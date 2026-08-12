@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {} from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Network } from 'lucide-react';
 import { AuthLayout } from '../../components/layout/AuthLayout/AuthLayout';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { PasswordInput } from '../../components/ui/PasswordInput/PasswordInput';
@@ -36,7 +35,7 @@ export const LoginPage = () => {
     <AuthLayout
       title={t('login.title')}
       subtitle={t('login.subtitle')}
-      logoIcon={<Network size={32} color="var(--color-primary)" />}
+      showBrand
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         {error && (
@@ -69,7 +68,7 @@ export const LoginPage = () => {
             signup page would send them somewhere that no longer exists.
           */}
           <div className={styles.metaRow}>
-            <Link to={`/${tenantSlug || 'admin'}/forgot-password`} className={styles.link}>
+            <Link to="/forgot-password" className={styles.link}>
               {t('login.forgotPassword')}
             </Link>
           </div>

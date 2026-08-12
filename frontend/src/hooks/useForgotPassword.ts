@@ -6,12 +6,12 @@ export const useForgotPassword = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const requestReset = async (email: string, tenantSlug: string | null) => {
+  const requestReset = async (email: string) => {
     setIsLoading(true);
     setError(null);
     setIsSuccess(false);
     try {
-      await authService.requestPasswordReset(email, tenantSlug);
+      await authService.requestPasswordReset(email);
       setIsSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.error || 'An unexpected error occurred');

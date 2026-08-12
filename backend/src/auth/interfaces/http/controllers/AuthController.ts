@@ -361,6 +361,23 @@ export class AuthController {
     }
   };
 
+  /**
+   * For users with no tenant context at the point of asking — a platform
+   * administrator, or anyone on the shared /login screen, which carries no
+   * slug. Looks the email up across every workspace instead of one.
+   */
+  requestPasswordResetGlobal = async (req: Request, res: Response) => {
+    try {
+      await this.requestPasswordResetUseCase.execute({
+        email: req.body.email,
+        tenantId: null,
+      });
+      res.status(200).json({ message: 'If the email exists, a reset link has been sent.' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
+
   resetPassword = async (req: Request, res: Response) => {
     try {
       await this.resetPasswordUseCase.execute(req.body);

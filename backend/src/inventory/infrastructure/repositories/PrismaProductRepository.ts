@@ -10,6 +10,8 @@ import {
 } from '../../domain/repositories';
 import { Product } from '../../domain/Product';
 import { ProductImage } from '../../domain/ProductImage';
+import { jsonToStringArray } from '../../../shared/infrastructure/prisma/jsonArray';
+import { insensitiveContains, insensitiveEquals } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
 
 /** Shape of the rows the search/read queries load. */
 const productInclude = {
@@ -43,7 +45,7 @@ export class PrismaProductRepository implements IProductRepository {
     categoryId: string | null;
     price: number;
     cost: number | null;
-    tags: string[];
+    tags: Prisma.JsonValue;
     lowStockThreshold: number;
     isArchived: boolean;
     createdAt: Date;
@@ -59,7 +61,7 @@ export class PrismaProductRepository implements IProductRepository {
       categoryId: record.categoryId,
       price: record.price,
       cost: record.cost,
-      tags: record.tags,
+      tags: jsonToStringArray(record.tags),
       lowStockThreshold: record.lowStockThreshold,
       isArchived: record.isArchived,
       createdAt: record.createdAt,
@@ -246,7 +248,7 @@ export class PrismaProductRepository implements IProductRepository {
     // vocabulary of one tenant is small enough to fold in memory.
     const seen = new Map<string, string>();
     for (const row of rows) {
-      for (const tag of row.tags) {
+      for (const tag of jsonToStringArray(row.tags)) {
         const key = tag.toLowerCase();
         if (!seen.has(key)) seen.set(key, tag);
       }
@@ -260,23 +262,22 @@ export class PrismaProductRepository implements IProductRepository {
     if (filters.name) {
       // One search box, three columns — users type a SKU as readily as a name.
       where.OR = [
-        { name: { contains: filters.name, mode: 'insensitive' } },
-        { sku: { contains: filters.name, mode: 'insensitive' } },
-        { brand: { contains: filters.name, mode: 'insensitive' } },
+        { name: insensitiveContains(filters.name) },
+        { sku: insensitiveContains(filters.name) },
+        { brand: insensitiveContains(filters.name) },
       ];
     }
     if (filters.categoryId) {
       where.categoryId = filters.categoryId;
     }
     if (filters.brand) {
-      where.brand = { equals: filters.brand, mode: 'insensitive' };
+      where.brand = insensitiveEquals(filters.brand);
     }
     if (filters.tags && filters.tags.length > 0) {
-      // `hasEvery` on a native String[] column: every requested tag must be
-      // present, which is the AND semantics the filter promises. The MySQL
-      // build spelled this as one `array_contains` per tag against a Json
-      // column, because MySQL has no array type.
-      where.tags = { hasEvery: filters.tags };
+      // `tags` is Json (MySQL has no array column type), so "every requested
+      // tag must be present" is one `array_contains` per tag, ANDed together —
+      // there is no single `hasEvery`-equivalent operator for a Json column.
+      where.AND = filters.tags.map((tag) => ({ tags: { array_contains: tag } }));
     }
     // A warehouse filter narrows which stock *counts*, not which products are
     // listed — see `toReadModel`. Requiring a stock row here would hide every

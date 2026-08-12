@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { IS_MYSQL } from '../../shared/infrastructure/prisma/provider';
 import {
   IReportRepository,
   MonthlyRevenue,
@@ -124,7 +125,11 @@ export class PrismaReportRepository implements IReportRepository {
    * truncation is what makes rows in the same month group together, and the
    * formatting only names the resulting bucket. Identifiers are double-quoted
    * because Prisma creates them camelCase, which Postgres would otherwise fold
-   * to lowercase and fail to find.
+   * to lowercase and fail to find. MySQL needs neither — `DATE_FORMAT` both
+   * truncates and formats in one call, and MySQL's `DATETIME` columns (unlike
+   * Postgres `timestamp`) carry no implicit session-timezone conversion on
+   * read, so the value already IS the UTC wall-clock time it was written as;
+   * no `AT TIME ZONE` equivalent is needed to anchor it.
    *
    * Bucketed in UTC, matching `getMonthlyRevenue` above — see the long comment
    * there for why a reporting period must not follow the tenant timezone.
@@ -135,15 +140,27 @@ export class PrismaReportRepository implements IReportRepository {
   async getNewClientsTrend(tenantId: string, limitMonths: number): Promise<NewClientsPoint[]> {
     const start = startOfMonthsAgo(limitMonths - 1);
 
-    const rows = await this.prisma.$queryRaw<{ month: string; count: bigint }[]>`
-      SELECT to_char(date_trunc('month', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
-             COUNT(*)                                                                AS count
-      FROM "Client"
-      WHERE "tenantId" = ${tenantId}
-        AND "createdAt" >= ${start}
-      GROUP BY 1
-      ORDER BY 1
-    `;
+    const query = IS_MYSQL
+      ? Prisma.sql`
+          SELECT DATE_FORMAT(\`createdAt\`, '%Y-%m') AS month,
+                 COUNT(*)                             AS count
+          FROM \`Client\`
+          WHERE \`tenantId\` = ${tenantId}
+            AND \`createdAt\` >= ${start}
+          GROUP BY 1
+          ORDER BY 1
+        `
+      : Prisma.sql`
+          SELECT to_char(date_trunc('month', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
+                 COUNT(*)                                                                AS count
+          FROM "Client"
+          WHERE "tenantId" = ${tenantId}
+            AND "createdAt" >= ${start}
+          GROUP BY 1
+          ORDER BY 1
+        `;
+
+    const rows = await this.prisma.$queryRaw<{ month: string; count: bigint }[]>(query);
 
     const counts = new Map(rows.map((r) => [r.month, Number(r.count)]));
 

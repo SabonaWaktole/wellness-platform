@@ -40,6 +40,7 @@ export const createGlobalAuthRoutes = (
 
 
   router.post('/invitations/accept', validateRequest(authSchemas.acceptInvitation), authController.acceptInvitation);
+  router.post('/password-reset/request', authLimiter, validateRequest(authSchemas.requestPasswordReset), authController.requestPasswordResetGlobal);
   router.post('/password-reset/reset', validateRequest(authSchemas.resetPassword), authController.resetPassword);
 
   // Profile endpoints

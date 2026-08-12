@@ -97,8 +97,8 @@
     "invoices": "Invoices",
     "reports": "Reports",
     "settings": "Settings",
-    "tenants": "Tenants",
-    "people": "People"
+    "tenants": "Business Clients",
+    "people": "Users"
   },
   "shell": {
     "standardTier": "Standard Tier",

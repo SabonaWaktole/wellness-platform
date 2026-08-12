@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {} from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { KeyRound, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CheckCircle2, ArrowLeft } from 'lucide-react';
 import { AuthLayout } from '../../components/layout/AuthLayout/AuthLayout';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { Button } from '../../components/ui/Button/Button';
@@ -10,14 +10,13 @@ import { useForgotPassword } from '../../hooks/useForgotPassword';
 
 export const ForgotPasswordPage = () => {
   const { t } = useTranslation('auth');
-  const { tenantSlug } = useParams();
   const { requestReset, isLoading, error, isSuccess } = useForgotPassword();
   const [email, setEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await requestReset(email, tenantSlug || null);
+      await requestReset(email);
     } catch (err) {
       // Error handled by hook
     }
@@ -27,7 +26,7 @@ export const ForgotPasswordPage = () => {
     <AuthLayout
       title={t('forgotPassword.title')}
       subtitle={t('forgotPassword.subtitle')}
-      logoIcon={<KeyRound size={32} color="var(--color-primary)" />}
+      showBrand
     >
       {isSuccess ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', alignItems: 'center', textAlign: 'center' }}>
@@ -35,8 +34,8 @@ export const ForgotPasswordPage = () => {
           <p style={{ fontFamily: 'var(--font-family-base)', fontSize: 'var(--font-size-body-md)', color: 'var(--color-on-surface)' }}>
             {t('forgotPassword.sent')}
           </p>
-          <Link 
-            to={`/${tenantSlug || 'admin'}/login`}
+          <Link
+            to="/login"
             style={{ 
               fontFamily: 'var(--font-family-base)', 
               fontSize: 'var(--font-size-label-md)', 
@@ -75,7 +74,7 @@ export const ForgotPasswordPage = () => {
             
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Link 
-                to={`/${tenantSlug || 'admin'}/login`}
+                to="/login"
                 style={{ 
                   fontFamily: 'var(--font-family-base)', 
                   fontSize: 'var(--font-size-label-md)', 

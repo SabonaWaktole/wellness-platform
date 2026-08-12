@@ -90,11 +90,11 @@ export const router = createBrowserRouter([
     element: <PublicQuotationPage />,
   },
   {
-    path: '/:tenantSlug/forgot-password',
+    path: '/forgot-password',
     element: <ForgotPasswordPage />,
   },
   {
-    path: '/:tenantSlug/reset-password',
+    path: '/reset-password',
     element: <ResetPasswordPage />,
   },
   {

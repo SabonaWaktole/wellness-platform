@@ -4,6 +4,8 @@ import { Client } from '../../domain/entities/Client';
 import { ClientStatus } from '../../domain/enums/ClientStatus';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../domain/enums/FieldType';
+import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
+import { IS_MYSQL } from '../../../shared/infrastructure/prisma/provider';
 
 export class PrismaClientRepository implements IClientRepository {
   constructor(private prisma: PrismaClient) {}
@@ -37,55 +39,60 @@ export class PrismaClientRepository implements IClientRepository {
     if (filters.customFields && Object.keys(filters.customFields).length > 0) {
       // Use raw query for custom field containment
       const customFieldsJson = JSON.stringify(filters.customFields);
-      
+
       // NOTE: these conditions must stay in step with the Prisma branch below.
       // The two paths diverge only on custom-field containment, so a filter
       // added to one and not the other silently changes search behaviour
       // depending on whether a custom-field filter happens to be active.
       const like = (value: string) => `%${value}%`;
 
-      // Postgres dialect throughout: ILIKE for case-insensitive matching, and
-      // double-quoted identifiers for the camelCase columns Prisma creates.
-      //
-      // A NULL email/phone yields NULL from ILIKE rather than false, so a client
-      // with no email simply does not match on that column — while still
-      // matching on name via the OR.
-      const searchFilter = filters.search
-        ? Prisma.sql`AND (name ILIKE ${like(filters.search)} OR email ILIKE ${like(filters.search)} OR phone ILIKE ${like(filters.search)})`
-        : Prisma.empty;
-      const nameFilter = filters.name ? Prisma.sql`AND name ILIKE ${like(filters.name)}` : Prisma.empty;
-      const emailFilter = filters.email ? Prisma.sql`AND email ILIKE ${like(filters.email)}` : Prisma.empty;
-      const phoneFilter = filters.phone ? Prisma.sql`AND phone ILIKE ${like(filters.phone)}` : Prisma.empty;
-      const statusFilter = filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty;
-      const assignedUserFilter = filters.assignedUserId ? Prisma.sql`AND "assignedUserId" = ${filters.assignedUserId}` : Prisma.empty;
+      // The two dialects diverge on more than just syntax sugar here: MySQL
+      // has no ILIKE (its default utf8mb4_unicode_ci collation makes LIKE
+      // case-insensitive already), no double-quoted identifiers (backticks
+      // instead), and no `@>` jsonb-containment operator (JSON_CONTAINS
+      // instead — same "every key/value on the right appears on the left"
+      // semantics for object arguments).
+      const whereClause = IS_MYSQL
+        ? Prisma.sql`
+            WHERE \`tenantId\` = ${tenantId}
+            ${filters.search ? Prisma.sql`AND (name LIKE ${like(filters.search)} OR email LIKE ${like(filters.search)} OR phone LIKE ${like(filters.search)})` : Prisma.empty}
+            ${filters.name ? Prisma.sql`AND name LIKE ${like(filters.name)}` : Prisma.empty}
+            ${filters.email ? Prisma.sql`AND email LIKE ${like(filters.email)}` : Prisma.empty}
+            ${filters.phone ? Prisma.sql`AND phone LIKE ${like(filters.phone)}` : Prisma.empty}
+            ${filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty}
+            ${filters.assignedUserId ? Prisma.sql`AND \`assignedUserId\` = ${filters.assignedUserId}` : Prisma.empty}
+            AND JSON_CONTAINS(\`customFieldValues\`, CAST(${customFieldsJson} AS JSON))
+          `
+        // A NULL email/phone yields NULL from ILIKE rather than false, so a
+        // client with no email simply does not match on that column — while
+        // still matching on name via the OR.
+        : Prisma.sql`
+            WHERE "tenantId" = ${tenantId}
+            ${filters.search ? Prisma.sql`AND (name ILIKE ${like(filters.search)} OR email ILIKE ${like(filters.search)} OR phone ILIKE ${like(filters.search)})` : Prisma.empty}
+            ${filters.name ? Prisma.sql`AND name ILIKE ${like(filters.name)}` : Prisma.empty}
+            ${filters.email ? Prisma.sql`AND email ILIKE ${like(filters.email)}` : Prisma.empty}
+            ${filters.phone ? Prisma.sql`AND phone ILIKE ${like(filters.phone)}` : Prisma.empty}
+            ${filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty}
+            ${filters.assignedUserId ? Prisma.sql`AND "assignedUserId" = ${filters.assignedUserId}` : Prisma.empty}
+            AND "customFieldValues" @> ${customFieldsJson}::jsonb
+          `;
 
-      // `@>` is jsonb containment: true when every key/value on the right
-      // appears on the left.
-      const whereClause = Prisma.sql`
-        WHERE "tenantId" = ${tenantId}
-        ${searchFilter}
-        ${nameFilter}
-        ${emailFilter}
-        ${phoneFilter}
-        ${statusFilter}
-        ${assignedUserFilter}
-        AND "customFieldValues" @> ${customFieldsJson}::jsonb
-      `;
+      const [table, createdAt] = IS_MYSQL ? ['`Client`', '`createdAt`'] : ['"Client"', '"createdAt"'];
 
       const rawQuery = Prisma.sql`
-        SELECT * FROM "Client"
+        SELECT * FROM ${Prisma.raw(table)}
         ${whereClause}
-        ORDER BY "createdAt" DESC
+        ORDER BY ${Prisma.raw(createdAt)} DESC
         LIMIT ${take} OFFSET ${skip}
       `;
 
       // `::int` rather than a bare COUNT(*): Postgres returns bigint, which
       // arrives as a JS BigInt that JSON.stringify refuses to serialise. The
-      // Number() below is a second guard on the same hazard.
-      const countQuery = Prisma.sql`
-        SELECT COUNT(*)::int as total FROM "Client"
-        ${whereClause}
-      `;
+      // Number() below is a second guard on the same hazard, and covers
+      // MySQL's own COUNT(*) BigInt the same way.
+      const countQuery = IS_MYSQL
+        ? Prisma.sql`SELECT COUNT(*) as total FROM ${Prisma.raw(table)} ${whereClause}`
+        : Prisma.sql`SELECT COUNT(*)::int as total FROM ${Prisma.raw(table)} ${whereClause}`;
 
       const [records, countResult] = await Promise.all([
         this.prisma.$queryRaw<any[]>(rawQuery),
@@ -103,14 +110,14 @@ export class PrismaClientRepository implements IClientRepository {
       // Mirrors the raw-SQL branch above — keep both in step.
       if (filters.search) {
         where.OR = [
-          { name: { contains: filters.search, mode: 'insensitive' } },
-          { email: { contains: filters.search, mode: 'insensitive' } },
-          { phone: { contains: filters.search, mode: 'insensitive' } },
+          { name: insensitiveContains(filters.search) },
+          { email: insensitiveContains(filters.search) },
+          { phone: insensitiveContains(filters.search) },
         ];
       }
-      if (filters.name) where.name = { contains: filters.name, mode: 'insensitive' };
-      if (filters.email) where.email = { contains: filters.email, mode: 'insensitive' };
-      if (filters.phone) where.phone = { contains: filters.phone, mode: 'insensitive' };
+      if (filters.name) where.name = insensitiveContains(filters.name);
+      if (filters.email) where.email = insensitiveContains(filters.email);
+      if (filters.phone) where.phone = insensitiveContains(filters.phone);
       if (filters.status) where.status = filters.status;
       if (filters.assignedUserId) where.assignedUserId = filters.assignedUserId;
 

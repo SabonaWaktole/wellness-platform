@@ -1,16 +1,34 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 import { NotificationSettings } from '../domain/NotificationSettings';
 import { INotificationSettingsRepository } from '../domain/INotificationSettingsRepository';
+import { jsonToStringArray } from '../../shared/infrastructure/prisma/jsonArray';
 
 export class PrismaNotificationSettingsRepository implements INotificationSettingsRepository {
   constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
 
   async get(tenantId: string): Promise<NotificationSettings> {
-    // The two array columns are native `String[]` on Postgres, so the row maps
-    // straight through. The MySQL build had to cast them out of `Json` here.
     const row = await this.prisma.notificationSettings.findUnique({ where: { tenantId } });
-    return row ? NotificationSettings.fromPersistence(row) : NotificationSettings.defaults(tenantId);
+    return row ? NotificationSettings.fromPersistence(this.toDomainProps(row)) : NotificationSettings.defaults(tenantId);
+  }
+
+  private toDomainProps(row: {
+    tenantId: string;
+    emailEnabled: boolean;
+    emailEventTypes: Prisma.JsonValue;
+    emailRecipientRoles: Prisma.JsonValue;
+    appointmentRemindersEnabled: boolean;
+    appointmentReminderLeadMinutes: number;
+    quotationFollowUpEnabled: boolean;
+    quotationFollowUpDays: number;
+    quotationAutoExpireEnabled: boolean;
+    quotationExpiryDays: number;
+  }) {
+    return {
+      ...row,
+      emailEventTypes: jsonToStringArray(row.emailEventTypes),
+      emailRecipientRoles: jsonToStringArray(row.emailRecipientRoles),
+    };
   }
 
   async save(settings: NotificationSettings): Promise<void> {
@@ -51,7 +69,7 @@ export class PrismaNotificationSettingsRepository implements INotificationSettin
 
     return tenants.map((t) =>
       t.notificationSettings
-        ? NotificationSettings.fromPersistence(t.notificationSettings)
+        ? NotificationSettings.fromPersistence(this.toDomainProps(t.notificationSettings))
         : NotificationSettings.defaults(t.id)
     );
   }

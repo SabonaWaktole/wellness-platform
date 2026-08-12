@@ -1,6 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { ICategoryRepository, CategoryWithItemCount } from '../../domain/repositories';
 import { Category } from '../../domain/Category';
+import { IS_MYSQL } from '../../../shared/infrastructure/prisma/provider';
 
 export class PrismaCategoryRepository implements ICategoryRepository {
   constructor(private prisma: PrismaClient) {}
@@ -97,6 +98,45 @@ export class PrismaCategoryRepository implements ICategoryRepository {
    * Archived categories are excluded because archiving them again is a no-op.
    */
   async findUnusedCategories(tenantId: string): Promise<Category[]> {
+    // Only the identifier quoting differs between the two dialects here —
+    // MySQL has no double-quoted-identifier syntax by default (backticks
+    // instead); the NOT EXISTS logic itself is portable SQL.
+    const query = IS_MYSQL
+      ? Prisma.sql`
+          SELECT c.id, c.name, c.description, c.\`isArchived\`, c.\`createdAt\`, c.\`updatedAt\`
+          FROM \`Category\` c
+          WHERE c.\`tenantId\` = ${tenantId}
+            AND c.\`isArchived\` = false
+            AND NOT EXISTS (
+              SELECT 1 FROM \`Product\` p
+              WHERE p.\`categoryId\` = c.id
+                AND p.\`isArchived\` = false
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM \`QuotationLineItem\` qli
+              JOIN \`Product\` p2 ON p2.id = qli.\`productId\`
+              WHERE p2.\`categoryId\` = c.id
+            )
+          ORDER BY c.name ASC
+        `
+      : Prisma.sql`
+          SELECT c.id, c.name, c.description, c."isArchived", c."createdAt", c."updatedAt"
+          FROM "Category" c
+          WHERE c."tenantId" = ${tenantId}
+            AND c."isArchived" = false
+            AND NOT EXISTS (
+              SELECT 1 FROM "Product" p
+              WHERE p."categoryId" = c.id
+                AND p."isArchived" = false
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM "QuotationLineItem" qli
+              JOIN "Product" p2 ON p2.id = qli."productId"
+              WHERE p2."categoryId" = c.id
+            )
+          ORDER BY c.name ASC
+        `;
+
     const rows = await this.prisma.$queryRaw<Array<{
       id: string,
       name: string,
@@ -104,23 +144,7 @@ export class PrismaCategoryRepository implements ICategoryRepository {
       isArchived: boolean,
       createdAt: Date,
       updatedAt: Date
-    }>>`
-      SELECT c.id, c.name, c.description, c."isArchived", c."createdAt", c."updatedAt"
-      FROM "Category" c
-      WHERE c."tenantId" = ${tenantId}
-        AND c."isArchived" = false
-        AND NOT EXISTS (
-          SELECT 1 FROM "Product" p
-          WHERE p."categoryId" = c.id
-            AND p."isArchived" = false
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM "QuotationLineItem" qli
-          JOIN "Product" p2 ON p2.id = qli."productId"
-          WHERE p2."categoryId" = c.id
-        )
-      ORDER BY c.name ASC;
-    `;
+    }>>(query);
 
     return rows.map((record) =>
       Category.create({

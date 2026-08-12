@@ -4,7 +4,7 @@
   "description": "Multi-tenant CRM SaaS backend",
   "main": "dist/main/server.js",
   "scripts": {
-    "build": "prisma generate && tsc && tsc-alias",
+    "build": "node scripts/generate-prisma-client.js && tsc && tsc-alias",
     "start": "node dist/main/server.js",
     "dev": "ts-node -r tsconfig-paths/register src/main/server.ts",
     "test": "jest --forceExit --detectOpenHandles",
@@ -12,6 +12,7 @@
     "test:integration": "jest --testPathPattern=tests/integration --forceExit --detectOpenHandles",
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
     "prisma:generate": "prisma generate",
+    "prisma:generate:mysql": "prisma generate --schema=prisma/schema.mysql.prisma",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:test": "dotenv -e .env.test -- prisma migrate deploy",
     "seed:superadmin": "ts-node -r tsconfig-paths/register scratch/seed-super-admin.ts",

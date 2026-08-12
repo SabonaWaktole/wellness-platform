@@ -97,8 +97,8 @@
     "invoices": "Τιμολόγια",
     "reports": "Αναφορές",
     "settings": "Ρυθμίσεις",
-    "tenants": "Οργανισμοί",
-    "people": "Άτομα"
+    "tenants": "Πελάτες επιχειρήσεις",
+    "people": "Χρήστες"
   },
   "shell": {
     "standardTier": "Τυπικό επίπεδο",

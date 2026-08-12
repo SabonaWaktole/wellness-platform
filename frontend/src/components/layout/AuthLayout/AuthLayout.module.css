@@ -106,6 +106,14 @@
   object-fit: cover;
 }
 
+/* The full wordmark, height-constrained so it stays crisp regardless of the
+   source aspect ratio (matches the landing page nav treatment). */
+.brandLogo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
 .titleWrapper {
   display: flex;
   flex-direction: column;

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {} from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { Key, CheckCircle2 } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import { AuthLayout } from '../../components/layout/AuthLayout/AuthLayout';
 import { PasswordInput } from '../../components/ui/PasswordInput/PasswordInput';
 import { Button } from '../../components/ui/Button/Button';
@@ -10,7 +10,6 @@ import { useResetPassword } from '../../hooks/useResetPassword';
 
 export const ResetPasswordPage = () => {
   const { t } = useTranslation('auth');
-  const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const { resetPassword, isLoading, error, isSuccess } = useResetPassword();
@@ -38,7 +37,7 @@ export const ResetPasswordPage = () => {
     <AuthLayout
       title={t('resetPassword.title')}
       subtitle={t('resetPassword.subtitle')}
-      logoIcon={<Key size={32} color="var(--color-primary)" />}
+      showBrand
     >
       {isSuccess ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', alignItems: 'center', textAlign: 'center' }}>
@@ -46,8 +45,8 @@ export const ResetPasswordPage = () => {
           <p style={{ fontFamily: 'var(--font-family-base)', fontSize: 'var(--font-size-body-md)', color: 'var(--color-on-surface)' }}>
             {t('resetPassword.success')}
           </p>
-          <Link 
-            to={`/${tenantSlug || 'admin'}/login`}
+          <Link
+            to="/login"
             style={{ 
               fontFamily: 'var(--font-family-base)', 
               fontSize: 'var(--font-size-label-md)', 

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { IQuotationRepository, QuotationFilters, PaginatedQuotations } from '../../domain/IQuotationRepository';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
+import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
 
 export class PrismaQuotationRepository implements IQuotationRepository {
   constructor(private prisma: PrismaClient) {}
@@ -117,8 +118,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     // Given the schema, joining Client to search by name is common.
     if (filters.query) {
       where.OR = [
-        { id: { contains: filters.query, mode: 'insensitive' } },
-        { client: { name: { contains: filters.query, mode: 'insensitive' } } }
+        { id: insensitiveContains(filters.query) },
+        { client: { name: insensitiveContains(filters.query) } }
       ];
     }
 

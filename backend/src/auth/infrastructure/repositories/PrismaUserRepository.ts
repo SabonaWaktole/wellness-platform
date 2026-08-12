@@ -7,6 +7,7 @@ import {
 import { User } from '../../domain/entities/User';
 import { UserRole } from '../../domain/enums/UserRole';
 import { prisma as defaultPrisma } from '../../../shared/infrastructure/prisma/client';
+import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
 
 export class PrismaUserRepository implements IUserRepository {
   /**
@@ -149,9 +150,9 @@ export class PrismaUserRepository implements IUserRepository {
       // case-SENSITIVE without it. See PrismaClientRepository.search, which
       // does the same for the client list.
       where.OR = [
-        { email: { contains: filters.q, mode: 'insensitive' } },
-        { firstName: { contains: filters.q, mode: 'insensitive' } },
-        { lastName: { contains: filters.q, mode: 'insensitive' } },
+        { email: insensitiveContains(filters.q) },
+        { firstName: insensitiveContains(filters.q) },
+        { lastName: insensitiveContains(filters.q) },
       ];
     }
 

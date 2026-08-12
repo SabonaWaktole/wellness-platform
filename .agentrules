@@ -1,56 +1,432 @@
-PROJECT CONTEXT
+# Project Context
 
-We are building the backend for a multi-tenant CRM SaaS platform. A finalized Software Requirements Document (SRD) already exists and defines the full product scope — I will feed you relevant sections as we go. The UI/UX for Milestone 1 has already been designed in Figma (via Stitch) and covers: Login, Forgot/Reset Password, Business Owner Onboarding, Staff Invitation, App Shell (Owner variant and Staff/Sales Rep variant), Super Admin Shell, and Account/Settings — both desktop and mobile. Those designs are the source of truth for what data each screen needs from the API; we are now building the functional layer behind them.
+## Overview
 
-TECH STACK
-- Backend: Node.js + TypeScript, using Express (no framework like NestJS — we're keeping the architecture explicit and hand-rolled).
-- Database: PostgreSQL.
-- ORM/Query layer: Prisma (unless I tell you otherwise).
-- Auth: JWT-based sessions, bcrypt for password hashing.
-- Testing: Jest + Supertest.
+We are building the backend for a **multi-tenant CRM SaaS platform**.
 
-ARCHITECTURE: CLEAN ARCHITECTURE
-We are strictly following Clean Architecture. Dependencies only point inward. Concretely:
+A finalized **Software Requirements Document (SRD)** already defines the complete product scope. I will provide the relevant SRD sections incrementally as we progress.
 
+The UI/UX for **Milestone 1** has already been completed in Figma (using Stitch). These designs are the **single source of truth** for the data required by each screen.
+
+The completed designs include:
+
+* Login
+* Forgot Password
+* Reset Password
+* Business Owner Onboarding
+* Staff Invitation
+* Application Shell
+
+  * Business Owner variant
+  * Staff / Sales Representative variant
+* Super Admin Shell
+* Account & Settings
+* Desktop and Mobile layouts
+
+Our task is to implement the backend that powers these screens.
+
+---
+
+# Technology Stack
+
+## Backend
+
+* Node.js
+* TypeScript
+* Express.js (no NestJS or similar frameworks)
+
+The architecture should remain explicit and hand-written.
+
+## Database
+
+* PostgreSQL
+
+## ORM
+
+* Prisma (unless explicitly instructed otherwise)
+
+## Authentication
+
+* JWT access/session tokens
+* bcrypt for password hashing
+
+## Testing
+
+* Jest
+* Supertest
+
+---
+
+# Architecture
+
+We follow **Clean Architecture** strictly.
+
+Dependencies always point inward.
+
+```
 src/
-  domain/            → Entities, value objects, repository interfaces (ports). Zero framework/DB dependencies.
-  application/        → Use cases (application services), DTOs, application-level errors. Depends only on domain.
-  infrastructure/     → Prisma repository implementations, JWT/bcrypt adapters, email adapter, config. Implements domain interfaces.
-  interfaces/          → Express controllers, routers, request validators (zod), middleware. Talks to application layer only, never directly to infrastructure.
-  main/ (or bootstrap/) → Composition root: wires everything together (dependency injection by hand, no DI framework needed).
+├── domain/
+│   ├── entities/
+│   ├── value-objects/
+│   ├── repository-interfaces/
+│   └── domain-services/
+│
+├── application/
+│   ├── use-cases/
+│   ├── dto/
+│   ├── errors/
+│   └── interfaces/
+│
+├── infrastructure/
+│   ├── prisma/
+│   ├── repositories/
+│   ├── auth/
+│   ├── email/
+│   └── config/
+│
+├── interfaces/
+│   ├── controllers/
+│   ├── routes/
+│   ├── middleware/
+│   └── validators/
+│
+└── main/
+    └── bootstrap/
+```
 
-Rules I want enforced at all times:
-- Domain layer has NO imports from Express, Prisma, or any framework.
-- Use cases receive dependencies via constructor injection (interfaces), never import infrastructure directly.
-- Controllers are thin: parse/validate request → call use case → map result to HTTP response. No business logic in controllers.
-- All business rules and validation that matter (e.g. "a tenant slug must be unique", "a Staff cannot invite another Staff") live in the domain/application layer, not in controllers or middleware.
+---
 
-MULTI-TENANCY MODEL (from the SRD — keep this in mind for everything we build)
-- Tenants are businesses. Every tenant-scoped table has a tenant_id foreign key.
-- Tenant is resolved from a directory-based URL path segment (e.g. /business1/api/... resolves tenant "business1"), not a subdomain.
-- Role hierarchy: Super Admin (platform-level, not tied to a tenant) → Business Owner (tenant admin) → Staff / Sales Representative (scoped operational user within a tenant).
-- Data isolation between tenants is non-negotiable: no query should ever be able to leak across tenant_id boundaries, even by accident. This must be enforced structurally, not just by convention (e.g. a base repository that always requires tenant_id, not something a developer can forget).
+# Architectural Rules (Mandatory)
 
-WORKFLOW: TEST-DRIVEN DEVELOPMENT (TDD) — NON-NEGOTIABLE
-For every feature, follow strict red-green-refactor:
-1. Write a failing test first (unit test for use cases/domain logic, integration test via Supertest for HTTP endpoints).
-2. Run it, confirm it fails for the right reason.
-3. Write the minimum code to make it pass.
-4. Refactor with tests green.
-5. Only then move to the next piece of functionality.
+These rules are non-negotiable.
 
-Never write implementation code before there is a failing test for it. When you finish a feature, show me the test file(s) and the implementation together, and tell me the test results (pass/fail) before moving on.
+### Domain Layer
 
-PHASED DELIVERY
-We are implementing this project phase by phase, matching the SRD's milestone breakdown:
-- Milestone 1: Foundation — Auth, Navigation/Route Guards, Role-Based Access Control (RBAC), multi-tenant resolution. ← we are starting here.
-- Milestone 2: Clients module
-- Milestone 3: Appointments
-- Milestone 4: Inventory (multi-warehouse)
-- Milestone 5: Quotations (with approval workflow)
-- Milestone 6: Notifications
-- Milestone 7: Deployment
+* Contains entities, value objects, business rules, and repository interfaces.
+* Must **never** import:
 
-Do not build ahead into later milestones. Do not add features not explicitly requested in the current phase's prompt, even if you can see they'll eventually be needed — flag them to me instead and I'll bring them in when we get there.
+  * Express
+  * Prisma
+  * JWT libraries
+  * Database clients
+  * Any framework
 
-Confirm you've understood this context. Then wait for the Phase 1 task prompt.
+The domain layer must remain framework-independent.
+
+---
+
+### Application Layer
+
+Contains:
+
+* Use Cases
+* DTOs
+* Application Errors
+
+Requirements:
+
+* Depends only on the Domain layer.
+* Receives all dependencies via constructor injection.
+* Never imports infrastructure implementations directly.
+
+---
+
+### Infrastructure Layer
+
+Responsible for external concerns:
+
+* Prisma repositories
+* JWT implementation
+* bcrypt adapter
+* Email providers
+* Configuration
+* External services
+
+Implements interfaces defined by the Domain layer.
+
+---
+
+### Interface Layer
+
+Contains:
+
+* Express controllers
+* Routers
+* Zod request validation
+* Middleware
+
+Controllers must remain thin.
+
+Responsibilities:
+
+1. Parse request
+2. Validate input
+3. Call a use case
+4. Map the result to an HTTP response
+
+Controllers must never contain business logic.
+
+---
+
+### Composition Root
+
+The `main` (or `bootstrap`) layer wires the application together.
+
+Requirements:
+
+* Manual dependency injection
+* No DI frameworks
+* All infrastructure dependencies are composed here
+
+---
+
+# Business Rule Placement
+
+Business rules belong in the Domain/Application layers.
+
+Examples:
+
+* Tenant slug must be unique.
+* Staff cannot invite another Staff.
+* Owner permissions.
+* Password policies.
+* Role validation.
+
+These rules must **never** live inside:
+
+* Controllers
+* Middleware
+* Express routes
+
+---
+
+# Multi-Tenancy Model
+
+This platform is fully multi-tenant.
+
+## Tenant
+
+A Tenant represents a business.
+
+Every tenant-scoped table **must** contain:
+
+```
+tenant_id
+```
+
+---
+
+## Tenant Resolution
+
+The tenant is resolved from the URL path.
+
+Example:
+
+```
+/business1/api/auth/login
+```
+
+resolves
+
+```
+tenant = business1
+```
+
+Subdomains are **not** used.
+
+---
+
+## Role Hierarchy
+
+```
+Super Admin
+    ↓
+Business Owner
+    ↓
+Staff / Sales Representative
+```
+
+### Super Admin
+
+* Platform-wide
+* Not tied to any tenant
+
+### Business Owner
+
+* Tenant administrator
+* Manages users and business configuration
+
+### Staff / Sales Representative
+
+* Tenant-scoped operational users
+* Limited permissions
+
+---
+
+## Tenant Isolation (Critical)
+
+Tenant isolation is mandatory.
+
+No query should ever be capable of returning another tenant's data.
+
+This must be enforced structurally rather than by developer convention.
+
+Preferred approach:
+
+* Tenant-aware repository interfaces
+* Base repositories requiring `tenant_id`
+* Repository APIs that make cross-tenant queries impossible by design
+
+A developer should not be able to accidentally omit tenant filtering.
+
+---
+
+# Development Workflow
+
+## Test-Driven Development (TDD)
+
+TDD is mandatory.
+
+Every feature follows this exact workflow.
+
+### Step 1
+
+Write a failing test.
+
+Use:
+
+* Unit tests for domain logic and use cases.
+* Integration tests (Supertest) for HTTP endpoints.
+
+---
+
+### Step 2
+
+Run the test.
+
+Confirm it fails for the expected reason.
+
+---
+
+### Step 3
+
+Write only the minimum implementation necessary to make the test pass.
+
+---
+
+### Step 4
+
+Refactor while keeping all tests green.
+
+---
+
+### Step 5
+
+Only after all tests pass may we proceed to the next functionality.
+
+Implementation must never be written before the failing test exists.
+
+For every completed feature, always provide:
+
+1. The test file(s)
+2. The implementation
+3. Test execution results (pass/fail)
+4. A brief explanation of the implementation
+
+Only then proceed to the next feature.
+
+---
+
+# Delivery Strategy
+
+Development follows the SRD milestone plan.
+
+Do **not** implement functionality from future milestones unless explicitly instructed.
+
+### Milestone 1
+
+Foundation
+
+* Authentication
+* JWT
+* Password Management
+* Route Guards
+* RBAC
+* Tenant Resolution
+* Multi-Tenant Infrastructure
+
+(Current milestone.)
+
+---
+
+### Milestone 2
+
+Clients Module
+
+---
+
+### Milestone 3
+
+Appointments
+
+---
+
+### Milestone 4
+
+Inventory (Multi-Warehouse)
+
+---
+
+### Milestone 5
+
+Quotations
+
+Including approval workflow.
+
+---
+
+### Milestone 6
+
+Notifications
+
+---
+
+### Milestone 7
+
+Deployment
+
+---
+
+# Implementation Constraints
+
+Always adhere to the following:
+
+* Follow Clean Architecture.
+* Follow SOLID principles.
+* Keep implementations small and focused.
+* Prefer composition over inheritance.
+* Avoid premature optimization.
+* Do not introduce functionality outside the current milestone.
+* Flag future considerations instead of implementing them.
+* Keep the codebase maintainable and testable.
+* Prioritize readability over cleverness.
+
+---
+
+# Expected Behavior
+
+Before implementing any feature:
+
+1. Confirm understanding of the task.
+2. Identify which milestone it belongs to.
+3. Explain the testing strategy.
+4. Write the failing tests first.
+5. Wait for the tests to fail.
+6. Implement the minimum code.
+7. Refactor.
+8. Show test results.
+9. Proceed only after all tests pass.
+
+When uncertain about requirements, ask for clarification instead of making assumptions.
+
+Wait for my next prompt before beginning implementation.

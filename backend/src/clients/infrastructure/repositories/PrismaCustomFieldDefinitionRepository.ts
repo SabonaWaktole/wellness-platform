@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../domain/enums/FieldType';
+import { jsonToStringArray } from '../../../shared/infrastructure/prisma/jsonArray';
 
 export class PrismaCustomFieldDefinitionRepository implements ICustomFieldDefinitionRepository {
   constructor(private prisma: PrismaClient) {}
@@ -15,7 +16,7 @@ export class PrismaCustomFieldDefinitionRepository implements ICustomFieldDefini
       tenantId: r.tenantId,
       fieldName: r.fieldName,
       fieldType: r.fieldType as FieldType,
-      options: r.options,
+      options: jsonToStringArray(r.options),
     }));
   }
 

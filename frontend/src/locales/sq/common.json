@@ -97,8 +97,8 @@
     "invoices": "Faturat",
     "reports": "Raportet",
     "settings": "Cilësimet",
-    "tenants": "Organizatat",
-    "people": "Personat"
+    "tenants": "Klientë biznesi",
+    "people": "Përdoruesit"
   },
   "shell": {
     "standardTier": "Niveli standard",

@@ -6,10 +6,12 @@
  * `schema.mysql.prisma` beside this file is the hand-maintained MySQL mirror
  * used by the Hostinger deployment, which is provisioned from
  * `nevacrm_full_import.sql` rather than from the migration history. The two
- * differ ONLY in dialect: `String[]` here against `Json` there for the four
- * array columns (tags, options, emailEventTypes, emailRecipientRoles), and
- * `@db.Text` annotations MySQL needs for long strings. Any model change must be
- * made in both, or the deployment drifts from what the code expects.
+ * now differ ONLY in the `@db.Text` annotations MySQL needs for long strings —
+ * the four array-shaped columns (tags, options, emailEventTypes,
+ * emailRecipientRoles) are `Json` on both sides on purpose, so the
+ * application code has exactly one shape to handle instead of branching per
+ * provider. Any model change must be made in both, or the deployment drifts
+ * from what the code expects.
  */
 datasource db {
   provider = "postgresql"
@@ -161,11 +163,14 @@ model NotificationSettings {
   /// Stored as strings rather than a Prisma enum for the same reason
   /// NotificationType is a TS const array: adding a type must not require a
   /// migration, and an unknown value here is inert rather than fatal.
-  emailEventTypes String[] @default([])
+  /// Json rather than a native array: MySQL (the Hostinger production target)
+  /// has no array column type, so both providers store this as JSON and the
+  /// application code has exactly one shape to deal with instead of two.
+  emailEventTypes Json @default("[]")
 
   /// Which roles receive event email. A workspace can keep owners informed by
   /// mail while leaving staff on in-app only.
-  emailRecipientRoles String[] @default(["BUSINESS_OWNER"])
+  emailRecipientRoles Json @default("[\"BUSINESS_OWNER\"]")
 
   /// Appointment reminders.
   appointmentRemindersEnabled    Boolean @default(true)
@@ -350,7 +355,9 @@ model CustomFieldDefinition {
   // list is src/clients/domain/enums/FieldType.ts and adding a value needs no
   // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, SINGLE_SELECT.
   fieldType String
-  options   String[] // for SINGLE_SELECT
+  // Json rather than a native array: MySQL (the Hostinger production target)
+  // has no array column type, so both providers store this as JSON.
+  options   Json @default("[]") // for SINGLE_SELECT
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
@@ -484,7 +491,9 @@ model Product {
   price             Float
   // Unit cost. Nullable because a catalogue can be priced before it is costed.
   cost              Float?
-  tags              String[] @default([])
+  // Json rather than a native array: MySQL (the Hostinger production target)
+  // has no array column type, so both providers store this as JSON.
+  tags              Json     @default("[]")
   lowStockThreshold Int      @default(10)
   // Archived products stay queryable (quotations reference them) but drop out
   // of the default catalogue view. Availability is always derived from stock.

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { IInvoiceRepository, InvoiceFilters, PaginatedInvoices } from '../../domain/IInvoiceRepository';
 import { Invoice, InvoiceStatus } from '../../domain/Invoice';
 import { InvoiceLineItem } from '../../domain/InvoiceLineItem';
+import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
 
 export class PrismaInvoiceRepository implements IInvoiceRepository {
   constructor(private prisma: PrismaClient) {}
@@ -72,8 +73,8 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
     if (filters.clientId) where.clientId = filters.clientId;
     if (filters.query) {
       where.OR = [
-        { id: { contains: filters.query, mode: 'insensitive' } },
-        { client: { name: { contains: filters.query, mode: 'insensitive' } } }
+        { id: insensitiveContains(filters.query) },
+        { client: { name: insensitiveContains(filters.query) } }
       ];
     }
 

@@ -49,9 +49,8 @@ export const authService = {
     await apiClient.post('/auth/logout');
   },
 
-  requestPasswordReset: async (email: string, tenantSlug: string | null) => {
-    const url = tenantSlug ? `/${tenantSlug}/auth/password-reset/request` : '/auth/password-reset/request';
-    await apiClient.post(url, { email });
+  requestPasswordReset: async (email: string) => {
+    await apiClient.post('/auth/password-reset/request', { email });
   },
 
   resetPassword: async (token: string, newPassword: string) => {

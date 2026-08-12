@@ -13,7 +13,9 @@ export class RequestPasswordResetUseCase {
   ) {}
 
   async execute(input: any) {
-    const user = await this.userRepository.findByEmail(input.email, input.tenantId);
+    const user = input.tenantId
+      ? await this.userRepository.findByEmail(input.email, input.tenantId)
+      : await this.userRepository.findAnyByEmail(input.email);
     if (!user) return; // Silent fail
 
     const token = crypto.randomBytes(32).toString('hex');
