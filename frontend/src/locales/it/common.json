@@ -97,8 +97,8 @@
     "invoices": "Fatture",
     "reports": "Report",
     "settings": "Impostazioni",
-    "tenants": "Tenant",
-    "people": "Persone"
+    "tenants": "Clienti Business",
+    "people": "Utenti"
   },
   "shell": {
     "standardTier": "Livello standard",
