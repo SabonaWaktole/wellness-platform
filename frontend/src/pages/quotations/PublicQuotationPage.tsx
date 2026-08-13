@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Download, FileWarning, CheckCircle2, XCircle, MessageSquareText } from 'lucide-react';
 import styles from './PublicQuotationPage.module.css';
 import { API_BASE_URL } from '../../api/baseUrl';
+import { formatDatePattern } from '../../utils/dateFormatPattern';
 
 interface PublicLine {
   description: string;
@@ -27,6 +28,7 @@ interface PublicQuotation {
   };
   currency: string;
   locale: string;
+  dateFormat: string;
   lines: PublicLine[];
   subtotal: number;
 }
@@ -155,7 +157,7 @@ export const PublicQuotationPage = () => {
   }
 
   const money = (amount: number) => formatMoney(amount, quotation.currency, quotation.locale);
-  const date = (value: string) => new Date(value).toLocaleDateString(quotation.locale);
+  const date = (value: string) => formatDatePattern(new Date(value), quotation.locale, quotation.dateFormat);
 
   return (
     <div className={styles.page}>

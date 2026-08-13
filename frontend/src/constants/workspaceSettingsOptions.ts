@@ -1,4 +1,4 @@
-import { SUPPORTED_LOCALES } from '../hooks/useTenantSettings';
+import { SUPPORTED_LOCALES, DATE_FORMATS } from '../hooks/useTenantSettings';
 
 /**
  * Shared between a workspace's own Settings page and the platform console's
@@ -63,4 +63,15 @@ export const LOCALE_LABELS: Record<(typeof SUPPORTED_LOCALES)[number], string> =
   'sq-AL': 'Albanian (Albania) — 1 234,56',
   'el-GR': 'Greek (Greece) — 1.234,56',
   'it-IT': 'Italian (Italy) — 1.234,56',
+};
+
+/**
+ * Labelled with a worked example (today, fixed rather than computed, so the
+ * picker doesn't visibly change every day) so the day/month/year order is
+ * obvious without having to already know what "MM/DD/YYYY" means.
+ */
+export const DATE_FORMAT_LABELS: Record<(typeof DATE_FORMATS)[number], string> = {
+  'MM/DD/YYYY': 'MM/DD/YYYY — 08/13/2026',
+  'DD/MM/YYYY': 'DD/MM/YYYY — 13/08/2026',
+  'YYYY-MM-DD': 'YYYY-MM-DD — 2026-08-13',
 };

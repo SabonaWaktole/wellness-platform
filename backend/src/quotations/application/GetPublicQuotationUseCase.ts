@@ -35,6 +35,7 @@ export interface PublicQuotationView {
   companyContactPhone: string | null;
   currency: string;
   locale: string;
+  dateFormat: string;
   lines: PublicQuotationLine[];
   subtotal: number;
 }

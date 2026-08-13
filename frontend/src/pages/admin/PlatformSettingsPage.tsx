@@ -13,8 +13,9 @@ import {
   CURRENCY_OPTIONS,
   TIMEZONE_OPTIONS,
   LOCALE_LABELS,
+  DATE_FORMAT_LABELS,
 } from '../../constants/workspaceSettingsOptions';
-import { SUPPORTED_LOCALES } from '../../hooks/useTenantSettings';
+import { SUPPORTED_LOCALES, DATE_FORMATS } from '../../hooks/useTenantSettings';
 import type { Language } from '../../i18n/config';
 import type { WorkspaceSettingsFields } from '../../services/dashboardService';
 import styles from './PlatformSettingsPage.module.css';
@@ -252,15 +253,25 @@ export const PlatformSettingsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Not consumed anywhere yet — date ordering comes from locale via
-                Intl. Same disabled treatment as the workspace Settings page,
-                for the same reason. See TD-012. */}
+            {/* Now the source of truth for day/month/year order everywhere a
+                date is shown — see useDateFormat and utils/dateFormatPattern.ts.
+                Same live treatment as the workspace Settings page. See TD-012. */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>{ts('company.localization.dateFormatLabel')}</label>
-              <select className={styles.nativeSelect} disabled value={form.dateFormat}>
-                <option value={form.dateFormat}>{form.dateFormat}</option>
+              <label className={styles.fieldLabel} htmlFor="platformDateFormat">
+                {ts('company.localization.dateFormatLabel')}
+              </label>
+              <select
+                id="platformDateFormat"
+                className={styles.nativeSelect}
+                value={form.dateFormat}
+                onChange={(e) => setField('dateFormat', e.target.value)}
+                disabled={isLoading}
+              >
+                {DATE_FORMATS.map((f) => (
+                  <option key={f} value={f}>{DATE_FORMAT_LABELS[f]}</option>
+                ))}
               </select>
-              <p className={styles.helperText}>{ts('company.localization.dateFormatNotUsed')}</p>
+              <p className={styles.helperText}>{ts('company.localization.dateFormatHint')}</p>
             </div>
           </div>
         </Card>

@@ -49,7 +49,7 @@
       "timezoneLabel": "Zona kohore",
       "dateFormatLabel": "Formati i datës",
       "timezoneHint": "Përcakton se cilës ditë i përket një takim ose shifër. Paneli dhe kalendari e përdorin të njëjtin, kështu që gjithmonë përputhen.",
-      "dateFormatNotUsed": "Renditja e datave aktualisht ndjek cilësimin Konventat e numrave dhe datave më sipër. Një model i qartë nuk zbatohet ende."
+      "dateFormatHint": "Kontrollon renditjen e ditës, muajit dhe vitit kudo që shfaqen datat në hapësirën e punës."
     },
     "language": {
       "title": "Gjuha",
