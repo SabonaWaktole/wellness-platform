@@ -41,6 +41,16 @@ export class PrismaUserRepository implements IUserRepository {
     return User.create({ ...data, role: data.role as UserRole });
   }
 
+  async countActivePlatformAdmins(): Promise<number> {
+    // Both conditions matter and neither implies the other: a suspended admin
+    // cannot sign in (LoginUseCase rejects `!isActive`), and a soft-deleted one
+    // has had its email anonymized. Either way it is not an account that could
+    // take over, so neither counts as "someone is left".
+    return this.prisma.user.count({
+      where: { role: 'SUPER_ADMIN', isActive: true, deletedAt: null },
+    });
+  }
+
   async create(user: User): Promise<User> {
     await this.prisma.user.create({
       data: {

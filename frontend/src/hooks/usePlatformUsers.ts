@@ -4,6 +4,7 @@ import type {
   PlatformUser,
   PlatformUserFilters,
   CreatePlatformUserInput,
+  CreatePlatformAdminInput,
   InvitePlatformUserInput,
 } from '../services/dashboardService';
 
@@ -80,6 +81,96 @@ export const useCreatePlatformUser = () => {
 
   return {
     createUser,
+    isSubmitting,
+    error,
+    clearError: useCallback(() => setError(null), []),
+  };
+};
+
+/**
+ * Appointing another platform administrator.
+ *
+ * Separate from `useCreatePlatformUser` rather than a role flag on it, because
+ * the two post to different endpoints for a structural reason: that one creates
+ * an account inside a chosen workspace, and a platform admin belongs to none.
+ */
+export const useCreatePlatformAdmin = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createAdmin = useCallback(
+    async (input: CreatePlatformAdminInput): Promise<PlatformUser | null> => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        return await dashboardService.createPlatformAdmin(input);
+      } catch (err: any) {
+        // The server's own message matters here — "already in use by an account
+        // on this platform" is the one rejection an operator can act on.
+        setError(err.response?.data?.error || 'Could not create the platform administrator.');
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    []
+  );
+
+  return {
+    createAdmin,
+    isSubmitting,
+    error,
+    clearError: useCallback(() => setError(null), []),
+  };
+};
+
+/**
+ * Closing your own platform admin account.
+ *
+ * `isLastAdmin` is resolved by counting the platform's admins rather than
+ * trusting a flag, and is only ever advisory: the server re-checks and answers
+ * 409 `LAST_PLATFORM_ADMIN` regardless. It exists so the console can explain
+ * WHY the action is unavailable instead of failing after the fact.
+ */
+export const useOwnPlatformAdminAccount = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [otherAdmins, setOtherAdmins] = useState<number | null>(null);
+
+  const refreshAdminCount = useCallback(async (selfId: string | undefined) => {
+    try {
+      const { items } = await dashboardService.getPlatformUsers({
+        role: 'SUPER_ADMIN',
+        isActive: true,
+        take: 100,
+      });
+      // "Other" — the caller does not keep the platform running for themselves.
+      setOtherAdmins(items.filter((u) => u.id !== selfId).length);
+    } catch {
+      // Left null: unknown is not zero, and the control stays cautious rather
+      // than claiming the account cannot be closed.
+      setOtherAdmins(null);
+    }
+  }, []);
+
+  const closeOwnAccount = useCallback(async (confirmEmail: string): Promise<boolean> => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await dashboardService.deleteOwnPlatformAdmin(confirmEmail);
+      return true;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Could not close the account.');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  return {
+    closeOwnAccount,
+    refreshAdminCount,
+    otherAdmins,
     isSubmitting,
     error,
     clearError: useCallback(() => setError(null), []),

@@ -44,6 +44,7 @@ export function makeTenantProvisioningHarness(): TenantProvisioningHarness {
     findByTenantId: jest.fn(),
     findActiveByTenantAndRole: jest.fn().mockResolvedValue([]),
       findPlatformUsers: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+      countActivePlatformAdmins: jest.fn().mockResolvedValue(1),
     create: jest.fn().mockImplementation(async (user) => user),
     updatePassword: jest.fn(),
     updateProfile: jest.fn(),

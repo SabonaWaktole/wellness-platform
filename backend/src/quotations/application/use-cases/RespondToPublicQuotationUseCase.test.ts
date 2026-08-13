@@ -20,6 +20,7 @@ const view = (status: string): PublicQuotationView => ({
   companyContactPhone: null,
   currency: 'EUR',
   locale: 'en-GB',
+  dateFormat: 'DD/MM/YYYY',
   lines: [{ description: 'Widget', quantity: 2, unitPrice: 10, lineTotal: 20 }],
   subtotal: 20,
 });

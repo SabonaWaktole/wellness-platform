@@ -95,4 +95,29 @@ export const tenantSchemas = {
     confirmEmail: z.string().min(1),
     newOwnerId: z.string().optional(),
   }),
+
+  /**
+   * One platform administrator appointing another.
+   *
+   * No `role` and no `tenantId`: both are fixed by what this endpoint is. The
+   * role is SUPER_ADMIN by definition, and a platform admin belongs to no
+   * workspace — accepting either field would invite a caller to think they
+   * could vary it. Same password floor as every other account-creating schema
+   * here.
+   */
+  createPlatformAdmin: z.object({
+    email: z.string().email(),
+    password: z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
+    firstName: z.string().min(1).optional().nullable(),
+    lastName: z.string().min(1).optional().nullable(),
+  }),
+
+  /**
+   * A platform administrator closing their own account. No id: the target is
+   * always the caller — see `DeletePlatformAdminSelfUseCase` for why that is
+   * structural rather than a convenience.
+   */
+  deleteOwnPlatformAdmin: z.object({
+    confirmEmail: z.string().min(1),
+  }),
 };

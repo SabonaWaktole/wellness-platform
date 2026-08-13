@@ -40,6 +40,7 @@ describe('NotificationService', () => {
       findById: jest.fn().mockImplementation(async (id: string) => makeUser({ id })),
       findActiveByTenantAndRole: jest.fn().mockResolvedValue([]),
       findPlatformUsers: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+      countActivePlatformAdmins: jest.fn().mockResolvedValue(1),
     } as unknown as jest.Mocked<IUserRepository>;
 
     service = new NotificationService(notificationRepo, userRepo);

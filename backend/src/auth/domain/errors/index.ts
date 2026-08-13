@@ -86,10 +86,49 @@ export class UserNotFoundError extends DomainError {
  * ordinary accounts. SUPER_ADMIN accounts are deliberately out of scope: they
  * have no tenant, no ownership to transfer, and locking one out is how a
  * platform loses its own operators.
+ *
+ * One platform admin acting on ANOTHER stays forbidden for that reason. The
+ * single exception is an admin closing their OWN account, which goes through
+ * `DeletePlatformAdminSelfUseCase` and is guarded by
+ * `LastPlatformAdminError` instead — nobody can be locked out by someone
+ * else's decision there, because the only account at stake is the caller's.
  */
 export class CannotModifySuperAdminError extends DomainError {
   constructor() {
     super('Super Admin accounts cannot be suspended, reactivated or deleted through this action');
+  }
+}
+
+/**
+ * The caller is the only platform administrator left, so closing their account
+ * would leave the platform with no one able to provision workspaces, lift a
+ * suspension, or create a replacement admin — a state no one inside the
+ * application could recover from (a new SUPER_ADMIN would have to be seeded
+ * directly against the database).
+ *
+ * Deliberately NOT a generic authorization failure: the caller is fully
+ * entitled to do this, just not yet. Naming the reason is what tells them the
+ * fix is "appoint another admin first".
+ */
+export class LastPlatformAdminError extends DomainError {
+  constructor() {
+    super(
+      'You are the only platform administrator. Create another one before closing your account.'
+    );
+  }
+}
+
+/**
+ * A platform administrator signs in at /login with no workspace slug, which
+ * resolves the account through `findAnyByEmail` — a lookup with no tenant
+ * filter that returns an arbitrary row when several accounts share an address.
+ * A platform admin sharing an email with any workspace account would therefore
+ * have a login that resolves to one or the other unpredictably, so the address
+ * has to be free across the WHOLE platform, not merely among admins.
+ */
+export class EmailAlreadyInUseError extends DomainError {
+  constructor(email: string) {
+    super(`"${email}" is already in use by an account on this platform`);
   }
 }
 

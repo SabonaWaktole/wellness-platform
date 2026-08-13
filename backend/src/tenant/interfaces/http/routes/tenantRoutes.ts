@@ -21,6 +21,8 @@ import { GetOwnershipTransferCandidatesUseCase } from '../../../../auth/applicat
 import { PlatformSuspendUserUseCase } from '../../../../auth/application/use-cases/PlatformSuspendUserUseCase';
 import { PlatformReactivateUserUseCase } from '../../../../auth/application/use-cases/PlatformReactivateUserUseCase';
 import { PlatformDeleteUserUseCase } from '../../../../auth/application/use-cases/PlatformDeleteUserUseCase';
+import { CreatePlatformAdminUseCase } from '../../../../auth/application/use-cases/CreatePlatformAdminUseCase';
+import { DeletePlatformAdminSelfUseCase } from '../../../../auth/application/use-cases/DeletePlatformAdminSelfUseCase';
 import { User } from '../../../../auth/domain/entities/User';
 import { BulkUpdateTenantSettingsUseCase } from '../../../../settings/application/use-cases/BulkUpdateTenantSettingsUseCase';
 import { bulkUpdateTenantSettingsSchema } from '../../../../settings/interfaces/http/schemas/platformSettingsSchemas';
@@ -38,6 +40,8 @@ import {
   RestoreOwnershipChoiceRequiredError,
   UserAlreadyInWorkspaceError,
   InvitationAlreadyPendingError,
+  LastPlatformAdminError,
+  EmailAlreadyInUseError,
 } from '../../../../auth/domain/errors';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { authorize } from '../../../../main/interfaces/http/middlewares/authorize';
@@ -95,6 +99,8 @@ export interface TenantRouterDeps {
   suspendUserUseCase: PlatformSuspendUserUseCase;
   reactivateUserUseCase: PlatformReactivateUserUseCase;
   deleteUserUseCase: PlatformDeleteUserUseCase;
+  createPlatformAdminUseCase: CreatePlatformAdminUseCase;
+  deletePlatformAdminSelfUseCase: DeletePlatformAdminSelfUseCase;
   bulkUpdateTenantSettingsUseCase: BulkUpdateTenantSettingsUseCase;
   tokenService: ITokenService;
   emailSender: IEmailSender;
@@ -120,6 +126,8 @@ export function createTenantRouter(deps: TenantRouterDeps): Router {
     suspendUserUseCase,
     reactivateUserUseCase,
     deleteUserUseCase,
+    createPlatformAdminUseCase,
+    deletePlatformAdminSelfUseCase,
     bulkUpdateTenantSettingsUseCase,
     tokenService,
     emailSender,
@@ -437,11 +445,95 @@ export function createTenantRouter(deps: TenantRouterDeps): Router {
     if (error instanceof RestoreOwnershipChoiceRequiredError) {
       return res.status(409).json({ error: error.message, code: 'RESTORE_CHOICE_REQUIRED' });
     }
+    // Carries a `code` for the same reason the two above do: the console
+    // disables its own "close account" control on this condition, and matching
+    // on a message string would break the moment the wording changes.
+    if (error instanceof LastPlatformAdminError) {
+      return res.status(409).json({ error: error.message, code: 'LAST_PLATFORM_ADMIN' });
+    }
+    if (error instanceof EmailAlreadyInUseError) {
+      return res.status(409).json({ error: error.message, code: 'EMAIL_IN_USE' });
+    }
     if (error instanceof UnauthorizedError) {
       return res.status(403).json({ error: error.message });
     }
     next(error);
   };
+
+  /**
+   * SUPER_ADMIN only: appoint another platform administrator.
+   *
+   * Separate from `POST /:id/users` because that route creates an account
+   * INSIDE a workspace, and a platform admin belongs to none — there is no
+   * `:id` to address this to. `CreateUserUseCase` still refuses the
+   * SUPER_ADMIN role outright, so this endpoint is the single way the role is
+   * ever granted through the API, and only an existing holder can reach it.
+   *
+   * Declared before the `/:id/...` routes below for the same ordering reason
+   * `/users` is.
+   */
+  router.post(
+    '/platform-admins',
+    validateRequest(tenantSchemas.createPlatformAdmin),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const callerRole = callerRoleOf(req);
+        if (!callerRole || !req.user) {
+          return res.status(401).json({ error: 'Access denied. No token provided.' });
+        }
+
+        const user = await createPlatformAdminUseCase.execute({
+          callerRole,
+          callerId: req.user.userId,
+          email: req.body.email,
+          password: req.body.password,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+        });
+
+        // `{ user }`, matching POST /:id/users — the console's create paths
+        // should not need to remember which one unwraps and which does not.
+        res.status(201).json({ user });
+      } catch (error) {
+        handleUserLifecycleError(error, res, next);
+      }
+    }
+  );
+
+  /**
+   * SUPER_ADMIN only: close YOUR OWN platform account.
+   *
+   * `/me` rather than an id, because the target is structurally the caller —
+   * see `DeletePlatformAdminSelfUseCase`. Refused with 409
+   * `LAST_PLATFORM_ADMIN` when no other admin would remain.
+   *
+   * The auth cookie is cleared on success: the account behind the caller's
+   * token no longer exists, and a token that outlives its account for the
+   * remainder of its hour (TD-010) is exactly the window worth closing here.
+   */
+  router.delete(
+    '/platform-admins/me',
+    validateRequest(tenantSchemas.deleteOwnPlatformAdmin),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const callerRole = callerRoleOf(req);
+        if (!callerRole || !req.user) {
+          return res.status(401).json({ error: 'Access denied. No token provided.' });
+        }
+
+        await deletePlatformAdminSelfUseCase.execute({
+          callerRole,
+          callerId: req.user.userId,
+          confirmEmail: req.body.confirmEmail,
+        });
+
+        res.clearCookie('jwt', authCookieOptions());
+        res.status(204).send();
+      } catch (error) {
+        handleUserLifecycleError(error, res, next);
+      }
+    }
+  );
 
   /**
    * SUPER_ADMIN only: active staff eligible to become the new Business Owner

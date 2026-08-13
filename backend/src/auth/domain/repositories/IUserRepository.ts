@@ -39,6 +39,17 @@ export interface IUserRepository {
   findByEmail(email: string, tenantId: string): Promise<User | null>;
   findAnyByEmail(email: string): Promise<User | null>;
   findSuperAdminByEmail(email: string): Promise<User | null>;
+  /**
+   * How many platform administrators can still sign in — active and not
+   * soft-deleted.
+   *
+   * Exists for one question: "if this admin closes their account, is anyone
+   * left?" Counting rather than listing because that is the whole of what the
+   * caller needs, and the alternative (`findPlatformUsers` filtered by role)
+   * is paginated and capped, so it answers a different question than it
+   * appears to. See DeletePlatformAdminSelfUseCase.
+   */
+  countActivePlatformAdmins(): Promise<number>;
   create(user: User): Promise<User>;
   updatePassword(userId: string, hashedPassword: string): Promise<void>;
   findByTenantId(tenantId: string): Promise<User[]>;

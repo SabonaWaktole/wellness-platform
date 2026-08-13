@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Settings, Tags, Warehouse as WarehouseIcon, FileText, Activity, AlertTriangle, Edit2, Trash2, ChevronRight, MoreVertical } from 'lucide-react';
+import { Plus, Settings, FileText, Activity, AlertTriangle, Edit2, Trash2, ChevronRight, MoreVertical } from 'lucide-react';
 import styles from './CategoryList.module.css';
 
 interface CategoryRowData {
@@ -16,8 +16,13 @@ import { CategoryFormModal, type CategoryFormData } from '../../../components/in
 import { DeleteCategoryModal } from '../../../components/inventory/DeleteCategoryModal/DeleteCategoryModal';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { AppLayout } from '../../../components/layout/AppLayout/AppLayout';
+import { Sidebar } from '../../../components/layout/Sidebar/Sidebar';
 import { SettingsLayout } from '../../../components/layout/SettingsLayout/SettingsLayout';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { useLogout } from '../../../hooks/useLogout';
+import { useNavigation } from '../../../hooks/useNavigation';
+import { getUserDisplayName } from '../../../utils/userUtils';
 
 const CategoryListContent: React.FC = () => {
   const { t } = useTranslation('inventory');
@@ -101,9 +106,6 @@ const CategoryListContent: React.FC = () => {
     }
   };
 
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
-
   // Item counts are real; only the icons are decorative. useMemo prevents them
   // from changing on re-renders.
   const categories = React.useMemo(() => {
@@ -161,40 +163,15 @@ const CategoryListContent: React.FC = () => {
         </div>
       </div>
 
+      {/*
+        The "Inventory Config" panel that used to sit to the left is gone, and
+        with it the third level of navigation. Every entry in it was already
+        reachable one level up in the settings nav — General Defaults was
+        Company, Warehouse Zones was Warehouses — Category Labels was a link to
+        the page it was already on, and Tax Configurations only ever raised a
+        "coming soon" alert. Opening Categories now lands directly on the list.
+      */}
       <div className={styles.grid}>
-        {/* Sidebar Options */}
-        <div className={styles.sidebar}>
-          <div className={styles.sidebarBox}>
-            <h3 className={styles.sidebarTitle}>{t('categories.configHeading')}</h3>
-            <nav className={styles.navLinks}>
-              <a href={`/${tenantSlug}/settings/company`} onClick={(e) => { e.preventDefault(); navigate(`/${tenantSlug}/settings/company`); }} className={styles.navLink}>
-                <span>{t('categories.generalDefaults')}</span>
-                <ChevronRight size={18} />
-              </a>
-              <a href={`/${tenantSlug}/settings/categories`} onClick={(e) => { e.preventDefault(); navigate(`/${tenantSlug}/settings/categories`); }} className={`${styles.navLink} ${styles.navLinkActive}`}>
-                <span>{t('categories.categoryLabels')}</span>
-                <Tags size={18} />
-              </a>
-              <a href={`/${tenantSlug}/settings/warehouses`} onClick={(e) => { e.preventDefault(); navigate(`/${tenantSlug}/settings/warehouses`); }} className={styles.navLink}>
-                <span>{t('categories.warehouseZones')}</span>
-                <WarehouseIcon size={18} />
-              </a>
-              <a href={`/${tenantSlug}/settings/tax`} onClick={(e) => { e.preventDefault(); alert(t('categories.taxComingSoon')); }} className={styles.navLink}>
-                <span>{t('categories.taxConfigurations')}</span>
-                <FileText size={18} />
-              </a>
-            </nav>
-          </div>
-
-          <div className={`${styles.sidebarBox} ${styles.insightBox}`}>
-            <div className={styles.insightHeader}>
-              <Activity size={16} className={styles.insightIcon} />
-              <span className={styles.insightTitle}>{t('categories.dataInsight')}</span>
-            </div>
-            <p className={styles.insightText}>{t('categories.dataInsightText')}</p>
-          </div>
-        </div>
-
         {/* Main List Area */}
         <div className={styles.mainContent}>
           <div className={styles.listContainer}>
@@ -306,10 +283,49 @@ function Description(props: any) { return <FileText {...props} />; }
 function PrecisionManufacturing(props: any) { return <Activity {...props} />; }
 function Security(props: any) { return <AlertTriangle {...props} />; }
 
+/**
+ * Wrapped in `AppLayout` + `Sidebar`, matching every other settings page
+ * (WarehouseList, NotificationSettingsPage, AccountSettingsPage).
+ *
+ * It previously rendered `SettingsLayout` alone, which dropped the main
+ * workspace navigation the moment Categories was opened — the settings
+ * sub-navigation replaced the app shell instead of sitting inside it, leaving
+ * no way back to Dashboard, Clients or anything else without the browser's
+ * back button. `SettingsLayout` is the SECONDARY nav; it was never meant to be
+ * the outermost element.
+ */
 export const CategoryList: React.FC = () => {
+  const navigate = useNavigate();
+  const { tenantSlug } = useParams();
+  const { user } = useAuthStore();
+  const { logout } = useLogout();
+  // The same path the other settings pages pass, so "Settings" is the item
+  // highlighted in the main sidebar rather than Products & Stock.
+  const navItems = useNavigation(user, `/${tenantSlug}/settings`);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
-    <SettingsLayout activeNavId="settings/categories">
-      <CategoryListContent />
-    </SettingsLayout>
+    <AppLayout
+      userName={getUserDisplayName(user, 'Settings User')}
+      onLogout={handleLogout}
+      onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
+      sidebar={
+        <Sidebar
+          orgName={tenantSlug || 'Workspace'}
+          orgTier={user?.role ?? ''}
+          navItems={navItems}
+          onNavItemClick={(id) => navigate(`/${tenantSlug}/${id === 'dashboard' ? '' : id}`)}
+          onLogoutClick={handleLogout}
+        />
+      }
+    >
+      <SettingsLayout activeNavId="settings/categories">
+        <CategoryListContent />
+      </SettingsLayout>
+    </AppLayout>
   );
 };

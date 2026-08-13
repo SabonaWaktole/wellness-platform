@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, UserPlus, Users, MoreVertical, Ban, CheckCircle2, Trash2 } from 'lucide-react';
+import { Plus, UserPlus, Users, MoreVertical, Ban, CheckCircle2, Trash2, ShieldPlus } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { TextInput } from '../../components/ui/TextInput';
 import { SelectInput } from '../../components/ui/SelectInput';
@@ -11,16 +11,19 @@ import type { DataTableColumn } from '../../components/ui/DataTable';
 import { DropdownMenu } from '../../components/ui/DropdownMenu';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { CreateUserModal } from './CreateUserModal';
+import { CreatePlatformAdminModal } from './CreatePlatformAdminModal';
 import { InviteUserModal } from './InviteUserModal';
 import { useTenants, useUserAdmin } from '../../hooks/useDashboard';
 import {
   usePlatformUsers,
   useCreatePlatformUser,
+  useCreatePlatformAdmin,
   useInvitePlatformUser,
 } from '../../hooks/usePlatformUsers';
 import { useDateFormat } from '../../hooks/useDateFormat';
 import type {
   CreatePlatformUserInput,
+  CreatePlatformAdminInput,
   InvitePlatformUserInput,
   OwnershipResolution,
   OwnershipTransferCandidate,
@@ -118,7 +121,15 @@ export const PeoplePage = () => {
     clearError: clearAdminError,
   } = useUserAdmin();
 
+  const {
+    createAdmin,
+    isSubmitting: isCreatingAdmin,
+    error: createAdminError,
+    clearError: clearCreateAdminError,
+  } = useCreatePlatformAdmin();
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [pendingSuspend, setPendingSuspend] = useState<PendingSuspend | null>(null);
   const [pendingReactivate, setPendingReactivate] = useState<PendingReactivate | null>(null);
@@ -130,6 +141,15 @@ export const PeoplePage = () => {
   ): Promise<boolean> => {
     const created = await createUser(tenantId, input);
     if (!created) return false;
+    refresh();
+    return true;
+  };
+
+  const handleCreateAdmin = async (input: CreatePlatformAdminInput): Promise<boolean> => {
+    const created = await createAdmin(input);
+    if (!created) return false;
+    // Platform admins appear in this same list (they carry no workspace, so the
+    // Workspace column reads as a dash), which is why the refresh is the same.
     refresh();
     return true;
   };
@@ -374,6 +394,19 @@ export const PeoplePage = () => {
           >
             {t('superAdmin.newUser')}
           </Button>
+          {/* Not disabled on `tenants.length === 0` like the two above: a
+              platform admin belongs to no workspace, so appointing one is the
+              single account action that still works on an empty platform. */}
+          <Button
+            variant="outline"
+            icon={<ShieldPlus size={20} />}
+            onClick={() => {
+              clearCreateAdminError();
+              setIsCreateAdminOpen(true);
+            }}
+          >
+            {t('superAdmin.newPlatformAdmin')}
+          </Button>
         </div>
       </header>
 
@@ -445,6 +478,14 @@ export const PeoplePage = () => {
         onSubmit={handleCreate}
         isSubmitting={isCreating}
         serverError={createError}
+      />
+
+      <CreatePlatformAdminModal
+        isOpen={isCreateAdminOpen}
+        onClose={() => setIsCreateAdminOpen(false)}
+        onSubmit={handleCreateAdmin}
+        isSubmitting={isCreatingAdmin}
+        serverError={createAdminError}
       />
 
       <InviteUserModal
