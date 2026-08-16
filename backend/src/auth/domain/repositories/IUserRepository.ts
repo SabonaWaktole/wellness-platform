@@ -68,7 +68,7 @@ export interface IUserRepository {
   updateRoleAndWarehouse(userId: string, role: string, warehouseId: string | null): Promise<void>;
   /**
    * Soft off-boarding. There is deliberately no `delete`: seven non-nullable
-   * columns reference User, so Postgres RESTRICT blocks removal outright and
+   * columns reference User, so the RESTRICT foreign keys block removal outright and
    * cascading would erase quotations, interactions and audit history.
    */
   setActive(userId: string, isActive: boolean): Promise<void>;

@@ -9,9 +9,10 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
     await this.prisma.$transaction(async (tx) => {
       /*
        * Deleted in dependency order, leaves-first, so nothing is ever removed
-       * while another row still points at it under RESTRICT (Postgres' default
-       * for an FK with no explicit `onDelete`, which is what most tenantId
-       * relations in schema.prisma are).
+       * while another row still points at it under RESTRICT (Prisma's default
+       * for a required relation with no explicit `onDelete`, which is what most
+       * tenantId relations in schema.prisma are, and which the generated MySQL
+       * DDL emits as a real `ON DELETE RESTRICT` foreign key).
        *
        * Rows with `onDelete: Cascade` to a parent deleted here are NOT listed
        * separately — deleting the parent removes them for free:

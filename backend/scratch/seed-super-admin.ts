@@ -31,8 +31,14 @@ const argOf = (name: string): string | undefined => {
   return i !== -1 ? process.argv[i + 1] : undefined;
 };
 
-/** Single-quoted SQL literal. Only ever applied to values we generate. */
-const q = (value: string) => `'${value.replace(/'/g, "''")}'`;
+/**
+ * Single-quoted MySQL string literal. Only ever applied to values we generate.
+ *
+ * Backslashes are escaped as well as quotes: unlike Postgres, MySQL treats
+ * `\` as an escape character inside string literals by default, so a lone
+ * backslash in a value would swallow the character after it.
+ */
+const q = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 
 async function main() {
   const email = argOf('email') ?? process.env.SUPER_ADMIN_EMAIL ?? DEFAULT_EMAIL;
@@ -60,13 +66,13 @@ async function main() {
     createdAt: new Date(),
   });
 
-  // PostgreSQL dialect, matching prisma/schema.prisma: double-quoted
-  // identifiers for the camelCase columns Prisma creates, and a real boolean
-  // rather than MySQL's 1.
+  // MySQL dialect, matching prisma/schema.prisma: backtick-quoted identifiers
+  // for the camelCase columns Prisma creates, and NOW(3) rather than NOW() so
+  // the millisecond precision of the DATETIME(3) column is not truncated.
   const sql = existing
-    ? `UPDATE "User" SET "hashedPassword" = ${q(hashedPassword)}, "isActive" = true WHERE "id" = ${q(user.id)};`
-    : `INSERT INTO "User" ("id", "email", "hashedPassword", "firstName", "lastName", "role", "tenantId", "isActive", "createdAt")\n` +
-      `VALUES (${q(user.id)}, ${q(user.email)}, ${q(hashedPassword)}, 'Platform', 'Admin', 'SUPER_ADMIN', NULL, true, NOW());`;
+    ? `UPDATE \`User\` SET \`hashedPassword\` = ${q(hashedPassword)}, \`isActive\` = true WHERE \`id\` = ${q(user.id)};`
+    : `INSERT INTO \`User\` (\`id\`, \`email\`, \`hashedPassword\`, \`firstName\`, \`lastName\`, \`role\`, \`tenantId\`, \`isActive\`, \`createdAt\`)\n` +
+      `VALUES (${q(user.id)}, ${q(user.email)}, ${q(hashedPassword)}, 'Platform', 'Admin', 'SUPER_ADMIN', NULL, true, NOW(3));`;
 
   // Printed either way, so the same account can be provisioned by pasting into
   // a hosting provider's SQL console when running this script against the

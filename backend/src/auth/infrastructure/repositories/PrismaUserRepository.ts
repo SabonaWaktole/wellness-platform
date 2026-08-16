@@ -156,9 +156,10 @@ export class PrismaUserRepository implements IUserRepository {
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
     if (filters.q) {
       // Searching for a person by name must not depend on how they capitalised
-      // it, so this is explicitly case-insensitive — Postgres `contains` is
-      // case-SENSITIVE without it. See PrismaClientRepository.search, which
-      // does the same for the client list.
+      // it. Routed through the helper rather than a bare `contains` so the
+      // case-insensitivity is an explicit decision recorded in one place, not
+      // an accident of the current collation. See PrismaClientRepository.search,
+      // which does the same for the client list.
       where.OR = [
         { email: insensitiveContains(filters.q) },
         { firstName: insensitiveContains(filters.q) },
