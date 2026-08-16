@@ -1,20 +1,26 @@
 /*
- * PostgreSQL is the active schema, and the one `prisma/migrations` is written
- * for — every migration in that folder emits `TIMESTAMP(3)`, `JSONB` and
- * double-quoted identifiers, so `prisma migrate deploy` only ever worked here.
+ * MySQL is the only provider. Production (Hostinger) runs MySQL, and this file
+ * is now the single source of truth for every environment — local, CI and
+ * deployed — so that the schema the code is generated against is always the
+ * schema production actually has.
  *
- * `schema.mysql.prisma` beside this file is the hand-maintained MySQL mirror
- * used by the Hostinger deployment, which is provisioned from
- * `nevacrm_full_import.sql` rather than from the migration history. The two
- * now differ ONLY in the `@db.Text` annotations MySQL needs for long strings —
- * the four array-shaped columns (tags, options, emailEventTypes,
- * emailRecipientRoles) are `Json` on both sides on purpose, so the
- * application code has exactly one shape to handle instead of branching per
- * provider. Any model change must be made in both, or the deployment drifts
- * from what the code expects.
+ * This replaces an earlier arrangement where PostgreSQL was canonical and a
+ * hand-maintained `schema.mysql.prisma` mirrored it for the deployment. Two
+ * schemas kept in step by hand is a drift you only discover in production: the
+ * mirror had already picked up `Json @default("[]")` on four columns that the
+ * live database declares `JSON NOT NULL` with no default at all.
+ *
+ * Notes for anyone editing this file:
+ *   - `@db.Text` on the long-string columns below. MySQL's default mapping for
+ *     `String` is VARCHAR(191), which silently truncates URLs and note bodies;
+ *     Postgres had no such limit, so these annotations have no Postgres
+ *     equivalent and are not optional here.
+ *   - The four array-shaped columns (tags, options, emailEventTypes,
+ *     emailRecipientRoles) are `Json`, not native arrays — MySQL has no array
+ *     type. Application code reads them through `jsonToStringArray`.
  */
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -44,8 +50,8 @@ model Tenant {
   urlSlug                   String  @unique
   requiresQuotationApproval Boolean @default(true)
   // Workspace branding, surfaced in the sidebar, settings and customer-facing pages.
-  logoUrl                   String?
-  coverImageUrl             String?
+  logoUrl                   String? @db.Text
+  coverImageUrl             String? @db.Text
 
   // Company profile. Like the branding URLs above, these are presentation-only
   // and are read straight from Prisma rather than through the Tenant entity.
@@ -215,8 +221,8 @@ model User {
   language       String?
   // Profile media. Store the public URL of the canonical (1x) asset; the
   // responsive variants are derived from it by convention (see MediaService).
-  avatarUrl      String?
-  coverImageUrl  String?
+  avatarUrl      String?  @db.Text
+  coverImageUrl  String?  @db.Text
   tenantId       String?
   createdAt      DateTime @default(now())
 
@@ -380,7 +386,7 @@ model Interaction {
   tenantId          String
   clientId          String
   authorUserId      String
-  content           String
+  content           String   @db.Text
   channel           String // 'MEETING', 'CALL', 'NOTE', 'EMAIL'
   outcomeCategoryId String?
   createdAt         DateTime @default(now())
@@ -401,7 +407,7 @@ model Appointment {
   assignedUserId String
   scheduledAt    DateTime
   status         String // 'SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED'
-  notes          String?
+  notes          String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -520,8 +526,8 @@ model ProductImage {
   tenantId  String
   productId String
   // Public URL of the @1x rendition; @2x is derived by naming convention.
-  url       String
-  url2x     String
+  url       String   @db.Text
+  url2x     String   @db.Text
   width     Int
   height    Int
   bytes     Int
@@ -560,7 +566,7 @@ model StockMovement {
   toWarehouseId   String? // Used for TRANSFER
   quantity        Int
   type            String // 'ADJUSTMENT', 'TRANSFER'
-  reason          String?
+  reason          String?  @db.Text
   createdBy       String
   createdAt       DateTime @default(now())
 
@@ -663,7 +669,7 @@ model QuotationStatusHistory {
   /// table where every other row can authenticate. NULL says exactly what
   /// happened.
   changedByUserId String?
-  note            String?
+  note            String?  @db.Text
   createdAt       DateTime @default(now())
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
@@ -749,7 +755,7 @@ model InvoiceStatusHistory {
   /// convention as QuotationStatusHistory.changedByUserId, for the same
   /// reason: automatic overdue detection has no acting user.
   changedByUserId String?
-  note            String?
+  note            String?  @db.Text
   createdAt       DateTime @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)

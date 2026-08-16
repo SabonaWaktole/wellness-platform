@@ -112,115 +112,17 @@
   box-shadow: var(--focus-ring);
 }
 
+/*
+ * Single column since the "Inventory Config" side panel was removed — the
+ * list is the whole page now. Kept as a grid rather than collapsed into the
+ * parent so the surrounding spacing stays identical to the other settings
+ * pages.
+ */
 .grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-lg);
   align-items: start;
-}
-
-@media (min-width: 1024px) {
-  .grid {
-    grid-template-columns: 3fr 9fr;
-  }
-}
-
-/* ---------------------------------------------------------------- sidebar */
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.sidebarBox {
-  padding: var(--spacing-base);
-  background-color: var(--color-surface-container-lowest);
-  border: none;
-  border-radius: var(--radius-xl);
-  box-shadow:
-    var(--shadow-xs),
-    inset 0 0 0 1px var(--border-hairline);
-}
-
-.sidebarTitle {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-label-sm);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 var(--spacing-sm) 0;
-  padding: 0 var(--spacing-xs);
-}
-
-.navLinks {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.navLink {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-  padding: 7px 10px;
-  border-radius: var(--radius-default);
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-label-md);
-  border: none;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.navLink:hover {
-  background-color: var(--color-surface-container);
-  color: var(--text-primary);
-}
-
-.navLinkActive,
-.navLinkActive:hover {
-  background-color: var(--color-surface-container-high);
-  color: var(--text-primary);
-  font-weight: 560;
-  border: none;
-}
-
-.insightBox {
-  background-color: var(--color-surface-container-low);
-  margin-top: var(--spacing-sm);
-  box-shadow: inset 0 0 0 1px var(--border-hairline);
-}
-
-.insightHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: 5px;
-}
-
-.insightIcon {
-  color: var(--color-secondary);
-  flex-shrink: 0;
-}
-
-.insightTitle {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-label-md);
-  font-weight: 620;
-  color: var(--text-primary);
-}
-
-.insightText {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-sm);
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
 }
 
 /* ----------------------------------------------------------- main content */

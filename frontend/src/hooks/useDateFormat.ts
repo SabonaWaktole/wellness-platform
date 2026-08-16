@@ -1,26 +1,25 @@
 import { useMemo } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { dayKeyInZone, isSameDayInZone, dayBoundsInZone } from '../utils/tenantDay';
+import { formatDatePattern, formatDateMediumPattern, FALLBACK_DATE_FORMAT } from '../utils/dateFormatPattern';
 
 /**
  * Date and time formatting bound to the workspace's settings.
  *
- * Two distinct settings feed this, and conflating them is the mistake to avoid:
+ * Three distinct settings feed this, and conflating them is the mistake to avoid:
  *
  *   - `tenantTimezone` decides WHICH DAY an instant falls on. It is a
  *     correctness concern: get it wrong and an appointment appears on the wrong
  *     date, or a dashboard count disagrees with the calendar.
- *   - `tenantLocale` decides HOW that date is written (order, separators,
- *     month names). Purely presentational.
+ *   - `tenantDateFormat` decides the ORDER day/month/year appear in. This is
+ *     the source of truth for ordering — see `utils/dateFormatPattern.ts`.
+ *   - `tenantLocale` decides everything else about HOW a date is written
+ *     (digit glyphs, written month names, AM/PM). Purely presentational, and
+ *     no longer has a say in ordering. See TD-012.
  *
  * Neither is the UI language. A user reading the interface in Albanian still
  * sees dates in their workspace's configured conventions — see the regression
  * test in i18n/orthogonality.test.tsx.
- *
- * `dateFormat` (MM/DD/YYYY etc.) is deliberately NOT consumed here: `Intl` with
- * a locale already produces the right ordering, and layering an explicit
- * pattern on top would let the two disagree. The setting is surfaced for a
- * future explicit-pattern mode; until then the locale governs. See TD-012.
  */
 export const FALLBACK_TIMEZONE = 'UTC';
 export const FALLBACK_LOCALE = 'en-US';
@@ -49,19 +48,20 @@ const toDate = (value: DateInput): Date =>
 export function useDateFormat() {
   const timeZone = useAuthStore((state) => state.user?.tenantTimezone) ?? FALLBACK_TIMEZONE;
   const locale = useAuthStore((state) => state.user?.tenantLocale) ?? FALLBACK_LOCALE;
+  const dateFormat = useAuthStore((state) => state.user?.tenantDateFormat) ?? FALLBACK_DATE_FORMAT;
 
   return useMemo(
     () => ({
       timeZone,
       locale,
+      dateFormat,
 
-      /** Short calendar date, e.g. 27/07/2026. */
-      date: (value: DateInput) =>
-        formatter(locale, timeZone, { dateStyle: 'short' }).format(toDate(value)),
+      /** Short calendar date, ordered per `dateFormat`, e.g. 07/27/2026. */
+      date: (value: DateInput) => formatDatePattern(toDate(value), locale, dateFormat, timeZone),
 
-      /** Date with a written month, for detail views. */
+      /** Date with a written month, ordered per `dateFormat`, for detail views. */
       dateMedium: (value: DateInput) =>
-        formatter(locale, timeZone, { dateStyle: 'medium' }).format(toDate(value)),
+        formatDateMediumPattern(toDate(value), locale, dateFormat, timeZone),
 
       /** Time of day only. */
       time: (value: DateInput) =>
@@ -69,9 +69,11 @@ export function useDateFormat() {
 
       /** Date and time together, for timeline entries and audit rows. */
       dateTime: (value: DateInput) =>
-        formatter(locale, timeZone, { dateStyle: 'medium', timeStyle: 'short' }).format(
-          toDate(value)
-        ),
+        `${formatDateMediumPattern(toDate(value), locale, dateFormat, timeZone)}, ${formatter(
+          locale,
+          timeZone,
+          { hour: '2-digit', minute: '2-digit' }
+        ).format(toDate(value))}`,
 
       /** Arbitrary options, still pinned to the tenant's zone and locale. */
       custom: (value: DateInput, options: Intl.DateTimeFormatOptions) =>
@@ -90,6 +92,6 @@ export function useDateFormat() {
        */
       dayBounds: (offsetDays = 0) => dayBoundsInZone(timeZone, offsetDays),
     }),
-    [locale, timeZone]
+    [locale, timeZone, dateFormat]
   );
 }

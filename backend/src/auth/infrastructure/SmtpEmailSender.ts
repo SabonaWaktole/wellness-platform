@@ -1,37 +1,37 @@
+import nodemailer, { Transporter } from 'nodemailer';
 import { IEmailSender } from '../application/ports/IEmailSender';
-import emailjs from '@emailjs/nodejs';
 
-export class EmailJsSender implements IEmailSender {
-  private serviceId: string;
-  private templateId: string;
-  private publicKey: string;
-  private privateKey: string;
+/**
+ * Sends mail through a plain SMTP mailbox (Hostinger's info@nevacrm.eu),
+ * replacing the EmailJS relay. One transporter is created per instance and
+ * reused across sends rather than reconnecting per call.
+ */
+export class SmtpEmailSender implements IEmailSender {
+  private readonly transporter: Transporter;
+  private readonly from: string;
 
   constructor() {
-    this.serviceId = process.env.EMAILJS_SERVICE_ID || '';
-    this.templateId = process.env.EMAILJS_TEMPLATE_ID || '';
-    this.publicKey = process.env.EMAILJS_PUBLIC_KEY || '';
-    this.privateKey = process.env.EMAILJS_PRIVATE_KEY || '';
+    const host = process.env.SMTP_HOST || '';
+    const port = Number(process.env.SMTP_PORT) || 587;
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+    const user = process.env.SMTP_USER || '';
+    const pass = process.env.SMTP_PASSWORD || '';
+
+    this.from = process.env.SMTP_FROM || `"NevaCRM" <${user}>`;
+    this.transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+    });
   }
 
-  /**
-   * The one place this class actually talks to EmailJS.
-   *
-   * All three public methods funnel through here, so the service/template/key
-   * wiring and the error handling exist once. `sendTransactionalEmail` is
-   * simply this with no body of its own to build.
-   */
-  private async send(to: string, subject: string, htmlContent: string, kind: string): Promise<void> {
+  private async send(to: string, subject: string, html: string, kind: string): Promise<void> {
     try {
-      await emailjs.send(
-        this.serviceId,
-        this.templateId,
-        { to_email: to, subject, html_content: htmlContent },
-        { publicKey: this.publicKey, privateKey: this.privateKey }
-      );
-      console.log(`${kind} email sent successfully to ${to} via EmailJS`);
+      await this.transporter.sendMail({ from: this.from, to, subject, html });
+      console.log(`${kind} email sent successfully to ${to} via SMTP`);
     } catch (error: any) {
-      console.error(`Error sending ${kind} email via EmailJS:`, error);
+      console.error(`Error sending ${kind} email via SMTP:`, error);
       throw new Error(`Failed to send ${kind} email`);
     }
   }
@@ -46,7 +46,7 @@ export class EmailJsSender implements IEmailSender {
   ): Promise<void> {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
 
-    const htmlContent = `
+    const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
         <h2 style="color: #4F46E5;">Your NevaCRM workspace is ready</h2>
         <p>A workspace has been created for you on NevaCRM. Here are your login details:</p>
@@ -61,13 +61,13 @@ export class EmailJsSender implements IEmailSender {
       </div>
     `;
 
-    await this.send(to, `Your NevaCRM workspace "${params.companyName}" is ready`, htmlContent, 'workspace created');
+    await this.send(to, `Your NevaCRM workspace "${params.companyName}" is ready`, html, 'workspace created');
   }
 
   async sendInvitationEmail(to: string, token: string, tenantName: string): Promise<void> {
     const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invitations/accept?token=${token}&email=${encodeURIComponent(to)}`;
-    
-    const htmlContent = `
+
+    const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
         <h2 style="color: #4F46E5;">Invitation to join ${tenantName}</h2>
         <p>You have been invited to join ${tenantName} on NevaCRM as a team member.</p>
@@ -77,31 +77,13 @@ export class EmailJsSender implements IEmailSender {
       </div>
     `;
 
-    try {
-      await emailjs.send(
-        this.serviceId,
-        this.templateId,
-        {
-          to_email: to,
-          subject: `You have been invited to join ${tenantName} on NevaCRM`,
-          html_content: htmlContent,
-        },
-        {
-          publicKey: this.publicKey,
-          privateKey: this.privateKey,
-        }
-      );
-      console.log(`Invitation email sent successfully to ${to} via EmailJS`);
-    } catch (error: any) {
-      console.error('Error sending invitation email via EmailJS:', error);
-      throw new Error('Failed to send invitation email');
-    }
+    await this.send(to, `You have been invited to join ${tenantName} on NevaCRM`, html, 'invitation');
   }
 
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}&email=${encodeURIComponent(to)}`;
-    
-    const htmlContent = `
+
+    const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
         <h2 style="color: #4F46E5;">Password Reset Request</h2>
         <p>We received a request to reset your password. If you didn't make this request, you can ignore this email.</p>
@@ -111,24 +93,6 @@ export class EmailJsSender implements IEmailSender {
       </div>
     `;
 
-    try {
-      await emailjs.send(
-        this.serviceId,
-        this.templateId,
-        {
-          to_email: to,
-          subject: 'Reset Your Password - NevaCRM',
-          html_content: htmlContent,
-        },
-        {
-          publicKey: this.publicKey,
-          privateKey: this.privateKey,
-        }
-      );
-      console.log(`Password reset email sent successfully to ${to} via EmailJS`);
-    } catch (error: any) {
-      console.error('Error sending password reset email via EmailJS:', error);
-      throw new Error('Failed to send password reset email');
-    }
+    await this.send(to, 'Reset Your Password - NevaCRM', html, 'password reset');
   }
 }

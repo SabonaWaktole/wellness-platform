@@ -49,7 +49,7 @@
       "timezoneLabel": "Timezone",
       "dateFormatLabel": "Date Format",
       "timezoneHint": "Decides which day an appointment or figure belongs to. The dashboard and the calendar both use it, so they always agree.",
-      "dateFormatNotUsed": "Date ordering currently follows the Number & Date Conventions setting above. An explicit pattern is not applied yet."
+      "dateFormatHint": "Controls the order of day, month and year wherever dates are shown across the workspace."
     },
     "language": {
       "title": "Language",

@@ -29,6 +29,7 @@ const toPublicJson = (view: PublicQuotationView) => ({
   },
   currency: view.currency,
   locale: view.locale,
+  dateFormat: view.dateFormat,
   lines: view.lines,
   subtotal: view.subtotal,
 });

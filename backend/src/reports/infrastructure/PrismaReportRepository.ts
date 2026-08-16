@@ -1,5 +1,4 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { IS_MYSQL } from '../../shared/infrastructure/prisma/provider';
 import {
   IReportRepository,
   MonthlyRevenue,
@@ -121,18 +120,11 @@ export class PrismaReportRepository implements IReportRepository {
    * agnosticism"; a growth chart that loads every client the workspace has ever
    * had in order to count them is the shape of query §4.7 warns about.
    *
-   * `date_trunc` then `to_char` rather than a single formatting call: the
-   * truncation is what makes rows in the same month group together, and the
-   * formatting only names the resulting bucket. Identifiers are double-quoted
-   * because Prisma creates them camelCase, which Postgres would otherwise fold
-   * to lowercase and fail to find. MySQL needs neither — `DATE_FORMAT` both
-   * truncates and formats in one call, and MySQL's `DATETIME` columns (unlike
-   * Postgres `timestamp`) carry no implicit session-timezone conversion on
-   * read, so the value already IS the UTC wall-clock time it was written as;
-   * no `AT TIME ZONE` equivalent is needed to anchor it.
-   *
-   * Bucketed in UTC, matching `getMonthlyRevenue` above — see the long comment
-   * there for why a reporting period must not follow the tenant timezone.
+   * `DATE_FORMAT` both truncates and formats in one call. Bucketing is in UTC:
+   * MySQL's `DATETIME` columns carry no implicit session-timezone conversion on
+   * read, so the stored value already IS the UTC wall-clock time it was written
+   * as, and no timezone anchoring is needed. See `getMonthlyRevenue` above for
+   * why a reporting period must not follow the tenant timezone.
    *
    * Months with no signups are filled in below rather than omitted, so the
    * chart shows a flat stretch instead of silently compressing time.
@@ -140,25 +132,15 @@ export class PrismaReportRepository implements IReportRepository {
   async getNewClientsTrend(tenantId: string, limitMonths: number): Promise<NewClientsPoint[]> {
     const start = startOfMonthsAgo(limitMonths - 1);
 
-    const query = IS_MYSQL
-      ? Prisma.sql`
-          SELECT DATE_FORMAT(\`createdAt\`, '%Y-%m') AS month,
-                 COUNT(*)                             AS count
-          FROM \`Client\`
-          WHERE \`tenantId\` = ${tenantId}
-            AND \`createdAt\` >= ${start}
-          GROUP BY 1
-          ORDER BY 1
-        `
-      : Prisma.sql`
-          SELECT to_char(date_trunc('month', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
-                 COUNT(*)                                                                AS count
-          FROM "Client"
-          WHERE "tenantId" = ${tenantId}
-            AND "createdAt" >= ${start}
-          GROUP BY 1
-          ORDER BY 1
-        `;
+    const query = Prisma.sql`
+      SELECT DATE_FORMAT(\`createdAt\`, '%Y-%m') AS month,
+             COUNT(*)                             AS count
+      FROM \`Client\`
+      WHERE \`tenantId\` = ${tenantId}
+        AND \`createdAt\` >= ${start}
+      GROUP BY 1
+      ORDER BY 1
+    `;
 
     const rows = await this.prisma.$queryRaw<{ month: string; count: bigint }[]>(query);
 

@@ -59,6 +59,7 @@ export function makeQuotationWriteHarness(): QuotationWriteHarness {
     findByTenantId: jest.fn(),
     findActiveByTenantAndRole: jest.fn().mockResolvedValue([]),
       findPlatformUsers: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+      countActivePlatformAdmins: jest.fn().mockResolvedValue(1),
     create: jest.fn(),
     updatePassword: jest.fn(),
     updateProfile: jest.fn(),

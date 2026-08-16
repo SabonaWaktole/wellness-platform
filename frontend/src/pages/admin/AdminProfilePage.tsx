@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/authService';
 import { Card } from '../../components/ui/Card/Card';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { Button } from '../../components/ui/Button/Button';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useOwnPlatformAdminAccount } from '../../hooks/usePlatformUsers';
 import styles from './AdminProfilePage.module.css';
 
 /**
@@ -20,7 +23,9 @@ import styles from './AdminProfilePage.module.css';
 export const AdminProfilePage: React.FC = () => {
   const { t } = useTranslation('settings');
   const { t: tc } = useTranslation('common');
-  const { user, updateUser } = useAuthStore();
+  const { t: td } = useTranslation('dashboard');
+  const navigate = useNavigate();
+  const { user, updateUser, logout: clearSession } = useAuthStore();
 
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
@@ -36,6 +41,17 @@ export const AdminProfilePage: React.FC = () => {
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  const {
+    closeOwnAccount,
+    refreshAdminCount,
+    otherAdmins,
+    isSubmitting: isClosing,
+    error: closeError,
+    clearError: clearCloseError,
+  } = useOwnPlatformAdminAccount();
+  const [isCloseOpen, setIsCloseOpen] = useState(false);
+  const [closeConfirmEmail, setCloseConfirmEmail] = useState('');
+
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -43,6 +59,29 @@ export const AdminProfilePage: React.FC = () => {
       setEmail(user.email || '');
     }
   }, [user]);
+
+  // Only to explain WHY the control is unavailable — the server re-checks and
+  // is the one that actually decides.
+  useEffect(() => {
+    refreshAdminCount(user?.userId);
+  }, [refreshAdminCount, user?.userId]);
+
+  // `null` is "could not tell", which is not the same as zero: the control
+  // stays available and lets the server give the real answer.
+  const isLastAdmin = otherAdmins === 0;
+
+  const handleCloseAccount = async () => {
+    const ok = await closeOwnAccount(closeConfirmEmail);
+    if (!ok) {
+      // Thrown so ConfirmDialog stays open with the reason visible, instead of
+      // closing as though the account had been removed.
+      throw new Error('close-failed');
+    }
+    // The account is gone and the server has already cleared the cookie; drop
+    // the local session too rather than leaving a signed-in shell behind.
+    clearSession();
+    navigate('/login', { replace: true });
+  };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +225,69 @@ export const AdminProfilePage: React.FC = () => {
           </div>
         </form>
       </Card>
+
+      {/*
+        Closing your own platform account.
+
+        Self-only: there is no equivalent control for removing ANOTHER platform
+        admin, and the endpoint behind this takes no id — see
+        DeletePlatformAdminSelfUseCase. The button is disabled while this is the
+        only admin left, with the reason stated rather than left to a failed
+        request to explain.
+      */}
+      <Card padding="lg" className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>{td('superAdmin.closeAccountTitle')}</h2>
+          <p className={styles.cardSubtitle}>{td('superAdmin.closeAccountSubtitle')}</p>
+        </div>
+
+        {isLastAdmin && (
+          <div className={`${styles.banner} ${styles.errorBanner}`}>
+            {td('superAdmin.closeAccountLastAdmin')}
+          </div>
+        )}
+
+        <div className={styles.formActions}>
+          <Button
+            variant="danger"
+            disabled={isLastAdmin}
+            onClick={() => {
+              clearCloseError();
+              setCloseConfirmEmail('');
+              setIsCloseOpen(true);
+            }}
+          >
+            {td('superAdmin.closeAccountAction')}
+          </Button>
+        </div>
+      </Card>
+
+      <ConfirmDialog
+        isOpen={isCloseOpen}
+        onClose={() => setIsCloseOpen(false)}
+        onConfirm={handleCloseAccount}
+        title={td('superAdmin.closeAccountTitle')}
+        tone="danger"
+        confirmLabel={isClosing ? tc('actions.saving') : td('superAdmin.closeAccountAction')}
+        message={
+          <>
+            <p>{td('superAdmin.closeAccountWarning')}</p>
+            <TextInput
+              label={td('superAdmin.closeAccountConfirmLabel', { email: user?.email ?? '' })}
+              value={closeConfirmEmail}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setCloseConfirmEmail(e.target.value)
+              }
+              autoComplete="off"
+            />
+            {closeError && (
+              <p className={styles.errorBanner} role="alert">
+                {closeError}
+              </p>
+            )}
+          </>
+        }
+      />
     </div>
   );
 };

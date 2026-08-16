@@ -39,6 +39,17 @@ export interface IUserRepository {
   findByEmail(email: string, tenantId: string): Promise<User | null>;
   findAnyByEmail(email: string): Promise<User | null>;
   findSuperAdminByEmail(email: string): Promise<User | null>;
+  /**
+   * How many platform administrators can still sign in — active and not
+   * soft-deleted.
+   *
+   * Exists for one question: "if this admin closes their account, is anyone
+   * left?" Counting rather than listing because that is the whole of what the
+   * caller needs, and the alternative (`findPlatformUsers` filtered by role)
+   * is paginated and capped, so it answers a different question than it
+   * appears to. See DeletePlatformAdminSelfUseCase.
+   */
+  countActivePlatformAdmins(): Promise<number>;
   create(user: User): Promise<User>;
   updatePassword(userId: string, hashedPassword: string): Promise<void>;
   findByTenantId(tenantId: string): Promise<User[]>;
@@ -57,7 +68,7 @@ export interface IUserRepository {
   updateRoleAndWarehouse(userId: string, role: string, warehouseId: string | null): Promise<void>;
   /**
    * Soft off-boarding. There is deliberately no `delete`: seven non-nullable
-   * columns reference User, so Postgres RESTRICT blocks removal outright and
+   * columns reference User, so the RESTRICT foreign keys block removal outright and
    * cascading would erase quotations, interactions and audit history.
    */
   setActive(userId: string, isActive: boolean): Promise<void>;

@@ -26,7 +26,9 @@ import {
   CURRENCY_OPTIONS,
   TIMEZONE_OPTIONS,
   LOCALE_LABELS,
+  DATE_FORMAT_LABELS,
 } from '../../constants/workspaceSettingsOptions';
+import { DATE_FORMATS } from '../../hooks/useTenantSettings';
 
 const mockNavItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -45,6 +47,7 @@ type FormState = Pick<
   | 'currency'
   | 'locale'
   | 'timezone'
+  | 'dateFormat'
   | 'defaultLanguage'
   | 'requiresQuotationApproval'
   | 'registrationNumber'
@@ -61,6 +64,7 @@ const EMPTY_FORM: FormState = {
   currency: 'USD',
   locale: 'en-US',
   timezone: 'UTC',
+  dateFormat: 'MM/DD/YYYY',
   defaultLanguage: 'en',
   requiresQuotationApproval: true,
   registrationNumber: '',
@@ -77,6 +81,7 @@ const toFormState = (settings: TenantSettings): FormState => ({
   currency: settings.currency,
   locale: settings.locale,
   timezone: settings.timezone,
+  dateFormat: settings.dateFormat,
   defaultLanguage: settings.defaultLanguage,
   requiresQuotationApproval: settings.requiresQuotationApproval,
   // Null means "never set". The inputs are controlled, so it becomes '' here
@@ -383,15 +388,12 @@ export const AccountSettingsPage = () => {
                   </div>
 
                   {/*
-                    Timezone is now genuinely consumed — it decides which day an
-                    instant belongs to on both the dashboard KPI and the calendar
-                    — so the control is live.
-
-                    Date Format is still NOT consumed: date ordering comes from
-                    the locale via Intl, and layering an explicit pattern on top
-                    would let the two disagree. It stays disabled with copy that
-                    says so, rather than becoming a setting that quietly does
-                    nothing. See TD-012.
+                    Timezone decides which day an instant belongs to on both the
+                    dashboard KPI and the calendar. Date Format decides the
+                    day/month/year ORDER everywhere a date is shown — it is now
+                    the source of truth for ordering (see useDateFormat and
+                    utils/dateFormatPattern.ts), resolving the disagreement that
+                    kept it disabled. See TD-012.
                   */}
                   <div className={styles.fieldGroup}>
                     <label className={styles.fieldLabel} htmlFor="timezoneSelect">
@@ -417,11 +419,21 @@ export const AccountSettingsPage = () => {
                   </div>
 
                   <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>{t('company.localization.dateFormatLabel')}</label>
-                    <select className={styles.nativeSelect} disabled value={saved?.dateFormat ?? 'MM/DD/YYYY'}>
-                      <option value={saved?.dateFormat ?? 'MM/DD/YYYY'}>{saved?.dateFormat ?? 'MM/DD/YYYY'}</option>
+                    <label className={styles.fieldLabel} htmlFor="dateFormatSelect">
+                      {t('company.localization.dateFormatLabel')}
+                    </label>
+                    <select
+                      id="dateFormatSelect"
+                      className={styles.nativeSelect}
+                      value={form.dateFormat}
+                      onChange={(e) => setField('dateFormat', e.target.value as FormState['dateFormat'])}
+                      disabled={!isBusinessOwner}
+                    >
+                      {DATE_FORMATS.map((f) => (
+                        <option key={f} value={f}>{DATE_FORMAT_LABELS[f]}</option>
+                      ))}
                     </select>
-                    <p className={styles.helperText}>{t('company.localization.dateFormatNotUsed')}</p>
+                    <p className={styles.helperText}>{t('company.localization.dateFormatHint')}</p>
                   </div>
                 </div>
               </Card>

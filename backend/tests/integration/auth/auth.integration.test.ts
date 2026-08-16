@@ -52,6 +52,13 @@ class InMemoryUserRepository implements IUserRepository {
   async findSuperAdminByEmail(email: string): Promise<User | null> {
     return this.users.find(u => u.email === email && u.role === UserRole.SUPER_ADMIN) ?? null;
   }
+  async countActivePlatformAdmins(): Promise<number> {
+    // Mirrors the Prisma implementation's filters: an admin who is suspended or
+    // soft-deleted cannot sign in, so neither counts as "someone is left".
+    return this.users.filter(
+      u => u.role === UserRole.SUPER_ADMIN && u.isActive && !u.deletedAt
+    ).length;
+  }
   async findPlatformUsers(filters: PlatformUserFilters): Promise<{ items: PlatformUserRow[]; total: number }> {
     // The platform console's cross-workspace listing. `tenantName` is null here
     // because this fake holds no tenants; the tests that exercise this endpoint

@@ -17,6 +17,7 @@ export class PrismaPublicQuotationReader implements IPublicQuotationReader {
             logoUrl: true,
             currency: true,
             locale: true,
+            dateFormat: true,
             addressLine: true,
             addressCity: true,
             addressState: true,
@@ -60,6 +61,7 @@ export class PrismaPublicQuotationReader implements IPublicQuotationReader {
       companyContactPhone: row.tenant.contactPhone,
       currency: row.tenant.currency,
       locale: row.tenant.locale,
+      dateFormat: row.tenant.dateFormat,
       lines,
       subtotal: lines.reduce((sum, l) => sum + l.lineTotal, 0),
     };

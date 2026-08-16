@@ -27,6 +27,8 @@ import { GetOwnershipTransferCandidatesUseCase } from '@auth/application/use-cas
 import { PlatformSuspendUserUseCase } from '@auth/application/use-cases/PlatformSuspendUserUseCase';
 import { PlatformReactivateUserUseCase } from '@auth/application/use-cases/PlatformReactivateUserUseCase';
 import { PlatformDeleteUserUseCase } from '@auth/application/use-cases/PlatformDeleteUserUseCase';
+import { CreatePlatformAdminUseCase } from '@auth/application/use-cases/CreatePlatformAdminUseCase';
+import { DeletePlatformAdminSelfUseCase } from '@auth/application/use-cases/DeletePlatformAdminSelfUseCase';
 import { PrismaOwnershipTransferRepository } from '@auth/infrastructure/repositories/PrismaOwnershipTransferRepository';
 import { PrismaOwnershipTransactions } from '@auth/infrastructure/PrismaOwnershipTransactions';
 import { PrismaAuditLogger } from '@shared/infrastructure/PrismaAuditLogger';
@@ -37,7 +39,7 @@ import { PrismaPasswordResetTokenRepository } from '@auth/infrastructure/reposit
 import { BcryptPasswordHasher } from '@auth/infrastructure/BcryptPasswordHasher';
 import { JwtTokenService } from '@auth/infrastructure/JwtTokenService';
 import { ConsoleEmailSender } from '@auth/infrastructure/ConsoleEmailSender';
-import { EmailJsSender } from '@auth/infrastructure/EmailJsSender';
+import { SmtpEmailSender } from '@auth/infrastructure/SmtpEmailSender';
 import { PrismaTenantProvisioningTransaction } from '@tenant/infrastructure/PrismaTenantProvisioningTransaction';
 import { CreateTenantWithOwnerUseCase } from '@tenant/application/use-cases/CreateTenantWithOwnerUseCase';
 import { SetTenantSubscriptionStatusUseCase } from '@tenant/application/use-cases/SetTenantSubscriptionStatusUseCase';
@@ -151,7 +153,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const prtRepository = overrides?.prtRepository ?? new PrismaPasswordResetTokenRepository();
   const passwordHasher = overrides?.passwordHasher ?? new BcryptPasswordHasher();
   const tokenService = overrides?.tokenService ?? new JwtTokenService();
-  const emailSender = overrides?.emailSender ?? new EmailJsSender();
+  const emailSender = overrides?.emailSender ?? new SmtpEmailSender();
   const tenantProvisioningTransaction =
     overrides?.tenantProvisioningTransaction ?? new PrismaTenantProvisioningTransaction();
   const platformSettingsRepository =
@@ -242,6 +244,15 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const platformDeleteUserUseCase = new PlatformDeleteUserUseCase(
     userRepository,
     ownershipTransactions,
+    auditLogger
+  );
+  const createPlatformAdminUseCase = new CreatePlatformAdminUseCase(
+    userRepository,
+    passwordHasher,
+    auditLogger
+  );
+  const deletePlatformAdminSelfUseCase = new DeletePlatformAdminSelfUseCase(
+    userRepository,
     auditLogger
   );
   const platformInviteUserUseCase = new PlatformInviteUserUseCase(
@@ -335,6 +346,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     suspendUserUseCase: platformSuspendUserUseCase,
     reactivateUserUseCase: platformReactivateUserUseCase,
     deleteUserUseCase: platformDeleteUserUseCase,
+    createPlatformAdminUseCase,
+    deletePlatformAdminSelfUseCase,
     bulkUpdateTenantSettingsUseCase,
     tokenService,
     emailSender,

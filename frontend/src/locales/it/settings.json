@@ -49,7 +49,7 @@
       "timezoneLabel": "Fuso orario",
       "dateFormatLabel": "Formato data",
       "timezoneHint": "Determina a quale giorno appartiene un appuntamento o un dato. Lo usano sia la dashboard sia il calendario, così concordano sempre.",
-      "dateFormatNotUsed": "L'ordine della data segue attualmente l'impostazione «Convenzioni per numeri e date» qui sopra. Non è ancora applicato uno schema esplicito."
+      "dateFormatHint": "Controlla l'ordine di giorno, mese e anno ovunque vengano mostrate le date nell'area di lavoro."
     },
     "language": {
       "title": "Lingua",

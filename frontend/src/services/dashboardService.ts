@@ -110,6 +110,21 @@ export interface CreatePlatformUserInput {
 }
 
 /**
+ * Appointing another platform administrator.
+ *
+ * No `role` and no workspace: both are fixed by what this is. A platform admin
+ * belongs to no tenant, which is exactly why this cannot go through
+ * `CreatePlatformUserInput` above — that one names a workspace to create the
+ * account in.
+ */
+export interface CreatePlatformAdminInput {
+  email: string;
+  password: string;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+/**
  * A Platform Admin inviting someone into a workspace by email — the third way
  * to become a Business Owner, next to being promoted from staff and being
  * invited by an existing owner. Adds an owner; a workspace may have several.
@@ -371,6 +386,33 @@ export const dashboardService = {
    */
   deleteUser: async (userId: string, confirmEmail: string, newOwnerId?: string): Promise<void> => {
     await apiClient.delete(`/tenants/users/${userId}`, { data: { confirmEmail, newOwnerId } });
+  },
+
+  /**
+   * Appoint another platform administrator.
+   *
+   * Not `createPlatformUser` with a different role: that one posts into a
+   * workspace (`/tenants/:id/users`) and a platform admin belongs to none, so
+   * there is no id to address it to. The server refuses SUPER_ADMIN on that
+   * route regardless.
+   */
+  createPlatformAdmin: async (input: CreatePlatformAdminInput): Promise<PlatformUser> => {
+    const response = await apiClient.post<{ user: PlatformUser }>(
+      `/tenants/platform-admins`,
+      input
+    );
+    return response.data.user;
+  },
+
+  /**
+   * Close YOUR OWN platform admin account. There is no id — the server always
+   * targets the caller, so no admin can remove another this way.
+   *
+   * Responds 409 `LAST_PLATFORM_ADMIN` when no other admin would remain, which
+   * is the condition the profile page checks before enabling its control.
+   */
+  deleteOwnPlatformAdmin: async (confirmEmail: string): Promise<void> => {
+    await apiClient.delete(`/tenants/platform-admins/me`, { data: { confirmEmail } });
   },
 
   /**
