@@ -1,20 +1,5 @@
-/*
- * PostgreSQL is the active schema, and the one `prisma/migrations` is written
- * for — every migration in that folder emits `TIMESTAMP(3)`, `JSONB` and
- * double-quoted identifiers, so `prisma migrate deploy` only ever worked here.
- *
- * `schema.mysql.prisma` beside this file is the hand-maintained MySQL mirror
- * used by the Hostinger deployment, which is provisioned from
- * `nevacrm_full_import.sql` rather than from the migration history. The two
- * now differ ONLY in the `@db.Text` annotations MySQL needs for long strings —
- * the four array-shaped columns (tags, options, emailEventTypes,
- * emailRecipientRoles) are `Json` on both sides on purpose, so the
- * application code has exactly one shape to handle instead of branching per
- * provider. Any model change must be made in both, or the deployment drifts
- * from what the code expects.
- */
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -44,8 +29,8 @@ model Tenant {
   urlSlug                   String  @unique
   requiresQuotationApproval Boolean @default(true)
   // Workspace branding, surfaced in the sidebar, settings and customer-facing pages.
-  logoUrl                   String?
-  coverImageUrl             String?
+  logoUrl                   String? @db.Text
+  coverImageUrl             String? @db.Text
 
   // Company profile. Like the branding URLs above, these are presentation-only
   // and are read straight from Prisma rather than through the Tenant entity.
@@ -114,29 +99,17 @@ model Tenant {
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
-/// it is PROVISIONED — never retroactively to an existing tenant. See
-/// EnterTenantUseCase's sibling, CreateTenantWithOwnerUseCase, which reads this
-/// row (falling back to PlatformSettings.defaults() if it has never been saved)
-/// when building a new Tenant.
-///
-/// Deliberately NOT a live default that existing tenants keep following: a
-/// workspace's own settings, once created, are that workspace's property, and
-/// changing this row must never silently move a paying customer's currency or
-/// timezone out from under them. Reaching an existing tenant is a separate,
-/// explicit action — the platform console's per-tenant bulk apply — not a side
-/// effect of editing this row.
-///
-/// A genuine singleton: exactly one row, `id` fixed at 'platform' by
-/// convention (see PrismaPlatformSettingsRepository) rather than modelled with
-/// no primary key at all, so `upsert` has a stable target.
+/// it is PROVISIONED — never retroactively to an existing tenant. See the
+/// Postgres schema for the full rationale; this model must stay in step with
+/// it field-for-field.
 model PlatformSettings {
-  id                        String  @id @default("platform")
-  requiresQuotationApproval Boolean @default(true)
-  currency                  String  @default("USD")
-  locale                    String  @default("en-US")
-  timezone                  String  @default("UTC")
-  dateFormat                String  @default("MM/DD/YYYY")
-  defaultLanguage           String  @default("en")
+  id                        String   @id @default("platform")
+  requiresQuotationApproval Boolean  @default(true)
+  currency                  String   @default("USD")
+  locale                    String   @default("en-US")
+  timezone                  String   @default("UTC")
+  dateFormat                String   @default("MM/DD/YYYY")
+  defaultLanguage           String   @default("en")
   updatedAt                 DateTime @updatedAt
 }
 
@@ -163,9 +136,6 @@ model NotificationSettings {
   /// Stored as strings rather than a Prisma enum for the same reason
   /// NotificationType is a TS const array: adding a type must not require a
   /// migration, and an unknown value here is inert rather than fatal.
-  /// Json rather than a native array: MySQL (the Hostinger production target)
-  /// has no array column type, so both providers store this as JSON and the
-  /// application code has exactly one shape to deal with instead of two.
   emailEventTypes Json @default("[]")
 
   /// Which roles receive event email. A workspace can keep owners informed by
@@ -204,19 +174,16 @@ model User {
   // Client.lastUpdatedByUserId, ...), so RESTRICT blocks it and cascading would
   // destroy financial and audit history. Same reasoning as ProductInUseError.
   isActive       Boolean  @default(true)
-  // Platform Admin soft-delete. Set together with isActive=false, but distinct
-  // from ordinary suspension: a deleted user's email/name/phone are also
-  // anonymized (see DeleteUserUseCase), and there is no route back from this —
-  // unlike suspension, which reactivation reverses. The row survives, never
-  // hard-deleted, for the same seven-FK-RESTRICT reason isActive does.
+  // Platform Admin soft-delete. See the Postgres schema for the full rationale;
+  // this model must stay in step with it field-for-field.
   deletedAt      DateTime?
   // Interface language override. NULL means "follow the workspace default" —
   // distinct from having explicitly chosen English.
   language       String?
   // Profile media. Store the public URL of the canonical (1x) asset; the
   // responsive variants are derived from it by convention (see MediaService).
-  avatarUrl      String?
-  coverImageUrl  String?
+  avatarUrl      String?  @db.Text
+  coverImageUrl  String?  @db.Text
   tenantId       String?
   createdAt      DateTime @default(now())
 
@@ -240,27 +207,16 @@ model User {
   ownershipTransfersAsActingOwner   OwnershipTransfer[] @relation("OwnershipTransferActingOwner")
 }
 
-/// Records a temporary Business-Owner promotion created when a Platform Admin
-/// suspends a Business Owner who still has active staff (see SuspendUserUseCase).
-/// Reactivation reads the ACTIVE row to offer "restore original ownership",
-/// "keep current ownership" or "keep both as Business Owners"
-/// (PlatformReactivateUserUseCase), then resolves it to RESTORED, KEPT or
-/// KEPT_BOTH — a terminal state, never reused. KEPT_BOTH demotes nobody: a
-/// workspace may have any number of Business Owners.
-///
-/// Only created for suspension. A Business Owner deletion that transfers
-/// ownership is permanent by construction (the original owner is gone), so it
-/// has no row here — just an AuditLog entry.
+/// See the Postgres schema for the full rationale; this model must stay in
+/// step with it field-for-field.
 model OwnershipTransfer {
   id                        String    @id
   tenantId                  String
   originalOwnerId           String
   actingOwnerId             String
-  // The acting owner's role/warehouse before promotion, so "restore" can put
-  // them back exactly where they were.
   previousActingRole        String
   previousActingWarehouseId String?
-  status                    String    // 'ACTIVE' | 'RESTORED' | 'KEPT' | 'KEPT_BOTH'
+  status                    String
   createdAt                 DateTime  @default(now())
   createdByUserId           String
   resolvedAt                DateTime?
@@ -274,16 +230,14 @@ model OwnershipTransfer {
   @@index([actingOwnerId, status])
 }
 
-/// Append-only record of platform-administrative actions. Deliberately has no
-/// foreign keys: an audit trail must survive the very rows it describes (a
-/// soft-deleted user's history should not become unreadable), so actor/target
-/// ids are plain strings rather than relations.
+/// See the Postgres schema for the full rationale; this model must stay in
+/// step with it field-for-field.
 model AuditLog {
   id          String   @id
   actorUserId String
   actorRole   String
-  action      String   // e.g. 'USER_SUSPENDED', 'USER_REACTIVATED', 'USER_DELETED', 'USER_INVITED', 'OWNERSHIP_TRANSFERRED'
-  targetType  String   // 'USER'
+  action      String
+  targetType  String
   targetId    String
   tenantId    String?
   metadata    Json?
@@ -355,8 +309,6 @@ model CustomFieldDefinition {
   // list is src/clients/domain/enums/FieldType.ts and adding a value needs no
   // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, SINGLE_SELECT.
   fieldType String
-  // Json rather than a native array: MySQL (the Hostinger production target)
-  // has no array column type, so both providers store this as JSON.
   options   Json @default("[]") // for SINGLE_SELECT
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
@@ -380,7 +332,7 @@ model Interaction {
   tenantId          String
   clientId          String
   authorUserId      String
-  content           String
+  content           String   @db.Text
   channel           String // 'MEETING', 'CALL', 'NOTE', 'EMAIL'
   outcomeCategoryId String?
   createdAt         DateTime @default(now())
@@ -401,7 +353,7 @@ model Appointment {
   assignedUserId String
   scheduledAt    DateTime
   status         String // 'SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED'
-  notes          String?
+  notes          String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -491,8 +443,6 @@ model Product {
   price             Float
   // Unit cost. Nullable because a catalogue can be priced before it is costed.
   cost              Float?
-  // Json rather than a native array: MySQL (the Hostinger production target)
-  // has no array column type, so both providers store this as JSON.
   tags              Json     @default("[]")
   lowStockThreshold Int      @default(10)
   // Archived products stay queryable (quotations reference them) but drop out
@@ -520,8 +470,8 @@ model ProductImage {
   tenantId  String
   productId String
   // Public URL of the @1x rendition; @2x is derived by naming convention.
-  url       String
-  url2x     String
+  url       String   @db.Text
+  url2x     String   @db.Text
   width     Int
   height    Int
   bytes     Int
@@ -560,7 +510,7 @@ model StockMovement {
   toWarehouseId   String? // Used for TRANSFER
   quantity        Int
   type            String // 'ADJUSTMENT', 'TRANSFER'
-  reason          String?
+  reason          String?  @db.Text
   createdBy       String
   createdAt       DateTime @default(now())
 
@@ -663,7 +613,7 @@ model QuotationStatusHistory {
   /// table where every other row can authenticate. NULL says exactly what
   /// happened.
   changedByUserId String?
-  note            String?
+  note            String?  @db.Text
   createdAt       DateTime @default(now())
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
@@ -749,7 +699,7 @@ model InvoiceStatusHistory {
   /// convention as QuotationStatusHistory.changedByUserId, for the same
   /// reason: automatic overdue detection has no acting user.
   changedByUserId String?
-  note            String?
+  note            String?  @db.Text
   createdAt       DateTime @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)

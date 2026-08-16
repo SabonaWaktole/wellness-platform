@@ -73,8 +73,7 @@ export class CreateTenantWithOwnerUseCase {
          * The slug check runs INSIDE the transaction, unlike the original,
          * which checked before opening one. That does not by itself make the
          * check race-free — two concurrent transactions can both read "free"
-         * under InnoDB's default REPEATABLE READ, whose non-locking reads each
-         * see their own consistent snapshot — but the unique index on
+         * under Postgres' default READ COMMITTED — but the unique index on
          * urlSlug is the actual guarantee, and the catch below turns the
          * resulting constraint violation into the same domain error. So the
          * loser of a race now gets `SlugAlreadyTakenError` rather than a raw

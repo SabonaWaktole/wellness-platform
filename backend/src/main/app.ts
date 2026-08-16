@@ -39,7 +39,7 @@ import { PrismaPasswordResetTokenRepository } from '@auth/infrastructure/reposit
 import { BcryptPasswordHasher } from '@auth/infrastructure/BcryptPasswordHasher';
 import { JwtTokenService } from '@auth/infrastructure/JwtTokenService';
 import { ConsoleEmailSender } from '@auth/infrastructure/ConsoleEmailSender';
-import { SmtpEmailSender } from '@auth/infrastructure/SmtpEmailSender';
+import { EmailJsSender } from '@auth/infrastructure/EmailJsSender';
 import { PrismaTenantProvisioningTransaction } from '@tenant/infrastructure/PrismaTenantProvisioningTransaction';
 import { CreateTenantWithOwnerUseCase } from '@tenant/application/use-cases/CreateTenantWithOwnerUseCase';
 import { SetTenantSubscriptionStatusUseCase } from '@tenant/application/use-cases/SetTenantSubscriptionStatusUseCase';
@@ -153,7 +153,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const prtRepository = overrides?.prtRepository ?? new PrismaPasswordResetTokenRepository();
   const passwordHasher = overrides?.passwordHasher ?? new BcryptPasswordHasher();
   const tokenService = overrides?.tokenService ?? new JwtTokenService();
-  const emailSender = overrides?.emailSender ?? new SmtpEmailSender();
+  const emailSender = overrides?.emailSender ?? new EmailJsSender();
   const tenantProvisioningTransaction =
     overrides?.tenantProvisioningTransaction ?? new PrismaTenantProvisioningTransaction();
   const platformSettingsRepository =

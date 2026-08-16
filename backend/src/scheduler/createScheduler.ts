@@ -7,7 +7,7 @@ import { InvoiceOverdueJob } from './jobs/InvoiceOverdueJob';
 
 import { PrismaUserRepository } from '../auth/infrastructure/repositories/PrismaUserRepository';
 import { PrismaTenantRepository } from '../tenant/infrastructure/repositories/PrismaTenantRepository';
-import { SmtpEmailSender } from '../auth/infrastructure/SmtpEmailSender';
+import { EmailJsSender } from '../auth/infrastructure/EmailJsSender';
 import { PrismaNotificationRepository } from '../notifications/infrastructure/PrismaNotificationRepository';
 import { PrismaNotificationSettingsRepository } from '../notifications/infrastructure/PrismaNotificationSettingsRepository';
 import { NotificationService } from '../notifications/application/NotificationService';
@@ -40,7 +40,7 @@ export function createScheduler(): Scheduler {
     settingsRepository,
     userRepository,
     tenantRepository,
-    new SmtpEmailSender(),
+    new EmailJsSender(),
     new NotificationEmailComposer(appUrl)
   );
 
