@@ -40,7 +40,7 @@ export class NotificationEmailComposer {
 
     return {
       subject: `${subject} — ${input.tenantName}`,
-      html: this.wrap(subject, body, link, input.tenantName),
+      html: this.wrap(subject, body, link, input.tenantName, input.entityType),
     };
   }
 
@@ -143,13 +143,33 @@ export class NotificationEmailComposer {
     return path ? `${this.appUrl}/${tenantSlug}/${path}` : null;
   }
 
-  private wrap(heading: string, body: string, link: string | null, tenantName: string): string {
+  private wrap(
+    heading: string,
+    body: string,
+    link: string | null,
+    tenantName: string,
+    entityType: string | null
+  ): string {
     return renderEmailLayout({
       preheader: heading,
+      eyebrow: this.eyebrowFor(entityType),
       heading: esc(heading),
       bodyHtml: `<p>${body}</p>`,
       cta: link ? { label: 'Open in NevaCRM', url: link } : undefined,
       footerNote: `You are receiving this because notification email is switched on for ${esc(tenantName)}. A Business Owner can change that under Settings → Notifications.`,
     });
+  }
+
+  private eyebrowFor(entityType: string | null): string {
+    switch (entityType) {
+      case 'QUOTATION':
+        return 'Quotation';
+      case 'APPOINTMENT':
+        return 'Appointment';
+      case 'CLIENT':
+        return 'Client';
+      default:
+        return 'Notification';
+    }
   }
 }

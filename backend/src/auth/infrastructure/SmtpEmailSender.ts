@@ -49,16 +49,19 @@ export class SmtpEmailSender implements IEmailSender {
 
     const bodyHtml = `
       <p>A workspace has been created for you on NevaCRM. Here are your login details:</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 12px; border-collapse: collapse; width: 100%;">
-        <tr><td style="padding: 6px 12px 6px 0; color: #6b7280;">Workspace</td><td style="padding: 6px 0;"><strong>${escapeHtml(params.companyName)}</strong></td></tr>
-        <tr><td style="padding: 6px 12px 6px 0; color: #6b7280;">Workspace URL</td><td style="padding: 6px 0;"><strong>${escapeHtml(params.urlSlug)}</strong></td></tr>
-        <tr><td style="padding: 6px 12px 6px 0; color: #6b7280;">Email</td><td style="padding: 6px 0;"><strong>${escapeHtml(to)}</strong></td></tr>
-        <tr><td style="padding: 6px 12px 6px 0; color: #6b7280;">Password</td><td style="padding: 6px 0;"><strong>${escapeHtml(params.ownerPassword)}</strong></td></tr>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 14px; width: 100%; background-color:#f7f8fc; border:1px solid #eceef3; border-radius: 10px;">
+        <tr><td style="padding: 12px 16px 4px 16px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.04em;">Workspace</td></tr>
+        <tr><td style="padding: 0 16px 12px 16px; font-size:15px; font-weight:600; color:#1a1d29;">${escapeHtml(params.companyName)} <span style="font-weight:400; color:#6b7280;">(${escapeHtml(params.urlSlug)})</span></td></tr>
+        <tr><td style="padding: 0 16px 4px 16px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.04em;">Email</td></tr>
+        <tr><td style="padding: 0 16px 12px 16px; font-size:15px; font-weight:600; color:#1a1d29;">${escapeHtml(to)}</td></tr>
+        <tr><td style="padding: 0 16px 4px 16px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.04em;">Password</td></tr>
+        <tr><td style="padding: 0 16px 16px 16px; font-size:15px; font-weight:600; color:#1a1d29; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">${escapeHtml(params.ownerPassword)}</td></tr>
       </table>
     `;
 
     const html = renderEmailLayout({
       preheader: 'Your NevaCRM workspace is ready',
+      eyebrow: 'New Workspace',
       heading: 'Your workspace is ready',
       bodyHtml,
       cta: { label: 'Log in to your workspace', url: loginUrl },
@@ -79,6 +82,7 @@ export class SmtpEmailSender implements IEmailSender {
 
     const html = renderEmailLayout({
       preheader: `You've been invited to join ${tenantName} on NevaCRM`,
+      eyebrow: 'Team Invitation',
       heading: `You're invited to join ${safeTenantName}`,
       bodyHtml,
       cta: { label: 'Accept Invitation', url: inviteLink },
@@ -98,6 +102,7 @@ export class SmtpEmailSender implements IEmailSender {
 
     const html = renderEmailLayout({
       preheader: 'Reset your NevaCRM password',
+      eyebrow: 'Password Reset',
       heading: 'Reset your password',
       bodyHtml,
       cta: { label: 'Reset Password', url: resetLink },

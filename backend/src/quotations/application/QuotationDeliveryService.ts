@@ -50,6 +50,7 @@ export class QuotationDeliveryService implements IQuotationDeliveryService {
       `;
       const html = renderEmailLayout({
         preheader: `${view.companyName} sent you quotation ${view.reference}`,
+        eyebrow: 'Quotation',
         heading: `Quotation ${escapeHtml(view.reference)}`,
         bodyHtml,
         cta: { label: 'View quotation', url },
