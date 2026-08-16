@@ -62,7 +62,7 @@ export const AcceptInvitationPage: React.FC = () => {
         <div style={{ textAlign: 'center' }}>
           <h3 style={{ color: 'var(--color-primary)', marginBottom: '16px' }}>{t('acceptInvitation.accepted')}</h3>
           <p style={{ marginBottom: '24px' }}>Your account has been created successfully.</p>
-          <Button variant="primary" onClick={() => navigate(acceptedTenantSlug ? `/${acceptedTenantSlug}/login` : '/login')} fullWidth>
+          <Button variant="primary" onClick={() => navigate('/login')} fullWidth>
             {t('goToLogin')}
           </Button>
         </div>

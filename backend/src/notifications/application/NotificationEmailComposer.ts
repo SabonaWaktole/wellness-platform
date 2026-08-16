@@ -1,4 +1,5 @@
 import { NotificationType, NotificationParams } from '../domain/NotificationType';
+import { renderEmailLayout, escapeHtml as esc } from '../../shared/email/emailLayout';
 
 export interface ComposedEmail {
   subject: string;
@@ -143,36 +144,12 @@ export class NotificationEmailComposer {
   }
 
   private wrap(heading: string, body: string, link: string | null, tenantName: string): string {
-    return `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #4F46E5;">${esc(heading)}</h2>
-        <p>${body}</p>
-        ${
-          link
-            ? `<a href="${esc(link)}" style="display: inline-block; background-color: #4F46E5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px;">Open in NevaCRM</a>`
-            : ''
-        }
-        <p style="margin-top: 24px; font-size: 12px; color: #999;">
-          You are receiving this because notification email is switched on for ${esc(tenantName)}.
-          A Business Owner can change that under Settings → Notifications.
-        </p>
-      </div>
-    `;
+    return renderEmailLayout({
+      preheader: heading,
+      heading: esc(heading),
+      bodyHtml: `<p>${body}</p>`,
+      cta: link ? { label: 'Open in NevaCRM', url: link } : undefined,
+      footerNote: `You are receiving this because notification email is switched on for ${esc(tenantName)}. A Business Owner can change that under Settings → Notifications.`,
+    });
   }
-}
-
-/**
- * Escapes interpolated values.
- *
- * Every value reaching these templates is tenant-authored — client names,
- * quotation references, member names — so it is untrusted input being placed
- * into HTML that lands in someone's inbox.
- */
-function esc(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
