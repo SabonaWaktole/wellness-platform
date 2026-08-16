@@ -86,6 +86,32 @@ describe('AcceptInvitationUseCase', () => {
     expect(invitationRepository.markAccepted).toHaveBeenCalledWith('inv-1', expect.any(Date));
   });
 
+  it('should accept a Platform Admin invitation without a tenant', async () => {
+    const invitation = Invitation.create({
+      id: 'inv-2',
+      tenantId: null,
+      email: 'newadmin@example.com',
+      role: UserRole.SUPER_ADMIN,
+      token: 'admin-token',
+      expiresAt: new Date(Date.now() + 86400000),
+      acceptedAt: null,
+    });
+
+    invitationRepository.findByToken.mockResolvedValue(invitation);
+    passwordHasher.hash.mockResolvedValue('hashed-pass');
+    userRepository.create.mockImplementation(async (user) => user);
+
+    const result = await useCase.execute({
+      token: 'admin-token',
+      newPassword: 'StrongPassword123!',
+    });
+
+    expect(result.user.role).toBe(UserRole.SUPER_ADMIN);
+    expect(result.user.tenantId).toBeNull();
+    expect(result.tenantSlug).toBeUndefined();
+    expect(tenantRepository.findById).not.toHaveBeenCalled();
+  });
+
   it('should throw InvitationExpiredError if token is expired', async () => {
     const invitation = Invitation.create({
       id: 'inv-1',

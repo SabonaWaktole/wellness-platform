@@ -119,6 +119,14 @@
   gap: var(--spacing-sm);
 }
 
+/* Import control and "Add field" sit together, wrapping on narrow screens. */
+.sectionActions {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
 .sectionTitle {
   font-family: var(--font-family-display);
   font-size: var(--font-size-headline-sm);

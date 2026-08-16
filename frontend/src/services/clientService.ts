@@ -7,7 +7,8 @@ import type {
   OutcomeCategory,
   ClientHistory,
   Interaction,
-  ClientStatus
+  ClientStatus,
+  ImportResult
 } from '../types/client';
 
 export const clientService = {
@@ -48,6 +49,43 @@ export const clientService = {
 
   defineCustomField: async (tenantSlug: string, data: { fieldName: string; fieldType: string; isRequired?: boolean }) => {
     const response = await apiClient.post<CustomFieldDefinition>(`/${tenantSlug}/clients/settings/custom-fields`, data);
+    return response.data;
+  },
+
+  /**
+   * Spreadsheets are parsed server-side, so the browser only ships the raw
+   * file — no CSV/Excel dependency is needed in the bundle.
+   */
+  importCustomFields: async (tenantSlug: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<ImportResult>(
+      `/${tenantSlug}/clients/settings/custom-fields/import`,
+      formData
+    );
+    return response.data;
+  },
+
+  importClients: async (tenantSlug: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<ImportResult>(`/${tenantSlug}/clients/import`, formData);
+    return response.data;
+  },
+
+  downloadCustomFieldTemplate: async (tenantSlug: string) => {
+    const response = await apiClient.get<Blob>(
+      `/${tenantSlug}/clients/settings/custom-fields/template`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  /** Headers follow the tenant's current custom fields, so this is fetched fresh. */
+  downloadClientTemplate: async (tenantSlug: string) => {
+    const response = await apiClient.get<Blob>(`/${tenantSlug}/clients/import/template`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 

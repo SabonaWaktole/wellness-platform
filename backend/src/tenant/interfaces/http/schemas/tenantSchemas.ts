@@ -22,25 +22,6 @@ export const tenantSchemas = {
   }),
 
   /**
-   * Super Admin creating a user inside an existing workspace, from the platform
-   * console rather than from inside that workspace.
-   *
-   * `SUPER_ADMIN` is absent from the role enum on purpose, and not only as
-   * defence in depth: the platform role belongs to no workspace, so creating one
-   * "in" a tenant is not a request that can be honoured. `CreateUserUseCase`
-   * rejects it too, for callers that never pass through this schema.
-   */
-  createUser: z.object({
-    email: z.string().email(),
-    password: z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
-    role: z.enum(['STAFF', 'BUSINESS_OWNER']),
-    firstName: z.string().min(1).optional().nullable(),
-    lastName: z.string().min(1).optional().nullable(),
-    phone: z.string().optional().nullable(),
-    warehouseId: z.string().optional().nullable(),
-  }),
-
-  /**
    * Super Admin permanently deleting a workspace. `confirmSlug` must equal
    * the workspace's own `urlSlug`, checked again in `DeleteTenantUseCase`
    * against the real record — this only guards against an empty or
@@ -77,12 +58,23 @@ export const tenantSchemas = {
    *
    * The role defaults to BUSINESS_OWNER because that is what this endpoint is
    * for; STAFF stays available so the console does not need a near-identical
-   * second endpoint to invite a team member. `SUPER_ADMIN` is absent for the
-   * same reason it is absent from `createUser` above.
+   * second endpoint to invite a team member. `SUPER_ADMIN` is absent because a
+   * platform admin belongs to no workspace — see `invitePlatformAdmin` below
+   * for that flow instead.
    */
   inviteUser: z.object({
     email: z.string().email(),
     role: z.enum(['BUSINESS_OWNER', 'STAFF']).default('BUSINESS_OWNER'),
+  }),
+
+  /**
+   * Super Admin inviting another Platform Admin by email — the tenant-less
+   * counterpart to `inviteUser`. No `role` and no `tenantId`: the role is
+   * fixed to SUPER_ADMIN and a platform admin belongs to no workspace, so
+   * accepting either field would invite a caller to think they could vary it.
+   */
+  invitePlatformAdmin: z.object({
+    email: z.string().email(),
   }),
 
   /**
@@ -94,22 +86,6 @@ export const tenantSchemas = {
   deleteUser: z.object({
     confirmEmail: z.string().min(1),
     newOwnerId: z.string().optional(),
-  }),
-
-  /**
-   * One platform administrator appointing another.
-   *
-   * No `role` and no `tenantId`: both are fixed by what this endpoint is. The
-   * role is SUPER_ADMIN by definition, and a platform admin belongs to no
-   * workspace — accepting either field would invite a caller to think they
-   * could vary it. Same password floor as every other account-creating schema
-   * here.
-   */
-  createPlatformAdmin: z.object({
-    email: z.string().email(),
-    password: z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
-    firstName: z.string().min(1).optional().nullable(),
-    lastName: z.string().min(1).optional().nullable(),
   }),
 
   /**

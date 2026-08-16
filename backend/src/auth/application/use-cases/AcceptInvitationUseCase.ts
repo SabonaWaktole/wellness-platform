@@ -41,7 +41,8 @@ export class AcceptInvitationUseCase {
     await this.userRepository.create(user);
     await this.invitationRepository.markAccepted(invitation.id, new Date());
 
-    const tenant = await this.tenantRepository.findById(invitation.tenantId);
+    // Null for a Platform Admin invitation, which belongs to no workspace.
+    const tenant = invitation.tenantId ? await this.tenantRepository.findById(invitation.tenantId) : null;
 
     /*
      * Tells the person who sent the invitation that it landed.
@@ -53,8 +54,10 @@ export class AcceptInvitationUseCase {
      *
      * The actor is the new user, who has just been created and is active, and
      * is never the recipient, so no self-notification is possible here.
+     * Skipped entirely for a Platform Admin invitation: notifications are
+     * tenant-scoped and there is no workspace to emit one into.
      */
-    if (invitation.invitedByUserId) {
+    if (invitation.invitedByUserId && invitation.tenantId) {
       await this.notifications?.emitSafe({
         tenantId: invitation.tenantId,
         recipientUserIds: [invitation.invitedByUserId],

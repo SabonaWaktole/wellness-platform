@@ -54,7 +54,7 @@ export const findPersonById = <T extends { id: string }>(
   id: string | null | undefined
 ): T | undefined => (id ? people?.find(p => p.id === id) : undefined);
 
-export const getUserFirstName = (user: User | null, fallback = 'Alex'): string => {
+export const getUserFirstName = (user: User | null, fallback = 'User'): string => {
   if (!user) return fallback;
   if (user.firstName) return user.firstName;
   return fallback;

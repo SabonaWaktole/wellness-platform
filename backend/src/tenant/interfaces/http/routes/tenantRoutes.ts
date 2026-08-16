@@ -14,14 +14,12 @@ import {
   TenantSuspendedError,
   ConfirmationMismatchError,
 } from '../../../domain/errors';
-import { CreateUserUseCase } from '../../../../auth/application/use-cases/CreateUserUseCase';
 import { GetPlatformUsersUseCase } from '../../../../auth/application/use-cases/GetPlatformUsersUseCase';
 import { PlatformInviteUserUseCase } from '../../../../auth/application/use-cases/PlatformInviteUserUseCase';
 import { GetOwnershipTransferCandidatesUseCase } from '../../../../auth/application/use-cases/GetOwnershipTransferCandidatesUseCase';
 import { PlatformSuspendUserUseCase } from '../../../../auth/application/use-cases/PlatformSuspendUserUseCase';
 import { PlatformReactivateUserUseCase } from '../../../../auth/application/use-cases/PlatformReactivateUserUseCase';
 import { PlatformDeleteUserUseCase } from '../../../../auth/application/use-cases/PlatformDeleteUserUseCase';
-import { CreatePlatformAdminUseCase } from '../../../../auth/application/use-cases/CreatePlatformAdminUseCase';
 import { DeletePlatformAdminSelfUseCase } from '../../../../auth/application/use-cases/DeletePlatformAdminSelfUseCase';
 import { User } from '../../../../auth/domain/entities/User';
 import { BulkUpdateTenantSettingsUseCase } from '../../../../settings/application/use-cases/BulkUpdateTenantSettingsUseCase';
@@ -92,14 +90,12 @@ export interface TenantRouterDeps {
   reactivateTenantUseCase: SetTenantSubscriptionStatusUseCase;
   enterTenantUseCase: EnterTenantUseCase;
   deleteTenantUseCase: DeleteTenantUseCase;
-  createUserUseCase: CreateUserUseCase;
   inviteUserUseCase: PlatformInviteUserUseCase;
   getPlatformUsersUseCase: GetPlatformUsersUseCase;
   getOwnershipTransferCandidatesUseCase: GetOwnershipTransferCandidatesUseCase;
   suspendUserUseCase: PlatformSuspendUserUseCase;
   reactivateUserUseCase: PlatformReactivateUserUseCase;
   deleteUserUseCase: PlatformDeleteUserUseCase;
-  createPlatformAdminUseCase: CreatePlatformAdminUseCase;
   deletePlatformAdminSelfUseCase: DeletePlatformAdminSelfUseCase;
   bulkUpdateTenantSettingsUseCase: BulkUpdateTenantSettingsUseCase;
   tokenService: ITokenService;
@@ -119,14 +115,12 @@ export function createTenantRouter(deps: TenantRouterDeps): Router {
     reactivateTenantUseCase,
     enterTenantUseCase,
     deleteTenantUseCase,
-    createUserUseCase,
     inviteUserUseCase,
     getPlatformUsersUseCase,
     getOwnershipTransferCandidatesUseCase,
     suspendUserUseCase,
     reactivateUserUseCase,
     deleteUserUseCase,
-    createPlatformAdminUseCase,
     deletePlatformAdminSelfUseCase,
     bulkUpdateTenantSettingsUseCase,
     tokenService,
@@ -461,20 +455,16 @@ export function createTenantRouter(deps: TenantRouterDeps): Router {
   };
 
   /**
-   * SUPER_ADMIN only: appoint another platform administrator.
-   *
-   * Separate from `POST /:id/users` because that route creates an account
-   * INSIDE a workspace, and a platform admin belongs to none — there is no
-   * `:id` to address this to. `CreateUserUseCase` still refuses the
-   * SUPER_ADMIN role outright, so this endpoint is the single way the role is
-   * ever granted through the API, and only an existing holder can reach it.
+   * SUPER_ADMIN only: invite another platform administrator by email — the
+   * tenant-less counterpart to `POST /:id/invitations` below. There is no
+   * `:id` to address this to, since a platform admin belongs to no workspace.
    *
    * Declared before the `/:id/...` routes below for the same ordering reason
-   * `/users` is.
+   * `/:id/invitations` is.
    */
   router.post(
-    '/platform-admins',
-    validateRequest(tenantSchemas.createPlatformAdmin),
+    '/platform-admins/invitations',
+    validateRequest(tenantSchemas.invitePlatformAdmin),
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const callerRole = callerRoleOf(req);
@@ -482,20 +472,25 @@ export function createTenantRouter(deps: TenantRouterDeps): Router {
           return res.status(401).json({ error: 'Access denied. No token provided.' });
         }
 
-        const user = await createPlatformAdminUseCase.execute({
+        const invitation = await inviteUserUseCase.execute({
           callerRole,
           callerId: req.user.userId,
           email: req.body.email,
-          password: req.body.password,
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
+          role: UserRole.SUPER_ADMIN,
         });
 
-        // `{ user }`, matching POST /:id/users — the console's create paths
-        // should not need to remember which one unwraps and which does not.
-        res.status(201).json({ user });
+        res.status(201).json({ invitation: { email: invitation.email, role: invitation.role } });
       } catch (error) {
-        handleUserLifecycleError(error, res, next);
+        if (error instanceof EmailAlreadyInUseError) {
+          return res.status(409).json({ error: error.message, code: 'EMAIL_IN_USE' });
+        }
+        if (error instanceof InvitationAlreadyPendingError) {
+          return res.status(409).json({ error: error.message, code: 'INVITATION_ALREADY_PENDING' });
+        }
+        if (error instanceof UnauthorizedError) {
+          return res.status(403).json({ error: error.message });
+        }
+        next(error);
       }
     }
   );
@@ -684,47 +679,6 @@ export function createTenantRouter(deps: TenantRouterDeps): Router {
         });
 
         res.json(result);
-      } catch (error) {
-        if (error instanceof UnauthorizedError) {
-          return res.status(403).json({ error: error.message });
-        }
-        next(error);
-      }
-    }
-  );
-
-  /**
-   * SUPER_ADMIN only: create a user directly inside a workspace, credentials
-   * included, without entering that workspace first.
-   *
-   * The in-workspace equivalent is POST /api/:tenantSlug/auth/users, which a
-   * BUSINESS_OWNER uses for their own staff. Both run `CreateUserUseCase`, which
-   * is where the "who may create which role, where" rules actually live.
-   */
-  router.post(
-    '/:id/users',
-    validateRequest(tenantSchemas.createUser),
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const callerRole = callerRoleOf(req);
-        if (!callerRole) {
-          return res.status(401).json({ error: 'Access denied. No token provided.' });
-        }
-
-        const user = await createUserUseCase.execute({
-          callerRole,
-          callerTenantId: req.user!.tenantId,
-          tenantId: String(req.params.id),
-          email: req.body.email,
-          password: req.body.password,
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          phone: req.body.phone,
-          role: req.body.role,
-          warehouseId: req.body.warehouseId,
-        });
-
-        res.status(201).json({ user });
       } catch (error) {
         if (error instanceof UnauthorizedError) {
           return res.status(403).json({ error: error.message });

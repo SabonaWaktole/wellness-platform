@@ -111,5 +111,14 @@
     "notesLabel": "Shënime",
     "notesComingSoon": "Së shpejti: shënimet e brendshme nuk ruhen ende me regjistrimin e klientit.",
     "saveClient": "Ruaj klientin"
+  },
+  "import": {
+    "importClients": "Importo nga Excel",
+    "downloadTemplate": "Shkarko shabllonin",
+    "summary": "{{created}} u krijuan",
+    "skipped": "{{count}} u anashkaluan (ekzistojnë tashmë)",
+    "rowError": "Rreshti {{row}}: {{message}}",
+    "failed": "Importimi dështoi. Kontrolloni skedarin dhe provoni përsëri.",
+    "templateFailed": "Shablloni nuk u shkarkua dot."
   }
 }

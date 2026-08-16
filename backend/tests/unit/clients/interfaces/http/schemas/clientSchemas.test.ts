@@ -95,6 +95,38 @@ describe('clientSchemas', () => {
       }
     });
 
+    // Field names are shown to users as labels, so "Company Size" has to be a
+    // legal name; the old /^[a-zA-Z0-9_]+$/ rule rejected every spaced name.
+    it('accepts a field name containing spaces', () => {
+      const data = { fieldName: 'Company Size', fieldType: FieldType.TEXT };
+      expect(defineCustomFieldSchema.parse(data)).toEqual(data);
+    });
+
+    it('accepts hyphens and underscores', () => {
+      expect(defineCustomFieldSchema.parse({ fieldName: 'vat-number_2', fieldType: FieldType.TEXT }).fieldName)
+        .toBe('vat-number_2');
+    });
+
+    it('trims surrounding whitespace so look-alike duplicates cannot be created', () => {
+      expect(defineCustomFieldSchema.parse({ fieldName: '  Company Size  ', fieldType: FieldType.TEXT }).fieldName)
+        .toBe('Company Size');
+    });
+
+    it('rejects punctuation in a field name', () => {
+      expect(() => defineCustomFieldSchema.parse({ fieldName: 'Bad!Name', fieldType: FieldType.TEXT }))
+        .toThrow();
+    });
+
+    it('rejects a name that is only whitespace', () => {
+      expect(() => defineCustomFieldSchema.parse({ fieldName: '   ', fieldType: FieldType.TEXT }))
+        .toThrow();
+    });
+
+    it('accepts ALPHANUMERIC', () => {
+      const data = { fieldName: 'Plate Number', fieldType: FieldType.ALPHANUMERIC };
+      expect(defineCustomFieldSchema.parse(data)).toEqual(data);
+    });
+
     it('rejects a type that is not in the enum', () => {
       expect(() => defineCustomFieldSchema.parse({ fieldName: 'x', fieldType: 'CHECKBOX' }))
         .toThrow();

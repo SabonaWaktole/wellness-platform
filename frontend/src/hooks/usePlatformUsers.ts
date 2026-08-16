@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { dashboardService } from '../services/dashboardService';
-import type {
-  PlatformUser,
-  PlatformUserFilters,
-  CreatePlatformUserInput,
-  CreatePlatformAdminInput,
-  InvitePlatformUserInput,
-} from '../services/dashboardService';
+import type { PlatformUser, PlatformUserFilters, InvitePlatformUserInput } from '../services/dashboardService';
 
 /**
  * Every account on the platform, for the admin console's People page.
@@ -48,79 +42,6 @@ export const usePlatformUsers = (initial: PlatformUserFilters = {}) => {
     filters,
     setFilters,
     refresh: useCallback(() => fetchUsers(filters), [fetchUsers, filters]),
-  };
-};
-
-/**
- * Creating an account from the console, in a chosen workspace.
- *
- * Separate from the listing hook for the same reason `useTenantAdmin` is
- * separate from `useTenants`: reading and writing have different loading and
- * error lifecycles, and the server's message on a rejected create (duplicate
- * email, weak password) is what the operator needs to see.
- */
-export const useCreatePlatformUser = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const createUser = useCallback(
-    async (tenantId: string, input: CreatePlatformUserInput): Promise<PlatformUser | null> => {
-      setIsSubmitting(true);
-      setError(null);
-      try {
-        return await dashboardService.createPlatformUser(tenantId, input);
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Could not create the account.');
-        return null;
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    []
-  );
-
-  return {
-    createUser,
-    isSubmitting,
-    error,
-    clearError: useCallback(() => setError(null), []),
-  };
-};
-
-/**
- * Appointing another platform administrator.
- *
- * Separate from `useCreatePlatformUser` rather than a role flag on it, because
- * the two post to different endpoints for a structural reason: that one creates
- * an account inside a chosen workspace, and a platform admin belongs to none.
- */
-export const useCreatePlatformAdmin = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const createAdmin = useCallback(
-    async (input: CreatePlatformAdminInput): Promise<PlatformUser | null> => {
-      setIsSubmitting(true);
-      setError(null);
-      try {
-        return await dashboardService.createPlatformAdmin(input);
-      } catch (err: any) {
-        // The server's own message matters here — "already in use by an account
-        // on this platform" is the one rejection an operator can act on.
-        setError(err.response?.data?.error || 'Could not create the platform administrator.');
-        return null;
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    []
-  );
-
-  return {
-    createAdmin,
-    isSubmitting,
-    error,
-    clearError: useCallback(() => setError(null), []),
   };
 };
 
@@ -178,25 +99,27 @@ export const useOwnPlatformAdminAccount = () => {
 };
 
 /**
- * Inviting someone into a workspace from the console, by default as a Business
- * Owner.
+ * Inviting someone from the console, by email.
  *
- * Same shape as `useCreatePlatformUser` above and deliberately not folded into
- * it: the two write different things (an invitation versus an account) and
- * fail for different reasons the operator has to read — "already has an
- * account here" and "an invitation is already pending" both come back as the
- * server's own message.
+ * A `tenantId` sends them into that workspace, defaulting to Business Owner.
+ * `tenantId: null` invites another Platform Admin instead, who belongs to no
+ * workspace — the two branch to different endpoints here so the page only
+ * ever has one hook to call regardless of which the operator chose.
  */
 export const useInvitePlatformUser = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const inviteUser = useCallback(
-    async (tenantId: string, input: InvitePlatformUserInput): Promise<boolean> => {
+    async (tenantId: string | null, input: InvitePlatformUserInput): Promise<boolean> => {
       setIsSubmitting(true);
       setError(null);
       try {
-        await dashboardService.invitePlatformUser(tenantId, input);
+        if (tenantId) {
+          await dashboardService.invitePlatformUser(tenantId, input);
+        } else {
+          await dashboardService.invitePlatformAdmin({ email: input.email });
+        }
         return true;
       } catch (err: any) {
         setError(err.response?.data?.error || 'Could not send the invitation.');

@@ -295,7 +295,8 @@ model AuditLog {
 
 model Invitation {
   id              String    @id
-  tenantId        String
+  // Nullable: a Platform Admin invitation belongs to no workspace.
+  tenantId        String?
   email           String
   role            String
   token           String    @unique
@@ -306,7 +307,7 @@ model Invitation {
   // cannot be attributed retroactively; new ones always carry a sender.
   invitedByUserId String?
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id])
   warehouse Warehouse? @relation("InvitationWarehouse", fields: [warehouseId], references: [id])
   invitedBy User?      @relation("InvitationSender", fields: [invitedByUserId], references: [id])
 }
@@ -353,7 +354,7 @@ model CustomFieldDefinition {
   fieldName String
   // Stored as a plain String rather than a Postgres enum, so the authoritative
   // list is src/clients/domain/enums/FieldType.ts and adding a value needs no
-  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, SINGLE_SELECT.
+  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, ALPHANUMERIC, SINGLE_SELECT.
   fieldType String
   // Json rather than a native array: MySQL (the Hostinger production target)
   // has no array column type, so both providers store this as JSON.

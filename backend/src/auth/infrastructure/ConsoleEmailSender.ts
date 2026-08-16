@@ -5,7 +5,11 @@ export class ConsoleEmailSender implements IEmailSender {
     console.log(`[EMAIL] To: ${to} | Password Reset Token: ${token}`);
   }
 
-  async sendInvitationEmail(to: string, token: string, tenantName: string): Promise<void> {
+  async sendInvitationEmail(to: string, token: string, tenantName?: string): Promise<void> {
+    if (!tenantName) {
+      console.log(`[EMAIL] To: ${to} | You are invited as a Platform Administrator | Token: ${token}`);
+      return;
+    }
     console.log(`[EMAIL] To: ${to} | You are invited to join ${tenantName} | Token: ${token}`);
   }
 

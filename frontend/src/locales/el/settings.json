@@ -86,12 +86,14 @@
       "NUMBER": "Αριθμός",
       "DATE": "Ημερομηνία",
       "BOOLEAN": "Λογική τιμή",
-      "SINGLE_SELECT": "Μονή επιλογή"
+      "SINGLE_SELECT": "Μονή επιλογή",
+      "ALPHANUMERIC": "Αλφαριθμητικό"
     },
     "breadcrumb": "Διαχείριση πελατών",
     "tabCustomFields": "Προσαρμοσμένα πεδία",
     "tabOutcomeCategories": "Κατηγορίες έκβασης",
     "addField": "Προσθήκη πεδίου",
+    "importFields": "Εισαγωγή από Excel",
     "addCategory": "Προσθήκη κατηγορίας",
     "addFieldTitle": "Προσθήκη προσαρμοσμένου πεδίου",
     "addCategoryTitle": "Προσθήκη κατηγορίας έκβασης",

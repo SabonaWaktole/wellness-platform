@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express from 'express';
+import ExcelJS from 'exceljs';
 import { createClientRouter } from '../../../src/clients/interfaces/http/routes/clientRoutes';
 import { PrismaClient } from '@prisma/client';
 import { ClientStatus } from '../../../src/clients/domain/enums/ClientStatus';
@@ -7,6 +8,7 @@ import { ITokenService } from '../../../src/auth/application/ports/ITokenService
 import { ITenantRepository } from '../../../src/tenant/domain/repositories/ITenantRepository';
 import { Tenant } from '../../../src/tenant/domain/entities/Tenant';
 import { UserRole } from '../../../src/auth/domain/enums/UserRole';
+import { FieldType } from '../../../src/clients/domain/enums/FieldType';
 
 const prisma = new PrismaClient();
 
@@ -26,6 +28,15 @@ class NonCryptographicStubTokenService implements ITokenService {
 
 const stubTokenService = new NonCryptographicStubTokenService();
 const validToken = stubTokenService.sign({ userId: 'u1', role: UserRole.BUSINESS_OWNER, tenantId: 't1', tenantSlug: 't1' });
+const staffToken = stubTokenService.sign({ userId: 'u1', role: UserRole.STAFF, tenantId: 't1', tenantSlug: 't1' });
+
+/** Builds a one-sheet .xlsx in memory so imports can be posted as real uploads. */
+const workbook = async (rows: any[][]): Promise<Buffer> => {
+  const wb = new ExcelJS.Workbook();
+  const sheet = wb.addWorksheet('Sheet1');
+  rows.forEach(row => sheet.addRow(row));
+  return Buffer.from(await wb.xlsx.writeBuffer());
+};
 
 // Stub tenantRepository so real resolveTenant middleware can resolve by slug
 const stubTenantRepo: ITenantRepository = {
@@ -295,6 +306,104 @@ describe('Client Routes', () => {
       .send({ fieldType: 'TEXT' });
     
     expect(res.status).toBe(400);
+  });
+
+  describe('Excel import', () => {
+    it('POST /settings/custom-fields/import creates the definitions in the sheet', async () => {
+      const file = await workbook([
+        ['fieldName', 'fieldType', 'options'],
+        ['Company Size', 'ALPHANUMERIC', ''],
+        ['Lead Source', 'SINGLE_SELECT', 'Web; Referral'],
+        ['Bad!Name', 'TEXT', ''],
+      ]);
+
+      const res = await request(app)
+        .post('/api/t1/clients/settings/custom-fields/import')
+        .set('Authorization', `Bearer ${validToken}`)
+        .attach('file', file, 'fields.xlsx');
+
+      expect(res.status).toBe(200);
+      expect(res.body.created).toBe(2);
+      expect(res.body.errors).toHaveLength(1);
+
+      const stored = await prisma.customFieldDefinition.findMany({
+        where: { tenantId: 't1', fieldName: { in: ['Company Size', 'Lead Source'] } },
+      });
+      expect(stored).toHaveLength(2);
+      // The spaced name is the case this whole change exists for.
+      expect(stored.map(s => s.fieldName)).toContain('Company Size');
+    });
+
+    it('POST /settings/custom-fields/import is refused for staff', async () => {
+      const file = await workbook([['fieldName', 'fieldType'], ['Anything', 'TEXT']]);
+
+      const res = await request(app)
+        .post('/api/t1/clients/settings/custom-fields/import')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .attach('file', file, 'fields.xlsx');
+
+      expect(res.status).toBe(403);
+    });
+
+    it('POST /import creates a client per row and reports the bad ones', async () => {
+      const file = await workbook([
+        ['name', 'email', 'status', 'Company Size'],
+        ['Imported Alpha', 'alpha@example.com', 'ACTIVE', 'AB 12'],
+        ['', 'nameless@example.com', 'ACTIVE', 'AB 12'],
+        ['Imported Beta', '', 'PROSPECT', 'AB-12'],
+      ]);
+
+      const res = await request(app)
+        .post('/api/t1/clients/import')
+        .set('Authorization', `Bearer ${validToken}`)
+        .attach('file', file, 'clients.xlsx');
+
+      expect(res.status).toBe(200);
+      expect(res.body.created).toBe(1);
+      // Row 3 has no name; row 4 breaks the ALPHANUMERIC rule.
+      expect(res.body.errors.map((e: any) => e.row)).toEqual([3, 4]);
+
+      const alpha = await prisma.client.findFirst({ where: { tenantId: 't1', name: 'Imported Alpha' } });
+      expect(alpha).not.toBeNull();
+      expect(alpha!.customFieldValues).toEqual({ 'Company Size': 'AB 12' });
+    });
+
+    it('POST /import rejects an upload with no file', async () => {
+      const res = await request(app)
+        .post('/api/t1/clients/import')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('GET /import/template names every custom field as a column', async () => {
+      const res = await request(app)
+        .get('/api/t1/clients/import/template')
+        .set('Authorization', `Bearer ${validToken}`)
+        .buffer()
+        .parse((response, callback) => {
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk: Buffer) => chunks.push(chunk));
+          response.on('end', () => callback(null, Buffer.concat(chunks)));
+        });
+
+      expect(res.status).toBe(200);
+
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(res.body);
+      const header = wb.worksheets[0]!.getRow(1).values as any[];
+      expect(header).toEqual(expect.arrayContaining(['name', 'status', 'Company Size']));
+    });
+  });
+
+  it('POST /settings/custom-fields accepts a field name containing spaces', async () => {
+    const res = await request(app)
+      .post('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ fieldName: 'Account Manager', fieldType: FieldType.TEXT });
+
+    expect(res.status).toBe(201);
+    expect(res.body.fieldName).toBe('Account Manager');
   });
 
   it('Cross-Tenant Isolation: returns 403 when Tenant 1 user acts on Tenant 2 slug', async () => {

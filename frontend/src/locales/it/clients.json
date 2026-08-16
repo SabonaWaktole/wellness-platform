@@ -111,5 +111,14 @@
     "notesLabel": "Note",
     "notesComingSoon": "In arrivo: le note interne non vengono ancora salvate insieme alla scheda cliente.",
     "saveClient": "Salva cliente"
+  },
+  "import": {
+    "importClients": "Importa da Excel",
+    "downloadTemplate": "Scarica modello",
+    "summary": "{{created}} creati",
+    "skipped": "{{count}} ignorati (già esistenti)",
+    "rowError": "Riga {{row}}: {{message}}",
+    "failed": "Importazione non riuscita. Controlla il file e riprova.",
+    "templateFailed": "Impossibile scaricare il modello."
   }
 }

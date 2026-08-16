@@ -71,8 +71,28 @@ export class SmtpEmailSender implements IEmailSender {
     await this.send(to, `Your NevaCRM workspace "${params.companyName}" is ready`, html, 'workspace created');
   }
 
-  async sendInvitationEmail(to: string, token: string, tenantName: string): Promise<void> {
+  async sendInvitationEmail(to: string, token: string, tenantName?: string): Promise<void> {
     const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invitations/accept?token=${token}&email=${encodeURIComponent(to)}`;
+
+    if (!tenantName) {
+      const bodyHtml = `
+        <p>You have been invited to join NevaCRM as a <strong>Platform Administrator</strong>.</p>
+        <p>Click the button below to accept the invitation and set up your account password.</p>
+      `;
+
+      const html = renderEmailLayout({
+        preheader: "You've been invited to join NevaCRM as a Platform Administrator",
+        eyebrow: 'Platform Invitation',
+        heading: "You're invited as a Platform Administrator",
+        bodyHtml,
+        cta: { label: 'Accept Invitation', url: inviteLink },
+        footerNote: "If you didn't expect this invitation, you can safely ignore this email.",
+      });
+
+      await this.send(to, 'You have been invited to join NevaCRM as a Platform Administrator', html, 'invitation');
+      return;
+    }
+
     const safeTenantName = escapeHtml(tenantName);
 
     const bodyHtml = `

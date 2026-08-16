@@ -18,7 +18,6 @@ export const AcceptInvitationPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [acceptedTenantSlug, setAcceptedTenantSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token || !email) {
@@ -37,13 +36,10 @@ export const AcceptInvitationPage: React.FC = () => {
     setError('');
     
     try {
-      const response = await api.post('/auth/invitations/accept', {
+      await api.post('/auth/invitations/accept', {
         token,
         newPassword: password,
       });
-      if (response.data.tenantSlug) {
-        setAcceptedTenantSlug(response.data.tenantSlug);
-      }
       setSuccess(true);
     } catch (err: any) {
       console.error(err);
