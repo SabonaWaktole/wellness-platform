@@ -36,6 +36,9 @@ const FIELD_TYPE_TO_INPUT: Record<CustomFieldType, CustomFieldInputProps['fieldT
   NUMBER: 'number',
   DATE: 'date',
   BOOLEAN: 'checkbox',
+  // Restricted to letters, numbers and spaces by the backend; a plain text box
+  // is still the right control, the value rule is enforced on submit.
+  ALPHANUMERIC: 'text',
   SINGLE_SELECT: 'dropdown',
 };
 
@@ -174,7 +177,7 @@ export const ClientFormContent: React.FC = () => {
             </div>
             <h2 className={styles.sectionTitle}>{t('form.basicInformation')}</h2>
           </div>
-          <div className={styles.grid2}>
+          <div className={styles.grid1}>
             <TextInput
               label={t('form.nameLabel')}
               placeholder={t('form.namePlaceholderClient')}
@@ -229,7 +232,7 @@ export const ClientFormContent: React.FC = () => {
               </div>
               <h2 className={styles.sectionTitle}>{t('form.customFieldsSection')}</h2>
             </div>
-            <div className={styles.grid2}>
+            <div className={styles.grid1}>
               {customFields.map((field) => (
                 <Controller
                   key={field.id}

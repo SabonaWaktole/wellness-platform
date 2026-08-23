@@ -18,6 +18,8 @@ import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { DataTable } from '../../components/ui/DataTable';
 import type { DataTableColumn } from '../../components/ui/DataTable';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
+import { ExcelImportButton } from '../../components/clients/ExcelImportButton';
+import { clientService } from '../../services/clientService';
 import styles from './ClientListContent.module.css';
 
 import { useClients } from '../../hooks/useClients';
@@ -159,6 +161,13 @@ export const ClientListContent: React.FC = () => {
           <h1 className={styles.title}>{t('list.title')}</h1>
         </div>
         <div className={styles.headerActions}>
+          <ExcelImportButton
+            label={t('import.importClients')}
+            templateFileName="clients-template.xlsx"
+            onImport={(file) => clientService.importClients(tenantSlug!, file)}
+            onDownloadTemplate={() => clientService.downloadClientTemplate(tenantSlug!)}
+            onImported={() => fetchClients({ search: debouncedSearchTerm })}
+          />
           <Button variant="outline" icon={<Filter size={18} />}>
             {t('list.filter')}
           </Button>

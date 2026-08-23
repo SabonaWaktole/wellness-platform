@@ -86,12 +86,14 @@
       "NUMBER": "Numero",
       "DATE": "Data",
       "BOOLEAN": "Booleano",
-      "SINGLE_SELECT": "Selezione singola"
+      "SINGLE_SELECT": "Selezione singola",
+      "ALPHANUMERIC": "Alfanumerico"
     },
     "breadcrumb": "Gestione clienti",
     "tabCustomFields": "Campi personalizzati",
     "tabOutcomeCategories": "Categorie di esito",
     "addField": "Aggiungi campo",
+    "importFields": "Importa da Excel",
     "addCategory": "Aggiungi categoria",
     "addFieldTitle": "Aggiungi campo personalizzato",
     "addCategoryTitle": "Aggiungi categoria di esito",

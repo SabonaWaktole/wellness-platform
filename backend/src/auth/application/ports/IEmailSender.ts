@@ -1,6 +1,7 @@
 export interface IEmailSender {
   sendPasswordResetEmail(to: string, token: string): Promise<void>;
-  sendInvitationEmail(to: string, token: string, tenantName: string): Promise<void>;
+  /** `tenantName` is omitted for a Platform Admin invitation, which has no workspace. */
+  sendInvitationEmail(to: string, token: string, tenantName?: string): Promise<void>;
 
   /**
    * Generic transactional send, used for every business-event email (§6.6).

@@ -1,26 +1,20 @@
 /*
- * MySQL is the only provider. Production (Hostinger) runs MySQL, and this file
- * is now the single source of truth for every environment — local, CI and
- * deployed — so that the schema the code is generated against is always the
- * schema production actually has.
+ * PostgreSQL is the active schema, and the one `prisma/migrations` is written
+ * for — every migration in that folder emits `TIMESTAMP(3)`, `JSONB` and
+ * double-quoted identifiers, so `prisma migrate deploy` only ever worked here.
  *
- * This replaces an earlier arrangement where PostgreSQL was canonical and a
- * hand-maintained `schema.mysql.prisma` mirrored it for the deployment. Two
- * schemas kept in step by hand is a drift you only discover in production: the
- * mirror had already picked up `Json @default("[]")` on four columns that the
- * live database declares `JSON NOT NULL` with no default at all.
- *
- * Notes for anyone editing this file:
- *   - `@db.Text` on the long-string columns below. MySQL's default mapping for
- *     `String` is VARCHAR(191), which silently truncates URLs and note bodies;
- *     Postgres had no such limit, so these annotations have no Postgres
- *     equivalent and are not optional here.
- *   - The four array-shaped columns (tags, options, emailEventTypes,
- *     emailRecipientRoles) are `Json`, not native arrays — MySQL has no array
- *     type. Application code reads them through `jsonToStringArray`.
+ * `schema.mysql.prisma` beside this file is the hand-maintained MySQL mirror
+ * used by the Hostinger deployment, which is provisioned from
+ * `nevacrm_full_import.sql` rather than from the migration history. The two
+ * now differ ONLY in the `@db.Text` annotations MySQL needs for long strings —
+ * the four array-shaped columns (tags, options, emailEventTypes,
+ * emailRecipientRoles) are `Json` on both sides on purpose, so the
+ * application code has exactly one shape to handle instead of branching per
+ * provider. Any model change must be made in both, or the deployment drifts
+ * from what the code expects.
  */
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -50,8 +44,8 @@ model Tenant {
   urlSlug                   String  @unique
   requiresQuotationApproval Boolean @default(true)
   // Workspace branding, surfaced in the sidebar, settings and customer-facing pages.
-  logoUrl                   String? @db.Text
-  coverImageUrl             String? @db.Text
+  logoUrl                   String?
+  coverImageUrl             String?
 
   // Company profile. Like the branding URLs above, these are presentation-only
   // and are read straight from Prisma rather than through the Tenant entity.
@@ -221,8 +215,8 @@ model User {
   language       String?
   // Profile media. Store the public URL of the canonical (1x) asset; the
   // responsive variants are derived from it by convention (see MediaService).
-  avatarUrl      String?  @db.Text
-  coverImageUrl  String?  @db.Text
+  avatarUrl      String?
+  coverImageUrl  String?
   tenantId       String?
   createdAt      DateTime @default(now())
 
@@ -301,7 +295,8 @@ model AuditLog {
 
 model Invitation {
   id              String    @id
-  tenantId        String
+  // Nullable: a Platform Admin invitation belongs to no workspace.
+  tenantId        String?
   email           String
   role            String
   token           String    @unique
@@ -312,7 +307,7 @@ model Invitation {
   // cannot be attributed retroactively; new ones always carry a sender.
   invitedByUserId String?
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id])
   warehouse Warehouse? @relation("InvitationWarehouse", fields: [warehouseId], references: [id])
   invitedBy User?      @relation("InvitationSender", fields: [invitedByUserId], references: [id])
 }
@@ -359,7 +354,7 @@ model CustomFieldDefinition {
   fieldName String
   // Stored as a plain String rather than a Postgres enum, so the authoritative
   // list is src/clients/domain/enums/FieldType.ts and adding a value needs no
-  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, SINGLE_SELECT.
+  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, ALPHANUMERIC, SINGLE_SELECT.
   fieldType String
   // Json rather than a native array: MySQL (the Hostinger production target)
   // has no array column type, so both providers store this as JSON.
@@ -386,7 +381,7 @@ model Interaction {
   tenantId          String
   clientId          String
   authorUserId      String
-  content           String   @db.Text
+  content           String
   channel           String // 'MEETING', 'CALL', 'NOTE', 'EMAIL'
   outcomeCategoryId String?
   createdAt         DateTime @default(now())
@@ -407,7 +402,7 @@ model Appointment {
   assignedUserId String
   scheduledAt    DateTime
   status         String // 'SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED'
-  notes          String?  @db.Text
+  notes          String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -526,8 +521,8 @@ model ProductImage {
   tenantId  String
   productId String
   // Public URL of the @1x rendition; @2x is derived by naming convention.
-  url       String   @db.Text
-  url2x     String   @db.Text
+  url       String
+  url2x     String
   width     Int
   height    Int
   bytes     Int
@@ -566,7 +561,7 @@ model StockMovement {
   toWarehouseId   String? // Used for TRANSFER
   quantity        Int
   type            String // 'ADJUSTMENT', 'TRANSFER'
-  reason          String?  @db.Text
+  reason          String?
   createdBy       String
   createdAt       DateTime @default(now())
 
@@ -669,7 +664,7 @@ model QuotationStatusHistory {
   /// table where every other row can authenticate. NULL says exactly what
   /// happened.
   changedByUserId String?
-  note            String?  @db.Text
+  note            String?
   createdAt       DateTime @default(now())
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
@@ -755,7 +750,7 @@ model InvoiceStatusHistory {
   /// convention as QuotationStatusHistory.changedByUserId, for the same
   /// reason: automatic overdue detection has no acting user.
   changedByUserId String?
-  note            String?  @db.Text
+  note            String?
   createdAt       DateTime @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)

@@ -28,33 +28,15 @@ export function resolveBaseDatabaseUrl(): string {
   return url;
 }
 
-/**
- * Name of the database owned exclusively by a given Jest worker.
- *
- * MySQL has no schemas-within-a-database: `CREATE SCHEMA` is a synonym for
- * `CREATE DATABASE`, and a connection selects one via the URL path rather than
- * a `?schema=` parameter. So worker isolation is one whole database each,
- * where under Postgres it was one schema inside a shared database.
- */
-export function databaseForWorker(workerId: string | number): string {
+/** Schema name owned exclusively by a given Jest worker. */
+export function schemaForWorker(workerId: string | number): string {
   return `test_w${workerId}`;
 }
 
-/**
- * Point a base connection string at a specific database.
- *
- * The database is the URL's path segment. Setting `?schema=` here instead —
- * as the Postgres version did — is silently ignored by the MySQL connector,
- * which would leave every worker sharing one database and reintroduce exactly
- * the cross-worker clobbering this isolation exists to prevent.
- */
-export function urlForDatabase(
-  baseUrl: string,
-  database: string,
-  connectionLimit?: number
-): string {
+/** Point a base connection string at a specific Postgres schema. */
+export function urlForSchema(baseUrl: string, schema: string, connectionLimit?: number): string {
   const url = new URL(baseUrl);
-  url.pathname = `/${database}`;
+  url.searchParams.set('schema', schema);
   if (connectionLimit !== undefined) {
     url.searchParams.set('connection_limit', String(connectionLimit));
   }

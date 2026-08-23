@@ -2,7 +2,8 @@ import { UserRole } from '../enums/UserRole';
 
 interface InvitationProps {
   id: string;
-  tenantId: string;
+  /** Null for a Platform Admin invitation, which belongs to no workspace. */
+  tenantId: string | null;
   email: string;
   role: UserRole;
   token: string;
@@ -15,7 +16,7 @@ interface InvitationProps {
 
 export class Invitation {
   public readonly id: string;
-  public readonly tenantId: string;
+  public readonly tenantId: string | null;
   public readonly email: string;
   public readonly role: UserRole;
   public readonly token: string;

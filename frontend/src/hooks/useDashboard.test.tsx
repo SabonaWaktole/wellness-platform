@@ -107,7 +107,7 @@ describe('useDashboard Hooks', () => {
                   type: 'CLIENT_CREATED',
                   description: 'Client Added',
                   timestamp: '2023-10-24T10:00:00.000Z',
-                  actor: { id: 'u1', name: 'Alex Carter' }
+                  actor: { id: 'u1', name: 'User' }
                 }
               ]
             });

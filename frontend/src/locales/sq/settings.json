@@ -86,12 +86,14 @@
       "NUMBER": "Numër",
       "DATE": "Datë",
       "BOOLEAN": "Po/Jo",
-      "SINGLE_SELECT": "Zgjedhje e vetme"
+      "SINGLE_SELECT": "Zgjedhje e vetme",
+      "ALPHANUMERIC": "Alfanumerik"
     },
     "breadcrumb": "Menaxhimi i klientëve",
     "tabCustomFields": "Fusha të personalizuara",
     "tabOutcomeCategories": "Kategoritë e rezultateve",
     "addField": "Shto fushë",
+    "importFields": "Importo nga Excel",
     "addCategory": "Shto kategori",
     "addFieldTitle": "Shto fushë të personalizuar",
     "addCategoryTitle": "Shto kategori rezultati",

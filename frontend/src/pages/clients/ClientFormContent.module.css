@@ -129,9 +129,10 @@
   margin: 0;
 }
 
-.grid2 {
+/* Every input sits on its own line so long labels and values stay readable. */
+.grid1 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--spacing-md);
 }
 

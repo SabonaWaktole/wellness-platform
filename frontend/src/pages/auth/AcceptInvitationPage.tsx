@@ -18,7 +18,6 @@ export const AcceptInvitationPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [acceptedTenantSlug, setAcceptedTenantSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token || !email) {
@@ -37,13 +36,10 @@ export const AcceptInvitationPage: React.FC = () => {
     setError('');
     
     try {
-      const response = await api.post('/auth/invitations/accept', {
+      await api.post('/auth/invitations/accept', {
         token,
         newPassword: password,
       });
-      if (response.data.tenantSlug) {
-        setAcceptedTenantSlug(response.data.tenantSlug);
-      }
       setSuccess(true);
     } catch (err: any) {
       console.error(err);
@@ -62,7 +58,7 @@ export const AcceptInvitationPage: React.FC = () => {
         <div style={{ textAlign: 'center' }}>
           <h3 style={{ color: 'var(--color-primary)', marginBottom: '16px' }}>{t('acceptInvitation.accepted')}</h3>
           <p style={{ marginBottom: '24px' }}>Your account has been created successfully.</p>
-          <Button variant="primary" onClick={() => navigate(acceptedTenantSlug ? `/${acceptedTenantSlug}/login` : '/login')} fullWidth>
+          <Button variant="primary" onClick={() => navigate('/login')} fullWidth>
             {t('goToLogin')}
           </Button>
         </div>

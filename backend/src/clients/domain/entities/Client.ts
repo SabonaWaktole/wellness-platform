@@ -3,6 +3,8 @@ import { CustomFieldDefinition } from './CustomFieldDefinition';
 import { FieldType } from '../enums/FieldType';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
+const ALPHANUMERIC_PATTERN = /^[a-zA-Z0-9 ]+$/;
+
 export interface ClientProps {
   id: string;
   tenantId: string;
@@ -51,11 +53,30 @@ export class Client {
         }
 
         const value = props.customFieldValues[key];
-        
-        if (def.fieldType === FieldType.SINGLE_SELECT) {
-          if (!def.options?.includes(value)) {
-            throw new DomainError(`Value "${value}" is not a valid option for field "${key}".`);
-          }
+
+        switch (def.fieldType) {
+          case FieldType.SINGLE_SELECT:
+            if (!def.options?.includes(value)) {
+              throw new DomainError(`Value "${value}" is not a valid option for field "${key}".`);
+            }
+            break;
+
+          case FieldType.ALPHANUMERIC:
+            // Blank is how the form reports "left empty"; only a filled-in value
+            // has to satisfy the letters/digits/spaces rule.
+            if (value !== null && value !== undefined && value !== '') {
+              if (typeof value !== 'string' || !ALPHANUMERIC_PATTERN.test(value)) {
+                throw new DomainError(
+                  `Value for field "${key}" must contain only letters, numbers and spaces.`
+                );
+              }
+            }
+            break;
+
+          // TEXT, NUMBER, DATE and BOOLEAN are stored as given — TEXT in
+          // particular is free-form and accepts spaces and punctuation.
+          default:
+            break;
         }
       }
     }

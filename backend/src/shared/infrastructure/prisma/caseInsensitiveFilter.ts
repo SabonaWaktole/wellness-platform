@@ -1,23 +1,18 @@
+import { IS_MYSQL } from './provider';
+
 /**
- * MySQL is the only provider, and the schema's `utf8mb4_unicode_ci` collation
- * already makes `contains` and `equals` case-insensitive — so these are plain
- * pass-throughs.
- *
- * They are kept rather than inlined at the call sites because they are the
- * record of WHY no `mode: 'insensitive'` appears anywhere in this codebase.
- * That option is Postgres-only; it is not a valid property on MySQL's
- * generated `StringFilter` at all, so reaching for it would not fail at
- * runtime but at compile time, in a place far from the reason. Routing every
- * case-insensitive comparison through here keeps the answer in one place.
- *
- * `_ci` is the whole mechanism: if the collation is ever changed to `_bin` or
- * `_cs`, these two functions are the only things that need to grow a LOWER()
- * — not the dozen call sites.
+ * `mode: 'insensitive'` is a Postgres-only Prisma filter option — it isn't a
+ * valid property on MySQL's generated `StringFilter` type at all, so it can't
+ * appear in code that has to compile against both clients. MySQL doesn't need
+ * it: the schema's utf8mb4_unicode_ci collation already makes `contains` and
+ * `equals` case-insensitive there. Untyped (`any`) return on purpose — the
+ * two branches are structurally different objects, and only one of them is a
+ * valid shape for whichever client is actually generated at build time.
  */
-export function insensitiveContains(value: string) {
-  return { contains: value };
+export function insensitiveContains(value: string): any {
+  return IS_MYSQL ? { contains: value } : { contains: value, mode: 'insensitive' };
 }
 
-export function insensitiveEquals(value: string) {
-  return { equals: value };
+export function insensitiveEquals(value: string): any {
+  return IS_MYSQL ? { equals: value } : { equals: value, mode: 'insensitive' };
 }

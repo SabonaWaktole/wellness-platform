@@ -13,26 +13,23 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
-    # MySQL, not Postgres: production (Hostinger) is MySQL, and CI running a
-    # different engine than production is how a green build ships a broken
-    # deploy. The raw SQL in the repositories is MySQL-specific (backtick
-    # quoting, DATE_FORMAT, JSON_CONTAINS) and is only actually exercised here.
     services:
-      mysql:
-        image: mysql:8
+      postgres:
+        image: postgres:16
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: nevacrm_test
-        ports: ['3306:3306']
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nevacrm_test
+        ports: ['5432:5432']
         # Without the healthcheck the first migration races container startup.
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
-      DATABASE_URL: mysql://root:root@127.0.0.1:3306/nevacrm_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nevacrm_test?schema=public
       JWT_SECRET: ci-only-secret-not-used-outside-this-job
       JWT_EXPIRATION: 1h
       PORT: '3000'

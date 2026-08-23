@@ -101,37 +101,16 @@ export interface PlatformUserFilters {
   take?: number;
 }
 
-export interface CreatePlatformUserInput {
-  email: string;
-  password: string;
-  role: 'BUSINESS_OWNER' | 'STAFF';
-  firstName?: string | null;
-  lastName?: string | null;
-}
-
 /**
- * Appointing another platform administrator.
- *
- * No `role` and no workspace: both are fixed by what this is. A platform admin
- * belongs to no tenant, which is exactly why this cannot go through
- * `CreatePlatformUserInput` above — that one names a workspace to create the
- * account in.
- */
-export interface CreatePlatformAdminInput {
-  email: string;
-  password: string;
-  firstName?: string | null;
-  lastName?: string | null;
-}
-
-/**
- * A Platform Admin inviting someone into a workspace by email — the third way
- * to become a Business Owner, next to being promoted from staff and being
- * invited by an existing owner. Adds an owner; a workspace may have several.
+ * A Platform Admin inviting someone by email. `role: 'BUSINESS_OWNER' |
+ * 'STAFF'` goes to a workspace (the third way to become a Business Owner,
+ * next to being promoted from staff and being invited by an existing owner —
+ * adds an owner; a workspace may have several). `role: 'SUPER_ADMIN'`
+ * appoints another Platform Admin instead, and belongs to no workspace.
  */
 export interface InvitePlatformUserInput {
   email: string;
-  role: 'BUSINESS_OWNER' | 'STAFF';
+  role: 'BUSINESS_OWNER' | 'STAFF' | 'SUPER_ADMIN';
 }
 
 /**
@@ -303,25 +282,11 @@ export const dashboardService = {
     return response.data;
   },
 
-  /** Create a user inside a workspace, credentials included, from the console. */
-  createPlatformUser: async (
-    tenantId: string,
-    input: CreatePlatformUserInput
-  ): Promise<PlatformUser> => {
-    const response = await apiClient.post<{ user: PlatformUser }>(
-      `/tenants/${tenantId}/users`,
-      input
-    );
-    return response.data.user;
-  },
-
   /**
    * Invite someone into a workspace by email, defaulting to Business Owner.
-   *
-   * The counterpart to `createPlatformUser`: that one sets a password the
-   * admin then has to pass on, this one lets the recipient choose their own
-   * through the ordinary invitation-acceptance page. Returns no token — the
-   * link only ever travels by email.
+   * Lets the recipient choose their own password through the ordinary
+   * invitation-acceptance page. Returns no token — the link only ever
+   * travels by email.
    */
   invitePlatformUser: async (
     tenantId: string,
@@ -329,6 +294,18 @@ export const dashboardService = {
   ): Promise<{ email: string; role: string }> => {
     const response = await apiClient.post<{ invitation: { email: string; role: string } }>(
       `/tenants/${tenantId}/invitations`,
+      input
+    );
+    return response.data.invitation;
+  },
+
+  /**
+   * Invite another Platform Admin by email — the tenant-less counterpart to
+   * `invitePlatformUser`. No workspace to address it to.
+   */
+  invitePlatformAdmin: async (input: { email: string }): Promise<{ email: string; role: string }> => {
+    const response = await apiClient.post<{ invitation: { email: string; role: string } }>(
+      `/tenants/platform-admins/invitations`,
       input
     );
     return response.data.invitation;
@@ -386,22 +363,6 @@ export const dashboardService = {
    */
   deleteUser: async (userId: string, confirmEmail: string, newOwnerId?: string): Promise<void> => {
     await apiClient.delete(`/tenants/users/${userId}`, { data: { confirmEmail, newOwnerId } });
-  },
-
-  /**
-   * Appoint another platform administrator.
-   *
-   * Not `createPlatformUser` with a different role: that one posts into a
-   * workspace (`/tenants/:id/users`) and a platform admin belongs to none, so
-   * there is no id to address it to. The server refuses SUPER_ADMIN on that
-   * route regardless.
-   */
-  createPlatformAdmin: async (input: CreatePlatformAdminInput): Promise<PlatformUser> => {
-    const response = await apiClient.post<{ user: PlatformUser }>(
-      `/tenants/platform-admins`,
-      input
-    );
-    return response.data.user;
   },
 
   /**

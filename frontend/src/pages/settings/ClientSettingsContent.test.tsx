@@ -87,12 +87,22 @@ describe('ClientSettingsContent', () => {
     expect(option.value).toBe('BOOLEAN');
   });
 
+  it('offers the alphanumeric type', () => {
+    renderPage();
+
+    openSlideOver();
+
+    const option = screen.getByRole('option', { name: 'Alphanumeric' }) as HTMLOptionElement;
+    expect(option.value).toBe('ALPHANUMERIC');
+  });
+
   it('offers only field types the backend accepts', () => {
     renderPage();
 
     openSlideOver();
 
-    const accepted = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'SINGLE_SELECT'];
+    // Mirrors backend src/clients/domain/enums/FieldType.ts.
+    const accepted = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'ALPHANUMERIC', 'SINGLE_SELECT'];
     const values = screen
       .getAllByRole('option')
       .map((o) => (o as HTMLOptionElement).value)

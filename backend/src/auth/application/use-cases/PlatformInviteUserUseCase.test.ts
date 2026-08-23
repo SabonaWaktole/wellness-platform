@@ -12,13 +12,14 @@ import {
   UnauthorizedError,
   UserAlreadyInWorkspaceError,
   InvitationAlreadyPendingError,
+  EmailAlreadyInUseError,
 } from '../../domain/errors';
 import { TenantNotFoundError } from '../../../tenant/domain/errors';
 
 describe('PlatformInviteUserUseCase', () => {
   let useCase: PlatformInviteUserUseCase;
   let invitationRepository: jest.Mocked<IInvitationRepository>;
-  let userRepository: jest.Mocked<Pick<IUserRepository, 'findByEmail'>>;
+  let userRepository: jest.Mocked<Pick<IUserRepository, 'findByEmail' | 'findAnyByEmail'>>;
   let tenantRepository: jest.Mocked<Pick<ITenantRepository, 'findById'>>;
   let emailSender: jest.Mocked<IEmailSender>;
   let auditLogger: jest.Mocked<IAuditLogger>;
@@ -54,7 +55,10 @@ describe('PlatformInviteUserUseCase', () => {
       markAccepted: jest.fn(),
       delete: jest.fn(),
     };
-    userRepository = { findByEmail: jest.fn().mockResolvedValue(null) };
+    userRepository = {
+      findByEmail: jest.fn().mockResolvedValue(null),
+      findAnyByEmail: jest.fn().mockResolvedValue(null),
+    };
     tenantRepository = {
       findById: jest.fn().mockResolvedValue(
         Tenant.create({ id: TENANT, name: 'Acme', urlSlug: 'acme', createdAt: new Date() })
@@ -171,5 +175,87 @@ describe('PlatformInviteUserUseCase', () => {
     emailSender.sendInvitationEmail.mockRejectedValue(new Error('smtp down'));
 
     await expect(invite()).resolves.toEqual(expect.objectContaining({ email: 'new.owner@example.com' }));
+  });
+
+  describe('platform-admin invitations (no tenantId, role SUPER_ADMIN)', () => {
+    const invitePlatformAdmin = (over: any = {}) =>
+      useCase.execute({
+        callerRole: UserRole.SUPER_ADMIN,
+        callerId: CALLER,
+        email: 'new.admin@example.com',
+        role: UserRole.SUPER_ADMIN,
+        ...over,
+      });
+
+    it('creates a tenant-less invitation without looking up a tenant', async () => {
+      const result = await invitePlatformAdmin();
+
+      expect(result.role).toBe(UserRole.SUPER_ADMIN);
+      expect(tenantRepository.findById).not.toHaveBeenCalled();
+      const created = invitationRepository.create.mock.calls[0][0];
+      expect(created.tenantId).toBeNull();
+      expect(created.role).toBe(UserRole.SUPER_ADMIN);
+    });
+
+    it('dedupes against the whole platform, not a single workspace', async () => {
+      await invitePlatformAdmin();
+
+      expect(userRepository.findAnyByEmail).toHaveBeenCalledWith('new.admin@example.com');
+      expect(userRepository.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the email is already in use anywhere on the platform', async () => {
+      userRepository.findAnyByEmail.mockResolvedValue(
+        User.create({
+          id: 'existing-admin',
+          email: 'new.admin@example.com',
+          hashedPassword: 'h',
+          role: UserRole.SUPER_ADMIN,
+          tenantId: null,
+          createdAt: new Date(),
+        })
+      );
+
+      await expect(invitePlatformAdmin()).rejects.toThrow(EmailAlreadyInUseError);
+      expect(invitationRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses a second invitation while one is still pending', async () => {
+      invitationRepository.findByTenantId.mockResolvedValue([
+        Invitation.create({
+          id: 'inv-2',
+          tenantId: null,
+          email: 'new.admin@example.com',
+          role: UserRole.SUPER_ADMIN,
+          token: 'tok2',
+          expiresAt: new Date(Date.now() + 60_000),
+          acceptedAt: null,
+        }),
+      ]);
+
+      await expect(invitePlatformAdmin()).rejects.toThrow(InvitationAlreadyPendingError);
+      expect(invitationRepository.findByTenantId).toHaveBeenCalledWith(null);
+    });
+
+    it('sends the invitation email without a tenant name', async () => {
+      const result = await invitePlatformAdmin();
+
+      expect(emailSender.sendInvitationEmail).toHaveBeenCalledWith(
+        'new.admin@example.com',
+        result.token,
+        undefined
+      );
+    });
+
+    it('rejects a caller-provided tenantId alongside the SUPER_ADMIN role', async () => {
+      await expect(invitePlatformAdmin({ tenantId: TENANT })).rejects.toThrow(UnauthorizedError);
+      expect(invitationRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('still refuses a non-SUPER_ADMIN caller', async () => {
+      await expect(
+        invitePlatformAdmin({ callerRole: UserRole.BUSINESS_OWNER })
+      ).rejects.toThrow(UnauthorizedError);
+    });
   });
 });

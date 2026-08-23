@@ -123,7 +123,7 @@ CREATE TABLE `AuditLog` (
 -- CreateTable
 CREATE TABLE `Invitation` (
     `id` VARCHAR(191) NOT NULL,
-    `tenantId` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NULL,
     `email` VARCHAR(191) NOT NULL,
     `role` VARCHAR(191) NOT NULL,
     `token` VARCHAR(191) NOT NULL,
@@ -496,7 +496,7 @@ ALTER TABLE `OwnershipTransfer` ADD CONSTRAINT `OwnershipTransfer_originalOwnerI
 ALTER TABLE `OwnershipTransfer` ADD CONSTRAINT `OwnershipTransfer_actingOwnerId_fkey` FOREIGN KEY (`actingOwnerId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Invitation` ADD CONSTRAINT `Invitation_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Invitation` ADD CONSTRAINT `Invitation_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Invitation` ADD CONSTRAINT `Invitation_warehouseId_fkey` FOREIGN KEY (`warehouseId`) REFERENCES `Warehouse`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

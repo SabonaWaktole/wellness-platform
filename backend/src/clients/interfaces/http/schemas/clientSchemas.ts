@@ -48,7 +48,17 @@ export const addInteractionSchema = z.object({
 });
 
 export const defineCustomFieldSchema = z.object({
-  fieldName: z.string().min(1, 'Field name is required').regex(/^[a-zA-Z0-9_]+$/, 'Field name must be alphanumeric with underscores'),
+  fieldName: z
+    .string()
+    .trim()
+    .min(1, 'Field name is required')
+    .max(60, 'Field name must be 60 characters or fewer')
+    // Trimmed before matching so " Size" and "Size " cannot slip past the
+    // @@unique([tenantId, fieldName]) constraint as look-alike duplicates.
+    .regex(
+      /^[a-zA-Z0-9 _-]+$/,
+      'Field name may contain letters, numbers, spaces, hyphens and underscores'
+    ),
   fieldType: z.nativeEnum(FieldType),
   options: z.array(z.string()).optional(),
 }).refine(data => {

@@ -1,5 +1,6 @@
 import { IEmailSender } from '../../auth/application/ports/IEmailSender';
 import { IPublicQuotationReader } from './GetPublicQuotationUseCase';
+import { renderEmailLayout, escapeHtml } from '../../shared/email/emailLayout';
 
 export interface IQuotationDeliveryService {
   /** Best-effort. Never throws: a send failure must not undo a sent quotation. */
@@ -43,17 +44,18 @@ export class QuotationDeliveryService implements IQuotationDeliveryService {
       if (!view.clientEmail) return;
 
       const url = `${this.appUrl}/q/${shareToken}`;
-      const html = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #4F46E5;">Quotation ${escapeHtml(view.reference)}</h2>
-          <p>${escapeHtml(view.companyName)} has sent you a quotation.</p>
-          <p>You can view it, and download it as a PDF, using the link below.</p>
-          <a href="${escapeHtml(url)}" style="display: inline-block; background-color: #4F46E5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px;">View quotation</a>
-          <p style="margin-top: 24px; font-size: 12px; color: #999;">
-            This link is private — please do not forward it.
-          </p>
-        </div>
+      const bodyHtml = `
+        <p><strong>${escapeHtml(view.companyName)}</strong> has sent you a quotation.</p>
+        <p>You can view it, and download it as a PDF, using the link below.</p>
       `;
+      const html = renderEmailLayout({
+        preheader: `${view.companyName} sent you quotation ${view.reference}`,
+        eyebrow: 'Quotation',
+        heading: `Quotation ${escapeHtml(view.reference)}`,
+        bodyHtml,
+        cta: { label: 'View quotation', url },
+        footerNote: 'This link is private — please do not forward it.',
+      });
 
       await this.emailSender.sendTransactionalEmail(
         view.clientEmail,
@@ -67,13 +69,4 @@ export class QuotationDeliveryService implements IQuotationDeliveryService {
       console.error('Failed to deliver quotation to client', error);
     }
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

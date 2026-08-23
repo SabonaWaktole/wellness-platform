@@ -59,6 +59,8 @@
 
 .headerActions {
   display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
   width: 100%;
 }

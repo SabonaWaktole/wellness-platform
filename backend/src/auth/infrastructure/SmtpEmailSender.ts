@@ -1,5 +1,6 @@
 import nodemailer, { Transporter } from 'nodemailer';
 import { IEmailSender } from '../application/ports/IEmailSender';
+import { renderEmailLayout, escapeHtml } from '../../shared/email/emailLayout';
 
 /**
  * Sends mail through a plain SMTP mailbox (Hostinger's info@nevacrm.eu),
@@ -46,36 +47,67 @@ export class SmtpEmailSender implements IEmailSender {
   ): Promise<void> {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #4F46E5;">Your NevaCRM workspace is ready</h2>
-        <p>A workspace has been created for you on NevaCRM. Here are your login details:</p>
-        <table style="margin-top: 15px; border-collapse: collapse;">
-          <tr><td style="padding: 4px 12px 4px 0; color: #666;">Workspace</td><td><strong>${params.companyName}</strong></td></tr>
-          <tr><td style="padding: 4px 12px 4px 0; color: #666;">Workspace URL</td><td><strong>${params.urlSlug}</strong></td></tr>
-          <tr><td style="padding: 4px 12px 4px 0; color: #666;">Email</td><td><strong>${to}</strong></td></tr>
-          <tr><td style="padding: 4px 12px 4px 0; color: #666;">Password</td><td><strong>${params.ownerPassword}</strong></td></tr>
-        </table>
-        <a href="${loginUrl}" style="display: inline-block; background-color: #4F46E5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px;">Log in to your workspace</a>
-        <p style="margin-top: 20px; font-size: 12px; color: #999;">For your security, we recommend changing your password after logging in.</p>
-      </div>
+    const bodyHtml = `
+      <p>A workspace has been created for you on NevaCRM. Here are your login details:</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 14px; width: 100%; background-color:#f7f8fc; border:1px solid #eceef3; border-radius: 10px;">
+        <tr><td style="padding: 12px 16px 4px 16px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.04em;">Workspace</td></tr>
+        <tr><td style="padding: 0 16px 12px 16px; font-size:15px; font-weight:600; color:#1a1d29;">${escapeHtml(params.companyName)} <span style="font-weight:400; color:#6b7280;">(${escapeHtml(params.urlSlug)})</span></td></tr>
+        <tr><td style="padding: 0 16px 4px 16px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.04em;">Email</td></tr>
+        <tr><td style="padding: 0 16px 12px 16px; font-size:15px; font-weight:600; color:#1a1d29;">${escapeHtml(to)}</td></tr>
+        <tr><td style="padding: 0 16px 4px 16px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.04em;">Password</td></tr>
+        <tr><td style="padding: 0 16px 16px 16px; font-size:15px; font-weight:600; color:#1a1d29; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">${escapeHtml(params.ownerPassword)}</td></tr>
+      </table>
     `;
+
+    const html = renderEmailLayout({
+      preheader: 'Your NevaCRM workspace is ready',
+      eyebrow: 'New Workspace',
+      heading: 'Your workspace is ready',
+      bodyHtml,
+      cta: { label: 'Log in to your workspace', url: loginUrl },
+      footerNote: 'For your security, we recommend changing your password after logging in.',
+    });
 
     await this.send(to, `Your NevaCRM workspace "${params.companyName}" is ready`, html, 'workspace created');
   }
 
-  async sendInvitationEmail(to: string, token: string, tenantName: string): Promise<void> {
+  async sendInvitationEmail(to: string, token: string, tenantName?: string): Promise<void> {
     const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invitations/accept?token=${token}&email=${encodeURIComponent(to)}`;
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #4F46E5;">Invitation to join ${tenantName}</h2>
-        <p>You have been invited to join ${tenantName} on NevaCRM as a team member.</p>
-        <p>Please click the button below to accept the invitation and set up your account password.</p>
-        <a href="${inviteLink}" style="display: inline-block; background-color: #4F46E5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px;">Accept Invitation</a>
-        <p style="margin-top: 20px; font-size: 12px; color: #999;">If you didn't expect this invitation, you can safely ignore this email.</p>
-      </div>
+    if (!tenantName) {
+      const bodyHtml = `
+        <p>You have been invited to join NevaCRM as a <strong>Platform Administrator</strong>.</p>
+        <p>Click the button below to accept the invitation and set up your account password.</p>
+      `;
+
+      const html = renderEmailLayout({
+        preheader: "You've been invited to join NevaCRM as a Platform Administrator",
+        eyebrow: 'Platform Invitation',
+        heading: "You're invited as a Platform Administrator",
+        bodyHtml,
+        cta: { label: 'Accept Invitation', url: inviteLink },
+        footerNote: "If you didn't expect this invitation, you can safely ignore this email.",
+      });
+
+      await this.send(to, 'You have been invited to join NevaCRM as a Platform Administrator', html, 'invitation');
+      return;
+    }
+
+    const safeTenantName = escapeHtml(tenantName);
+
+    const bodyHtml = `
+      <p>You have been invited to join <strong>${safeTenantName}</strong> on NevaCRM as a team member.</p>
+      <p>Click the button below to accept the invitation and set up your account password.</p>
     `;
+
+    const html = renderEmailLayout({
+      preheader: `You've been invited to join ${tenantName} on NevaCRM`,
+      eyebrow: 'Team Invitation',
+      heading: `You're invited to join ${safeTenantName}`,
+      bodyHtml,
+      cta: { label: 'Accept Invitation', url: inviteLink },
+      footerNote: "If you didn't expect this invitation, you can safely ignore this email.",
+    });
 
     await this.send(to, `You have been invited to join ${tenantName} on NevaCRM`, html, 'invitation');
   }
@@ -83,15 +115,19 @@ export class SmtpEmailSender implements IEmailSender {
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}&email=${encodeURIComponent(to)}`;
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #4F46E5;">Password Reset Request</h2>
-        <p>We received a request to reset your password. If you didn't make this request, you can ignore this email.</p>
-        <p>To reset your password, click the button below:</p>
-        <a href="${resetLink}" style="display: inline-block; background-color: #4F46E5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px;">Reset Password</a>
-        <p style="margin-top: 20px; font-size: 12px; color: #999;">This link will expire in 1 hour.</p>
-      </div>
+    const bodyHtml = `
+      <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
+      <p>To reset your password, click the button below:</p>
     `;
+
+    const html = renderEmailLayout({
+      preheader: 'Reset your NevaCRM password',
+      eyebrow: 'Password Reset',
+      heading: 'Reset your password',
+      bodyHtml,
+      cta: { label: 'Reset Password', url: resetLink },
+      footerNote: 'This link will expire in 1 hour.',
+    });
 
     await this.send(to, 'Reset Your Password - NevaCRM', html, 'password reset');
   }

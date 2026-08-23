@@ -106,7 +106,8 @@ export const createTenantAuthRoutes = (
    * administrator reaching this route is doing so with a workspace session
    * minted by /api/tenants/:id/enter, which reads BUSINESS_OWNER, so they pass.
    * A platform-session SUPER_ADMIN would be stopped by `resolveTenant` long
-   * before this guard anyway, and has POST /api/tenants/:id/users instead.
+   * before this guard anyway; the console's own super-admin-only way to add
+   * someone is POST /api/tenants/:id/invitations (or /platform-admins/invitations).
    */
   router.post(
     '/users',

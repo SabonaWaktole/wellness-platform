@@ -21,7 +21,27 @@ describe('Client Entity', () => {
     options: ['1-10', '11-50', '51-200'],
   });
 
-  const definitions = [textDef, selectDef];
+  const alphanumericDef = CustomFieldDefinition.create({
+    id: 'field-3',
+    tenantId,
+    fieldName: 'Plate Number',
+    fieldType: FieldType.ALPHANUMERIC,
+  });
+
+  const definitions = [textDef, selectDef, alphanumericDef];
+
+  const clientWith = (customFieldValues: Record<string, any>) =>
+    Client.create({
+      id: 'client-x',
+      tenantId,
+      name: 'Acme Corp',
+      contactInfo: { email: 'test@acmecorp.com' },
+      status: ClientStatus.PROSPECT,
+      customFieldValues,
+      lastUpdatedByUserId: 'user-1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }, definitions);
 
   it('creates a client successfully when all custom fields match definitions', () => {
     const client = Client.create({
@@ -98,5 +118,33 @@ describe('Client Entity', () => {
         updatedAt: new Date(),
       }, definitions);
     }).toThrow('Value "1000+" is not a valid option for field "company_size".');
+  });
+
+  // TEXT is free-form: spaces and punctuation must survive untouched.
+  it('accepts spaces and punctuation in a TEXT value', () => {
+    const client = clientWith({ industry: 'Software & IT Services' });
+    expect(client.customFieldValues.industry).toBe('Software & IT Services');
+  });
+
+  describe('ALPHANUMERIC fields', () => {
+    it('accepts letters, numbers and spaces', () => {
+      expect(clientWith({ 'Plate Number': 'AB 123' }).customFieldValues['Plate Number'])
+        .toBe('AB 123');
+    });
+
+    it('rejects punctuation', () => {
+      expect(() => clientWith({ 'Plate Number': 'AB-123' }))
+        .toThrow('Value for field "Plate Number" must contain only letters, numbers and spaces.');
+    });
+
+    it('rejects a non-string value', () => {
+      expect(() => clientWith({ 'Plate Number': 42 }))
+        .toThrow('Value for field "Plate Number" must contain only letters, numbers and spaces.');
+    });
+
+    it('allows a blank value, which is how the form reports "left empty"', () => {
+      expect(() => clientWith({ 'Plate Number': '' })).not.toThrow();
+      expect(() => clientWith({ 'Plate Number': null })).not.toThrow();
+    });
   });
 });

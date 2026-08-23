@@ -33,7 +33,7 @@ export interface PlatformDeleteUserDTO {
  *
  * "Delete" is a soft delete (`IUserRepository.softDelete`), not a row
  * removal: seven non-nullable columns reference User, so a hard delete is
- * blocked by the RESTRICT foreign keys — the same reason `DeactivateUserUseCase`
+ * blocked by Postgres RESTRICT — the same reason `DeactivateUserUseCase`
  * never removes a row either.
  */
 export class PlatformDeleteUserUseCase {

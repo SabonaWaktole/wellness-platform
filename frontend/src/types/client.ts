@@ -33,7 +33,20 @@ export interface CustomFieldDefinition {
   isRequired: boolean;
 }
 
-export type CustomFieldType = 'TEXT' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SINGLE_SELECT';
+export type CustomFieldType =
+  | 'TEXT'
+  | 'NUMBER'
+  | 'DATE'
+  | 'BOOLEAN'
+  | 'ALPHANUMERIC'
+  | 'SINGLE_SELECT';
+
+/** Per-row outcome of a spreadsheet import; `skipped` only applies to fields. */
+export interface ImportResult {
+  created: number;
+  skipped?: number;
+  errors: { row: number; message: string }[];
+}
 
 export interface OutcomeCategory {
   id: string;

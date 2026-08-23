@@ -27,7 +27,6 @@ import { GetOwnershipTransferCandidatesUseCase } from '@auth/application/use-cas
 import { PlatformSuspendUserUseCase } from '@auth/application/use-cases/PlatformSuspendUserUseCase';
 import { PlatformReactivateUserUseCase } from '@auth/application/use-cases/PlatformReactivateUserUseCase';
 import { PlatformDeleteUserUseCase } from '@auth/application/use-cases/PlatformDeleteUserUseCase';
-import { CreatePlatformAdminUseCase } from '@auth/application/use-cases/CreatePlatformAdminUseCase';
 import { DeletePlatformAdminSelfUseCase } from '@auth/application/use-cases/DeletePlatformAdminSelfUseCase';
 import { PrismaOwnershipTransferRepository } from '@auth/infrastructure/repositories/PrismaOwnershipTransferRepository';
 import { PrismaOwnershipTransactions } from '@auth/infrastructure/PrismaOwnershipTransactions';
@@ -246,11 +245,6 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     ownershipTransactions,
     auditLogger
   );
-  const createPlatformAdminUseCase = new CreatePlatformAdminUseCase(
-    userRepository,
-    passwordHasher,
-    auditLogger
-  );
   const deletePlatformAdminSelfUseCase = new DeletePlatformAdminSelfUseCase(
     userRepository,
     auditLogger
@@ -339,14 +333,12 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     ),
     enterTenantUseCase,
     deleteTenantUseCase,
-    createUserUseCase,
     inviteUserUseCase: platformInviteUserUseCase,
     getPlatformUsersUseCase,
     getOwnershipTransferCandidatesUseCase,
     suspendUserUseCase: platformSuspendUserUseCase,
     reactivateUserUseCase: platformReactivateUserUseCase,
     deleteUserUseCase: platformDeleteUserUseCase,
-    createPlatformAdminUseCase,
     deletePlatformAdminSelfUseCase,
     bulkUpdateTenantSettingsUseCase,
     tokenService,

@@ -86,12 +86,14 @@
       "NUMBER": "Number",
       "DATE": "Date",
       "BOOLEAN": "Boolean",
-      "SINGLE_SELECT": "Single Select"
+      "SINGLE_SELECT": "Single Select",
+      "ALPHANUMERIC": "Alphanumeric"
     },
     "breadcrumb": "Client Management",
     "tabCustomFields": "Custom Fields",
     "tabOutcomeCategories": "Outcome Categories",
     "addField": "Add Field",
+    "importFields": "Import from Excel",
     "addCategory": "Add Category",
     "addFieldTitle": "Add Custom Field",
     "addCategoryTitle": "Add Outcome Category",

@@ -3,10 +3,10 @@
 -- Run this on the Hostinger MySQL database, in the SQL tab.
 --
 -- SUPER_ADMIN sits outside every workspace (tenantId IS NULL), so there is
--- no in-app way to create one — this is the only path. `scratch/seed-super-admin.ts
--- --sql-only` now emits MySQL directly, so it prints the same dialect as this
--- file; prefer the script when you need a different email or password, and
--- this file when you just want something to paste into phpMyAdmin.
+-- no in-app way to create one — this is the only path, matching
+-- scratch/seed-super-admin.ts's own SQL-only mode, just in MySQL dialect
+-- (backticks, no double-quoted identifiers) instead of the script's Postgres
+-- output.
 --
 -- Email: sebonawaktole@gmail.com
 -- Password: S@bon@W@ — near-identical to the hardcoded default already

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit2 } from 'lucide-react';
 import { SettingsLayout } from '../../components/layout/SettingsLayout';
@@ -6,11 +7,14 @@ import { SlideOver } from '../../components/ui/SlideOver';
 import { Button } from '../../components/ui/Button';
 import { TextInput } from '../../components/ui/TextInput';
 import { SelectInput } from '../../components/ui/SelectInput';
+import { ExcelImportButton } from '../../components/clients/ExcelImportButton';
+import { clientService } from '../../services/clientService';
 import { useClientSettings, useDefineCustomField, useDefineOutcomeCategory } from '../../hooks/useClients';
 import styles from './ClientSettingsContent.module.css';
 
 export const ClientSettingsContent: React.FC = () => {
   const { t } = useTranslation('settings');
+  const { tenantSlug = '' } = useParams();
   const { t: tc } = useTranslation('common');
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'fields' | 'outcomes'>('fields');
@@ -90,9 +94,18 @@ export const ClientSettingsContent: React.FC = () => {
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>{t('clientManagement.customFields')}</h2>
-              <Button icon={<Plus size={16} />} onClick={() => setIsSlideOverOpen(true)}>
-                {t('clientManagement.addField')}
-              </Button>
+              <div className={styles.sectionActions}>
+                <ExcelImportButton
+                  label={t('clientManagement.importFields')}
+                  templateFileName="custom-fields-template.xlsx"
+                  onImport={(file) => clientService.importCustomFields(tenantSlug, file)}
+                  onDownloadTemplate={() => clientService.downloadCustomFieldTemplate(tenantSlug)}
+                  onImported={fetchSettings}
+                />
+                <Button icon={<Plus size={16} />} onClick={() => setIsSlideOverOpen(true)}>
+                  {t('clientManagement.addField')}
+                </Button>
+              </div>
             </div>
 
             <div className={styles.tableContainer}>
@@ -216,6 +229,7 @@ export const ClientSettingsContent: React.FC = () => {
                 <option value="NUMBER">{t('clientManagement.fieldTypes.NUMBER')}</option>
                 <option value="DATE">{t('clientManagement.fieldTypes.DATE')}</option>
                 <option value="BOOLEAN">{t('clientManagement.fieldTypes.BOOLEAN')}</option>
+                <option value="ALPHANUMERIC">{t('clientManagement.fieldTypes.ALPHANUMERIC')}</option>
               </SelectInput>
             </>
           ) : (

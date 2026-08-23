@@ -1,0 +1,11 @@
+-- Soft off-boarding for staff.
+--
+-- A hard delete is not possible: seven non-nullable columns reference "User"
+-- (Quotation.createdByUserId, Appointment.assignedUserId, Interaction.authorUserId,
+-- Client.lastUpdatedByUserId, QuotationStatusHistory.changedByUserId,
+-- StockMovement.createdBy, PasswordResetToken.userId). With no ON DELETE rule
+-- declared, Postgres defaults to RESTRICT, so the delete is blocked outright;
+-- cascading instead would erase financial and audit history.
+--
+-- DEFAULT true back-fills every existing row as active.
+ALTER TABLE "User" ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;

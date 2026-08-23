@@ -111,5 +111,14 @@
     "notesLabel": "Notes",
     "notesComingSoon": "Coming soon: internal notes are not yet saved with the client record.",
     "saveClient": "Save Client"
+  },
+  "import": {
+    "importClients": "Import from Excel",
+    "downloadTemplate": "Download template",
+    "summary": "{{created}} created",
+    "skipped": "{{count}} skipped (already exist)",
+    "rowError": "Row {{row}}: {{message}}",
+    "failed": "The import failed. Check the file and try again.",
+    "templateFailed": "The template could not be downloaded."
   }
 }
