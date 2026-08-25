@@ -107,6 +107,7 @@
     "phonePlaceholderClient": "(555) 123-4567",
     "emailPlaceholderClient": "contact@example.com",
     "customFieldsSection": "Custom Fields",
+    "fieldRequired": "This field is required",
     "internalNotes": "Internal Notes",
     "notesLabel": "Notes",
     "notesComingSoon": "Coming soon: internal notes are not yet saved with the client record.",

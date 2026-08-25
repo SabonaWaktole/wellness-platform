@@ -202,6 +202,12 @@
   box-shadow: inset 0 0 0 1px var(--border-hairline);
 }
 
+.actionButtonGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .actionButton {
   background: none;
   border: none;
@@ -266,6 +272,70 @@
   font-size: var(--font-size-body-md);
   color: var(--text-primary);
   cursor: pointer;
+}
+
+/* ------------------------------------------------------- options editor */
+
+.optionsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.optionsLabel {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-md);
+  font-weight: 520;
+  color: var(--text-primary);
+}
+
+.optionsChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.optionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  background-color: var(--color-surface-container);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  font-family: var(--font-family-base);
+  box-shadow: inset 0 0 0 1px var(--border-hairline);
+}
+
+.optionChipRemove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.optionChipRemove:hover {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-error);
+}
+
+.optionsInputRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.optionsInputRow > *:first-child {
+  flex: 1;
 }
 
 .slideOverFooter {

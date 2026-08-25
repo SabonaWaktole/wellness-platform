@@ -46,7 +46,9 @@ export class PrismaInvoicePdfReader implements IInvoicePdfReader {
       dueDate: row.dueDate,
       sentAt: row.sentAt,
       paidAt: row.paidAt,
-      clientName: row.client.name,
+      // Falls back to "Client" if the tenant deleted the field currently
+      // holding the PRIMARY_NAME role — see ClientFieldResolver.
+      clientName: row.client.name ?? 'Client',
       companyName: row.tenant.name,
       companyAddress: formatAddress(row.tenant),
       companyContactEmail: row.tenant.contactEmail,

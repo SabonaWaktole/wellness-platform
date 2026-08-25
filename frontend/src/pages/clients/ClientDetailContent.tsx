@@ -130,6 +130,14 @@ export const ClientDetailContent: React.FC = () => {
   if (isClientLoading) return <div className={styles.container}>{t('detail.loading')}</div>;
   if (!client) return <div className={styles.container}>{t('detail.notFound')}</div>;
 
+  // ASSIGNEE / PRIMARY_EMAIL / PRIMARY_PHONE already have specialized
+  // rendering in the Key Contact card above (server-resolved onto
+  // client.assignedUserId / client.contactInfo); everything else — including
+  // PRIMARY_NAME, STATUS, and true custom fields — goes in the About card.
+  const aboutFields = customFields.filter(
+    (field) => field.role !== 'ASSIGNEE' && field.role !== 'PRIMARY_EMAIL' && field.role !== 'PRIMARY_PHONE'
+  );
+
   return (
     <div className={styles.container}>
       {/* Header section */}
@@ -143,7 +151,7 @@ export const ClientDetailContent: React.FC = () => {
         <div className={styles.headerMain}>
           <div className={styles.headerLeft}>
             <div className={styles.companyLogo}>
-              <span className={styles.companyInitials}>{client.name.substring(0, 2).toUpperCase()}</span>
+              <span className={styles.companyInitials}>{(client.name || 'Client').substring(0, 2).toUpperCase()}</span>
             </div>
             <div className={styles.companyInfo}>
               <div className={styles.companyTitleRow}>
@@ -228,21 +236,20 @@ export const ClientDetailContent: React.FC = () => {
             </div>
           </Card>
 
-          {/* Custom Fields Card */}
+          {/* About Card — every field not already rendered above via its role */}
           <Card padding="lg" className={styles.customFieldsCard}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>{t('detail.about')}</h2>
               <button
                 className={styles.settingsButton}
-                disabled
-                title={t('detail.customFieldSettingsSoon')}
+                onClick={() => navigate(`/${tenantSlug}/settings/client-management`)}
                 aria-label={t('detail.customFieldSettingsAria')}
               >
                 <Settings size={16} />
               </button>
             </div>
             <div className={styles.fieldsList}>
-              {customFields.map((field) => (
+              {aboutFields.map((field) => (
                 <div key={field.id} className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{field.fieldName}</span>
                   <span className={styles.fieldValue}>
@@ -253,7 +260,7 @@ export const ClientDetailContent: React.FC = () => {
                   </span>
                 </div>
               ))}
-              {customFields.length === 0 && (
+              {aboutFields.length === 0 && (
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldValue}>{t('detail.noCustomFields')}</span>
                 </div>

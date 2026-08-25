@@ -18,7 +18,12 @@ describe('ImportCustomFieldsUseCase', () => {
   beforeEach(() => {
     repo = {
       findByTenantId: jest.fn().mockResolvedValue([]),
+      findById: jest.fn(),
+      findByTenantIdAndRole: jest.fn(),
       save: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn(),
+      delete: jest.fn(),
+      reorder: jest.fn(),
     };
     useCase = new ImportCustomFieldsUseCase(repo);
   });

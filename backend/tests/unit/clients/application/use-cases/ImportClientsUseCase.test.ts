@@ -1,8 +1,11 @@
 import { ImportClientsUseCase } from '../../../../../src/clients/application/use-cases/ImportClientsUseCase';
 import { CreateClientUseCase } from '../../../../../src/clients/application/use-cases/CreateClientUseCase';
+import { EnsureDefaultClientFieldsUseCase } from '../../../../../src/clients/application/use-cases/EnsureDefaultClientFieldsUseCase';
 import { ICustomFieldDefinitionRepository } from '../../../../../src/clients/domain/repositories/ICustomFieldDefinitionRepository';
+import { IClientRepository } from '../../../../../src/clients/domain/repositories/IClientRepository';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
+import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
 import { ParsedSheet } from '../../../../../src/clients/infrastructure/excel/sheet';
 
@@ -11,13 +14,31 @@ describe('ImportClientsUseCase', () => {
   const authorUserId = 'user-1';
 
   const definitions = [
+    CustomFieldDefinition.create({
+      id: 'name-field', tenantId, fieldName: 'Name', fieldType: FieldType.TEXT,
+      role: FieldRole.PRIMARY_NAME, required: true,
+    }),
+    CustomFieldDefinition.create({
+      id: 'email-field', tenantId, fieldName: 'Email', fieldType: FieldType.EMAIL,
+      role: FieldRole.PRIMARY_EMAIL,
+    }),
+    CustomFieldDefinition.create({
+      id: 'phone-field', tenantId, fieldName: 'Phone', fieldType: FieldType.TEXT,
+      role: FieldRole.PRIMARY_PHONE,
+    }),
+    CustomFieldDefinition.create({
+      id: 'status-field', tenantId, fieldName: 'Status', fieldType: FieldType.SINGLE_SELECT,
+      options: ['PROSPECT', 'ACTIVE', 'INACTIVE'], role: FieldRole.STATUS, required: true,
+    }),
     CustomFieldDefinition.create({ id: 'f1', tenantId, fieldName: 'Company Size', fieldType: FieldType.NUMBER }),
     CustomFieldDefinition.create({ id: 'f2', tenantId, fieldName: 'Is VIP', fieldType: FieldType.BOOLEAN }),
     CustomFieldDefinition.create({ id: 'f3', tenantId, fieldName: 'Plate Number', fieldType: FieldType.ALPHANUMERIC }),
   ];
 
   let customFieldRepo: jest.Mocked<ICustomFieldDefinitionRepository>;
+  let clientRepo: jest.Mocked<IClientRepository>;
   let createClientUseCase: jest.Mocked<Pick<CreateClientUseCase, 'execute'>>;
+  let ensureDefaultFields: EnsureDefaultClientFieldsUseCase;
   let useCase: ImportClientsUseCase;
 
   const sheetOf = (rows: Record<string, string>[]): ParsedSheet => ({
@@ -28,10 +49,25 @@ describe('ImportClientsUseCase', () => {
   beforeEach(() => {
     customFieldRepo = {
       findByTenantId: jest.fn().mockResolvedValue(definitions),
+      findById: jest.fn(),
+      findByTenantIdAndRole: jest.fn(),
       save: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      reorder: jest.fn(),
     };
+    clientRepo = {
+      findById: jest.fn(),
+      search: jest.fn(),
+      save: jest.fn(),
+      update: jest.fn(),
+      countByTenant: jest.fn(),
+      findRecentByTenant: jest.fn(),
+      backfillLegacyBasicFields: jest.fn(),
+    } as any;
     createClientUseCase = { execute: jest.fn().mockResolvedValue({ id: 'client-1' }) };
-    useCase = new ImportClientsUseCase(createClientUseCase as any, customFieldRepo);
+    ensureDefaultFields = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
+    useCase = new ImportClientsUseCase(createClientUseCase as any, ensureDefaultFields);
   });
 
   it('creates a client per row, coercing custom field values by declared type', async () => {
@@ -56,10 +92,15 @@ describe('ImportClientsUseCase', () => {
       expect.objectContaining({
         tenantId,
         authorUserId,
-        name: 'Acme Ltd',
-        email: 'hi@acme.com',
-        status: ClientStatus.ACTIVE,
-        customFieldValues: { 'Company Size': 42, 'Is VIP': true, 'Plate Number': 'AB 123' },
+        customFieldValues: {
+          Name: 'Acme Ltd',
+          Email: 'hi@acme.com',
+          Phone: '+123',
+          Status: ClientStatus.ACTIVE,
+          'Company Size': 42,
+          'Is VIP': true,
+          'Plate Number': 'AB 123',
+        },
       })
     );
   });
@@ -67,7 +108,9 @@ describe('ImportClientsUseCase', () => {
   it('defaults a missing status to PROSPECT', async () => {
     await useCase.execute({ tenantId, authorUserId, sheet: sheetOf([{ name: 'Acme', status: '' }]) });
     expect(createClientUseCase.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ status: ClientStatus.PROSPECT })
+      expect.objectContaining({
+        customFieldValues: expect.objectContaining({ Status: ClientStatus.PROSPECT }),
+      })
     );
   });
 
@@ -78,7 +121,9 @@ describe('ImportClientsUseCase', () => {
       sheet: sheetOf([{ name: 'Acme', 'Company Size': '', 'Is VIP': '' }]),
     });
     expect(createClientUseCase.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ customFieldValues: {} })
+      expect.objectContaining({
+        customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT },
+      })
     );
   });
 
@@ -88,7 +133,7 @@ describe('ImportClientsUseCase', () => {
       authorUserId,
       sheet: sheetOf([
         { name: 'Good One', 'Company Size': '10' },
-        { name: '', 'Company Size': '10' },
+        { name: 'Unknown Column', Unknown: 'x' },
         { name: 'Bad Number', 'Company Size': 'twelve' },
         { name: 'Another Good', 'Company Size': '20' },
       ]),

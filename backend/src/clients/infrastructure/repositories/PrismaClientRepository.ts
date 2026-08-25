@@ -1,11 +1,18 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { IClientRepository, SearchClientsFilters } from '../../domain/repositories/IClientRepository';
 import { Client } from '../../domain/entities/Client';
-import { ClientStatus } from '../../domain/enums/ClientStatus';
-import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
-import { FieldType } from '../../domain/enums/FieldType';
+import { FieldRole } from '../../domain/enums/FieldRole';
 import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
 import { IS_MYSQL } from '../../../shared/infrastructure/prisma/provider';
+
+/** Legacy Client column each role mirrors into — see backfillLegacyBasicFields. */
+const LEGACY_COLUMN_BY_ROLE: Record<FieldRole, string> = {
+  [FieldRole.PRIMARY_NAME]: 'name',
+  [FieldRole.PRIMARY_EMAIL]: 'email',
+  [FieldRole.PRIMARY_PHONE]: 'phone',
+  [FieldRole.STATUS]: 'status',
+  [FieldRole.ASSIGNEE]: 'assignedUserId',
+};
 
 export class PrismaClientRepository implements IClientRepository {
   constructor(private prisma: PrismaClient) {}
@@ -16,9 +23,12 @@ export class PrismaClientRepository implements IClientRepository {
     return Client.reconstitute({
       id: record.id,
       tenantId: record.tenantId,
-      name: record.name,
+      // Falls back to "Client"/empty when a tenant has deleted the field
+      // currently holding this role — see ClientFieldResolver for the
+      // canonical version of this fallback (used wherever defs are in scope).
+      name: record.name ?? 'Client',
       contactInfo: { email: record.email || undefined, phone: record.phone || undefined },
-      status: record.status as ClientStatus,
+      status: record.status ?? '',
       assignedUserId: record.assignedUserId,
       customFieldValues: typeof record.customFieldValues === 'string' 
         ? JSON.parse(record.customFieldValues) 
@@ -170,6 +180,40 @@ export class PrismaClientRepository implements IClientRepository {
         updatedAt: client.updatedAt,
       },
     });
+  }
+
+  async backfillLegacyBasicFields(tenantId: string, fieldNameByRole: Partial<Record<FieldRole, string>>): Promise<void> {
+    const entries = Object.entries(fieldNameByRole) as [FieldRole, string][];
+    if (entries.length === 0) return;
+
+    if (IS_MYSQL) {
+      // Each JSON_SET path/value pair is a bound parameter, not a raw
+      // fragment — the field name goes in as a value, not spliced into SQL.
+      const setArgs = entries.flatMap(([role, fieldName]) => {
+        const column = LEGACY_COLUMN_BY_ROLE[role];
+        return [
+          Prisma.sql`CONCAT('$."', ${fieldName}, '"')`,
+          Prisma.raw(`\`${column}\``),
+        ];
+      });
+      const joined = Prisma.join(setArgs, ', ');
+      await this.prisma.$executeRaw`
+        UPDATE \`Client\`
+        SET \`customFieldValues\` = JSON_SET(\`customFieldValues\`, ${joined})
+        WHERE \`tenantId\` = ${tenantId}
+      `;
+    } else {
+      const pairs = entries.map(([role, fieldName]) => {
+        const column = LEGACY_COLUMN_BY_ROLE[role];
+        return Prisma.sql`${fieldName}, to_jsonb(${Prisma.raw(`"${column}"`)})`;
+      });
+      const joined = Prisma.join(pairs, ', ');
+      await this.prisma.$executeRaw`
+        UPDATE "Client"
+        SET "customFieldValues" = "customFieldValues" || jsonb_strip_nulls(jsonb_build_object(${joined}))
+        WHERE "tenantId" = ${tenantId}
+      `;
+    }
   }
 
   async update(tenantId: string, client: Client): Promise<void> {

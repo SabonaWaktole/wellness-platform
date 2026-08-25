@@ -277,12 +277,18 @@ model PasswordResetToken {
 }
 
 model Client {
+  // name/email/phone/status/assignedUserId are being dissolved into the
+  // tenant-editable CustomFieldDefinition system (see FieldRole) so a
+  // business owner can rename/retype/delete/reorder every client field,
+  // including these. Kept nullable here during the transition: existing
+  // rows/tooling can still read them, but customFieldValues is the
+  // authoritative source going forward — see ClientFieldResolver.
   id                  String   @id
   tenantId            String
-  name                String
+  name                String?
   email               String?
   phone               String?
-  status              String // 'PROSPECT', 'ACTIVE', 'INACTIVE'
+  status              String? // legacy: 'PROSPECT', 'ACTIVE', 'INACTIVE'
   assignedUserId      String?
   customFieldValues   Json
   lastUpdatedByUserId String
@@ -308,13 +314,24 @@ model CustomFieldDefinition {
   fieldName String
   // Stored as a plain String rather than a Postgres enum, so the authoritative
   // list is src/clients/domain/enums/FieldType.ts and adding a value needs no
-  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, ALPHANUMERIC, SINGLE_SELECT.
+  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, ALPHANUMERIC,
+  // SINGLE_SELECT, EMAIL, USER_REFERENCE.
   fieldType String
-  options   Json @default("[]") // for SINGLE_SELECT
+  options   Json    @default("[]") // for SINGLE_SELECT
+  // Display order within the tenant's field list (client form/detail/settings).
+  order     Int     @default(0)
+  // Tags this field as the tenant's designated field for a system concern
+  // (search/PDFs/email delivery/reports/dashboard scoping) — see
+  // src/clients/domain/enums/FieldRole.ts and ClientFieldResolver. At most
+  // one field per (tenantId, role); NULL is distinct per row in MySQL so
+  // unroled fields are unaffected.
+  role      String?
+  required  Boolean @default(false)
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, fieldName])
+  @@unique([tenantId, role])
 }
 
 model OutcomeCategory {

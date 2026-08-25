@@ -1,17 +1,18 @@
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
+import { EnsureDefaultClientFieldsUseCase } from './EnsureDefaultClientFieldsUseCase';
+import { ClientFieldResolver } from '../../domain/services/ClientFieldResolver';
 import { Client } from '../../domain/entities/Client';
-import { ClientStatus } from '../../domain/enums/ClientStatus';
 import { randomUUID } from 'crypto';
 
 interface CreateClientDTO {
   tenantId: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  status: ClientStatus;
-  assignedUserId?: string;
+  /**
+   * name/email/phone/status/assignedUserId are no longer separate fields —
+   * they're ordinary entries in here, keyed by whatever the tenant has
+   * currently named those fields (see FieldRole / ClientFieldResolver).
+   */
   customFieldValues?: Record<string, any>;
   authorUserId: string;
 }
@@ -20,20 +21,25 @@ export class CreateClientUseCase {
   constructor(
     private clientRepo: IClientRepository,
     private customFieldRepo: ICustomFieldDefinitionRepository,
+    private ensureDefaultFields: EnsureDefaultClientFieldsUseCase,
     private notifications?: NotificationService
   ) {}
 
   async execute(dto: CreateClientDTO): Promise<Client> {
-    const definitions = await this.customFieldRepo.findByTenantId(dto.tenantId);
+    const definitions = await this.ensureDefaultFields.execute(dto.tenantId);
+    const customFieldValues = dto.customFieldValues || {};
 
     const client = Client.create({
       id: randomUUID(),
       tenantId: dto.tenantId,
-      name: dto.name,
-      contactInfo: { email: dto.email, phone: dto.phone },
-      status: dto.status,
-      assignedUserId: dto.assignedUserId,
-      customFieldValues: dto.customFieldValues || {},
+      name: ClientFieldResolver.resolveName(customFieldValues, definitions),
+      contactInfo: {
+        email: ClientFieldResolver.resolveEmail(customFieldValues, definitions),
+        phone: ClientFieldResolver.resolvePhone(customFieldValues, definitions),
+      },
+      status: ClientFieldResolver.resolveStatus(customFieldValues, definitions) ?? '',
+      assignedUserId: ClientFieldResolver.resolveAssignedUserId(customFieldValues, definitions) ?? null,
+      customFieldValues,
       lastUpdatedByUserId: dto.authorUserId,
       createdAt: new Date(),
       updatedAt: new Date(),

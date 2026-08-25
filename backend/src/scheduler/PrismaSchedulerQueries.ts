@@ -46,7 +46,7 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
       tenantId: r.tenantId,
       assignedUserId: r.assignedUserId,
       scheduledAt: r.scheduledAt,
-      clientName: r.client.name,
+      clientName: r.client.name ?? 'Client',
     }));
   }
 
@@ -121,7 +121,7 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
       // cannot express that, so it is asserted here rather than at four call
       // sites downstream.
       sentAt: r.sentAt as Date,
-      clientName: r.client.name,
+      clientName: r.client.name ?? 'Client',
     }));
   }
 

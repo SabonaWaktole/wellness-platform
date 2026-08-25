@@ -52,7 +52,9 @@ export class PrismaPublicQuotationReader implements IPublicQuotationReader {
       issuedAt: row.createdAt,
       sentAt: row.sentAt,
       respondedAt: row.respondedAt,
-      clientName: row.client.name,
+      // Falls back to "Client" if the tenant deleted the field currently
+      // holding the PRIMARY_NAME role — see ClientFieldResolver.
+      clientName: row.client.name ?? 'Client',
       clientEmail: row.client.email,
       companyName: row.tenant.name,
       companyLogoUrl: row.tenant.logoUrl,
