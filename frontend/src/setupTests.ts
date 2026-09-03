@@ -41,6 +41,15 @@ if (!textProto.getClientRects) textProto.getClientRects = emptyClientRects;
 if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = zeroRect;
 if (!textProto.getBoundingClientRect) textProto.getBoundingClientRect = zeroRect;
 
+/** jsdom has no layout engine and so never implements ResizeObserver. */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 export const server = setupServer(...handlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
