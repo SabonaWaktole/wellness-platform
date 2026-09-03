@@ -40,6 +40,9 @@ export const NOTIFICATION_TYPES = [
 
   // Team.
   'INVITATION_ACCEPTED',
+
+  // Forms.
+  'FORM_SUBMITTED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -48,7 +51,7 @@ export const isNotificationType = (value: string): value is NotificationType =>
   (NOTIFICATION_TYPES as readonly string[]).includes(value);
 
 /** What a notification points at, so the UI can deep-link. */
-export const NOTIFICATION_ENTITY_TYPES = ['QUOTATION', 'APPOINTMENT', 'CLIENT'] as const;
+export const NOTIFICATION_ENTITY_TYPES = ['QUOTATION', 'APPOINTMENT', 'CLIENT', 'FORM'] as const;
 export type NotificationEntityType = (typeof NOTIFICATION_ENTITY_TYPES)[number];
 
 /**

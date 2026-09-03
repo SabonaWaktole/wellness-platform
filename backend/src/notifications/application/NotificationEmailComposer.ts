@@ -118,6 +118,11 @@ export class NotificationEmailComposer {
           subject: `${String(p.memberName ?? 'A new member')} joined the workspace`,
           body: `<strong>${esc(String(p.memberName ?? 'A new member'))}</strong> accepted their invitation and now has access to the workspace.`,
         };
+      case 'FORM_SUBMITTED':
+        return {
+          subject: `New response for ${String(p.form ?? 'your form')}`,
+          body: `A new response was submitted for <strong>${esc(String(p.form ?? 'your form'))}</strong>.`,
+        };
       default: {
         /*
          * Exhaustiveness check. Adding a NotificationType without adding a
@@ -168,6 +173,8 @@ export class NotificationEmailComposer {
         return 'Appointment';
       case 'CLIENT':
         return 'Client';
+      case 'FORM':
+        return 'Form';
       default:
         return 'Notification';
     }

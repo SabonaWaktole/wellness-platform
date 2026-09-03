@@ -26,6 +26,7 @@
     "CLIENT_ASSIGNED": "{{actor}} ju caktoi klientin {{client}}",
     "INVITATION_ACCEPTED": "{{email}} pranoi ftesën tuaj dhe iu bashkua ekipit",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
-    "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days"
+    "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
+    "FORM_SUBMITTED": "Një përgjigje e re u dërgua për {{form}}"
   }
 }
