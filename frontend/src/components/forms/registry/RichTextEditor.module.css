@@ -1,0 +1,45 @@
+.host {
+  width: 100%;
+  height: 100%;
+  cursor: text;
+}
+
+.content {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-family-base);
+  color: var(--text-primary);
+}
+
+.content :global(.tiptap) {
+  outline: none;
+  width: 100%;
+  height: 100%;
+  overflow-wrap: break-word;
+}
+
+.content :global(.tiptap p) {
+  margin: 0 0 0.4em;
+}
+
+.content :global(.tiptap p:last-child) {
+  margin-bottom: 0;
+}
+
+.content :global(.tiptap h1),
+.content :global(.tiptap h2),
+.content :global(.tiptap h3) {
+  margin: 0 0 0.3em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.content :global(.tiptap h1) { font-size: 1.5em; }
+.content :global(.tiptap h2) { font-size: 1.25em; }
+.content :global(.tiptap h3) { font-size: 1.1em; }
+
+.content :global(.tiptap ul),
+.content :global(.tiptap ol) {
+  margin: 0 0 0.4em;
+  padding-left: 1.4em;
+}

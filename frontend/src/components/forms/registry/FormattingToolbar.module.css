@@ -1,0 +1,67 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 4px);
+  padding: var(--spacing-xs, 4px);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-raised, #f8fafc);
+}
+
+.select {
+  height: 26px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface);
+  font-size: var(--font-size-caption, 0.75rem);
+  padding: 0 4px;
+}
+
+.group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--color-surface);
+}
+
+.toggleActive {
+  background: var(--color-primary, #1d4ed8);
+  color: #fff;
+}
+
+.colorField {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.colorField input[type='color'] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border-hairline);
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
