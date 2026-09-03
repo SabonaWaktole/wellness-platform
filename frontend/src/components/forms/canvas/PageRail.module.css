@@ -1,0 +1,124 @@
+.rail {
+  /* The grid column in FormCanvas.module.css's `.body` is what actually
+   * constrains this in the builder; `width` is the defensive floor so this
+   * component is not silently unbounded if it is ever reused somewhere
+   * without that grid (flex: 0 0 132px alone is a no-op inside a grid
+   * parent — see the comment on `.body`, the bug this pins down). */
+  width: 132px;
+  flex: 0 0 132px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-sm, 8px);
+  border-right: 1px solid var(--border-hairline);
+  background: var(--color-surface);
+  overflow-y: auto;
+}
+
+.railHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.railHeader button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 8px);
+}
+
+.thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  /* A4 aspect ratio, so a page miniature is unmistakably a page. */
+  aspect-ratio: 794 / 1123;
+  padding: 0;
+  border: 2px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: #fff;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.thumbActive {
+  border-color: var(--color-primary, #1d4ed8);
+}
+
+.mini {
+  position: absolute;
+  inset: 0;
+}
+
+.miniSection {
+  position: absolute;
+  background: var(--color-primary, #1d4ed8);
+  opacity: 0.18;
+  border-radius: 1px;
+}
+
+.thumbNumber {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.pageActions {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.pageActions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.pageActions button:hover:not(:disabled) {
+  background: var(--surface-raised, #f1f5f9);
+  color: var(--text-primary);
+}
+
+.pageActions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cleanup {
+  padding: var(--spacing-xs, 4px);
+  border: 1px dashed var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption, 0.75rem);
+  cursor: pointer;
+}

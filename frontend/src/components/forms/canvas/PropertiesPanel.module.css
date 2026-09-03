@@ -1,0 +1,49 @@
+.panel {
+  padding: var(--spacing-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hint {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.sizeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+}
+
+.textEditorHost {
+  min-height: 100px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--spacing-sm, 8px);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface);
+}

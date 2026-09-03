@@ -1,0 +1,74 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatchSelected {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 1px;
+}
+
+.custom {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.nativeInput {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.hexValue {
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.clear {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Warning, not a block: the owner may have a reason, and the colour is only
+ * ever used for rules and badges — never behind body text. */
+.warning {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--color-warning, #b45309);
+}
