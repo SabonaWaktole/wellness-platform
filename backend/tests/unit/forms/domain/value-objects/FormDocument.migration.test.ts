@@ -9,7 +9,6 @@ import {
 import { ComponentType } from '../../../../../src/forms/domain/enums/ComponentType';
 import { FormItemKind } from '../../../../../src/forms/domain/enums/FormItemKind';
 import { FormControlVariant } from '../../../../../src/forms/domain/enums/FormControlVariant';
-import { FormDocumentValidator } from '../../../../../src/forms/domain/services/FormDocumentValidator';
 import type { FormLayout } from '../../../../../src/forms/domain/value-objects/FormLayout';
 
 describe('migrateDocumentToV3', () => {
@@ -223,20 +222,7 @@ describe('migrateDocumentToV3 — fits the A4 usable area', () => {
     expect(e.x + e.width).toBeLessThanOrEqual(s.width);
   });
 
-  /* Every migrated document must pass the very validator that guards saves. */
-  it('produces a document the save-time validator accepts', () => {
-    const v2: FormLayout = {
-      version: 2,
-      page: { width: 900, height: 2400 },
-      sections: [
-        { id: 'a', title: 'A', x: 32, y: 32, width: 832, height: 488, elements: [] },
-        { id: 'b', title: 'B', x: 32, y: 552, width: 832, height: 260, elements: [] },
-        { id: 'c', title: 'C', x: 32, y: 1400, width: 832, height: 900, elements: [] },
-      ],
-    };
-
-    const doc = migrateDocumentToV3(v2 as unknown);
-    expect(() => FormDocumentValidator.validate(doc, [])).not.toThrow();
-    expect(doc.pages.flatMap((p) => p.sections).every((s) => s.height <= usableH)).toBe(true);
-  });
+  // The "passes the save-time validator" case lives in
+  // FormDocumentValidator.test.ts, added alongside FormDocumentValidator
+  // itself — this file only depends on FormDocument/FormLayout.
 });
