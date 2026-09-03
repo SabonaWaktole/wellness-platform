@@ -44,9 +44,6 @@ export const NOTIFICATION_TYPES = [
 
   // Team.
   'INVITATION_ACCEPTED',
-
-  // Forms.
-  'FORM_SUBMITTED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
