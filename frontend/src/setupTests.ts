@@ -45,15 +45,6 @@ if (!textProto.getClientRects) textProto.getClientRects = emptyClientRects;
 if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = zeroRect;
 if (!textProto.getBoundingClientRect) textProto.getBoundingClientRect = zeroRect;
 
-/** jsdom has no layout engine and so never implements ResizeObserver. */
-if (typeof globalThis.ResizeObserver === 'undefined') {
-  globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-}
-
 /**
  * jsdom has no layout engine and so never implements ResizeObserver. Real
  * browsers do, and code that measures a container (ScaledPage, for instance)
