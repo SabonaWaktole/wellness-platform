@@ -1,6 +1,6 @@
 import { IFormSubmissionRepository } from '../../domain/repositories/IFormSubmissionRepository';
 import { FormSubmission } from '../../domain/entities/FormSubmission';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 /**
@@ -16,7 +16,7 @@ export class ListSubmissionsUseCase {
   constructor(private submissionRepo: IFormSubmissionRepository) {}
 
   async execute(tenantId: string, requestingUserRole: string, formId: string): Promise<FormSubmission[]> {
-    if (requestingUserRole !== UserRole.BUSINESS_OWNER && requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(requestingUserRole, 'forms:view_submissions')) {
       throw new DomainError('Only Business Owners can view form submissions');
     }
     return this.submissionRepo.listByForm(tenantId, formId);

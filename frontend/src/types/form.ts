@@ -198,6 +198,7 @@ export interface ClientFormResponse {
   name: string;
   description: string | null;
   isDefault: boolean;
+  isTemplate: boolean;
   status: FormStatus;
   /** Optimistic concurrency token — send it back with the next save. */
   version: number;
@@ -219,6 +220,7 @@ export interface ClientFormSummary {
   name: string;
   description: string | null;
   isDefault: boolean;
+  isTemplate: boolean;
   status: FormStatus;
   version: number;
   updatedAt: string;

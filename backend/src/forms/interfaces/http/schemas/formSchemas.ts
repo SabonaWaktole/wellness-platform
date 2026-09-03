@@ -315,6 +315,14 @@ export const duplicateClientFormSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
+export const saveAsTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
+
+export const createFormFromTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
+
 export const publishFormSchema = z.object({
   expectedVersion: z.number().int().min(1),
 });

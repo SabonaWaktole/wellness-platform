@@ -5,6 +5,8 @@ import { GetClientFormsUseCase } from '../../../application/use-cases/GetClientF
 import { CreateClientFormUseCase } from '../../../application/use-cases/CreateClientFormUseCase';
 import { UpdateClientFormSettingsUseCase } from '../../../application/use-cases/UpdateClientFormSettingsUseCase';
 import { DuplicateClientFormUseCase } from '../../../application/use-cases/DuplicateClientFormUseCase';
+import { SaveAsTemplateUseCase } from '../../../application/use-cases/SaveAsTemplateUseCase';
+import { CreateFormFromTemplateUseCase } from '../../../application/use-cases/CreateFormFromTemplateUseCase';
 import { DeleteClientFormUseCase } from '../../../application/use-cases/DeleteClientFormUseCase';
 import { StoreFormAssetUseCase } from '../../../application/use-cases/StoreFormAssetUseCase';
 import {
@@ -25,6 +27,8 @@ import {
   createClientFormSchema,
   updateClientFormSettingsSchema,
   duplicateClientFormSchema,
+  saveAsTemplateSchema,
+  createFormFromTemplateSchema,
   publishFormSchema,
 } from '../schemas/formSchemas';
 
@@ -41,6 +45,7 @@ const toJson = (view: ClientFormView) => ({
   name: view.form.name,
   description: view.form.description,
   isDefault: view.form.isDefault,
+  isTemplate: view.form.isTemplate,
   status: view.form.status,
   version: view.form.version,
   layout: view.layout,
@@ -58,6 +63,7 @@ const toSummaryJson = (form: ClientForm) => ({
   name: form.name,
   description: form.description,
   isDefault: form.isDefault,
+  isTemplate: form.isTemplate,
   status: form.status,
   version: form.version,
   updatedAt: form.updatedAt,
@@ -113,6 +119,8 @@ export class FormController {
     private createClientFormUseCase: CreateClientFormUseCase,
     private updateClientFormSettingsUseCase: UpdateClientFormSettingsUseCase,
     private duplicateClientFormUseCase: DuplicateClientFormUseCase,
+    private saveAsTemplateUseCase: SaveAsTemplateUseCase,
+    private createFormFromTemplateUseCase: CreateFormFromTemplateUseCase,
     private deleteClientFormUseCase: DeleteClientFormUseCase,
     private storeFormAssetUseCase: StoreFormAssetUseCase,
     private publishFormUseCase: PublishFormUseCase,
@@ -173,6 +181,49 @@ export class FormController {
         tenantId,
         req.user!.role,
         String(req.params.formId),
+        validated.name
+      );
+      res.status(201).json(toSummaryJson(form));
+    } catch (error: any) {
+      res.status(statusFor(error)).json({ error: error.message });
+    }
+  };
+
+  /** The "Create from template" picker's list — templates only. */
+  public listTemplates = async (req: Request, res: Response) => {
+    try {
+      const tenantId = requireTenantId(req);
+      const templates = await this.getClientFormsUseCase.executeTemplates(tenantId);
+      res.json(templates.map(toSummaryJson));
+    } catch (error: any) {
+      res.status(statusFor(error)).json({ error: error.message });
+    }
+  };
+
+  public saveAsTemplate = async (req: Request, res: Response) => {
+    try {
+      const validated = saveAsTemplateSchema.parse(req.body);
+      const tenantId = requireTenantId(req);
+      const template = await this.saveAsTemplateUseCase.execute(
+        tenantId,
+        req.user!.role,
+        String(req.params.formId),
+        validated.name
+      );
+      res.status(201).json(toSummaryJson(template));
+    } catch (error: any) {
+      res.status(statusFor(error)).json({ error: error.message });
+    }
+  };
+
+  public createFormFromTemplate = async (req: Request, res: Response) => {
+    try {
+      const validated = createFormFromTemplateSchema.parse(req.body);
+      const tenantId = requireTenantId(req);
+      const form = await this.createFormFromTemplateUseCase.execute(
+        tenantId,
+        req.user!.role,
+        String(req.params.templateId),
         validated.name
       );
       res.status(201).json(toSummaryJson(form));

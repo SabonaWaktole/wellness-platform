@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
 import { FormStatus } from '../../domain/enums/FormStatus';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 /** Copies a form's layout under a new name. Never copies `isDefault`. */
@@ -15,7 +15,7 @@ export class DuplicateClientFormUseCase {
     formId: string,
     newName: string
   ): Promise<ClientForm> {
-    if (requestingUserRole !== UserRole.BUSINESS_OWNER && requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(requestingUserRole, 'forms:create')) {
       throw new DomainError('Only Business Owners can duplicate client forms');
     }
 

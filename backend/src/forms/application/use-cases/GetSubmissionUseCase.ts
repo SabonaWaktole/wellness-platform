@@ -2,7 +2,7 @@ import { IFormSubmissionRepository } from '../../domain/repositories/IFormSubmis
 import { IFormVersionRepository } from '../../domain/repositories/IFormVersionRepository';
 import { FormSubmission } from '../../domain/entities/FormSubmission';
 import { FormVersion } from '../../domain/entities/FormVersion';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 export interface SubmissionDetail {
@@ -27,7 +27,7 @@ export class GetSubmissionUseCase {
     formId: string,
     submissionId: string
   ): Promise<SubmissionDetail | null> {
-    if (requestingUserRole !== UserRole.BUSINESS_OWNER && requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(requestingUserRole, 'forms:view_submissions')) {
       throw new DomainError('Only Business Owners can view form submissions');
     }
     const submission = await this.submissionRepo.findById(tenantId, submissionId);

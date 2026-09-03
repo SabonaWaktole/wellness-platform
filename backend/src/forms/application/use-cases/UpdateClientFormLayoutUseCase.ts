@@ -4,7 +4,7 @@ import { ClientForm } from '../../domain/entities/ClientForm';
 import { FormDocumentValidator } from '../../domain/services/FormDocumentValidator';
 import { FormDocument } from '../../domain/value-objects/FormDocument';
 import { UNPLACED_SECTION_ID } from './GetClientFormUseCase';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface UpdateClientFormLayoutDTO {
@@ -34,10 +34,7 @@ export class UpdateClientFormLayoutUseCase {
   ) {}
 
   async execute(dto: UpdateClientFormLayoutDTO): Promise<ClientForm> {
-    if (
-      dto.requestingUserRole !== UserRole.BUSINESS_OWNER &&
-      dto.requestingUserRole !== UserRole.SUPER_ADMIN
-    ) {
+    if (!FormPermissions.can(dto.requestingUserRole, 'forms:edit')) {
       throw new DomainError('Only Business Owners can edit client forms');
     }
 

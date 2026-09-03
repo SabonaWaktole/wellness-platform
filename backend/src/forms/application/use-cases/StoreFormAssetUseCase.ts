@@ -1,5 +1,5 @@
 import { MediaService } from '../../../media/MediaService';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 export interface StoredFormAsset {
@@ -27,7 +27,7 @@ export class StoreFormAssetUseCase {
     requestingUserRole: string,
     buffer: Buffer
   ): Promise<StoredFormAsset> {
-    if (requestingUserRole !== UserRole.BUSINESS_OWNER && requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(requestingUserRole, 'forms:edit')) {
       throw new DomainError('Only Business Owners can upload form images');
     }
 

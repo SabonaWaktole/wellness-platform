@@ -7,7 +7,8 @@ import type { ResizedBox } from './useResize';
 import { CANVAS_GUTTER, type CanvasViewport } from './useCanvasViewport';
 import { GuideOverlay } from './GuideOverlay';
 import { computeSnap, type Guide } from './snapping';
-import { findSection, pageContainingSection } from './layoutOps';
+import { findSection, pageContainingSection, sectionContaining } from './layoutOps';
+import { useVisiblePages } from './useVisiblePages';
 import type { DocumentPage, FormDocument } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
@@ -171,6 +172,23 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             .find((s) => s.elements.some((el) => el.id === selection.id))?.id ?? null
         : null;
 
+  // Virtualisation (spec §35): pages far outside the viewport skip rendering
+  // their FormPageRenderer + canvas chrome — real cost on a 10-page, 300+
+  // component document. The page holding the current selection is always
+  // force-rendered regardless of visibility, so drag/resize handles never
+  // vanish out from under an in-progress gesture just because a resize
+  // elsewhere scrolled it off-screen.
+  const pageIds = layout.pages.map((p) => p.id);
+  const { isVisible, setPageRef } = useVisiblePages(pageIds);
+  const selectedPageId =
+    selection?.type === 'page'
+      ? selection.id
+      : selection?.type === 'section'
+        ? pageContainingSection(layout, selection.id)?.id ?? null
+        : selection?.type === 'element'
+          ? pageContainingSection(layout, sectionContaining(layout, selection.id)?.id ?? '')?.id ?? null
+          : null;
+
   return (
     <div
       className={styles.stack}
@@ -210,6 +228,8 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onResizeElement={onResizeElement}
             onDeleteElement={onDeleteElement}
             getScale={viewport.getScale}
+            shouldRender={isVisible(page.id) || page.id === selectedPageId}
+            wrapRef={setPageRef(page.id)}
           />
         ))}
       </div>
@@ -224,6 +244,11 @@ interface SheetProps extends Omit<FormCanvasProps, 'viewport' | 'onGestureStart'
   targetSectionId: string | null;
   getScale: () => number;
   guides: Guide[];
+  /** False while this page is far outside the viewport (spec §35) — the
+   *  wrapper still renders at full size so scroll height and page numbering
+   *  never shift, only the expensive content inside it is skipped. */
+  shouldRender: boolean;
+  wrapRef: (el: HTMLElement | null) => void;
 }
 
 const Sheet: React.FC<SheetProps> = ({
@@ -243,14 +268,17 @@ const Sheet: React.FC<SheetProps> = ({
   onResizeElement,
   onDeleteElement,
   getScale,
+  shouldRender,
+  wrapRef,
 }) => (
   <div
+    ref={wrapRef}
+    data-page-id={page.id}
     className={styles.sheetWrap}
     style={{ marginBottom: index < layout.pages.length - 1 ? CANVAS_GUTTER : 0 }}
   >
     <div
       className={styles.sheet}
-      data-page-id={page.id}
       style={{ width: layout.page.width, height: layout.page.height }}
       onClick={(e) => {
         e.stopPropagation();
@@ -269,40 +297,44 @@ const Sheet: React.FC<SheetProps> = ({
         aria-hidden="true"
       />
 
-      <FormPageRenderer page={page} mode="edit" control={control} />
-      {/* Guides are computed in this page's coordinate space, but only the
-          page currently being dragged on ever has any — drawing them on
-          every sheet is harmless since the array is empty elsewhere. */}
-      <GuideOverlay guides={guides} />
+      {shouldRender && (
+        <>
+          <FormPageRenderer page={page} mode="edit" control={control} />
+          {/* Guides are computed in this page's coordinate space, but only the
+              page currently being dragged on ever has any — drawing them on
+              every sheet is harmless since the array is empty elsewhere. */}
+          <GuideOverlay guides={guides} />
 
-      {page.sections.map((section) => (
-        <React.Fragment key={section.id}>
-          <CanvasSection
-            section={section}
-            isSelected={selection?.type === 'section' && selection.id === section.id}
-            isTarget={targetSectionId === section.id}
-            getScale={getScale}
-            onSelect={() => onSelect({ type: 'section', id: section.id })}
-            onMove={(x, y) => onMoveSection(section.id, x, y)}
-            onResize={(box) => onResizeSection(section.id, box)}
-            onRename={(title) => onRenameSection(section.id, title)}
-            onDelete={() => onDeleteSection(section.id)}
-          />
-          {section.elements.map((element) => (
-            <div key={element.id} style={{ position: 'absolute', left: section.x, top: section.y }}>
-              <CanvasElement
-                element={element}
-                isSelected={selection?.type === 'element' && selection.id === element.id}
+          {page.sections.map((section) => (
+            <React.Fragment key={section.id}>
+              <CanvasSection
+                section={section}
+                isSelected={selection?.type === 'section' && selection.id === section.id}
+                isTarget={targetSectionId === section.id}
                 getScale={getScale}
-                onSelect={() => onSelect({ type: 'element', id: element.id })}
-                onMove={(x, y) => onMoveElement(element.id, x, y)}
-                onResize={(box) => onResizeElement(element.id, box)}
-                onDelete={() => onDeleteElement(element.id)}
+                onSelect={() => onSelect({ type: 'section', id: section.id })}
+                onMove={(x, y) => onMoveSection(section.id, x, y)}
+                onResize={(box) => onResizeSection(section.id, box)}
+                onRename={(title) => onRenameSection(section.id, title)}
+                onDelete={() => onDeleteSection(section.id)}
               />
-            </div>
+              {section.elements.map((element) => (
+                <div key={element.id} style={{ position: 'absolute', left: section.x, top: section.y }}>
+                  <CanvasElement
+                    element={element}
+                    isSelected={selection?.type === 'element' && selection.id === element.id}
+                    getScale={getScale}
+                    onSelect={() => onSelect({ type: 'element', id: element.id })}
+                    onMove={(x, y) => onMoveElement(element.id, x, y)}
+                    onResize={(box) => onResizeElement(element.id, box)}
+                    onDelete={() => onDeleteElement(element.id)}
+                  />
+                </div>
+              ))}
+            </React.Fragment>
           ))}
-        </React.Fragment>
-      ))}
+        </>
+      )}
     </div>
 
     <div className={styles.pageNumber} aria-hidden="true">

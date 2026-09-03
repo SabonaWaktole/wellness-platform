@@ -52,6 +52,26 @@ export const formService = {
     return response.data;
   },
 
+  listTemplates: async (tenantSlug: string) => {
+    const response = await apiClient.get<ClientFormSummary[]>(`/${tenantSlug}/forms/templates`);
+    return response.data;
+  },
+
+  saveAsTemplate: async (tenantSlug: string, formId: string, name: string) => {
+    const response = await apiClient.post<ClientFormSummary>(`/${tenantSlug}/forms/${formId}/save-as-template`, {
+      name,
+    });
+    return response.data;
+  },
+
+  createFormFromTemplate: async (tenantSlug: string, templateId: string, name: string) => {
+    const response = await apiClient.post<ClientFormSummary>(
+      `/${tenantSlug}/forms/templates/${templateId}/instantiate`,
+      { name }
+    );
+    return response.data;
+  },
+
   deleteForm: async (tenantSlug: string, formId: string) => {
     await apiClient.delete(`/${tenantSlug}/forms/${formId}`);
   },
