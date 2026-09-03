@@ -28,7 +28,24 @@ describe('Client Entity', () => {
     fieldType: FieldType.ALPHANUMERIC,
   });
 
-  const definitions = [textDef, selectDef, alphanumericDef];
+  const multiSelectDef = CustomFieldDefinition.create({
+    id: 'field-4',
+    tenantId,
+    fieldName: 'services',
+    fieldType: FieldType.MULTI_SELECT,
+    options: ['Consulting', 'Support', 'Training'],
+  });
+
+  const requiredMultiSelectDef = CustomFieldDefinition.create({
+    id: 'field-5',
+    tenantId,
+    fieldName: 'regions',
+    fieldType: FieldType.MULTI_SELECT,
+    options: ['EU', 'US'],
+    required: true,
+  });
+
+  const definitions = [textDef, selectDef, alphanumericDef, multiSelectDef];
 
   const clientWith = (customFieldValues: Record<string, any>) =>
     Client.create({
@@ -145,6 +162,48 @@ describe('Client Entity', () => {
     it('allows a blank value, which is how the form reports "left empty"', () => {
       expect(() => clientWith({ 'Plate Number': '' })).not.toThrow();
       expect(() => clientWith({ 'Plate Number': null })).not.toThrow();
+    });
+  });
+
+  describe('MULTI_SELECT', () => {
+    it('accepts several valid options', () => {
+      const client = clientWith({ services: ['Consulting', 'Training'] });
+      expect(client.customFieldValues.services).toEqual(['Consulting', 'Training']);
+    });
+
+    it('accepts an empty selection when the field is optional', () => {
+      expect(() => clientWith({ services: [] })).not.toThrow();
+    });
+
+    it('rejects an option that is not on the list', () => {
+      expect(() => clientWith({ services: ['Consulting', 'Catering'] }))
+        .toThrow('Value "Catering" is not a valid option for field "services".');
+    });
+
+    it('rejects a bare string where a list is expected', () => {
+      expect(() => clientWith({ services: 'Consulting' }))
+        .toThrow('Value for field "services" must be a list of options.');
+    });
+
+    it('rejects duplicate options', () => {
+      expect(() => clientWith({ services: ['Support', 'Support'] }))
+        .toThrow('Field "services" contains duplicate options.');
+    });
+
+    it('treats an empty selection as missing for a required field', () => {
+      expect(() =>
+        Client.create({
+          id: 'client-ms',
+          tenantId,
+          name: 'Acme Corp',
+          contactInfo: {},
+          status: ClientStatus.PROSPECT,
+          customFieldValues: { regions: [] },
+          lastUpdatedByUserId: 'user-1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }, [requiredMultiSelectDef])
+      ).toThrow('Field "regions" is required.');
     });
   });
 });

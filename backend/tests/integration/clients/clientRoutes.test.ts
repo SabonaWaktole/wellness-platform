@@ -89,6 +89,14 @@ describe('Client Routes', () => {
     await prisma.client.deleteMany({ where: { tenantId: 't1' } });
     await prisma.customFieldDefinition.deleteMany({ where: { tenantId: 't1' } });
     await prisma.outcomeCategory.deleteMany({ where: { tenantId: 't1' } });
+    // Wiping CustomFieldDefinition rows without also clearing this stamp is
+    // exactly the bug it exists to prevent, turned against the fixture
+    // itself: a prior run (or another suite reusing 't1' in the same worker)
+    // can leave the tenant "seeded" with none of its Name/Status/etc. fields
+    // actually present, so every client create in THIS run 400s with
+    // 'Field "Name" is not defined for this tenant.' — a failure that looks
+    // like it belongs to whichever test happens to run first, not to setup.
+    await prisma.tenant.update({ where: { id: 't1' }, data: { clientFieldsSeededAt: null } });
   });
 
   afterAll(async () => {
@@ -109,6 +117,29 @@ describe('Client Routes', () => {
     
     expect(res.status).toBe(201);
     expect(res.body.fieldName).toBe('industry');
+  });
+
+  /*
+   * Before this was fixed, a duplicate name reached the database's unique
+   * constraint and the raw Prisma error — an internal file path and a
+   * multi-line query dump — came back as the response body.
+   */
+  it('POST /settings/custom-fields refuses a duplicate name with a clean 400, not a raw Prisma error', async () => {
+    const first = await request(app)
+      .post('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ fieldName: 'duplicate-name-test', fieldType: 'TEXT' });
+    expect(first.status).toBe(201);
+
+    const second = await request(app)
+      .post('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ fieldName: 'duplicate-name-test', fieldType: 'TEXT' });
+
+    expect(second.status).toBe(400);
+    expect(second.body.error).toBe('A field named "duplicate-name-test" already exists.');
+    expect(second.body.error).not.toContain('PrismaCustomFieldDefinitionRepository');
+    expect(second.body.error).not.toContain('Unique constraint failed');
   });
 
   it('PATCH/DELETE/reorder custom-fields work end to end', async () => {

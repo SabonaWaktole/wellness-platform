@@ -72,7 +72,9 @@ export class PrismaReportRepository implements IReportRepository {
   async getClientStatusDistribution(tenantId: string): Promise<ClientStatusCount[]> {
     const counts = await this.prisma.client.groupBy({
       by: ['status'],
-      where: { tenantId },
+      // Archived clients are excluded: they are hidden from the Clients page,
+      // so counting them here would make the chart disagree with the list.
+      where: { tenantId, deletedAt: null },
       _count: {
         id: true
       }

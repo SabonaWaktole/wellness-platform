@@ -57,6 +57,14 @@ const coerce = (definition: CustomFieldDefinition, raw: string): any => {
       if (Number.isNaN(date.getTime())) throw new Error(`"${raw}" is not a valid date for "${definition.fieldName}".`);
       return date.toISOString();
     }
+    case FieldType.MULTI_SELECT:
+      // Same `;` / `|` separator the custom-field options column uses, so one
+      // convention covers both templates. Whether each entry is actually a
+      // configured option is the domain's call, not this function's.
+      return raw
+        .split(/[;|]/)
+        .map(v => v.trim())
+        .filter(Boolean);
     default:
       return raw;
   }

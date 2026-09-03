@@ -10,12 +10,22 @@ import { FieldRole } from '../../../domain/enums/FieldRole';
 // (required-ness, email format, SINGLE_SELECT options, ...) happens
 // domain-side in Client.create against the tenant's live definitions,
 // since Zod can't know a per-tenant dynamic shape.
+/**
+ * `notes` IS a top-level field, unlike name/email/phone/status: it is a system
+ * concern the tenant cannot rename or delete, so it is not part of the
+ * per-tenant custom-field shape. Capped to keep a runaway paste from bloating
+ * every client read.
+ */
+const clientNotes = z.string().max(10000).nullish();
+
 export const createClientSchema = z.object({
   customFieldValues: z.record(z.any()).optional(),
+  notes: clientNotes,
 });
 
 export const updateClientSchema = z.object({
   customFieldValues: z.record(z.any()).optional(),
+  notes: clientNotes,
 });
 
 export const searchClientsSchema = z.object({
@@ -29,6 +39,12 @@ export const searchClientsSchema = z.object({
   /** Free text: status is now a tenant-configurable SINGLE_SELECT, not a fixed enum. */
   status: z.string().optional(),
   assignedUserId: z.string().uuid().optional(),
+  /**
+   * `?archived=true` returns the tenant's archived clients instead of its
+   * active ones — the Clients page's "Archived" view. Absent/false keeps the
+   * default active-only behaviour every existing caller relies on.
+   */
+  archived: z.coerce.boolean().optional(),
   customFields: z.string().optional().transform((val) => {
     if (!val) return undefined;
     try {
@@ -62,12 +78,14 @@ export const defineCustomFieldSchema = z.object({
   role: z.nativeEnum(FieldRole).nullable().optional(),
   required: z.boolean().optional(),
 }).refine(data => {
-  if (data.fieldType === FieldType.SINGLE_SELECT && (!data.options || data.options.length === 0)) {
+  const needsOptions =
+    data.fieldType === FieldType.SINGLE_SELECT || data.fieldType === FieldType.MULTI_SELECT;
+  if (needsOptions && (!data.options || data.options.length === 0)) {
     return false;
   }
   return true;
 }, {
-  message: "Options are required for SINGLE_SELECT fields",
+  message: "Options are required for SINGLE_SELECT and MULTI_SELECT fields",
   path: ["options"],
 });
 

@@ -14,6 +14,8 @@ interface CreateClientDTO {
    * currently named those fields (see FieldRole / ClientFieldResolver).
    */
   customFieldValues?: Record<string, any>;
+  /** Internal notes. A system field, not one of the tenant's custom fields. */
+  notes?: string | null;
   authorUserId: string;
 }
 
@@ -40,6 +42,7 @@ export class CreateClientUseCase {
       status: ClientFieldResolver.resolveStatus(customFieldValues, definitions) ?? '',
       assignedUserId: ClientFieldResolver.resolveAssignedUserId(customFieldValues, definitions) ?? null,
       customFieldValues,
+      notes: dto.notes ?? null,
       lastUpdatedByUserId: dto.authorUserId,
       createdAt: new Date(),
       updatedAt: new Date(),

@@ -55,6 +55,8 @@ describe('UpdateClientUseCase', () => {
       update: jest.fn(),
       delete: jest.fn(),
       reorder: jest.fn(),
+      hasSeededDefaults: jest.fn().mockResolvedValue(false),
+      markDefaultsSeeded: jest.fn(),
     };
     ensureDefaultFields = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
     useCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultFields);
@@ -108,5 +110,53 @@ describe('UpdateClientUseCase', () => {
       customFieldValues: { Name: 'New Name' },
       updatingUserId: 'u2',
     })).rejects.toThrow('Client not found or access denied');
+  });
+  describe('internal notes', () => {
+    const withNotes = (notes: string | null) =>
+      Client.create({
+        id: 'c1',
+        tenantId: 't1',
+        name: 'Acme',
+        contactInfo: {},
+        status: ClientStatus.PROSPECT,
+        customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT },
+        notes,
+        lastUpdatedByUserId: 'u1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }, defaultDefinitions);
+
+    it('saves notes supplied with the update', async () => {
+      clientRepo.findById.mockResolvedValue(withNotes(null));
+
+      const result = await useCase.execute({
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2',
+        notes: 'Prefers email contact. Renewal due in March.',
+      });
+
+      expect(result.notes).toBe('Prefers email contact. Renewal due in March.');
+    });
+
+    it('leaves existing notes alone when the update omits them', async () => {
+      clientRepo.findById.mockResolvedValue(withNotes('Existing note'));
+
+      // An edit that only touches a custom field must not wipe the notes.
+      const result = await useCase.execute({
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2',
+        customFieldValues: { Name: 'Acme Renamed' },
+      });
+
+      expect(result.notes).toBe('Existing note');
+    });
+
+    it('clears notes when an empty string is sent', async () => {
+      clientRepo.findById.mockResolvedValue(withNotes('Existing note'));
+
+      const result = await useCase.execute({
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2', notes: '',
+      });
+
+      expect(result.notes).toBe('');
+    });
   });
 });

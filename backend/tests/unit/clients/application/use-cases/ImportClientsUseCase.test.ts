@@ -55,6 +55,8 @@ describe('ImportClientsUseCase', () => {
       update: jest.fn(),
       delete: jest.fn(),
       reorder: jest.fn(),
+      hasSeededDefaults: jest.fn().mockResolvedValue(false),
+      markDefaultsSeeded: jest.fn(),
     };
     clientRepo = {
       findById: jest.fn(),

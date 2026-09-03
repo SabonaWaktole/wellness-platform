@@ -14,12 +14,16 @@ import { DefineOutcomeCategoryUseCase } from '../../../application/use-cases/Def
 import { EnsureDefaultClientFieldsUseCase } from '../../../application/use-cases/EnsureDefaultClientFieldsUseCase';
 import { GetClientUseCase } from '../../../application/use-cases/GetClientUseCase';
 import { GetCustomFieldsUseCase } from '../../../application/use-cases/GetCustomFieldsUseCase';
+import { ArchiveClientUseCase } from '../../../application/use-cases/ArchiveClientUseCase';
+import { RestoreClientUseCase } from '../../../application/use-cases/RestoreClientUseCase';
+import { GetClientRelatedCountsUseCase } from '../../../application/use-cases/GetClientRelatedCountsUseCase';
 import { GetOutcomeCategoriesUseCase } from '../../../application/use-cases/GetOutcomeCategoriesUseCase';
 import { ImportCustomFieldsUseCase } from '../../../application/use-cases/ImportCustomFieldsUseCase';
 import { ImportClientsUseCase } from '../../../application/use-cases/ImportClientsUseCase';
 import { IMPORT_MIME, MAX_IMPORT_BYTES } from '../../../infrastructure/excel/sheet';
 import { PrismaClientRepository } from '../../../infrastructure/repositories/PrismaClientRepository';
 import { PrismaCustomFieldDefinitionRepository } from '../../../infrastructure/repositories/PrismaCustomFieldDefinitionRepository';
+import { PrismaCustomFieldWriteTransaction } from '../../../infrastructure/PrismaCustomFieldWriteTransaction';
 import { PrismaInteractionRepository } from '../../../infrastructure/repositories/PrismaInteractionRepository';
 import { PrismaOutcomeCategoryRepository } from '../../../infrastructure/repositories/PrismaOutcomeCategoryRepository';
 import { PrismaAppointmentRepository } from '../../../../appointments/infrastructure/repositories/PrismaAppointmentRepository';
@@ -85,6 +89,7 @@ export const createClientRouter = (
   // Repositories
   const clientRepo = new PrismaClientRepository(prisma);
   const customFieldRepo = new PrismaCustomFieldDefinitionRepository(prisma);
+  const customFieldWriteTransaction = new PrismaCustomFieldWriteTransaction(prisma);
   const interactionRepo = new PrismaInteractionRepository(prisma);
   const outcomeCategoryRepo = new PrismaOutcomeCategoryRepository(prisma);
   const appointmentRepo = new PrismaAppointmentRepository(prisma);
@@ -101,7 +106,7 @@ export const createClientRouter = (
   const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, appointmentRepo);
   const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo);
   const defineCustomFieldUseCase = new DefineCustomFieldUseCase(customFieldRepo);
-  const updateCustomFieldUseCase = new UpdateCustomFieldUseCase(customFieldRepo);
+  const updateCustomFieldUseCase = new UpdateCustomFieldUseCase(customFieldWriteTransaction);
   const deleteCustomFieldUseCase = new DeleteCustomFieldUseCase(customFieldRepo);
   const reorderCustomFieldsUseCase = new ReorderCustomFieldsUseCase(customFieldRepo);
   const defineOutcomeCategoryUseCase = new DefineOutcomeCategoryUseCase(outcomeCategoryRepo);
@@ -109,6 +114,9 @@ export const createClientRouter = (
   const getCustomFieldsUseCase = new GetCustomFieldsUseCase(ensureDefaultClientFieldsUseCase);
   const getOutcomeCategoriesUseCase = new GetOutcomeCategoriesUseCase(outcomeCategoryRepo);
   const importCustomFieldsUseCase = new ImportCustomFieldsUseCase(customFieldRepo);
+  const archiveClientUseCase = new ArchiveClientUseCase(clientRepo);
+  const restoreClientUseCase = new RestoreClientUseCase(clientRepo);
+  const getClientRelatedCountsUseCase = new GetClientRelatedCountsUseCase(clientRepo);
   const importClientsUseCase = new ImportClientsUseCase(createClientUseCase, ensureDefaultClientFieldsUseCase);
 
   // Controller
@@ -127,7 +135,10 @@ export const createClientRouter = (
     getCustomFieldsUseCase,
     getOutcomeCategoriesUseCase,
     importCustomFieldsUseCase,
-    importClientsUseCase
+    importClientsUseCase,
+    archiveClientUseCase,
+    restoreClientUseCase,
+    getClientRelatedCountsUseCase
   );
 
   // Middlewares applied to all routes in this router
@@ -149,6 +160,9 @@ export const createClientRouter = (
   router.put('/:clientId', clientController.updateClient);
   router.get('/:clientId/history', clientController.getHistory);
   router.post('/:clientId/interactions', clientController.addInteraction);
+  router.get('/:clientId/related-counts', clientController.getClientRelatedCounts);
+  router.delete('/:clientId', clientController.archiveClient);
+  router.post('/:clientId/restore', clientController.restoreClient);
   
   router.post('/settings/custom-fields', clientController.defineCustomField);
   router.patch('/settings/custom-fields/:fieldId', clientController.updateCustomField);

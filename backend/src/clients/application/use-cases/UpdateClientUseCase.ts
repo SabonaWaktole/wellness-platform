@@ -10,6 +10,8 @@ interface UpdateClientDTO {
   tenantId: string;
   clientId: string;
   customFieldValues?: Record<string, any>;
+  /** Omitted leaves the existing notes untouched; '' clears them. */
+  notes?: string | null;
   updatingUserId: string;
 }
 
@@ -46,6 +48,9 @@ export class UpdateClientUseCase {
       status: ClientFieldResolver.resolveStatus(mergedCustomFields, definitions) ?? '',
       assignedUserId: ClientFieldResolver.resolveAssignedUserId(mergedCustomFields, definitions) ?? null,
       customFieldValues: mergedCustomFields,
+      // Same merge rule as custom fields: absent means "not being edited", so
+      // an update that omits notes must not wipe them.
+      notes: dto.notes !== undefined ? dto.notes : existingClient.notes,
       lastUpdatedByUserId: dto.updatingUserId,
       createdAt: existingClient.createdAt,
       updatedAt: new Date(),

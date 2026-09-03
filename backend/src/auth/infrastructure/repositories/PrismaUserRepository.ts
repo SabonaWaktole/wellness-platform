@@ -131,7 +131,8 @@ export class PrismaUserRepository implements IUserRepository {
     // assigned clients, and appointments still ahead that are not cancelled.
     // Past and cancelled appointments are history, not a handover concern.
     const [clients, upcomingAppointments] = await Promise.all([
-      this.prisma.client.count({ where: { assignedUserId: userId } }),
+      // Archived clients need no handover — they are out of the active book.
+      this.prisma.client.count({ where: { assignedUserId: userId, deletedAt: null } }),
       this.prisma.appointment.count({
         where: {
           assignedUserId: userId,

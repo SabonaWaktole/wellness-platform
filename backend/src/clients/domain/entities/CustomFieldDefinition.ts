@@ -41,9 +41,9 @@ export class CustomFieldDefinition {
   }
 
   private static validate(props: CustomFieldDefinitionProps): void {
-    if (props.fieldType === FieldType.SINGLE_SELECT) {
+    if (props.fieldType === FieldType.SINGLE_SELECT || props.fieldType === FieldType.MULTI_SELECT) {
       if (!props.options || props.options.length === 0) {
-        throw new DomainError('SINGLE_SELECT fields must have at least one option.');
+        throw new DomainError(`${props.fieldType} fields must have at least one option.`);
       }
     }
 

@@ -85,6 +85,21 @@ export class PrismaCustomFieldDefinitionRepository implements ICustomFieldDefini
     await this.prisma.customFieldDefinition.deleteMany({ where: { id, tenantId } });
   }
 
+  async hasSeededDefaults(tenantId: string): Promise<boolean> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { clientFieldsSeededAt: true },
+    });
+    return tenant?.clientFieldsSeededAt != null;
+  }
+
+  async markDefaultsSeeded(tenantId: string): Promise<void> {
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { clientFieldsSeededAt: new Date() },
+    });
+  }
+
   async reorder(tenantId: string, orderedIds: string[]): Promise<void> {
     await this.prisma.$transaction(
       orderedIds.map((id, index) =>
