@@ -22,6 +22,9 @@ describe('ClientSettingsContent', () => {
   const mockFetchSettings = vi.fn();
   const mockDefineCustomField = vi.fn();
   const mockDefineOutcomeCategory = vi.fn();
+  const mockUpdateCustomField = vi.fn();
+  const mockDeleteCustomField = vi.fn();
+  const mockReorderCustomFields = vi.fn();
 
   const setup = (overrides: { fieldError?: string | null; outcomeError?: string | null } = {}) => {
     (useClientSettings as any).mockReturnValue({
@@ -41,15 +44,15 @@ describe('ClientSettingsContent', () => {
       error: overrides.outcomeError ?? null,
     });
     (useUpdateCustomField as any).mockReturnValue({
-      updateCustomField: vi.fn(),
+      updateCustomField: mockUpdateCustomField,
       isLoading: false,
       error: null,
     });
     (useDeleteCustomField as any).mockReturnValue({
-      deleteCustomField: vi.fn(),
+      deleteCustomField: mockDeleteCustomField,
     });
     (useReorderCustomFields as any).mockReturnValue({
-      reorderCustomFields: vi.fn(),
+      reorderCustomFields: mockReorderCustomFields,
     });
   };
 
@@ -117,7 +120,8 @@ describe('ClientSettingsContent', () => {
 
     // Mirrors backend src/clients/domain/enums/FieldType.ts.
     const accepted = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'ALPHANUMERIC', 'SINGLE_SELECT', 'EMAIL', 'USER_REFERENCE'];
-    const values = within(screen.getByLabelText('Field Type'))
+    const fieldTypeSelect = screen.getByLabelText('Field Type');
+    const values = within(fieldTypeSelect)
       .getAllByRole('option')
       .map((o) => (o as HTMLOptionElement).value)
       .filter(Boolean);
