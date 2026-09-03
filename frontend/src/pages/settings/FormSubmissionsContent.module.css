@@ -1,0 +1,67 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 1rem);
+  margin-bottom: var(--spacing-lg, 1.5rem);
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--text-secondary, #4a5060);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: var(--spacing-sm, 0.5rem);
+  border-bottom: 2px solid var(--border-hairline, #e5e7eb);
+  color: var(--text-secondary, #4a5060);
+  font-size: 0.85rem;
+}
+
+.table td {
+  padding: var(--spacing-sm, 0.5rem);
+  border-bottom: 1px solid var(--border-hairline, #e5e7eb);
+}
+
+.detailOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 40%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-lg, 1.5rem);
+}
+
+.detailPanel {
+  background: var(--color-surface, #fff);
+  border-radius: var(--radius-lg, 12px);
+  max-width: 60rem;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--spacing-lg, 1.5rem);
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md, 1rem);
+}
+
+.detailHeader h2 {
+  margin: 0;
+}

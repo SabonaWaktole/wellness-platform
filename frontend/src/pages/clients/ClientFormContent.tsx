@@ -1,46 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FileText, Save, Puzzle } from 'lucide-react';
+import { FileText, Save } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
-import { CustomFieldInput, type CustomFieldInputProps } from '../../components/ui/CustomFieldInput/CustomFieldInput';
-import { useCreateClient, useUpdateClient, useClientDetail, useClientSettings } from '../../hooks/useClients';
+import { Controller } from 'react-hook-form';
+import { FormRenderer } from '../../components/forms/FormRenderer';
+import { isBlank } from '../../components/forms/FormRenderer/fieldControl';
+import { useCreateClient, useUpdateClient, useClientDetail } from '../../hooks/useClients';
+import { useClientForm } from '../../hooks/useClientForm';
 import { useTeam } from '../../hooks/useTeam';
 import { getStaffDisplayName } from '../../utils/userUtils';
-import type { CustomFieldType } from '../../types/client';
+import type { FormElement } from '../../types/form';
 import styles from './ClientFormContent.module.css';
 
 interface ClientFormValues {
   customFieldValues: Record<string, unknown>;
+  /** Internal notes — a system field, not one of the tenant's custom fields. */
+  notes: string;
 }
-
-/**
- * Backend field type → the input variant that renders it.
- *
- * Explicit rather than derived, so adding a backend type is a deliberate choice
- * here too. Anything unrecognised falls back to a plain text box: a field the UI
- * does not know about should still be readable and editable, never blank.
- */
-const FIELD_TYPE_TO_INPUT: Record<CustomFieldType, CustomFieldInputProps['fieldType']> = {
-  TEXT: 'text',
-  NUMBER: 'number',
-  DATE: 'date',
-  BOOLEAN: 'checkbox',
-  // Restricted to letters, numbers and spaces by the backend; a plain text box
-  // is still the right control, the value rule is enforced on submit.
-  ALPHANUMERIC: 'text',
-  LONG_TEXT: 'multiline',
-  SINGLE_SELECT: 'dropdown',
-  MULTI_SELECT: 'multi-select',
-  EMAIL: 'email',
-  USER_REFERENCE: 'user-select',
-};
-
-const inputVariantFor = (fieldType: string): CustomFieldInputProps['fieldType'] =>
-  FIELD_TYPE_TO_INPUT[fieldType as CustomFieldType] ?? 'text';
 
 export const ClientFormContent: React.FC = () => {
   const navigate = useNavigate();
@@ -50,67 +30,155 @@ export const ClientFormContent: React.FC = () => {
   const { createClient, isLoading: isCreating, error: createError } = useCreateClient();
   const { updateClient, isLoading: isUpdating, error: updateError } = useUpdateClient();
   const { client, fetchClient } = useClientDetail(clientId || '');
-  const { customFields, fetchSettings } = useClientSettings();
+  const { form, isLoading: isFormLoading, error: formError, fetchForm } = useClientForm();
   // Only the staff list; pending invitations are Business-Owner-only.
   const { staff, fetchStaff } = useTeam();
 
   const [requiredErrors, setRequiredErrors] = useState<Record<string, string>>({});
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-  } = useForm<ClientFormValues>({
-    defaultValues: {
-      customFieldValues: {},
-    },
+  const { control, handleSubmit, reset, getValues } = useForm<ClientFormValues>({
+    defaultValues: { customFieldValues: {}, notes: '' },
   });
 
   useEffect(() => {
-    fetchSettings();
+    fetchForm();
     fetchStaff();
     if (isEdit) {
       fetchClient();
     }
-  }, [fetchSettings, fetchStaff, isEdit, fetchClient]);
-
-  // Populate form when editing
-  useEffect(() => {
-    if (client && isEdit) {
-      reset({
-        // Values are passed through as stored, NOT String()-coerced. Coercing
-        // turned a stored `false` into the string "false", which is truthy — so
-        // a checkbox field that was off rendered as on, and saving it back
-        // silently flipped the value to true.
-        customFieldValues: { ...(client.customFieldValues || {}) },
-      });
-    }
-  }, [client, isEdit, reset]);
-
-  const sortedCustomFields = [...customFields].sort((a, b) => a.order - b.order);
+  }, [fetchForm, fetchStaff, isEdit, fetchClient]);
 
   const { t } = useTranslation('clients');
   const { t: tc } = useTranslation('common');
-  const error = createError || updateError;
+  const error = createError || updateError || formError;
   const isLoading = isCreating || isUpdating;
 
+  /**
+   * Deactivated members are hidden — assigning new work to someone who can no
+   * longer sign in is never the intent — but a client already assigned to a
+   * deactivated member keeps them as a visible option. Without that exception,
+   * opening and saving such a client would silently reassign it, because the
+   * select would have no matching option for the stored value.
+   */
+  const assignedUserIds = useMemo(() => {
+    const values = (client?.customFieldValues ?? {}) as Record<string, unknown>;
+    return new Set(Object.values(values).filter((v): v is string => typeof v === 'string'));
+  }, [client]);
+
+  const userOptions = useMemo(
+    () =>
+      staff
+        .filter((member) => member.isActive !== false || assignedUserIds.has(member.id))
+        .map((member) => ({ id: member.id, label: getStaffDisplayName(member) })),
+    [staff, assignedUserIds]
+  );
+
+  /**
+   * Only the fields this form actually renders can be validated or submitted —
+   * and, on this page, only the BOUND ones.
+   *
+   * A v3 form owns its own fields, and an unbound field has no
+   * CustomFieldDefinition and therefore nowhere to go on a Client record. Such
+   * fields belong to FormSubmission.data (Phase 6), not here, so this page
+   * deliberately ignores them rather than inventing a client column for them.
+   */
+  const renderedFields = useMemo(() => {
+    if (!form) return [];
+    const byId = new Map(form.definitions.map((d) => [d.id, d]));
+    return form.layout.pages
+      .flatMap((page) => page.sections)
+      .flatMap((section) => section.elements)
+      .flatMap((element: FormElement) => {
+        const clientFieldId = element.field?.clientFieldId;
+        if (!clientFieldId) return [];
+        const definition = byId.get(clientFieldId);
+        return definition ? [{ element, field: element.field!, definition }] : [];
+      });
+  }, [form]);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (!client || !isEdit) return;
+    const stored = (client.customFieldValues || {}) as Record<string, unknown>;
+
+    /*
+     * Bridge the stored keys back into the document's keys.
+     *
+     * Client.customFieldValues is keyed by the DEFINITION's fieldName; the
+     * renderer reads `field.key`. This is the same mapping `onSubmit`
+     * performs in the other direction — without it, editing an existing
+     * client would render every field blank and then save those blanks over
+     * real data.
+     *
+     * Values are passed through as stored, NOT String()-coerced. Coercing
+     * turned a stored `false` into the string "false", which is truthy — so a
+     * checkbox field that was off rendered as on, and saving it back silently
+     * flipped the value to true.
+     */
+    const byKey: Record<string, unknown> = {};
+    for (const { field, definition } of renderedFields) {
+      if (definition.fieldName in stored) byKey[field.key] = stored[definition.fieldName];
+    }
+
+    reset({ customFieldValues: byKey, notes: client.notes ?? '' });
+  }, [client, isEdit, reset, renderedFields]);
+
   const onSubmit = async (values: ClientFormValues) => {
-    // Simple required-field check: every field flagged `required` must have a
-    // non-blank value before we ever call the API.
+    // Required-field check across the fields this form renders. A required
+    // field the form does not place is refused when the layout is saved, so it
+    // cannot reach here.
     const nextErrors: Record<string, string> = {};
-    for (const field of sortedCustomFields) {
-      if (!field.required) continue;
-      const value = values.customFieldValues?.[field.fieldName];
-      const isBlank = value === undefined || value === null || value === '';
-      if (isBlank) {
-        nextErrors[field.fieldName] = t('form.fieldRequired', { defaultValue: 'This field is required' });
+    for (const { field, definition } of renderedFields) {
+      // The definition is authoritative for `required` — Client.create
+      // enforces it, so a form-level relaxation would only fail later.
+      if (!(definition.required || field.required)) continue;
+      if (isBlank(values.customFieldValues?.[field.key])) {
+        // Keyed by field.key, matching what the renderer collects under.
+        nextErrors[field.key] = t('form.fieldRequired', {
+          defaultValue: 'This field is required',
+        });
       }
     }
     setRequiredErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const data = { customFieldValues: values.customFieldValues };
+    /*
+     * MERGE, never replace.
+     *
+     * The renderer only produces values for the fields THIS form places. A
+     * client created through a wide form and later edited through a narrower
+     * one would otherwise come back with every unrendered field erased — the
+     * form does not know those values exist, so a plain replace silently
+     * deletes them. Starting from the stored record and layering the edited
+     * fields on top is what keeps a narrow form a *view* rather than a filter.
+     */
+    /*
+     * Translate the document's own keys into the client record's keys.
+     *
+     * The renderer collects under `field.key` (the form's stable data
+     * identity), but Client.customFieldValues is keyed by the DEFINITION's
+     * fieldName — see Client.create. Bridging the two here, explicitly, is
+     * what lets a form rename or restructure its fields without touching the
+     * client dictionary, and is the same mapping SubmitFormUseCase performs
+     * server-side for bound fields.
+     */
+    const collected: Record<string, unknown> = {};
+    for (const { field, definition } of renderedFields) {
+      const value = values.customFieldValues?.[field.key];
+      if (value !== undefined) collected[definition.fieldName] = value;
+    }
+
+    const merged = {
+      ...(isEdit ? client?.customFieldValues ?? {} : {}),
+      ...collected,
+    };
+
+    const data = {
+      customFieldValues: merged,
+      // Trimmed, and '' rather than undefined so clearing the box actually
+      // clears the stored notes instead of leaving the old text in place.
+      notes: values.notes?.trim() ?? '',
+    };
 
     try {
       if (isEdit && clientId) {
@@ -126,7 +194,14 @@ export const ClientFormContent: React.FC = () => {
   };
 
   return (
-    <form className={styles.container} onSubmit={handleSubmit(onSubmit)}>
+    /*
+     * noValidate: validation is ours, not the browser's. Fields carry the
+     * native `required` attribute for assistive tech, but leaving native
+     * constraint validation on means the browser silently blocks submit and
+     * shows its own tooltip — so a required field left blank produces a native
+     * bubble on one field and our styled message on none of the others.
+     */
+    <form className={styles.container} noValidate onSubmit={handleSubmit(onSubmit)}>
       {/* Page Header */}
       <div className={styles.header}>
         <div className={styles.headerText}>
@@ -139,7 +214,12 @@ export const ClientFormContent: React.FC = () => {
           <Button variant="outline" type="button" onClick={() => navigate(`/${tenantSlug}/clients`)}>
             {tc('actions.cancel')}
           </Button>
-          <Button variant="primary" type="submit" icon={<Save size={18} />} disabled={isLoading}>
+          <Button
+            variant="primary"
+            type="submit"
+            icon={<Save size={18} />}
+            disabled={isLoading || isFormLoading}
+          >
             {isLoading ? tc('state.saving') : t('form.saveClient')}
           </Button>
         </div>
@@ -148,66 +228,19 @@ export const ClientFormContent: React.FC = () => {
       {error && <div className={styles.errorBanner}>{error}</div>}
 
       <div className={styles.formContainer}>
-        {/* Fields (dynamic, tenant-defined — this includes the 5 system fields) */}
-        <Card className={`${styles.sectionCard} ${styles.dynamicCard}`} padding="xl">
-          <div className={styles.sectionHeader}>
-            <div className={styles.iconWrapper}>
-              <Puzzle size={20} />
-            </div>
-            <h2 className={styles.sectionTitle}>{t('form.customFieldsSection')}</h2>
-          </div>
-          <div className={styles.grid1}>
-            {sortedCustomFields.map((field) => (
-              <Controller
-                key={field.id}
-                name={`customFieldValues.${field.fieldName}`}
-                control={control}
-                render={({ field: controlled }) => {
-                  if (field.fieldType === 'USER_REFERENCE') {
-                    const selectedValue = watch(`customFieldValues.${field.fieldName}`);
-                    /**
-                     * Deactivated members are hidden — assigning new work to
-                     * someone who can no longer sign in is never the intent —
-                     * but a client already assigned to a deactivated member
-                     * keeps them as a visible option. Without that exception,
-                     * opening and saving such a client would silently
-                     * reassign it, because the select would have no matching
-                     * option for the stored value.
-                     */
-                    const assignableStaff = staff.filter(
-                      (member) => member.isActive !== false || member.id === selectedValue
-                    );
-                    return (
-                      <CustomFieldInput
-                        fieldType="user-select"
-                        label={field.fieldName}
-                        userOptions={assignableStaff.map((member) => ({
-                          id: member.id,
-                          label: getStaffDisplayName(member),
-                        }))}
-                        value={controlled.value}
-                        onChange={controlled.onChange}
-                        required={field.required}
-                        error={requiredErrors[field.fieldName]}
-                      />
-                    );
-                  }
-                  return (
-                    <CustomFieldInput
-                      fieldType={inputVariantFor(field.fieldType)}
-                      label={field.fieldName}
-                      options={field.options ?? []}
-                      value={controlled.value}
-                      onChange={controlled.onChange}
-                      required={field.required}
-                      error={requiredErrors[field.fieldName]}
-                    />
-                  );
-                }}
-              />
-            ))}
-          </div>
-        </Card>
+        {/* The tenant's own form: sections, layout and controls all come from
+            the builder, so this page has nothing field-specific left in it. */}
+        {form && (
+          <FormRenderer
+            layout={form.layout}
+            mode="fill"
+            control={control}
+            errors={requiredErrors}
+            namePrefix="customFieldValues"
+            userOptions={userOptions}
+            values={getValues('customFieldValues')}
+          />
+        )}
 
         {/* Internal Notes */}
         <Card className={styles.sectionCard} padding="xl">
@@ -218,12 +251,20 @@ export const ClientFormContent: React.FC = () => {
             <h2 className={styles.sectionTitle}>{t('form.internalNotes')}</h2>
           </div>
           <div className={styles.fullWidth}>
-            <TextareaInput
-              label={t('form.notesLabel')}
-              placeholder={t('form.notesComingSoon')}
-              rows={4}
-              disabled
-              helperText="This field isn't wired up to the backend yet, so notes typed here won't be saved."
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <TextareaInput
+                  label={t('form.notesLabel')}
+                  placeholder={t('form.notesPlaceholder')}
+                  rows={4}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  helperText={t('form.notesHelper')}
+                />
+              )}
             />
           </div>
         </Card>
