@@ -19,6 +19,7 @@ import enInvoices from '../locales/en/invoices.json';
 import enSettings from '../locales/en/settings.json';
 import enDashboard from '../locales/en/dashboard.json';
 import enNotifications from '../locales/en/notifications.json';
+import enForms from '../locales/en/forms.json';
 
 import sqCommon from '../locales/sq/common.json';
 import sqAuth from '../locales/sq/auth.json';
@@ -30,6 +31,7 @@ import sqInvoices from '../locales/sq/invoices.json';
 import sqSettings from '../locales/sq/settings.json';
 import sqDashboard from '../locales/sq/dashboard.json';
 import sqNotifications from '../locales/sq/notifications.json';
+import sqForms from '../locales/sq/forms.json';
 
 import elCommon from '../locales/el/common.json';
 import elAuth from '../locales/el/auth.json';
@@ -41,6 +43,7 @@ import elInvoices from '../locales/el/invoices.json';
 import elSettings from '../locales/el/settings.json';
 import elDashboard from '../locales/el/dashboard.json';
 import elNotifications from '../locales/el/notifications.json';
+import elForms from '../locales/el/forms.json';
 
 import itCommon from '../locales/it/common.json';
 import itAuth from '../locales/it/auth.json';
@@ -52,6 +55,7 @@ import itInvoices from '../locales/it/invoices.json';
 import itSettings from '../locales/it/settings.json';
 import itDashboard from '../locales/it/dashboard.json';
 import itNotifications from '../locales/it/notifications.json';
+import itForms from '../locales/it/forms.json';
 
 /**
  * Catalogues are imported statically rather than fetched at runtime.
@@ -74,6 +78,7 @@ export const resources = {
     settings: enSettings,
     dashboard: enDashboard,
     notifications: enNotifications,
+    forms: enForms,
   },
   sq: {
     common: sqCommon,
@@ -86,6 +91,7 @@ export const resources = {
     settings: sqSettings,
     dashboard: sqDashboard,
     notifications: sqNotifications,
+    forms: sqForms,
   },
   el: {
     common: elCommon,
@@ -98,6 +104,7 @@ export const resources = {
     settings: elSettings,
     dashboard: elDashboard,
     notifications: elNotifications,
+    forms: elForms,
   },
   it: {
     common: itCommon,
@@ -110,6 +117,7 @@ export const resources = {
     settings: itSettings,
     dashboard: itDashboard,
     notifications: itNotifications,
+    forms: itForms,
   },
 } as const;
 

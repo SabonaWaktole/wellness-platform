@@ -41,6 +41,11 @@ export const RICH_TEXT_EXTENSIONS = [
     // the text editor having none of its own.
     undoRedo: false,
     heading: { levels: [1, 2, 3] },
+    // StarterKit v3 now bundles its own Underline extension; the explicit
+    // one below is configured for the toolbar and would otherwise collide
+    // with it ("Duplicate extension names found: ['underline']"), leaving
+    // the editor uninitialized.
+    underline: false,
   }),
   TextStyle,
   Color,

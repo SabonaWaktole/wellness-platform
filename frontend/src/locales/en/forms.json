@@ -1,0 +1,93 @@
+{
+  "addMenu": {
+    "title": "Add",
+    "section": "Section",
+    "selectSectionFirst": "Select a section to add components to it.",
+    "addingTo": "Adding to the selected section.",
+    "uploadImage": "Upload an image",
+    "uploading": "Uploading…",
+    "addItem": "Add {{item}}"
+  },
+  "components": {
+    "TEXT": "Text block",
+    "IMAGE": "Image",
+    "DIVIDER": "Divider",
+    "INPUT": "Text field",
+    "TEXTAREA": "Long text",
+    "CHECKBOX_GROUP": "Checkboxes",
+    "RADIO_GROUP": "Radio group",
+    "DROPDOWN": "Dropdown",
+    "DATE": "Date",
+    "SIGNATURE": "Signature",
+    "USER_SELECT": "Person"
+  },
+  "signature": {
+    "clear": "Clear",
+    "saving": "Saving…"
+  },
+  "pageRail": {
+    "label": "Pages",
+    "pages": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "addPage": "Add page",
+    "goToPage": "Go to page {{number}}",
+    "movePageUp": "Move page {{number}} up",
+    "movePageDown": "Move page {{number}} down",
+    "duplicatePage": "Duplicate page {{number}}",
+    "deletePage": "Delete page {{number}}",
+    "removeEmptyPages": "Remove empty pages"
+  },
+  "formattingToolbar": {
+    "label": "Text formatting",
+    "paragraphStyle": "Paragraph style",
+    "paragraph": "Paragraph",
+    "heading1": "Heading 1",
+    "heading2": "Heading 2",
+    "heading3": "Heading 3",
+    "fontFamily": "Font family",
+    "defaultFont": "Default font",
+    "fontSize": "Font size",
+    "defaultSize": "Default size",
+    "bold": "Bold",
+    "italic": "Italic",
+    "underline": "Underline",
+    "strikethrough": "Strikethrough",
+    "align": {
+      "left": "Align left",
+      "center": "Align center",
+      "right": "Align right",
+      "justify": "Justify"
+    },
+    "bulletList": "Bulleted list",
+    "orderedList": "Numbered list",
+    "textColor": "Text",
+    "highlight": "Highlight",
+    "lineHeight": "Line height",
+    "defaultLineHeight": "Default spacing"
+  },
+  "public": {
+    "loading": "Loading…",
+    "notFound": "Form not found",
+    "notFoundHint": "This link may be incorrect, or the form may no longer be accepting responses.",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "submitError": "Something went wrong submitting this form. Please try again.",
+    "defaultSuccess": "Thank you — your response has been recorded.",
+    "privateNotice": "Your response is sent privately to the organisation that shared this form."
+  },
+  "submissions": {
+    "title": "Submissions",
+    "backToForm": "Back to form",
+    "empty": "No submissions yet.",
+    "loading": "Loading submissions…",
+    "columnSubmitted": "Submitted",
+    "columnSource": "Source",
+    "columnClient": "Client record",
+    "view": "View",
+    "exportCsv": "Export CSV",
+    "detailTitle": "Submission",
+    "viewClient": "View client",
+    "sourcePublicLink": "Public link",
+    "sourceInternal": "Internal"
+  }
+}

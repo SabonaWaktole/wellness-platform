@@ -1,0 +1,93 @@
+{
+  "addMenu": {
+    "title": "Shto",
+    "section": "Seksion",
+    "selectSectionFirst": "Zgjidhni një seksion për t'i shtuar komponentë.",
+    "addingTo": "Duke shtuar te seksioni i zgjedhur.",
+    "uploadImage": "Ngarko një imazh",
+    "uploading": "Duke ngarkuar…",
+    "addItem": "Shto {{item}}"
+  },
+  "components": {
+    "TEXT": "Bllok teksti",
+    "IMAGE": "Imazh",
+    "DIVIDER": "Ndarës",
+    "INPUT": "Fushë teksti",
+    "TEXTAREA": "Tekst i gjatë",
+    "CHECKBOX_GROUP": "Kutiza zgjedhjeje",
+    "RADIO_GROUP": "Grup radio",
+    "DROPDOWN": "Listë zgjedhëse",
+    "DATE": "Datë",
+    "SIGNATURE": "Nënshkrim",
+    "USER_SELECT": "Person"
+  },
+  "signature": {
+    "clear": "Pastro",
+    "saving": "Duke ruajtur…"
+  },
+  "pageRail": {
+    "label": "Faqet",
+    "pages": "{{count}} faqe",
+    "pages_other": "{{count}} faqe",
+    "addPage": "Shto faqe",
+    "goToPage": "Shko te faqja {{number}}",
+    "movePageUp": "Ngri faqen {{number}}",
+    "movePageDown": "Ul faqen {{number}}",
+    "duplicatePage": "Dyfisho faqen {{number}}",
+    "deletePage": "Fshi faqen {{number}}",
+    "removeEmptyPages": "Hiq faqet bosh"
+  },
+  "formattingToolbar": {
+    "label": "Formatimi i tekstit",
+    "paragraphStyle": "Stili i paragrafit",
+    "paragraph": "Paragraf",
+    "heading1": "Titull 1",
+    "heading2": "Titull 2",
+    "heading3": "Titull 3",
+    "fontFamily": "Familja e shkronjave",
+    "defaultFont": "Shkronja e paracaktuar",
+    "fontSize": "Madhësia e shkronjave",
+    "defaultSize": "Madhësia e paracaktuar",
+    "bold": "Të trasha",
+    "italic": "Kursive",
+    "underline": "Nënvizuar",
+    "strikethrough": "Vijëzuar",
+    "align": {
+      "left": "Rreshto majtas",
+      "center": "Rreshto në qendër",
+      "right": "Rreshto djathtas",
+      "justify": "Barazo"
+    },
+    "bulletList": "Listë me pika",
+    "orderedList": "Listë e numëruar",
+    "textColor": "Teksti",
+    "highlight": "Theksim",
+    "lineHeight": "Hapësira e rreshtave",
+    "defaultLineHeight": "Hapësira e paracaktuar"
+  },
+  "public": {
+    "loading": "Duke ngarkuar…",
+    "notFound": "Formulari nuk u gjet",
+    "notFoundHint": "Ky lidhje mund të jetë e pasaktë, ose formulari mund të mos pranojë më përgjigje.",
+    "submit": "Dërgo",
+    "submitting": "Duke dërguar…",
+    "submitError": "Diçka shkoi keq gjatë dërgimit të këtij formulari. Ju lutemi provoni përsëri.",
+    "defaultSuccess": "Faleminderit — përgjigja juaj u regjistrua.",
+    "privateNotice": "Përgjigja juaj i dërgohet privatisht organizatës që ndau këtë formular."
+  },
+  "submissions": {
+    "title": "Dërgime",
+    "backToForm": "Kthehu te formulari",
+    "empty": "Ende pa dërgime.",
+    "loading": "Duke ngarkuar dërgimet…",
+    "columnSubmitted": "Dërguar",
+    "columnSource": "Burimi",
+    "columnClient": "Regjistrim klienti",
+    "view": "Shiko",
+    "exportCsv": "Eksporto CSV",
+    "detailTitle": "Dërgimi",
+    "viewClient": "Shiko klientin",
+    "sourcePublicLink": "Lidhje publike",
+    "sourceInternal": "Të brendshme"
+  }
+}

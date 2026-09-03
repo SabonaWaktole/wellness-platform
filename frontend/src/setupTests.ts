@@ -24,6 +24,23 @@ if (!Element.prototype.setPointerCapture) {
   Element.prototype.hasPointerCapture = () => false;
 }
 
+/**
+ * jsdom has no layout engine, and — unlike Element — neither Range nor Text
+ * carry a getClientRects() at all. ProseMirror's scrollIntoView calls it
+ * (via Range for a text offset, or straight on a Text node for a boundary)
+ * on every state update to compute the caret's position, throwing
+ * "getClientRects is not a function" as an unhandled rejection outside any
+ * assertion — which fails the whole `vitest run` exit code even though every
+ * test using a live TipTap editor still passes.
+ */
+const emptyClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: function* () {} }) as unknown as DOMRectList;
+const zeroRect = () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() { return this; } }) as DOMRect;
+const textProto = Text.prototype as unknown as { getClientRects?: () => DOMRectList; getBoundingClientRect?: () => DOMRect };
+if (!Range.prototype.getClientRects) Range.prototype.getClientRects = emptyClientRects;
+if (!textProto.getClientRects) textProto.getClientRects = emptyClientRects;
+if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = zeroRect;
+if (!textProto.getBoundingClientRect) textProto.getBoundingClientRect = zeroRect;
+
 export const server = setupServer(...handlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
