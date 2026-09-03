@@ -11,7 +11,10 @@ import {
   DocumentPage,
   emptyPageGeometry,
   A4_PORTRAIT,
+  DEFAULT_MARGIN,
+  migrateDocumentToV3,
 } from '../../../../../src/forms/domain/value-objects/FormDocument';
+import type { FormLayout } from '../../../../../src/forms/domain/value-objects/FormLayout';
 
 const page = () => emptyPageGeometry();
 
@@ -278,5 +281,32 @@ describe('FormDocumentValidator — options', () => {
 
   it('requires a choice component to actually have options', () => {
     expect(() => FormDocumentValidator.validate(withOptions([]), [])).toThrow(/at least one option/i);
+  });
+});
+
+/*
+ * Found by running a real migrated tenant form through the API: v2 pages were
+ * up to 900px wide, so sections legitimately reached 832px — wider than an A4
+ * page's 698px usable area. The document read back fine but was UNSAVEABLE,
+ * because FormDocumentValidator.assertSectionFitsPage refuses it. Migration
+ * must land inside the same bounds live editing is held to.
+ */
+describe('migrateDocumentToV3 output passes FormDocumentValidator', () => {
+  const usableH = A4_PORTRAIT.height - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
+
+  it('produces a document the save-time validator accepts', () => {
+    const v2: FormLayout = {
+      version: 2,
+      page: { width: 900, height: 2400 },
+      sections: [
+        { id: 'a', title: 'A', x: 32, y: 32, width: 832, height: 488, elements: [] },
+        { id: 'b', title: 'B', x: 32, y: 552, width: 832, height: 260, elements: [] },
+        { id: 'c', title: 'C', x: 32, y: 1400, width: 832, height: 900, elements: [] },
+      ],
+    };
+
+    const migrated = migrateDocumentToV3(v2 as unknown);
+    expect(() => FormDocumentValidator.validate(migrated, [])).not.toThrow();
+    expect(migrated.pages.flatMap((p) => p.sections).every((s) => s.height <= usableH)).toBe(true);
   });
 });
