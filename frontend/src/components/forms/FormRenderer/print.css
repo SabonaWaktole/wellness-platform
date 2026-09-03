@@ -1,0 +1,90 @@
+/*
+ * Print stylesheet for FormRenderer (spec §26, brief §7).
+ *
+ * Geometry is pinned to the Phase 0.5 fidelity spike's measured results, not
+ * derived freshly here: the document's coordinate system is 794x1123 CSS px
+ * (A4 at 96dpi), and 794px prints as 210.078mm — 0.078mm over true A4 — which
+ * is exactly the kind of overhang that produces a phantom blank trailing
+ * page. Scaling each sheet by 0.99962 (measured, not computed from a purer
+ * formula, because the spike is what actually confirmed sub-millimeter
+ * drift) lands it on exactly 210mm x 297mm in both Chromium and Firefox.
+ *
+ * Selectors key off `data-print-page` / `data-print-document`, not the
+ * CSS-module class names FormRenderer.module.css exports — those are hashed
+ * per build and this file needs to reach into FormRenderer from outside its
+ * module scope.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  /* Screen-only chrome on a print page (the "Back" link, the Print button
+   * itself) opts out with this attribute rather than a CSS-module class, for
+   * the same out-of-module-scope reason as the selectors above. */
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  [data-print-document] {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  [data-print-page] {
+    position: relative;
+    width: 210mm !important;
+    height: 297mm !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    break-after: page;
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Without this, the trailing `break-after: page` on the last sheet forces
+   * a blank page after it — confirmed by the spike as the classic cause of a
+   * phantom 4th page. */
+  [data-print-page]:last-child {
+    break-after: auto;
+  }
+
+  /* The page's content is authored at 794x1123 CSS px (set via inline style
+   * on this element, unchanged from screen rendering); this transform is
+   * what maps that px box onto the fixed 210mm x 297mm sheet above without
+   * either box reflowing. transform-origin stays top-left so (0,0) in
+   * document coordinates stays (0,0) on the printed sheet. */
+  [data-print-page-content] {
+    transform: scale(0.99962);
+    transform-origin: top left;
+  }
+
+  /*
+   * The public fill page (and the builder's own preview) wrap FormRenderer
+   * in ScaledPage, whose inline `transform: scale(...)` fits the document to
+   * the SCREEN viewport's width — a value with nothing to do with A4. Left
+   * alone it would compound with the 0.99962 sheet scale above and print at
+   * whatever fraction the visitor's browser window happened to be. `!important`
+   * in a stylesheet is one of the few things that beats an inline style, so
+   * this is what actually neutralises it for print; the internal Phase 7
+   * print routes render FormRenderer directly (no ScaledPage) and never hit
+   * this rule at all.
+   */
+  [data-scaled-page-scaler] {
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  [data-scaled-page-viewport] {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}

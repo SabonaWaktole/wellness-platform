@@ -37,23 +37,29 @@ export const FormRenderer = <TValues extends FieldValues = FieldValues>({
   onUploadAsset,
   namePrefix,
 }: FormRendererProps<TValues>) => (
-  <div className={styles.document}>
+  <div className={styles.document} data-print-document>
     {layout.pages.map((page) => (
-      <div
-        key={page.id}
-        className={styles.page}
-        style={{ width: layout.page.width, height: layout.page.height, background: layout.page.background }}
-      >
-        <FormPageRenderer
-          page={page}
-          mode={mode}
-          control={control}
-          errors={errors}
-          values={values}
-          userOptions={userOptions}
-          onUploadAsset={onUploadAsset}
-          namePrefix={namePrefix}
-        />
+      // The outer div is the SHEET — print.css pins it to exactly 210mm x
+      // 297mm. The inner div stays sized in document px (794x1123 @96dpi)
+      // and is what print.css scales by the Phase 0.5-measured 0.99962
+      // factor to make the px box land on that sheet without drift.
+      <div key={page.id} className={styles.page} data-print-page>
+        <div
+          className={styles.pageContent}
+          data-print-page-content
+          style={{ width: layout.page.width, height: layout.page.height, background: layout.page.background }}
+        >
+          <FormPageRenderer
+            page={page}
+            mode={mode}
+            control={control}
+            errors={errors}
+            values={values}
+            userOptions={userOptions}
+            onUploadAsset={onUploadAsset}
+            namePrefix={namePrefix}
+          />
+        </div>
       </div>
     ))}
   </div>

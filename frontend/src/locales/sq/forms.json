@@ -75,6 +75,11 @@
     "defaultSuccess": "Faleminderit — përgjigja juaj u regjistrua.",
     "privateNotice": "Përgjigja juaj i dërgohet privatisht organizatës që ndau këtë formular."
   },
+  "print": {
+    "action": "Printo",
+    "back": "Kthehu",
+    "loading": "Duke ngarkuar…"
+  },
   "submissions": {
     "title": "Dërgime",
     "backToForm": "Kthehu te formulari",
