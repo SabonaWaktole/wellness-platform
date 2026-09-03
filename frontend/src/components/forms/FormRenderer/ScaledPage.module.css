@@ -1,0 +1,13 @@
+/* Scrolls when the scaled page is still taller than the viewport (a very
+ * tall form), never wider — the scale factor guarantees width always fits. */
+.viewport {
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.scaler {
+  transform-origin: top center;
+}
