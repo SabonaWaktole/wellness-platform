@@ -66,6 +66,20 @@ model Tenant {
   // to handle or lock out live customers on deploy.
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
 
+  // Stamped the first (and only) time EnsureDefaultClientFieldsUseCase seeds
+  // this tenant's baseline client fields (Name/Email/Phone/Status/Assigned To).
+  // The seeder used to decide by "which FieldRoles are missing", which meant a
+  // business owner could never delete one of those fields: the next read of
+  // the field list silently recreated it at the bottom of the order. This
+  // stamp makes seeding a one-time event, so deletes stick.
+  clientFieldsSeededAt DateTime?
+
+  // Same one-shot reasoning as clientFieldsSeededAt, for the starter intake
+  // form built from those fields (EnsureDefaultClientFormUseCase). Without the
+  // stamp, "create the default form if the tenant has none" would resurrect a
+  // form the owner deliberately deleted on the very next page load.
+  clientFormSeededAt DateTime?
+
   createdAt DateTime @default(now())
 
   users                  User[]
@@ -73,6 +87,9 @@ model Tenant {
   invitations            Invitation[]
   clients                Client[]
   customFieldDefinitions CustomFieldDefinition[]
+  clientForms            ClientForm[]
+  formVersions           FormVersion[]
+  formSubmissions        FormSubmission[]
   outcomeCategories      OutcomeCategory[]
   interactions           Interaction[]
   appointments           Appointment[]
@@ -162,7 +179,7 @@ model NotificationSettings {
 }
 
 model User {
-  id             String   @id
+  id             String    @id
   email          String
   hashedPassword String
   firstName      String?
@@ -173,7 +190,7 @@ model User {
   // reference User (Quotation.createdByUserId, Appointment.assignedUserId,
   // Client.lastUpdatedByUserId, ...), so RESTRICT blocks it and cascading would
   // destroy financial and audit history. Same reasoning as ProductInUseError.
-  isActive       Boolean  @default(true)
+  isActive       Boolean   @default(true)
   // Platform Admin soft-delete. See the Postgres schema for the full rationale;
   // this model must stay in step with it field-for-field.
   deletedAt      DateTime?
@@ -182,29 +199,29 @@ model User {
   language       String?
   // Profile media. Store the public URL of the canonical (1x) asset; the
   // responsive variants are derived from it by convention (see MediaService).
-  avatarUrl      String?  @db.Text
-  coverImageUrl  String?  @db.Text
+  avatarUrl      String?   @db.Text
+  coverImageUrl  String?   @db.Text
   tenantId       String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
-  tenant               Tenant?                  @relation(fields: [tenantId], references: [id])
-  warehouseId          String?
-  warehouse            Warehouse?               @relation("UserWarehouse", fields: [warehouseId], references: [id])
-  passwordResetTokens  PasswordResetToken[]
-  assignedClients      Client[]                 @relation("AssignedClients")
-  updatedClients       Client[]                 @relation("LastUpdatedClients")
-  interactions         Interaction[]
-  assignedAppointments Appointment[]            @relation("AssignedAppointments")
-  inventoryMovements   StockMovement[]
-  quotations           Quotation[]
-  statusChanges        QuotationStatusHistory[]
-  invoices             Invoice[]
-  invoiceStatusChanges InvoiceStatusHistory[]
-  notifications        Notification[]           @relation("NotificationRecipient")
-  causedNotifications  Notification[]           @relation("NotificationActor")
-  sentInvitations      Invitation[]             @relation("InvitationSender")
-  ownershipTransfersAsOriginalOwner OwnershipTransfer[] @relation("OwnershipTransferOriginalOwner")
-  ownershipTransfersAsActingOwner   OwnershipTransfer[] @relation("OwnershipTransferActingOwner")
+  tenant                            Tenant?                  @relation(fields: [tenantId], references: [id])
+  warehouseId                       String?
+  warehouse                         Warehouse?               @relation("UserWarehouse", fields: [warehouseId], references: [id])
+  passwordResetTokens               PasswordResetToken[]
+  assignedClients                   Client[]                 @relation("AssignedClients")
+  updatedClients                    Client[]                 @relation("LastUpdatedClients")
+  interactions                      Interaction[]
+  assignedAppointments              Appointment[]            @relation("AssignedAppointments")
+  inventoryMovements                StockMovement[]
+  quotations                        Quotation[]
+  statusChanges                     QuotationStatusHistory[]
+  invoices                          Invoice[]
+  invoiceStatusChanges              InvoiceStatusHistory[]
+  notifications                     Notification[]           @relation("NotificationRecipient")
+  causedNotifications               Notification[]           @relation("NotificationActor")
+  sentInvitations                   Invitation[]             @relation("InvitationSender")
+  ownershipTransfersAsOriginalOwner OwnershipTransfer[]      @relation("OwnershipTransferOriginalOwner")
+  ownershipTransfersAsActingOwner   OwnershipTransfer[]      @relation("OwnershipTransferActingOwner")
 }
 
 /// See the Postgres schema for the full rationale; this model must stay in
@@ -283,7 +300,7 @@ model Client {
   // including these. Kept nullable here during the transition: existing
   // rows/tooling can still read them, but customFieldValues is the
   // authoritative source going forward — see ClientFieldResolver.
-  id                  String   @id
+  id                  String    @id
   tenantId            String
   name                String?
   email               String?
@@ -291,9 +308,22 @@ model Client {
   status              String? // legacy: 'PROSPECT', 'ACTIVE', 'INACTIVE'
   assignedUserId      String?
   customFieldValues   Json
+  /// Free-text internal notes about the client, private to the workspace.
+  /// A dedicated column rather than an entry in customFieldValues: those are
+  /// tenant-defined and validated against the tenant's live definitions, and a
+  /// tenant that deleted the definition would lose the notes with it. This is
+  /// a system field, always present, never renameable.
+  notes               String?   @db.Text
   lastUpdatedByUserId String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  // Soft delete, same reasoning as User.deletedAt above. A hard delete is
+  // impossible here too: Interaction/Appointment/Quotation/Invoice each hold a
+  // non-nullable clientId with no cascade rule, so RESTRICT blocks removing any
+  // client who has ever been booked or invoiced — and cascading would destroy
+  // issued invoices, rewriting historical revenue. NULL means active; every
+  // client-facing read filters on it. Reversible, unlike User.deletedAt.
+  deletedAt           DateTime?
 
   tenant            Tenant        @relation(fields: [tenantId], references: [id])
   assignedUser      User?         @relation("AssignedClients", fields: [assignedUserId], references: [id])
@@ -303,19 +333,20 @@ model Client {
   quotations        Quotation[]
   invoices          Invoice[]
 
+  @@index([tenantId, deletedAt])
   @@index([tenantId, status])
   @@index([tenantId, assignedUserId])
   @@index([tenantId, name])
 }
 
 model CustomFieldDefinition {
-  id        String   @id
+  id        String  @id
   tenantId  String
   fieldName String
   // Stored as a plain String rather than a Postgres enum, so the authoritative
   // list is src/clients/domain/enums/FieldType.ts and adding a value needs no
-  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, ALPHANUMERIC,
-  // SINGLE_SELECT, EMAIL, USER_REFERENCE.
+  // migration. Currently: TEXT, NUMBER, DATE, BOOLEAN, ALPHANUMERIC, LONG_TEXT,
+  // SINGLE_SELECT, MULTI_SELECT, EMAIL, USER_REFERENCE.
   fieldType String
   options   Json    @default("[]") // for SINGLE_SELECT
   // Display order within the tenant's field list (client form/detail/settings).
@@ -616,11 +647,11 @@ model QuotationLineItem {
 }
 
 model QuotationStatusHistory {
-  id              String   @id @default(uuid())
-  tenantId        String
-  quotationId     String
-  fromStatus      String
-  toStatus        String
+  id          String @id @default(uuid())
+  tenantId    String
+  quotationId String
+  fromStatus  String
+  toStatus    String
 
   /// NULL means the scheduler made this change, not a person.
   ///
@@ -643,7 +674,7 @@ model QuotationStatusHistory {
   /// their past status changes as "done by the scheduler". NULL here has one
   /// meaning and it is not "we lost the name". Deleting a user with history
   /// stays blocked; off-boarding is `User.isActive`, as it already was.
-  changedBy User?     @relation(fields: [changedByUserId], references: [id], onDelete: Restrict)
+  changedBy User? @relation(fields: [changedByUserId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, quotationId])
 }
@@ -653,9 +684,9 @@ model QuotationStatusHistory {
 // ==========================================
 
 model Invoice {
-  id              String    @id @default(uuid())
-  tenantId        String
-  clientId        String
+  id       String @id @default(uuid())
+  tenantId String
+  clientId String
 
   /// Created by converting exactly one ACCEPTED Quotation — enforced by this
   /// unique constraint, the actual guarantee under concurrency (the use case's
@@ -707,7 +738,7 @@ model InvoiceLineItem {
 }
 
 model InvoiceStatusHistory {
-  id         String   @id @default(uuid())
+  id         String @id @default(uuid())
   tenantId   String
   invoiceId  String
   fromStatus String
@@ -787,4 +818,145 @@ model Notification {
   @@index([tenantId, recipientUserId, readAt, createdAt])
   /// Retention pruning scans by age.
   @@index([tenantId, createdAt])
+}
+
+/// A tenant-authored client intake form: titled sections ("paragraphs") laid out
+/// over the tenant's own CustomFieldDefinitions, built by drag and drop.
+///
+/// A form owns LAYOUT ONLY. CustomFieldDefinition remains the tenant-level data
+/// dictionary — what a client record can store — and a form is one presentation
+/// of it. Fields cannot belong to forms: CustomFieldDefinition carries
+/// @@unique([tenantId, role]), so a FieldRole is a fact about the tenant, and
+/// ClientFieldResolver (called from PDF, email, search and dashboard code that
+/// has no form in scope) could not answer "the client's email" if that depended
+/// on which form happened to be open.
+model ClientForm {
+  id          String    @id
+  tenantId    String
+  name        String
+  description String?   @db.Text
+  /// Exactly one per tenant. This is the form the internal client create/edit
+  /// page renders, and the only one that shows fields not yet placed on it.
+  isDefault   Boolean   @default(false)
+  /// FormStatus: DRAFT | PUBLISHED | ARCHIVED. A plain String for the same
+  /// reason CustomFieldDefinition.fieldType is — the authoritative list lives
+  /// in src/forms/domain/enums/FormStatus.ts and new values cost no migration.
+  status      String    @default("DRAFT")
+  /// The section/item tree — see src/forms/domain/value-objects/FormLayout.ts.
+  /// Sections and items are deliberately NOT tables. Presentation metadata
+  /// (help text, accent colour, column span, placeholder) churns constantly,
+  /// and every new attribute would otherwise cost a Postgres migration folder
+  /// AND a hand-written MySQL script, because schema.mysql.prisma is maintained
+  /// by hand. `options` and `customFieldValues` are already Json here for the
+  /// same reason. The price — no FK from an item to its definition — is paid on
+  /// read: the read model resolves each fieldId against the tenant's live
+  /// definitions and drops orphans, exactly as ClientFieldResolver already
+  /// tolerates a deleted roled field.
+  ///
+  /// No @default: MySQL cannot take a literal default on a JSON column, and the
+  /// application always writes it (same as Client.customFieldValues).
+  layout      Json
+  /// Optimistic concurrency counter, bumped on every layout write. A layout is
+  /// a whole document, so a lost update costs an entire builder session rather
+  /// than one field — updates are compare-and-set on this value.
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  /// Soft delete, so a form that already produced clients keeps its identity.
+  deletedAt   DateTime?
+  /// Randomly-generated public share token (43 chars, base64url of 32 bytes),
+  /// minted on first publish. NULL until then. This is what stands in for
+  /// authentication on the client-facing fill route — same design as
+  /// Quotation's share token, see src/quotations/domain/shareToken.ts.
+  shareToken  String?   @unique
+  /// A template is a form kept as a reusable starting point rather than one
+  /// clients fill. Creating a form FROM a template deep-copies the document,
+  /// so later edits to either side never propagate (spec §30).
+  isTemplate  Boolean   @default(false)
+  /// The FormVersion clients currently submit against. NULL until first
+  /// publish. Deliberately NOT a relation field: FormVersion.formId already
+  /// points back here, and a second FK in the opposite direction would make
+  /// both rows un-deletable without a two-step dance.
+  publishedVersionId String?
+  /// The draft `version` counter's value at the moment of the last publish.
+  /// NULL until first publish. This is what "unpublished changes" is computed
+  /// from (`version > publishedAtDraftVersion`) without ever diffing the
+  /// draft document against the frozen FormVersion snapshot — every mutator
+  /// already bumps `version`, so this is a cheap integer comparison instead
+  /// of a document walk on every read.
+  publishedAtDraftVersion Int?
+  /// Submission settings — success message, notification recipients, whether
+  /// the form is still accepting responses. Json for the same reason `layout`
+  /// is: these knobs churn, and each new one would otherwise cost a Postgres
+  /// migration AND a hand-written MySQL script.
+  ///
+  /// No @default: MySQL cannot take a literal default on a JSON column.
+  settings    Json
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  versions    FormVersion[]
+  submissions FormSubmission[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, deletedAt])
+}
+
+/// An immutable published snapshot of a form's document.
+///
+/// The DRAFT document lives on ClientForm.layout and is mutable; publishing
+/// copies it here and stamps ClientForm.publishedVersionId. Historical rows
+/// are NEVER deleted — a FormSubmission is pinned to the exact version it was
+/// submitted against, and deleting the version would make that submission
+/// unrenderable (spec §28, brief §8).
+model FormVersion {
+  id                String   @id
+  tenantId          String
+  formId            String
+  /// 1-based, monotonically increasing per form.
+  versionNumber     Int
+  /// The frozen FormDocument (v3) — see src/forms/domain/value-objects/FormDocument.ts.
+  document          Json
+  publishedAt       DateTime @default(now())
+  publishedByUserId String?
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  form        ClientForm       @relation(fields: [formId], references: [id])
+  submissions FormSubmission[]
+
+  @@unique([formId, versionNumber])
+  @@index([tenantId, formId])
+}
+
+/// One completed response to a published form version.
+///
+/// `data` is a structured, machine-readable object keyed by FieldSpec.key —
+/// never OCR'd or parsed back out of a PDF (spec §27). Print output is a
+/// RENDERING of this row, not its source of truth.
+model FormSubmission {
+  id                String   @id
+  tenantId          String
+  formId            String
+  /// Pins the submission to the exact document that produced it, so a later
+  /// republish can never retroactively reinterpret what these values meant.
+  formVersionId     String
+  data              Json
+  submittedAt       DateTime @default(now())
+  /// NULL for a public submission — the person filling a shared link has no
+  /// account (that is the whole point of the share token).
+  submittedByUserId String?
+  /// Set when the form carried client-bound fields and a Client row was
+  /// created/updated from this submission.
+  clientId          String?
+  /// How it arrived: PUBLIC_LINK | INTERNAL.
+  source            String   @default("PUBLIC_LINK")
+  /// Salted hash, not a raw IP — enough to spot abuse, not PII retention.
+  ipHash            String?
+  userAgent         String?  @db.Text
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  form        ClientForm  @relation(fields: [formId], references: [id])
+  formVersion FormVersion @relation(fields: [formVersionId], references: [id])
+
+  @@index([tenantId, formId, submittedAt])
+  @@index([tenantId, submittedAt])
 }
