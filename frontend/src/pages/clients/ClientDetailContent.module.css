@@ -487,3 +487,20 @@
   gap: var(--spacing-sm);
   justify-content: flex-end;
 }
+
+/* Internal notes: author-entered free text, so newlines and long words must
+   both survive rather than overflow the card. */
+.notesBody {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--color-on-surface);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.notesEmpty {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  font-size: var(--font-size-sm);
+}

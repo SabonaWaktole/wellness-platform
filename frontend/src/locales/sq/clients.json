@@ -28,7 +28,20 @@
     "emptyDescription": "Klientët që shtoni do të shfaqen këtu.",
     "showing": "Duke shfaqur {{shown}} nga {{total}} regjistrime",
     "prev": "Para",
-    "next": "Pas"
+    "next": "Pas",
+    "deleteClient": "Fshi klientin",
+    "restoreClient": "Rikthe klientin",
+    "deleteClientTitle": "Të fshihet ky klient?",
+    "deleteClientConfirm": "Fshi klientin",
+    "archiveConfirmGeneric": "{{name}} do të hiqet nga lista e klientëve. Mund ta riktheni më vonë nga pamja Të arkivuar.",
+    "archiveConfirmNoRecords": "{{name}} do të hiqet nga lista e klientëve. Nuk ka fatura, oferta apo takime. Mund ta riktheni më vonë nga pamja Të arkivuar.",
+    "archiveConfirmWithRecords": "{{name}} do të hiqet nga lista e klientëve, por historiku ruhet: {{invoices}} faturë/a, {{quotations}} ofertë/a, {{appointments}} takim/e dhe {{interactions}} ndërveprim/e mbeten të paprekura. Mund ta riktheni më vonë nga pamja Të arkivuar.",
+    "viewArchived": "Të arkivuar",
+    "viewActive": "Aktivë",
+    "emptyArchived": "Asnjë klient i arkivuar",
+    "emptyArchivedDescription": "Klientët që fshini shfaqen këtu dhe mund të rikthehen.",
+    "archiveFailed": "Klienti nuk u fshi dot. Provoni sërish.",
+    "restoreFailed": "Klienti nuk u rikthye dot. Provoni sërish."
   },
   "detail": {
     "loading": "Duke ngarkuar klientin...",
@@ -80,7 +93,9 @@
     "noOutcome": "Pa rezultat",
     "scheduleAppointment": "Planifiko takim",
     "yes": "Po",
-    "no": "Jo"
+    "no": "Jo",
+    "internalNotes": "Paragrafi",
+    "noNotesYet": "Ende asnjë shënim."
   },
   "form": {
     "createTitle": "Shto klient të ri",
@@ -107,10 +122,12 @@
     "phonePlaceholderClient": "(068) 123-4567",
     "emailPlaceholderClient": "kontakt@shembull.com",
     "customFieldsSection": "Fusha të personalizuara",
-    "internalNotes": "Shënime të brendshme",
-    "notesLabel": "Shënime",
-    "notesComingSoon": "Së shpejti: shënimet e brendshme nuk ruhen ende me regjistrimin e klientit.",
-    "saveClient": "Ruaj klientin"
+    "internalNotes": "Paragraf",
+    "notesLabel": "Paragrafi",
+    "saveClient": "Ruaj klientin",
+    "notesPlaceholder": "I dukshëm vetëm për ekipin tuaj…",
+    "notesHelper": "Private për hapësirën tuaj të punës. Nuk i tregohen kurrë klientit.",
+    "emptyForm": "Ky formular nuk ka ende seksione. Pronari i biznesit mund ta ndërtojë te Cilësimet › Menaxhimi i klientëve › Formulari."
   },
   "import": {
     "importClients": "Importo nga Excel",

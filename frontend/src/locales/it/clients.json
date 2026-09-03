@@ -28,7 +28,20 @@
     "emptyDescription": "I clienti che aggiungi compariranno qui.",
     "showing": "Visualizzate {{shown}} di {{total}} voci",
     "prev": "Prec.",
-    "next": "Succ."
+    "next": "Succ.",
+    "deleteClient": "Elimina cliente",
+    "restoreClient": "Ripristina cliente",
+    "deleteClientTitle": "Eliminare questo cliente?",
+    "deleteClientConfirm": "Elimina cliente",
+    "archiveConfirmGeneric": "{{name}} verrà rimosso dall'elenco clienti. Potrai ripristinarlo in seguito dalla vista Archiviati.",
+    "archiveConfirmNoRecords": "{{name}} verrà rimosso dall'elenco clienti. Non ha fatture, preventivi o appuntamenti. Potrai ripristinarlo in seguito dalla vista Archiviati.",
+    "archiveConfirmWithRecords": "{{name}} verrà rimosso dall'elenco clienti, ma la cronologia viene conservata: {{invoices}} fattura/e, {{quotations}} preventivo/i, {{appointments}} appuntamento/i e {{interactions}} interazione/i restano intatti. Potrai ripristinarlo in seguito dalla vista Archiviati.",
+    "viewArchived": "Archiviati",
+    "viewActive": "Attivi",
+    "emptyArchived": "Nessun cliente archiviato",
+    "emptyArchivedDescription": "I clienti eliminati compaiono qui e possono essere ripristinati.",
+    "archiveFailed": "Impossibile eliminare questo cliente. Riprova.",
+    "restoreFailed": "Impossibile ripristinare questo cliente. Riprova."
   },
   "detail": {
     "loading": "Caricamento cliente...",
@@ -80,7 +93,9 @@
     "noOutcome": "Nessun esito",
     "scheduleAppointment": "Fissa appuntamento",
     "yes": "Sì",
-    "no": "No"
+    "no": "No",
+    "internalNotes": "Paragrafo",
+    "noNotesYet": "Nessuna nota."
   },
   "form": {
     "createTitle": "Aggiungi nuovo cliente",
@@ -107,10 +122,12 @@
     "phonePlaceholderClient": "02 1234 5678",
     "emailPlaceholderClient": "contatto@example.com",
     "customFieldsSection": "Campi personalizzati",
-    "internalNotes": "Note interne",
-    "notesLabel": "Note",
-    "notesComingSoon": "In arrivo: le note interne non vengono ancora salvate insieme alla scheda cliente.",
-    "saveClient": "Salva cliente"
+    "internalNotes": "Paragrafo",
+    "notesLabel": "Paragrafo",
+    "saveClient": "Salva cliente",
+    "notesPlaceholder": "Visibile solo al tuo team…",
+    "notesHelper": "Private del tuo spazio di lavoro. Mai mostrate al cliente.",
+    "emptyForm": "Questo modulo non ha ancora sezioni. Il titolare può crearlo in Impostazioni › Gestione clienti › Modulo."
   },
   "import": {
     "importClients": "Importa da Excel",

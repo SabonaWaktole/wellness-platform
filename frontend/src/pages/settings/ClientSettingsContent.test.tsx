@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ClientSettingsContent } from './ClientSettingsContent';
 import {
@@ -22,9 +22,6 @@ describe('ClientSettingsContent', () => {
   const mockFetchSettings = vi.fn();
   const mockDefineCustomField = vi.fn();
   const mockDefineOutcomeCategory = vi.fn();
-  const mockUpdateCustomField = vi.fn();
-  const mockDeleteCustomField = vi.fn();
-  const mockReorderCustomFields = vi.fn();
 
   const setup = (overrides: { fieldError?: string | null; outcomeError?: string | null } = {}) => {
     (useClientSettings as any).mockReturnValue({
@@ -43,16 +40,22 @@ describe('ClientSettingsContent', () => {
       isLoading: false,
       error: overrides.outcomeError ?? null,
     });
+    // These three were added to the component later; without them the whole
+    // suite failed on a destructure of undefined before rendering anything.
     (useUpdateCustomField as any).mockReturnValue({
-      updateCustomField: mockUpdateCustomField,
+      updateCustomField: vi.fn(),
       isLoading: false,
       error: null,
     });
     (useDeleteCustomField as any).mockReturnValue({
-      deleteCustomField: mockDeleteCustomField,
+      deleteCustomField: vi.fn(),
+      isLoading: false,
+      error: null,
     });
     (useReorderCustomFields as any).mockReturnValue({
-      reorderCustomFields: mockReorderCustomFields,
+      reorderCustomFields: vi.fn(),
+      isLoading: false,
+      error: null,
     });
   };
 
@@ -119,15 +122,31 @@ describe('ClientSettingsContent', () => {
     openSlideOver();
 
     // Mirrors backend src/clients/domain/enums/FieldType.ts.
-    const accepted = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'ALPHANUMERIC', 'SINGLE_SELECT', 'EMAIL', 'USER_REFERENCE'];
-    const fieldTypeSelect = screen.getByLabelText('Field Type');
-    const values = within(fieldTypeSelect)
-      .getAllByRole('option')
+    const accepted = [
+      'TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'ALPHANUMERIC',
+      'SINGLE_SELECT', 'MULTI_SELECT', 'EMAIL', 'USER_REFERENCE',
+    ];
+    // Scoped to the Field Type select: the slide-over also carries a Role
+    // dropdown, whose options are FieldRoles and not field types at all.
+    const typeSelect = screen.getByLabelText(/Field Type/i);
+    const values = Array.from(typeSelect.querySelectorAll('option'))
       .map((o) => (o as HTMLOptionElement).value)
       .filter(Boolean);
 
     for (const value of values) {
       expect(accepted).toContain(value);
     }
+  });
+
+  it('offers MULTI_SELECT as a selectable field type', () => {
+    renderPage();
+    openSlideOver();
+
+    const typeSelect = screen.getByLabelText(/Field Type/i);
+    const values = Array.from(typeSelect.querySelectorAll('option')).map(
+      (o) => (o as HTMLOptionElement).value
+    );
+
+    expect(values).toContain('MULTI_SELECT');
   });
 });

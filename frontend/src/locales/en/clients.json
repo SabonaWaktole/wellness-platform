@@ -28,7 +28,20 @@
     "emptyDescription": "Clients you add will appear here.",
     "showing": "Showing {{shown}} of {{total}} entries",
     "prev": "Prev",
-    "next": "Next"
+    "next": "Next",
+    "deleteClient": "Delete client",
+    "restoreClient": "Restore client",
+    "deleteClientTitle": "Delete this client?",
+    "deleteClientConfirm": "Delete client",
+    "archiveConfirmGeneric": "{{name}} will be removed from your client list. You can restore them later from the Archived view.",
+    "archiveConfirmNoRecords": "{{name}} will be removed from your client list. They have no invoices, quotations or appointments. You can restore them later from the Archived view.",
+    "archiveConfirmWithRecords": "{{name}} will be removed from your client list, but their history is kept: {{invoices}} invoice(s), {{quotations}} quotation(s), {{appointments}} appointment(s) and {{interactions}} interaction(s) stay intact. You can restore them later from the Archived view.",
+    "viewArchived": "Archived",
+    "viewActive": "Active",
+    "emptyArchived": "No archived clients",
+    "emptyArchivedDescription": "Clients you delete appear here and can be restored.",
+    "archiveFailed": "Could not delete this client. Please try again.",
+    "restoreFailed": "Could not restore this client. Please try again."
   },
   "detail": {
     "loading": "Loading client...",
@@ -80,7 +93,9 @@
     "noOutcome": "No Outcome",
     "scheduleAppointment": "Schedule Appointment",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "internalNotes": "Paragraph",
+    "noNotesYet": "No notes yet."
   },
   "form": {
     "createTitle": "Add New Client",
@@ -108,10 +123,12 @@
     "emailPlaceholderClient": "contact@example.com",
     "customFieldsSection": "Custom Fields",
     "fieldRequired": "This field is required",
-    "internalNotes": "Internal Notes",
-    "notesLabel": "Notes",
-    "notesComingSoon": "Coming soon: internal notes are not yet saved with the client record.",
-    "saveClient": "Save Client"
+    "internalNotes": "Paragraph",
+    "notesLabel": "Paragraph",
+    "saveClient": "Save Client",
+    "notesPlaceholder": "Visible only to your team…",
+    "notesHelper": "Private to your workspace. Never shown to the client.",
+    "emptyForm": "This form has no sections yet. A business owner can build it in Settings › Client Management › Form."
   },
   "import": {
     "importClients": "Import from Excel",

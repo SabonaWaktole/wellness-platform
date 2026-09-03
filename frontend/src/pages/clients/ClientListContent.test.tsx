@@ -5,10 +5,14 @@ import { ClientListContent } from './ClientListContent';
 import { MemoryRouter } from 'react-router-dom';
 import * as useClientsModule from '../../hooks/useClients';
 import * as useTeamModule from '../../hooks/useTeam';
+import { useAuthStore } from '../../store/useAuthStore';
 
 // Mock the hook
 vi.mock('../../hooks/useClients', () => ({
   useClients: vi.fn(),
+  useArchiveClient: vi.fn(),
+  useRestoreClient: vi.fn(),
+  useClientRelatedCounts: vi.fn(),
 }));
 
 vi.mock('../../hooks/useTeam', () => ({
@@ -17,9 +21,15 @@ vi.mock('../../hooks/useTeam', () => ({
 
 describe('ClientListContent', () => {
   let mockFetchClients: ReturnType<typeof vi.fn>;
+  let mockArchiveClient: ReturnType<typeof vi.fn>;
+  let mockRestoreClient: ReturnType<typeof vi.fn>;
+  let mockFetchRelatedCounts: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockFetchClients = vi.fn();
+    mockArchiveClient = vi.fn().mockResolvedValue({ archivedClientName: 'Acme' });
+    mockRestoreClient = vi.fn().mockResolvedValue({ restoredClientName: 'Acme' });
+    mockFetchRelatedCounts = vi.fn();
     
     // Default mock setup
     vi.mocked(useClientsModule.useClients).mockReturnValue({
@@ -28,6 +38,22 @@ describe('ClientListContent', () => {
       isLoading: false,
       error: null,
       fetchClients: mockFetchClients,
+    });
+
+    vi.mocked(useClientsModule.useArchiveClient).mockReturnValue({
+      archiveClient: mockArchiveClient,
+      isLoading: false,
+      error: null,
+    });
+    vi.mocked(useClientsModule.useRestoreClient).mockReturnValue({
+      restoreClient: mockRestoreClient,
+      isLoading: false,
+      error: null,
+    });
+    vi.mocked(useClientsModule.useClientRelatedCounts).mockReturnValue({
+      counts: null,
+      isLoading: false,
+      fetchRelatedCounts: mockFetchRelatedCounts,
     });
 
     vi.mocked(useTeamModule.useTeam).mockReturnValue({
@@ -116,7 +142,9 @@ describe('ClientListContent', () => {
     // Initial fetch from useEffect on mount. The param is `search`, not
     // `name`: one box now matches name, email and phone (SRS 6.2).
     expect(mockFetchClients).toHaveBeenCalledTimes(1);
-    expect(mockFetchClients).toHaveBeenCalledWith({ search: '' });
+    // `archived: false` is explicit: the list asks for active clients, which
+    // is what keeps archived ones out of the default view.
+    expect(mockFetchClients).toHaveBeenCalledWith({ search: '', archived: false });
     
     mockFetchClients.mockClear();
 
@@ -144,7 +172,7 @@ describe('ClientListContent', () => {
 
     // NOW it should have fetched, and exactly once for the final value
     expect(mockFetchClients).toHaveBeenCalledTimes(1);
-    expect(mockFetchClients).toHaveBeenCalledWith({ search: 'Acme' });
+    expect(mockFetchClients).toHaveBeenCalledWith({ search: 'Acme', archived: false });
 
     vi.useRealTimers();
   });
@@ -180,5 +208,101 @@ describe('ClientListContent', () => {
       expect(screen.queryByText('u-not-in-list')).toBeNull();
     });
   });
+
+  describe('archiving a client', () => {
+    const asOwner = () => {
+      useAuthStore.setState({
+        user: { id: 'u1', email: 'owner@example.com', role: 'BUSINESS_OWNER' },
+        isAuthenticated: true,
+        isInitializing: false,
+      });
+    };
+
+    const withOneClient = () => {
+      vi.mocked(useClientsModule.useClients).mockReturnValue({
+        clients: [
+          {
+            id: 'c1',
+            name: 'Acme Ltd',
+            contactInfo: { email: 'hi@acme.test' },
+            status: 'ACTIVE',
+            assignedUserId: 'u1',
+            customFieldValues: {},
+            lastUpdatedByUserId: 'u1',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 1,
+        isLoading: false,
+        error: null,
+        fetchClients: mockFetchClients,
+      });
+    };
+
+    afterEach(() => {
+      useAuthStore.setState({ user: null, isAuthenticated: false });
+    });
+
+    it('hides the delete action from staff', () => {
+      useAuthStore.setState({
+        user: { id: 'u2', email: 'staff@example.com', role: 'STAFF' },
+        isAuthenticated: true,
+        isInitializing: false,
+      });
+      withOneClient();
+      renderComponent();
+
+      fireEvent.click(screen.getByLabelText(/Actions for Acme Ltd/i));
+      expect(screen.queryByText('Delete client')).toBeNull();
+      // The archived view is an owner tool too.
+      expect(screen.queryByText('Archived')).toBeNull();
+    });
+
+    it('asks for confirmation before archiving, and does not archive on open', () => {
+      asOwner();
+      withOneClient();
+      renderComponent();
+
+      fireEvent.click(screen.getByLabelText(/Actions for Acme Ltd/i));
+      fireEvent.click(screen.getByText('Delete client'));
+
+      expect(screen.getByText('Delete this client?')).toBeDefined();
+      expect(mockFetchRelatedCounts).toHaveBeenCalledWith('c1');
+      // Opening the dialog must not be the action itself.
+      expect(mockArchiveClient).not.toHaveBeenCalled();
+    });
+
+    it('tells the owner what archiving preserves', () => {
+      asOwner();
+      withOneClient();
+      vi.mocked(useClientsModule.useClientRelatedCounts).mockReturnValue({
+        counts: { interactions: 4, appointments: 2, quotations: 1, invoices: 3 },
+        isLoading: false,
+        fetchRelatedCounts: mockFetchRelatedCounts,
+      });
+      renderComponent();
+
+      fireEvent.click(screen.getByLabelText(/Actions for Acme Ltd/i));
+      fireEvent.click(screen.getByText('Delete client'));
+
+      expect(screen.getByText(/3 invoice\(s\)/)).toBeDefined();
+      expect(screen.getByText(/stay intact/)).toBeDefined();
+    });
+
+    it('switches to the archived view and offers restore instead of delete', () => {
+      asOwner();
+      withOneClient();
+      renderComponent();
+
+      fireEvent.click(screen.getByText('Archived'));
+      expect(mockFetchClients).toHaveBeenLastCalledWith({ search: '', archived: true });
+
+      fireEvent.click(screen.getByLabelText(/Actions for Acme Ltd/i));
+      expect(screen.getByText('Restore client')).toBeDefined();
+      expect(screen.queryByText('Delete client')).toBeNull();
+    });
+  });
+
 });
 // @ts-nocheck

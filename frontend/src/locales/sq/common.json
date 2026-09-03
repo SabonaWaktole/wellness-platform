@@ -70,7 +70,8 @@
     "breadcrumb": "Shtegu i navigimit"
   },
   "input": {
-    "selectAnOption": "Zgjidhni një opsion"
+    "selectAnOption": "Zgjidhni një opsion",
+    "noOptionsConfigured": "Nuk ka opsione të konfiguruara për këtë fushë."
   },
   "stock": {
     "units": "{{count}} njësi"

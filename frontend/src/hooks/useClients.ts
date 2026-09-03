@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { clientService } from '../services/clientService';
 import { useParams } from 'react-router-dom';
-import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory } from '../types/client';
+import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory, ClientRelatedCounts } from '../types/client';
 import { extractApiErrorMessage } from '../utils/apiError';
 
 export const useClients = () => {
@@ -239,6 +239,79 @@ export const useDeleteCustomField = () => {
   };
 
   return { deleteCustomField, isLoading, error };
+};
+
+/**
+ * Archives a client (soft delete). The client leaves the active list but its
+ * invoices, quotations, appointments and history stay intact — see
+ * ArchiveClientUseCase on the backend.
+ */
+export const useArchiveClient = () => {
+  const { tenantSlug } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const archiveClient = async (clientId: string) => {
+    if (!tenantSlug) throw new Error('Missing tenant context');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await clientService.archiveClient(tenantSlug, clientId);
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, 'Failed to delete client'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { archiveClient, isLoading, error };
+};
+
+export const useRestoreClient = () => {
+  const { tenantSlug } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const restoreClient = async (clientId: string) => {
+    if (!tenantSlug) throw new Error('Missing tenant context');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await clientService.restoreClient(tenantSlug, clientId);
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, 'Failed to restore client'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { restoreClient, isLoading, error };
+};
+
+/** Fetches what a client is attached to, for the archive confirmation dialog. */
+export const useClientRelatedCounts = () => {
+  const { tenantSlug } = useParams();
+  const [counts, setCounts] = useState<ClientRelatedCounts | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchRelatedCounts = useCallback(async (clientId: string) => {
+    if (!tenantSlug) return;
+    setIsLoading(true);
+    setCounts(null);
+    try {
+      setCounts(await clientService.getClientRelatedCounts(tenantSlug, clientId));
+    } catch {
+      // The dialog still works without counts — it just omits the detail line
+      // rather than blocking the owner from archiving.
+      setCounts(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tenantSlug]);
+
+  return { counts, isLoading, fetchRelatedCounts };
 };
 
 export const useReorderCustomFields = () => {
