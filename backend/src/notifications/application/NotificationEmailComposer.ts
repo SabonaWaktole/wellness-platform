@@ -113,15 +113,15 @@ export class NotificationEmailComposer {
           subject: `${client} was assigned to you`,
           body: `<strong>${esc(client)}</strong> is now assigned to you.`,
         };
+      case 'FORM_SUBMITTED':
+        return {
+          subject: `New submission for "${String(p.form ?? 'your form')}"`,
+          body: `Someone submitted <strong>${esc(String(p.form ?? 'your form'))}</strong>.`,
+        };
       case 'INVITATION_ACCEPTED':
         return {
           subject: `${String(p.memberName ?? 'A new member')} joined the workspace`,
           body: `<strong>${esc(String(p.memberName ?? 'A new member'))}</strong> accepted their invitation and now has access to the workspace.`,
-        };
-      case 'FORM_SUBMITTED':
-        return {
-          subject: `New response for ${String(p.form ?? 'your form')}`,
-          body: `A new response was submitted for <strong>${esc(String(p.form ?? 'your form'))}</strong>.`,
         };
       default: {
         /*
@@ -144,7 +144,9 @@ export class NotificationEmailComposer {
           ? 'appointments'
           : entityType === 'CLIENT'
             ? `clients/${entityId}`
-            : null;
+            : entityType === 'FORM'
+              ? `settings/client-management/forms/${entityId}/submissions`
+              : null;
     return path ? `${this.appUrl}/${tenantSlug}/${path}` : null;
   }
 

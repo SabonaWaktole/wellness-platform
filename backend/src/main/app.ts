@@ -292,6 +292,62 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService);
   app.use('/api/:tenantSlug/clients', clientRoutes);
 
+  // The client-facing form (§24) — no tenant prefix, no auth. Mounted BEFORE
+  // its tenant-scoped sibling below for the identical reason
+  // `/api/public/quotations` is: `/api/:tenantSlug/forms` is a wildcard that
+  // would otherwise match `/api/public/forms/<token>` too (tenantSlug="public"),
+  // 401'ing every visitor who opens a shared link. See publicFormRoutes.ts for
+  // what stands in for authentication instead.
+  const { createPublicFormRouter } = require('../forms/interfaces/http/routes/publicFormRoutes');
+  const { GetPublicFormUseCase } = require('../forms/application/use-cases/GetPublicFormUseCase');
+  const { SubmitFormUseCase } = require('../forms/application/use-cases/SubmitFormUseCase');
+  const { PrismaClientFormRepository } = require('../forms/infrastructure/repositories/PrismaClientFormRepository');
+  const { PrismaFormVersionRepository } = require('../forms/infrastructure/repositories/PrismaFormVersionRepository');
+  const { PrismaFormSubmissionRepository } = require('../forms/infrastructure/repositories/PrismaFormSubmissionRepository');
+  const { PrismaCustomFieldDefinitionRepository: PublicFormCustomFieldRepo } = require('../clients/infrastructure/repositories/PrismaCustomFieldDefinitionRepository');
+  const { PrismaClientRepository: PublicFormClientRepo } = require('../clients/infrastructure/repositories/PrismaClientRepository');
+  const { EnsureDefaultClientFieldsUseCase } = require('../clients/application/use-cases/EnsureDefaultClientFieldsUseCase');
+  const { CreateClientUseCase } = require('../clients/application/use-cases/CreateClientUseCase');
+
+  const publicFormClientFormRepo = new PrismaClientFormRepository(prisma);
+  const publicFormVersionRepo = new PrismaFormVersionRepository(prisma);
+  const publicFormSubmissionRepo = new PrismaFormSubmissionRepository(prisma);
+  const publicFormCustomFieldRepo = new PublicFormCustomFieldRepo(prisma);
+  const publicFormClientRepo = new PublicFormClientRepo(prisma);
+  // A fresh CreateClientUseCase, wired to the SAME notificationService every
+  // other module uses — a client created from a public form submission
+  // still emits CLIENT_ASSIGNED exactly like one created from the UI.
+  const publicFormCreateClientUseCase = new CreateClientUseCase(
+    publicFormClientRepo,
+    publicFormCustomFieldRepo,
+    new EnsureDefaultClientFieldsUseCase(publicFormCustomFieldRepo, publicFormClientRepo),
+    notificationService
+  );
+
+  app.use(
+    '/api/public/forms',
+    createPublicFormRouter(
+      new GetPublicFormUseCase(publicFormClientFormRepo, publicFormVersionRepo),
+      new SubmitFormUseCase(
+        publicFormClientFormRepo,
+        publicFormVersionRepo,
+        publicFormSubmissionRepo,
+        publicFormCustomFieldRepo,
+        userRepository,
+        publicFormCreateClientUseCase,
+        notificationService
+      )
+    )
+  );
+
+  // Client intake forms — the drag-and-drop builder's layouts. A sibling of
+  // /clients rather than a sub-path of it: forms are a presentation layer over
+  // the tenant's field dictionary, and clientRoutes already wires 18 use cases
+  // into a single controller.
+  const { createFormRouter } = require('../forms/interfaces/http/routes/formRoutes');
+  const formRoutes = createFormRouter(prisma, tokenService, tenantRepository);
+  app.use('/api/:tenantSlug/forms', formRoutes);
+
   // Appointment routes
   const { createAppointmentRouter } = require('../appointments/interfaces/http/routes/appointmentRoutes');
   const appointmentRoutes = createAppointmentRouter(prisma, tokenService, tenantRepository, notificationService);

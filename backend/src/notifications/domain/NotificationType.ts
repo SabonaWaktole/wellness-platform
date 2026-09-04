@@ -38,11 +38,12 @@ export const NOTIFICATION_TYPES = [
   // Clients.
   'CLIENT_ASSIGNED',
 
+  // Forms — the public link was filled. No actor (the filler has no
+  // account), same as the two scheduled types above.
+  'FORM_SUBMITTED',
+
   // Team.
   'INVITATION_ACCEPTED',
-
-  // Forms.
-  'FORM_SUBMITTED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
