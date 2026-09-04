@@ -13,6 +13,17 @@ import { handlers } from './mocks/handlers';
  */
 import './i18n';
 
+/**
+ * jsdom doesn't implement the pointer-capture trio of the Pointer Events API,
+ * so any component calling element.setPointerCapture (drag/resize handles)
+ * throws "is not a function" the instant a pointerdown fires in a test.
+ */
+if (!Element.prototype.setPointerCapture) {
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
+  Element.prototype.hasPointerCapture = () => false;
+}
+
 export const server = setupServer(...handlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
