@@ -32,7 +32,9 @@ const FIELD_TYPE_TO_INPUT: Record<CustomFieldType, CustomFieldInputProps['fieldT
   // Restricted to letters, numbers and spaces by the backend; a plain text box
   // is still the right control, the value rule is enforced on submit.
   ALPHANUMERIC: 'text',
+  LONG_TEXT: 'multiline',
   SINGLE_SELECT: 'dropdown',
+  MULTI_SELECT: 'multi-select',
   EMAIL: 'email',
   USER_REFERENCE: 'user-select',
 };
