@@ -10,6 +10,9 @@ import {
   ChevronRight,
   Edit,
   Users,
+  Trash2,
+  RotateCcw,
+  Archive,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
@@ -18,11 +21,19 @@ import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { DataTable } from '../../components/ui/DataTable';
 import type { DataTableColumn } from '../../components/ui/DataTable';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { ExcelImportButton } from '../../components/clients/ExcelImportButton';
 import { clientService } from '../../services/clientService';
 import styles from './ClientListContent.module.css';
 
-import { useClients } from '../../hooks/useClients';
+import {
+  useClients,
+  useArchiveClient,
+  useRestoreClient,
+  useClientRelatedCounts,
+} from '../../hooks/useClients';
+import { useAuthStore } from '../../store/useAuthStore';
+import type { Client } from '../../types/client';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName, getStaffInitials } from '../../utils/userUtils';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -36,6 +47,19 @@ export const ClientListContent: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { clients, total, isLoading, fetchClients } = useClients();
+  const { user } = useAuthStore();
+  /* Archiving is Business-Owner-only on the backend (ArchiveClientUseCase).
+   * Hiding the action for everyone else keeps the UI honest rather than
+   * offering a button that always 403s — the backend stays the enforcement
+   * point either way. */
+  const canArchive = user?.role === 'BUSINESS_OWNER' || user?.role === 'SUPER_ADMIN';
+  const { archiveClient } = useArchiveClient();
+  const { restoreClient } = useRestoreClient();
+  const { counts, fetchRelatedCounts } = useClientRelatedCounts();
+  /** Which side of the soft-delete line the list is showing. */
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivingClient, setArchivingClient] = useState<Client | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   /*
    * The staff dashboard's "Log note" quick action has no client of its own, so
@@ -59,8 +83,56 @@ export const ClientListContent: React.FC = () => {
 
   useEffect(() => {
     // One box, matched across name / email / phone — SRS §6.2.
-    fetchClients({ search: debouncedSearchTerm });
-  }, [fetchClients, debouncedSearchTerm]);
+    fetchClients({ search: debouncedSearchTerm, archived: showArchived });
+  }, [fetchClients, debouncedSearchTerm, showArchived]);
+
+  const refresh = () => fetchClients({ search: debouncedSearchTerm, archived: showArchived });
+
+  /* Counts are fetched when the dialog opens rather than per row: the list
+   * endpoint does not carry them, and four COUNT queries per row would be a
+   * needless cost for a dialog most rows never open. */
+  const openArchiveDialog = (client: Client) => {
+    setActionError(null);
+    setArchivingClient(client);
+    fetchRelatedCounts(client.id);
+  };
+
+  const handleArchive = async () => {
+    if (!archivingClient) return;
+    try {
+      await archiveClient(archivingClient.id);
+      setArchivingClient(null);
+      refresh();
+    } catch (err: any) {
+      setActionError(err?.response?.data?.error ?? t('list.archiveFailed'));
+    }
+  };
+
+  const handleRestore = async (client: Client) => {
+    setActionError(null);
+    try {
+      await restoreClient(client.id);
+      refresh();
+    } catch (err: any) {
+      setActionError(err?.response?.data?.error ?? t('list.restoreFailed'));
+    }
+  };
+
+  /** Spells out what archiving keeps, so "delete" is not read as "destroy". */
+  const archiveMessage = () => {
+    if (!counts) return t('list.archiveConfirmGeneric', { name: archivingClient?.name ?? '' });
+    const kept = counts.interactions + counts.appointments + counts.quotations + counts.invoices;
+    if (kept === 0) {
+      return t('list.archiveConfirmNoRecords', { name: archivingClient?.name ?? '' });
+    }
+    return t('list.archiveConfirmWithRecords', {
+      name: archivingClient?.name ?? '',
+      invoices: counts.invoices,
+      quotations: counts.quotations,
+      appointments: counts.appointments,
+      interactions: counts.interactions,
+    });
+  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -146,6 +218,23 @@ export const ClientListContent: React.FC = () => {
               icon: <Edit size={16} />,
               onClick: () => navigate(clientHref(client.id)),
             },
+            ...(canArchive && !showArchived
+              ? [{
+                  id: 'archive',
+                  label: t('list.deleteClient'),
+                  icon: <Trash2 size={16} />,
+                  danger: true,
+                  onClick: () => openArchiveDialog(client),
+                }]
+              : []),
+            ...(canArchive && showArchived
+              ? [{
+                  id: 'restore',
+                  label: t('list.restoreClient'),
+                  icon: <RotateCcw size={16} />,
+                  onClick: () => handleRestore(client),
+                }]
+              : []),
           ]}
         />
       ),
@@ -189,7 +278,21 @@ export const ClientListContent: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          {/* Owners need somewhere to see and undo archives; without this the
+              archived clients would be unreachable from the UI entirely. */}
+          {canArchive && (
+            <Button
+              variant={showArchived ? 'primary' : 'outline'}
+              icon={<Archive size={18} />}
+              onClick={() => setShowArchived((v) => !v)}
+              aria-pressed={showArchived}
+            >
+              {showArchived ? t('list.viewActive') : t('list.viewArchived')}
+            </Button>
+          )}
         </div>
+
+        {actionError && <div className={styles.actionError} role="alert">{actionError}</div>}
 
         {/* Table */}
         <DataTable
@@ -202,11 +305,15 @@ export const ClientListContent: React.FC = () => {
           onRowClick={(client) => navigate(clientHref(client.id))}
           empty={{
             icon: <Users size={20} />,
-            title: searchTerm ? t('list.emptyNoMatch') : t('list.empty'),
-            description: searchTerm
+            title: showArchived
+              ? t('list.emptyArchived')
+              : searchTerm ? t('list.emptyNoMatch') : t('list.empty'),
+            description: showArchived
+              ? t('list.emptyArchivedDescription')
+              : searchTerm
               ? t('list.emptyNoMatchDescription', { term: searchTerm })
               : t('list.emptyDescription'),
-            action: searchTerm ? undefined : (
+            action: searchTerm || showArchived ? undefined : (
               <Button
                 variant="primary"
                 icon={<Plus size={18} />}
@@ -233,6 +340,16 @@ export const ClientListContent: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!archivingClient}
+        onClose={() => setArchivingClient(null)}
+        onConfirm={handleArchive}
+        title={t('list.deleteClientTitle')}
+        message={archiveMessage()}
+        confirmLabel={t('list.deleteClientConfirm')}
+        tone="danger"
+      />
     </div>
   );
 };

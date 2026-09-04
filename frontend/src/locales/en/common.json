@@ -70,7 +70,8 @@
     "breadcrumb": "Breadcrumb"
   },
   "input": {
-    "selectAnOption": "Select an option"
+    "selectAnOption": "Select an option",
+    "noOptionsConfigured": "No options configured for this field."
   },
   "stock": {
     "units": "{{count}} Units"

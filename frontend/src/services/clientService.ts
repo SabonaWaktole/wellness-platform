@@ -7,16 +7,17 @@ import type {
   OutcomeCategory,
   ClientHistory,
   Interaction,
-  ImportResult
+  ImportResult,
+  ClientRelatedCounts
 } from '../types/client';
 
 export const clientService = {
-  createClient: async (tenantSlug: string, data: { customFieldValues?: Record<string, any> }) => {
+  createClient: async (tenantSlug: string, data: { customFieldValues?: Record<string, any>; notes?: string | null }) => {
     const response = await apiClient.post<Client>(`/${tenantSlug}/clients`, data);
     return response.data;
   },
 
-  updateClient: async (tenantSlug: string, clientId: string, data: { customFieldValues?: Record<string, any> }) => {
+  updateClient: async (tenantSlug: string, clientId: string, data: { customFieldValues?: Record<string, any>; notes?: string | null }) => {
     const response = await apiClient.put<Client>(`/${tenantSlug}/clients/${clientId}`, data);
     return response.data;
   },
@@ -28,6 +29,31 @@ export const clientService = {
 
   searchClients: async (tenantSlug: string, params: SearchClientsParams) => {
     const response = await apiClient.get<PaginatedResult<Client>>(`/${tenantSlug}/clients/search`, { params });
+    return response.data;
+  },
+
+  /** Soft delete: the client is archived, not removed. Related invoices,
+   *  quotations, appointments and history all survive and keep resolving the
+   *  client's name — see ArchiveClientUseCase on the backend. */
+  archiveClient: async (tenantSlug: string, clientId: string) => {
+    const response = await apiClient.delete<{ archivedClientName: string; preserved: ClientRelatedCounts }>(
+      `/${tenantSlug}/clients/${clientId}`
+    );
+    return response.data;
+  },
+
+  restoreClient: async (tenantSlug: string, clientId: string) => {
+    const response = await apiClient.post<{ restoredClientName: string }>(
+      `/${tenantSlug}/clients/${clientId}/restore`
+    );
+    return response.data;
+  },
+
+  /** What the client is attached to — shown in the archive confirmation. */
+  getClientRelatedCounts: async (tenantSlug: string, clientId: string) => {
+    const response = await apiClient.get<ClientRelatedCounts>(
+      `/${tenantSlug}/clients/${clientId}/related-counts`
+    );
     return response.data;
   },
 

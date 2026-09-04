@@ -30,6 +30,13 @@ const ROLE_OPTIONS: { value: '' | FieldRole; labelKey: string }[] = [
   { value: 'ASSIGNEE', labelKey: 'clientManagement.roleAssignee' },
 ];
 
+/**
+ * The two select types are the ones that carry an options list; the backend
+ * rejects either without at least one option (see defineCustomFieldSchema).
+ */
+const needsOptions = (fieldType: string) =>
+  fieldType === 'SINGLE_SELECT' || fieldType === 'MULTI_SELECT';
+
 export const ClientSettingsContent: React.FC = () => {
   const { t } = useTranslation('settings');
   const { tenantSlug = '' } = useParams();
@@ -108,7 +115,7 @@ export const ClientSettingsContent: React.FC = () => {
       fieldType: newFieldType,
       role: newFieldRole || null,
       required: newFieldRequired,
-      ...(newFieldType === 'SINGLE_SELECT' ? { options: newFieldOptions } : {}),
+      ...(needsOptions(newFieldType) ? { options: newFieldOptions } : {}),
     };
     try {
       if (editingField) {
@@ -382,11 +389,12 @@ export const ClientSettingsContent: React.FC = () => {
                 <option value="BOOLEAN">{t('clientManagement.fieldTypes.BOOLEAN')}</option>
                 <option value="ALPHANUMERIC">{t('clientManagement.fieldTypes.ALPHANUMERIC')}</option>
                 <option value="SINGLE_SELECT">{t('clientManagement.fieldTypes.SINGLE_SELECT')}</option>
+                <option value="MULTI_SELECT">{t('clientManagement.fieldTypes.MULTI_SELECT')}</option>
                 <option value="EMAIL">{t('clientManagement.fieldTypes.EMAIL')}</option>
                 <option value="USER_REFERENCE">{t('clientManagement.fieldTypes.USER_REFERENCE')}</option>
               </SelectInput>
 
-              {newFieldType === 'SINGLE_SELECT' && (
+              {needsOptions(newFieldType) && (
                 <div className={styles.optionsEditor}>
                   <label className={styles.optionsLabel}>{t('clientManagement.options')}</label>
                   <div className={styles.optionsChips}>

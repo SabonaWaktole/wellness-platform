@@ -70,7 +70,8 @@
     "breadcrumb": "Percorso di navigazione"
   },
   "input": {
-    "selectAnOption": "Seleziona un'opzione"
+    "selectAnOption": "Seleziona un'opzione",
+    "noOptionsConfigured": "Nessuna opzione configurata per questo campo."
   },
   "stock": {
     "units": "{{count}} unità"

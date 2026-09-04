@@ -16,9 +16,21 @@ export interface Client {
   status: string;
   assignedUserId: string | null;
   customFieldValues: Record<string, any>;
+  /** Free-text internal notes, private to the workspace. */
+  notes?: string | null;
   lastUpdatedByUserId: string;
   createdAt: string;
   updatedAt: string;
+  /** Set when the client is archived; absent/null means active. */
+  deletedAt?: string | null;
+}
+
+/** Records that survive archiving a client — shown in the confirmation. */
+export interface ClientRelatedCounts {
+  interactions: number;
+  appointments: number;
+  quotations: number;
+  invoices: number;
 }
 
 export type FieldRole =
@@ -48,7 +60,9 @@ export type CustomFieldType =
   | 'DATE'
   | 'BOOLEAN'
   | 'ALPHANUMERIC'
+  | 'LONG_TEXT'
   | 'SINGLE_SELECT'
+  | 'MULTI_SELECT'
   | 'EMAIL'
   | 'USER_REFERENCE';
 
@@ -96,6 +110,8 @@ export interface SearchClientsParams {
   status?: string;
   assignedUserId?: string;
   customFields?: Record<string, any>;
+  /** `true` lists archived clients instead of active ones. */
+  archived?: boolean;
   skip?: number;
   take?: number;
 }

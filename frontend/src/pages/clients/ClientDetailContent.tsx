@@ -40,6 +40,9 @@ const formatCustomFieldValue = (
 ): string => {
   if (typeof value === 'boolean') return value ? labels.yes : labels.no;
   if (value === null || value === undefined || value === '') return '-';
+  // MULTI_SELECT stores an array. String([...]) would render "a,b" with no
+  // spacing, and an empty selection as '' rather than the not-set dash.
+  if (Array.isArray(value)) return value.length ? value.join(', ') : '-';
   return String(value);
 };
 
@@ -266,6 +269,19 @@ export const ClientDetailContent: React.FC = () => {
                 </div>
               )}
             </div>
+          </Card>
+
+          {/* Internal Notes — workspace-private, never shown to the client on
+              quotations, invoices or any customer-facing page. */}
+          <Card padding="lg">
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>{t('detail.internalNotes')}</h2>
+            </div>
+            {client.notes?.trim() ? (
+              <p className={styles.notesBody}>{client.notes}</p>
+            ) : (
+              <p className={styles.notesEmpty}>{t('detail.noNotesYet')}</p>
+            )}
           </Card>
         </div>
 

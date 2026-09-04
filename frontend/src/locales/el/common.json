@@ -70,7 +70,8 @@
     "breadcrumb": "Διαδρομή πλοήγησης"
   },
   "input": {
-    "selectAnOption": "Επιλέξτε μια επιλογή"
+    "selectAnOption": "Επιλέξτε μια επιλογή",
+    "noOptionsConfigured": "Δεν έχουν οριστεί επιλογές για αυτό το πεδίο."
   },
   "stock": {
     "units": "{{count}} μονάδες"

@@ -7,6 +7,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  height: 100%;
+  justify-content: center;
 }
 
 .checkboxLabel {
@@ -38,10 +40,78 @@
   color: var(--text-primary);
 }
 
+/* Guidance under a control. Only rendered when there is no error to show —
+ * stacking both puts the thing the user must fix under the thing they don't. */
+.helperText {
+  margin-top: 4px;
+  margin-bottom: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  line-height: var(--font-line-height-body-sm);
+  color: var(--text-secondary);
+}
+
 .helperTextError {
   margin-top: 0;
   font-family: var(--font-family-base);
   font-size: var(--font-size-body-sm);
   line-height: var(--font-line-height-body-sm);
   color: var(--color-error);
+}
+
+/* ---------------------------------------------------------------------------
+ * multi-select — a checkbox group. A <fieldset>/<legend> rather than a plain
+ * label so screen readers announce the group name once and then each option,
+ * which a single label wrapping many checkboxes cannot do.
+ * ------------------------------------------------------------------------ */
+.multiSelectGroup {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-base) var(--spacing-base);
+  margin: 0;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.multiSelectLegend {
+  padding: 0 4px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+/*
+ * Shared by the radio and checkbox groups. Paper intake forms lay long option
+ * lists out in columns — one option per row would run "Main Workplace Type"
+ * down a whole page — so the column count is a per-field setting fed in as
+ * --option-columns. auto-fit keeps it collapsing to one column on narrow
+ * screens without a second media query per call site.
+ */
+.optionGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--option-columns, 1), minmax(0, 1fr));
+  align-content: start;
+  gap: 2px var(--spacing-base);
+  flex: 1;
+  min-height: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .optionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.multiSelectOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Long option lists scroll inside the group instead of pushing the form. */
+  max-height: 220px;
+  overflow-y: auto;
 }
