@@ -1,0 +1,171 @@
+/* The page is a fixed-size document; ScaledPage scales it to fit its
+ * container. Every section and element inside is positioned absolutely, in
+ * page pixels — this file never guesses a size, it only ever gets one. */
+.page {
+  position: relative;
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1, 0 1px 3px rgba(0, 0, 0, 0.12));
+}
+
+.section {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised, var(--color-surface));
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/*
+ * Positioned OVER the canvas, not stacked above it in flow — this keeps the
+ * canvas's origin (0,0) identical to the section's own box origin, which is
+ * what every element's x/y is measured from (and what the builder's overlay
+ * chrome in components/forms/canvas assumes when it lines up drag handles
+ * with what FormRenderer actually draws). Elements the owner places near the
+ * very top sit visually under the title bar — an intentional trade for exact
+ * coordinate agreement between the builder and the rendered form.
+ */
+.sectionHeader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-base);
+  background: var(--surface-raised, var(--color-surface));
+  border-bottom: 1px solid var(--border-hairline);
+  pointer-events: none;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title-sm, 1.05rem);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* The canvas is the free-positioning area inside a section; every child is
+ * absolutely positioned against IT, not against the page. */
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.element {
+  box-sizing: border-box;
+}
+
+.text {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  line-height: var(--font-line-height-body-md);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+/*
+ * A field's colour/size overrides land here as CSS custom properties (see
+ * fieldColorVars in FormRenderer.tsx) and cascade onto the native form
+ * controls the shared UI-kit inputs render — those components have no colour
+ * props of their own, and giving every input in the app a "form builder"
+ * concept it doesn't need was the wrong trade against a CSS cascade.
+ */
+.fieldColorWrapper {
+  height: 100%;
+}
+
+.fieldColorWrapper :global(input),
+.fieldColorWrapper :global(select),
+.fieldColorWrapper :global(textarea) {
+  color: var(--field-text-color, inherit);
+  background: var(--field-background, inherit);
+  border-color: var(--field-border-color, inherit);
+  font-size: var(--field-font-size, inherit);
+}
+
+.fieldColorWrapper :global(label) {
+  color: var(--field-label-color, inherit);
+}
+
+/* Read-only rendering, used by the client detail view and print mode. */
+.readOnlyLabel {
+  margin: 0 0 2px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.readOnlyValue {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.emptyState {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+ * v3: a document is a STACK of fixed A4 sheets (spec §5, §6).
+ * ------------------------------------------------------------------------ */
+.document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg, 24px);
+}
+
+.textElement {
+  font-family: var(--font-family-base);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.imageElement {
+  display: block;
+}
+
+.divider {
+  border-radius: 1px;
+  color: var(--border-hairline);
+}
+
+/* A signature area reads as a signature area on paper: a ruled line with its
+ * caption beneath (spec §18), not an empty labelled box. */
+.signatureBlock {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.signatureLine {
+  border-bottom: 1.5px solid var(--text-primary);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.signatureCaption {
+  margin-top: var(--spacing-xs, 4px);
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
