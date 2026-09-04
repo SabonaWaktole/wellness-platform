@@ -6,6 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  height: 100%;
 }
 
 .label {
@@ -26,11 +27,14 @@
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
+  min-height: 0;
 }
 
 .input {
   width: 100%;
-  height: 38px;
+  height: 100%;
+  min-height: 38px;
   padding: 0 var(--spacing-base);
   font-family: var(--font-family-base);
   font-size: var(--font-size-body-md);

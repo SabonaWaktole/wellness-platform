@@ -26,12 +26,16 @@ if (!Element.prototype.setPointerCapture) {
 
 /**
  * jsdom has no layout engine, and — unlike Element — neither Range nor Text
- * carry a getClientRects() at all. ProseMirror's scrollIntoView calls it
- * (via Range for a text offset, or straight on a Text node for a boundary)
- * on every state update to compute the caret's position, throwing
- * "getClientRects is not a function" as an unhandled rejection outside any
- * assertion — which fails the whole `vitest run` exit code even though every
- * test using a live TipTap editor still passes.
+ * carry a getClientRects()/getBoundingClientRect() at all. ProseMirror's
+ * scrollIntoView calls these on essentially every state update (via Range for
+ * a text offset, or straight on a Text node for a boundary) to compute the
+ * caret's position — a transaction fires `scrollIntoView`, which calls
+ * `coordsAtPos`, which needs a real rect — so any test that mounts a
+ * `RichTextEditor`/`useEditor` throws "target.getClientRects is not a
+ * function" (or the BoundingClientRect equivalent) the moment the user (or a
+ * command like `.focus()`) causes the first transaction, as an unhandled
+ * exception outside any assertion — which fails the whole `vitest run` exit
+ * code even though every test using a live TipTap editor still passes.
  */
 const emptyClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: function* () {} }) as unknown as DOMRectList;
 const zeroRect = () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() { return this; } }) as DOMRect;
@@ -42,6 +46,21 @@ if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRec
 if (!textProto.getBoundingClientRect) textProto.getBoundingClientRect = zeroRect;
 
 /** jsdom has no layout engine and so never implements ResizeObserver. */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+/**
+ * jsdom has no layout engine and so never implements ResizeObserver. Real
+ * browsers do, and code that measures a container (ScaledPage, for instance)
+ * is written against that assumption — without this stub, every such
+ * component throws in every test that renders it, not just the ones actually
+ * asserting on measurement.
+ */
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class ResizeObserver {
     observe() {}

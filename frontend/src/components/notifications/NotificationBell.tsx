@@ -15,6 +15,7 @@ const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
     case 'QUOTATION': return `/${tenantSlug}/quotations/${n.entityId}`;
     case 'CLIENT': return `/${tenantSlug}/clients/${n.entityId}`;
     case 'APPOINTMENT': return `/${tenantSlug}/appointments`;
+    case 'FORM': return `/${tenantSlug}/settings/client-management/forms/${n.entityId}/submissions`;
     default: return null;
   }
 };

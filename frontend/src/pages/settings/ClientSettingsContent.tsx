@@ -18,6 +18,7 @@ import {
   useDeleteCustomField,
   useReorderCustomFields,
 } from '../../hooks/useClients';
+import { ClientFormsTab } from './ClientFormsTab';
 import type { CustomFieldDefinition, FieldRole } from '../../types/client';
 import styles from './ClientSettingsContent.module.css';
 
@@ -42,7 +43,7 @@ export const ClientSettingsContent: React.FC = () => {
   const { tenantSlug = '' } = useParams();
   const { t: tc } = useTranslation('common');
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'fields' | 'outcomes'>('fields');
+  const [activeTab, setActiveTab] = useState<'fields' | 'form' | 'outcomes'>('fields');
 
   // Form state for the slide-over
   const [newFieldName, setNewFieldName] = useState('');
@@ -202,6 +203,12 @@ export const ClientSettingsContent: React.FC = () => {
               {t('clientManagement.tabCustomFields')}
             </button>
             <button
+              className={`${styles.tab} ${activeTab === 'form' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('form')}
+            >
+              {t('clientManagement.tabForm')}
+            </button>
+            <button
               className={`${styles.tab} ${activeTab === 'outcomes' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('outcomes')}
             >
@@ -298,6 +305,17 @@ export const ClientSettingsContent: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/*
+          * Form Tab — the drag-and-drop builder.
+          *
+          * The Fields tab above stays the tenant's data dictionary (what a
+          * client record can store, plus the Excel importer); this tab decides
+          * only how those fields are grouped and drawn. Keeping them apart is
+          * what lets a field be renamed or retyped without touching a layout,
+          * and a layout be rearranged without touching stored client data.
+          */}
+        {activeTab === 'form' && <ClientFormsTab />}
 
         {/* Outcome Categories Tab */}
         {activeTab === 'outcomes' && (

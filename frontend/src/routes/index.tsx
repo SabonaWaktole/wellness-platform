@@ -15,6 +15,7 @@ import { AppointmentsPage } from '../pages/appointments/AppointmentsPage';
 import { EditAppointmentPage } from '../pages/appointments/EditAppointmentPage';
 import { CreateAppointmentPage } from '../pages/appointments/CreateAppointmentPage';
 import { ClientSettingsPage } from '../pages/settings/ClientSettingsPage';
+import { FormBuilderPage } from '../pages/settings/FormBuilderPage';
 import { TeamSettingsPage } from '../pages/settings/team/TeamSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -26,6 +27,8 @@ import { QuotationList } from '../pages/quotations/QuotationList';
 import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 import { QuotationDetail } from '../pages/quotations/QuotationDetail';
 import { PublicQuotationPage } from '../pages/quotations/PublicQuotationPage';
+import { PublicFormPage } from '../pages/forms/PublicFormPage';
+import { FormSubmissionsPage } from '../pages/settings/FormSubmissionsPage';
 import { NotificationSettingsPage } from '../pages/settings/NotificationSettingsPage';
 import { CreateQuotation } from '../pages/quotations/CreateQuotation';
 import { EditQuotation } from '../pages/quotations/EditQuotation';
@@ -88,6 +91,17 @@ export const router = createBrowserRouter([
   {
     path: '/q/:token',
     element: <PublicQuotationPage />,
+  },
+  /*
+   * The client-facing form (§24). Same placement reasoning as `/q/:token`
+   * above — a tenant-prefixed path would collide with the tenant shell's
+   * guards, which would bounce an anonymous visitor to a login they have no
+   * account for. `/f/` for the same "gets pasted into emails, read aloud on
+   * phone calls" reason `/q/` is short.
+   */
+  {
+    path: '/f/:token',
+    element: <PublicFormPage />,
   },
   {
     path: '/forgot-password',
@@ -224,6 +238,26 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ClientSettingsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/client-management/forms/:formId',
+        element: (
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+              <FormBuilderPage />
+            </RoleGuard>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/client-management/forms/:formId/submissions',
+        element: (
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+              <FormSubmissionsPage />
+            </RoleGuard>
           </ProtectedRoute>
         ),
       },

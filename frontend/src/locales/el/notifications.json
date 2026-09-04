@@ -24,6 +24,7 @@
     "APPOINTMENT_RESCHEDULED": "Ο/Η {{actor}} μετέφερε το ραντεβού σας στις {{scheduledAt}} — {{reason}}",
     "APPOINTMENT_CANCELLED": "Ο/Η {{actor}} ακύρωσε το ραντεβού σας — {{reason}}",
     "CLIENT_ASSIGNED": "Ο/Η {{actor}} σας ανέθεσε τον πελάτη {{client}}",
+    "FORM_SUBMITTED": "Νέα υποβολή για \"{{form}}\"",
     "INVITATION_ACCEPTED": "Ο/Η {{email}} αποδέχτηκε την πρόσκλησή σας και εντάχθηκε στην ομάδα",
     "APPOINTMENT_REMINDER": "Υπενθύμιση: ραντεβού με τον/την {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Η προσφορά {{reference}} δεν έχει λάβει απάντηση από τον/την {{clientName}} εδώ και {{daysWaiting}} ημέρες"

@@ -24,6 +24,7 @@
     "APPOINTMENT_RESCHEDULED": "{{actor}} moved your appointment to {{scheduledAt}} — {{reason}}",
     "APPOINTMENT_CANCELLED": "{{actor}} cancelled your appointment — {{reason}}",
     "CLIENT_ASSIGNED": "{{actor}} assigned {{client}} to you",
+    "FORM_SUBMITTED": "New submission for \"{{form}}\"",
     "INVITATION_ACCEPTED": "{{email}} accepted your invitation and joined the team",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
