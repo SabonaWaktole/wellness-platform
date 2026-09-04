@@ -13,13 +13,20 @@ export interface Client {
     email?: string;
     phone?: string;
   };
-  status: ClientStatus;
+  status: string;
   assignedUserId: string | null;
   customFieldValues: Record<string, any>;
   lastUpdatedByUserId: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type FieldRole =
+  | 'PRIMARY_NAME'
+  | 'PRIMARY_EMAIL'
+  | 'PRIMARY_PHONE'
+  | 'STATUS'
+  | 'ASSIGNEE';
 
 export interface CustomFieldDefinition {
   id: string;
@@ -30,7 +37,9 @@ export interface CustomFieldDefinition {
   // accept it, so every such submission 400'd.
   fieldType: CustomFieldType;
   options?: string[];
-  isRequired: boolean;
+  order: number;
+  role: FieldRole | null;
+  required: boolean;
 }
 
 export type CustomFieldType =
@@ -39,7 +48,9 @@ export type CustomFieldType =
   | 'DATE'
   | 'BOOLEAN'
   | 'ALPHANUMERIC'
-  | 'SINGLE_SELECT';
+  | 'SINGLE_SELECT'
+  | 'EMAIL'
+  | 'USER_REFERENCE';
 
 /** Per-row outcome of a spreadsheet import; `skipped` only applies to fields. */
 export interface ImportResult {
@@ -82,7 +93,7 @@ export interface SearchClientsParams {
   name?: string;
   email?: string;
   phone?: string;
-  status?: ClientStatus;
+  status?: string;
   assignedUserId?: string;
   customFields?: Record<string, any>;
   skip?: number;

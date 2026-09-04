@@ -1,23 +1,22 @@
 import { apiClient } from '../api';
-import type { 
-  Client, 
-  SearchClientsParams, 
-  PaginatedResult, 
+import type {
+  Client,
+  SearchClientsParams,
+  PaginatedResult,
   CustomFieldDefinition,
   OutcomeCategory,
   ClientHistory,
   Interaction,
-  ClientStatus,
   ImportResult
 } from '../types/client';
 
 export const clientService = {
-  createClient: async (tenantSlug: string, data: { name: string; email?: string; phone?: string; status?: ClientStatus; assignedUserId?: string | null; customFieldValues?: Record<string, any> }) => {
+  createClient: async (tenantSlug: string, data: { customFieldValues?: Record<string, any> }) => {
     const response = await apiClient.post<Client>(`/${tenantSlug}/clients`, data);
     return response.data;
   },
 
-  updateClient: async (tenantSlug: string, clientId: string, data: { name?: string; email?: string; phone?: string; status?: ClientStatus; assignedUserId?: string | null; customFieldValues?: Record<string, any> }) => {
+  updateClient: async (tenantSlug: string, clientId: string, data: { customFieldValues?: Record<string, any> }) => {
     const response = await apiClient.put<Client>(`/${tenantSlug}/clients/${clientId}`, data);
     return response.data;
   },
@@ -47,9 +46,23 @@ export const clientService = {
     return response.data;
   },
 
-  defineCustomField: async (tenantSlug: string, data: { fieldName: string; fieldType: string; isRequired?: boolean }) => {
+  defineCustomField: async (tenantSlug: string, data: { fieldName: string; fieldType: string; options?: string[]; role?: string | null; required?: boolean }) => {
     const response = await apiClient.post<CustomFieldDefinition>(`/${tenantSlug}/clients/settings/custom-fields`, data);
     return response.data;
+  },
+
+  updateCustomField: async (tenantSlug: string, fieldId: string, data: { fieldName?: string; fieldType?: string; options?: string[]; role?: string | null; required?: boolean }) => {
+    const response = await apiClient.patch<CustomFieldDefinition>(`/${tenantSlug}/clients/settings/custom-fields/${fieldId}`, data);
+    return response.data;
+  },
+
+  deleteCustomField: async (tenantSlug: string, fieldId: string) => {
+    const response = await apiClient.delete<{ deletedFieldName: string; deletedRole: string | null }>(`/${tenantSlug}/clients/settings/custom-fields/${fieldId}`);
+    return response.data;
+  },
+
+  reorderCustomFields: async (tenantSlug: string, orderedFieldIds: string[]) => {
+    await apiClient.post<void>(`/${tenantSlug}/clients/settings/custom-fields/reorder`, { orderedFieldIds });
   },
 
   /**

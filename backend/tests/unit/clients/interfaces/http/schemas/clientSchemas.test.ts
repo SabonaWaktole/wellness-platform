@@ -15,24 +15,30 @@ describe('clientSchemas', () => {
   describe('createClientSchema', () => {
     it('validates a correct payload', () => {
       const data = {
-        name: 'Acme Corp',
-        email: 'test@acme.com',
-        phone: '+1234567890',
-        status: ClientStatus.PROSPECT,
-        customFieldValues: { industry: 'Tech' },
+        customFieldValues: {
+          Name: 'Acme Corp',
+          Email: 'test@acme.com',
+          Phone: '+1234567890',
+          Status: ClientStatus.PROSPECT,
+          industry: 'Tech',
+        },
       };
       expect(createClientSchema.parse(data)).toEqual(data);
     });
 
-    it('rejects missing name', () => {
-      expect(() => createClientSchema.parse({ status: ClientStatus.PROSPECT }))
+    it('accepts a payload with no customFieldValues at all', () => {
+      expect(createClientSchema.parse({})).toEqual({});
+    });
+
+    it('rejects a customFieldValues that is not an object', () => {
+      expect(() => createClientSchema.parse({ customFieldValues: 'not-an-object' }))
         .toThrow();
     });
   });
 
   describe('updateClientSchema', () => {
     it('validates a partial payload', () => {
-      const data = { name: 'New Name' };
+      const data = { customFieldValues: { Name: 'New Name' } };
       expect(updateClientSchema.parse(data)).toEqual(data);
     });
   });

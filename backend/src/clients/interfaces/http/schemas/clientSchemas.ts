@@ -1,23 +1,20 @@
 import { z } from 'zod';
-import { ClientStatus } from '../../../domain/enums/ClientStatus';
 import { InteractionChannel } from '../../../domain/enums/InteractionChannel';
 import { FieldType } from '../../../domain/enums/FieldType';
+import { FieldRole } from '../../../domain/enums/FieldRole';
 
+// name/email/phone/status/assignedUserId are no longer top-level fields: a
+// tenant can rename/retype/delete every client field (see FieldRole), so
+// they now arrive as ordinary entries in customFieldValues, keyed by
+// whatever the tenant currently calls them. Individual value validation
+// (required-ness, email format, SINGLE_SELECT options, ...) happens
+// domain-side in Client.create against the tenant's live definitions,
+// since Zod can't know a per-tenant dynamic shape.
 export const createClientSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().optional(),
-  status: z.nativeEnum(ClientStatus),
-  assignedUserId: z.string().uuid().optional(),
   customFieldValues: z.record(z.any()).optional(),
 });
 
 export const updateClientSchema = z.object({
-  name: z.string().min(1).optional(),
-  email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().optional(),
-  status: z.nativeEnum(ClientStatus).optional(),
-  assignedUserId: z.string().uuid().nullable().optional(),
   customFieldValues: z.record(z.any()).optional(),
 });
 
@@ -29,7 +26,8 @@ export const searchClientsSchema = z.object({
   name: z.string().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
-  status: z.nativeEnum(ClientStatus).optional(),
+  /** Free text: status is now a tenant-configurable SINGLE_SELECT, not a fixed enum. */
+  status: z.string().optional(),
   assignedUserId: z.string().uuid().optional(),
   customFields: z.string().optional().transform((val) => {
     if (!val) return undefined;
@@ -61,6 +59,8 @@ export const defineCustomFieldSchema = z.object({
     ),
   fieldType: z.nativeEnum(FieldType),
   options: z.array(z.string()).optional(),
+  role: z.nativeEnum(FieldRole).nullable().optional(),
+  required: z.boolean().optional(),
 }).refine(data => {
   if (data.fieldType === FieldType.SINGLE_SELECT && (!data.options || data.options.length === 0)) {
     return false;
@@ -69,6 +69,27 @@ export const defineCustomFieldSchema = z.object({
 }, {
   message: "Options are required for SINGLE_SELECT fields",
   path: ["options"],
+});
+
+export const updateCustomFieldSchema = z.object({
+  fieldName: z
+    .string()
+    .trim()
+    .min(1, 'Field name is required')
+    .max(60, 'Field name must be 60 characters or fewer')
+    .regex(
+      /^[a-zA-Z0-9 _-]+$/,
+      'Field name may contain letters, numbers, spaces, hyphens and underscores'
+    )
+    .optional(),
+  fieldType: z.nativeEnum(FieldType).optional(),
+  options: z.array(z.string()).optional(),
+  role: z.nativeEnum(FieldRole).nullable().optional(),
+  required: z.boolean().optional(),
+});
+
+export const reorderCustomFieldsSchema = z.object({
+  orderedFieldIds: z.array(z.string().uuid()).min(1),
 });
 
 export const defineOutcomeCategorySchema = z.object({

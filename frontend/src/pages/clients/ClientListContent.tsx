@@ -83,7 +83,7 @@ export const ClientListContent: React.FC = () => {
         <div className={styles.clientCell}>
           <Avatar
             src={undefined}
-            fallback={client.name.substring(0, 2).toUpperCase()}
+            fallback={(client.name || 'Client').substring(0, 2).toUpperCase()}
             size="md"
           />
           <div className={styles.clientInfo}>

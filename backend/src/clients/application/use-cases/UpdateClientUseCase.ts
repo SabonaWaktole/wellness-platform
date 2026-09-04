@@ -1,18 +1,14 @@
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
+import { EnsureDefaultClientFieldsUseCase } from './EnsureDefaultClientFieldsUseCase';
+import { ClientFieldResolver } from '../../domain/services/ClientFieldResolver';
 import { Client } from '../../domain/entities/Client';
-import { ClientStatus } from '../../domain/enums/ClientStatus';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface UpdateClientDTO {
   tenantId: string;
   clientId: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  status?: ClientStatus;
-  assignedUserId?: string | null;
   customFieldValues?: Record<string, any>;
   updatingUserId: string;
 }
@@ -21,6 +17,7 @@ export class UpdateClientUseCase {
   constructor(
     private clientRepo: IClientRepository,
     private customFieldRepo: ICustomFieldDefinitionRepository,
+    private ensureDefaultFields: EnsureDefaultClientFieldsUseCase,
     private notifications?: NotificationService
   ) {}
 
@@ -30,7 +27,7 @@ export class UpdateClientUseCase {
       throw new DomainError('Client not found or access denied');
     }
 
-    const definitions = await this.customFieldRepo.findByTenantId(dto.tenantId);
+    const definitions = await this.ensureDefaultFields.execute(dto.tenantId);
 
     // Merge custom field values
     const mergedCustomFields = dto.customFieldValues
@@ -41,13 +38,13 @@ export class UpdateClientUseCase {
     const updatedClient = Client.create({
       id: existingClient.id,
       tenantId: existingClient.tenantId,
-      name: dto.name !== undefined ? dto.name : existingClient.name,
+      name: ClientFieldResolver.resolveName(mergedCustomFields, definitions),
       contactInfo: {
-        email: dto.email !== undefined ? dto.email : existingClient.contactInfo.email,
-        phone: dto.phone !== undefined ? dto.phone : existingClient.contactInfo.phone,
+        email: ClientFieldResolver.resolveEmail(mergedCustomFields, definitions),
+        phone: ClientFieldResolver.resolvePhone(mergedCustomFields, definitions),
       },
-      status: dto.status !== undefined ? dto.status : existingClient.status,
-      assignedUserId: dto.assignedUserId !== undefined ? dto.assignedUserId : existingClient.assignedUserId,
+      status: ClientFieldResolver.resolveStatus(mergedCustomFields, definitions) ?? '',
+      assignedUserId: ClientFieldResolver.resolveAssignedUserId(mergedCustomFields, definitions) ?? null,
       customFieldValues: mergedCustomFields,
       lastUpdatedByUserId: dto.updatingUserId,
       createdAt: existingClient.createdAt,

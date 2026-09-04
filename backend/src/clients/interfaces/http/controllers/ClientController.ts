@@ -6,6 +6,9 @@ import { SearchClientsUseCase } from '../../../application/use-cases/SearchClien
 import { GetClientHistoryUseCase } from '../../../application/use-cases/GetClientHistoryUseCase';
 import { AddInteractionUseCase } from '../../../application/use-cases/AddInteractionUseCase';
 import { DefineCustomFieldUseCase } from '../../../application/use-cases/DefineCustomFieldUseCase';
+import { UpdateCustomFieldUseCase } from '../../../application/use-cases/UpdateCustomFieldUseCase';
+import { DeleteCustomFieldUseCase } from '../../../application/use-cases/DeleteCustomFieldUseCase';
+import { ReorderCustomFieldsUseCase } from '../../../application/use-cases/ReorderCustomFieldsUseCase';
 import { DefineOutcomeCategoryUseCase } from '../../../application/use-cases/DefineOutcomeCategoryUseCase';
 import { GetClientUseCase } from '../../../application/use-cases/GetClientUseCase';
 import { GetCustomFieldsUseCase } from '../../../application/use-cases/GetCustomFieldsUseCase';
@@ -28,6 +31,8 @@ import {
   searchClientsSchema,
   addInteractionSchema,
   defineCustomFieldSchema,
+  updateCustomFieldSchema,
+  reorderCustomFieldsSchema,
   defineOutcomeCategorySchema
 } from '../schemas/clientSchemas';
 
@@ -39,6 +44,9 @@ export class ClientController {
     private getClientHistoryUseCase: GetClientHistoryUseCase,
     private addInteractionUseCase: AddInteractionUseCase,
     private defineCustomFieldUseCase: DefineCustomFieldUseCase,
+    private updateCustomFieldUseCase: UpdateCustomFieldUseCase,
+    private deleteCustomFieldUseCase: DeleteCustomFieldUseCase,
+    private reorderCustomFieldsUseCase: ReorderCustomFieldsUseCase,
     private defineOutcomeCategoryUseCase: DefineOutcomeCategoryUseCase,
     private getClientUseCase: GetClientUseCase,
     private getCustomFieldsUseCase: GetCustomFieldsUseCase,
@@ -277,6 +285,78 @@ export class ClientController {
       });
 
       res.status(201).json(definition);
+    } catch (error: any) {
+      if (error.message.includes('Only Business Owners')) {
+        res.status(403).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  };
+
+  public updateCustomField = async (req: Request, res: Response) => {
+    try {
+      const validatedData = updateCustomFieldSchema.parse(req.body);
+      const tenantId = requireTenantId(req);
+      const requestingUserRole = req.user!.role;
+      const fieldId = req.params.fieldId as string;
+
+      const definition = await this.updateCustomFieldUseCase.execute({
+        tenantId,
+        requestingUserRole,
+        fieldId,
+        ...validatedData
+      });
+
+      res.status(200).json(definition);
+    } catch (error: any) {
+      if (error.message.includes('Only Business Owners')) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  };
+
+  public deleteCustomField = async (req: Request, res: Response) => {
+    try {
+      const tenantId = requireTenantId(req);
+      const requestingUserRole = req.user!.role;
+      const fieldId = req.params.fieldId as string;
+
+      const result = await this.deleteCustomFieldUseCase.execute({
+        tenantId,
+        requestingUserRole,
+        fieldId,
+      });
+
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error.message.includes('Only Business Owners')) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  };
+
+  public reorderCustomFields = async (req: Request, res: Response) => {
+    try {
+      const validatedData = reorderCustomFieldsSchema.parse(req.body);
+      const tenantId = requireTenantId(req);
+      const requestingUserRole = req.user!.role;
+
+      await this.reorderCustomFieldsUseCase.execute({
+        tenantId,
+        requestingUserRole,
+        orderedFieldIds: validatedData.orderedFieldIds,
+      });
+
+      res.status(204).send();
     } catch (error: any) {
       if (error.message.includes('Only Business Owners')) {
         res.status(403).json({ error: error.message });

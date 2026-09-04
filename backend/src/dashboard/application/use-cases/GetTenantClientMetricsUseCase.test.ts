@@ -18,6 +18,7 @@ describe('GetTenantClientMetricsUseCase', () => {
       update: jest.fn(),
       countByTenant: jest.fn(),
       findRecentByTenant: jest.fn(),
+      backfillLegacyBasicFields: jest.fn(),
     };
 
     // Unconfigured tenant: the repository answers with the domain defaults,

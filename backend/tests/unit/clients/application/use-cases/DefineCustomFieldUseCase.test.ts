@@ -8,7 +8,15 @@ describe('DefineCustomFieldUseCase', () => {
   let customFieldRepo: jest.Mocked<ICustomFieldDefinitionRepository>;
 
   beforeEach(() => {
-    customFieldRepo = { findByTenantId: jest.fn(), save: jest.fn() };
+    customFieldRepo = {
+      findByTenantId: jest.fn().mockResolvedValue([]),
+      findById: jest.fn(),
+      findByTenantIdAndRole: jest.fn().mockResolvedValue(null),
+      save: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      reorder: jest.fn(),
+    };
     useCase = new DefineCustomFieldUseCase(customFieldRepo);
   });
 

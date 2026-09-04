@@ -6,9 +6,11 @@ import styles from './CustomFieldInput.module.css';
 import { useTranslation } from 'react-i18next';
 
 export interface CustomFieldInputProps {
-  fieldType: 'text' | 'multiline' | 'number' | 'dropdown' | 'date' | 'checkbox';
+  fieldType: 'text' | 'multiline' | 'number' | 'dropdown' | 'date' | 'checkbox' | 'email' | 'user-select';
   label: string;
   options?: string[];
+  /** Only used by `fieldType: 'user-select'`. */
+  userOptions?: { id: string; label: string }[];
   value: any;
   onChange: (value: any) => void;
   error?: string;
@@ -18,7 +20,7 @@ export interface CustomFieldInputProps {
 
 export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
   (
-    { fieldType, label, options = [], value, onChange, error, required, className = '' },
+    { fieldType, label, options = [], userOptions = [], value, onChange, error, required, className = '' },
     ref
   ) => {
     const { t } = useTranslation('common');
@@ -26,10 +28,11 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
       case 'text':
       case 'number':
       case 'date':
+      case 'email':
         return (
           <TextInput
             ref={ref as React.Ref<HTMLInputElement>}
-            type={fieldType}
+            type={fieldType === 'email' ? 'email' : fieldType}
             label={label}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
@@ -65,6 +68,25 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
             {options.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
+              </option>
+            ))}
+          </SelectInput>
+        );
+      case 'user-select':
+        return (
+          <SelectInput
+            ref={ref as React.Ref<HTMLSelectElement>}
+            label={label}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            error={error}
+            required={required}
+            className={className}
+          >
+            <option value="">{t('input.unassigned', { defaultValue: 'Unassigned' })}</option>
+            {userOptions.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.label}
               </option>
             ))}
           </SelectInput>

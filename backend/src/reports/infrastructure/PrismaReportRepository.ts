@@ -78,8 +78,11 @@ export class PrismaReportRepository implements IReportRepository {
       }
     });
 
+    // A client with no value for the field currently holding the STATUS
+    // role (tenant deleted/never set it) groups under "Unspecified" rather
+    // than being dropped from the distribution.
     return counts.map(c => ({
-      status: c.status,
+      status: c.status ?? 'Unspecified',
       count: c._count.id
     }));
   }

@@ -1,7 +1,8 @@
-import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../domain/enums/FieldType';
-import { ClientStatus } from '../../domain/enums/ClientStatus';
+import { FieldRole } from '../../domain/enums/FieldRole';
+import { ClientFieldResolver } from '../../domain/services/ClientFieldResolver';
+import { EnsureDefaultClientFieldsUseCase } from './EnsureDefaultClientFieldsUseCase';
 import { CreateClientUseCase } from './CreateClientUseCase';
 import { createClientSchema } from '../../interfaces/http/schemas/clientSchemas';
 import { ParsedSheet } from '../../infrastructure/excel/sheet';
@@ -9,6 +10,13 @@ import { ImportRowError } from './ImportCustomFieldsUseCase';
 
 /** Built-in columns; every other header is matched against a custom field. */
 export const CLIENT_TEMPLATE_HEADERS = ['name', 'email', 'phone', 'status'];
+
+const BUILT_IN_ROLE_BY_HEADER: Record<string, FieldRole> = {
+  name: FieldRole.PRIMARY_NAME,
+  email: FieldRole.PRIMARY_EMAIL,
+  phone: FieldRole.PRIMARY_PHONE,
+  status: FieldRole.STATUS,
+};
 
 export interface ImportClientsResult {
   created: number;
@@ -57,13 +65,13 @@ const coerce = (definition: CustomFieldDefinition, raw: string): any => {
 export class ImportClientsUseCase {
   constructor(
     private createClientUseCase: CreateClientUseCase,
-    private customFieldRepo: ICustomFieldDefinitionRepository
+    private ensureDefaultFields: EnsureDefaultClientFieldsUseCase
   ) {}
 
   async execute(dto: ImportClientsDTO): Promise<ImportClientsResult> {
-    const definitions = await this.customFieldRepo.findByTenantId(dto.tenantId);
+    const definitions = await this.ensureDefaultFields.execute(dto.tenantId);
     const definitionsByHeader = new Map(definitions.map(d => [normalise(d.fieldName), d]));
-    const builtIn = new Set(CLIENT_TEMPLATE_HEADERS.map(normalise));
+    const builtIn = new Set(Object.keys(BUILT_IN_ROLE_BY_HEADER));
 
     const result: ImportClientsResult = { created: 0, errors: [] };
 
@@ -72,15 +80,26 @@ export class ImportClientsUseCase {
       const rowNumber = index + 2;
 
       try {
-        const values: Record<string, string> = {};
         const customFieldValues: Record<string, any> = {};
 
         for (const [header, raw] of Object.entries(row)) {
           const key = normalise(header);
+
           if (builtIn.has(key)) {
-            values[key] = raw;
+            if (raw === '') continue;
+            const role = BUILT_IN_ROLE_BY_HEADER[key];
+            const fieldName = ClientFieldResolver.findFieldNameForRole(definitions, role);
+            // Tenant deleted the field holding this role — the column has
+            // nowhere to go, so the cell is silently dropped rather than
+            // failing the whole row.
+            if (!fieldName) continue;
+            const definition = definitionsByHeader.get(normalise(fieldName));
+            customFieldValues[fieldName] = definition
+              ? coerce(definition, key === 'status' ? raw.toUpperCase() : raw)
+              : raw;
             continue;
           }
+
           const definition = definitionsByHeader.get(key);
           if (!definition) {
             throw new Error(`Column "${header}" does not match any custom field.`);
@@ -90,13 +109,12 @@ export class ImportClientsUseCase {
           }
         }
 
-        const parsed = createClientSchema.safeParse({
-          name: values.name ?? '',
-          email: values.email ?? '',
-          phone: values.phone || undefined,
-          status: (values.status || ClientStatus.PROSPECT).toUpperCase(),
-          customFieldValues,
-        });
+        const statusFieldName = ClientFieldResolver.findFieldNameForRole(definitions, FieldRole.STATUS);
+        if (statusFieldName && customFieldValues[statusFieldName] === undefined) {
+          customFieldValues[statusFieldName] = 'PROSPECT';
+        }
+
+        const parsed = createClientSchema.safeParse({ customFieldValues });
 
         if (!parsed.success) {
           throw new Error(parsed.error.issues.map(i => `${i.path.join('.') || 'row'}: ${i.message}`).join('; '));

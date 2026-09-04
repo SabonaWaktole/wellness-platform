@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ClientSettingsContent } from './ClientSettingsContent';
 import {
   useClientSettings,
   useDefineCustomField,
   useDefineOutcomeCategory,
+  useUpdateCustomField,
+  useDeleteCustomField,
+  useReorderCustomFields,
 } from '../../hooks/useClients';
 
 vi.mock('../../hooks/useClients');
@@ -36,6 +39,17 @@ describe('ClientSettingsContent', () => {
       defineOutcomeCategory: mockDefineOutcomeCategory,
       isLoading: false,
       error: overrides.outcomeError ?? null,
+    });
+    (useUpdateCustomField as any).mockReturnValue({
+      updateCustomField: vi.fn(),
+      isLoading: false,
+      error: null,
+    });
+    (useDeleteCustomField as any).mockReturnValue({
+      deleteCustomField: vi.fn(),
+    });
+    (useReorderCustomFields as any).mockReturnValue({
+      reorderCustomFields: vi.fn(),
     });
   };
 
@@ -102,8 +116,8 @@ describe('ClientSettingsContent', () => {
     openSlideOver();
 
     // Mirrors backend src/clients/domain/enums/FieldType.ts.
-    const accepted = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'ALPHANUMERIC', 'SINGLE_SELECT'];
-    const values = screen
+    const accepted = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'ALPHANUMERIC', 'SINGLE_SELECT', 'EMAIL', 'USER_REFERENCE'];
+    const values = within(screen.getByLabelText('Field Type'))
       .getAllByRole('option')
       .map((o) => (o as HTMLOptionElement).value)
       .filter(Boolean);

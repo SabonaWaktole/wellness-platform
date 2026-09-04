@@ -1,4 +1,5 @@
 import { Client } from '../entities/Client';
+import { FieldRole } from '../enums/FieldRole';
 
 export interface SearchClientsFilters {
   /**
@@ -23,4 +24,13 @@ export interface IClientRepository {
   findRecentByTenant(tenantId: string, limit: number, assignedUserId?: string): Promise<Client[]>;
   save(tenantId: string, client: Client): Promise<void>;
   update(tenantId: string, client: Client): Promise<void>;
+  /**
+   * One-time merge of the legacy name/email/phone/status/assignedUserId
+   * columns into customFieldValues under the given newly-seeded field
+   * names, for every existing client of the tenant. Safe to call only when
+   * those field names are guaranteed absent from customFieldValues (i.e.
+   * right after the definitions were created) — see
+   * EnsureDefaultClientFieldsUseCase.
+   */
+  backfillLegacyBasicFields(tenantId: string, fieldNameByRole: Partial<Record<FieldRole, string>>): Promise<void>;
 }

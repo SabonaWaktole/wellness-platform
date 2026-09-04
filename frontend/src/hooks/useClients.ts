@@ -177,7 +177,7 @@ export const useDefineCustomField = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defineCustomField = async (data: { fieldName: string; fieldType: string }) => {
+  const defineCustomField = async (data: { fieldName: string; fieldType: string; options?: string[]; role?: string | null; required?: boolean }) => {
     if (!tenantSlug) throw new Error('Missing tenant context');
     setIsLoading(true);
     setError(null);
@@ -195,6 +195,72 @@ export const useDefineCustomField = () => {
   };
 
   return { defineCustomField, isLoading, error };
+};
+
+export const useUpdateCustomField = () => {
+  const { tenantSlug } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateCustomField = async (fieldId: string, data: { fieldName?: string; fieldType?: string; options?: string[]; role?: string | null; required?: boolean }) => {
+    if (!tenantSlug) throw new Error('Missing tenant context');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await clientService.updateCustomField(tenantSlug, fieldId, data);
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, 'Failed to update custom field'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { updateCustomField, isLoading, error };
+};
+
+export const useDeleteCustomField = () => {
+  const { tenantSlug } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteCustomField = async (fieldId: string) => {
+    if (!tenantSlug) throw new Error('Missing tenant context');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await clientService.deleteCustomField(tenantSlug, fieldId);
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, 'Failed to delete custom field'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { deleteCustomField, isLoading, error };
+};
+
+export const useReorderCustomFields = () => {
+  const { tenantSlug } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reorderCustomFields = async (orderedFieldIds: string[]) => {
+    if (!tenantSlug) throw new Error('Missing tenant context');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await clientService.reorderCustomFields(tenantSlug, orderedFieldIds);
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, 'Failed to reorder custom fields'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { reorderCustomFields, isLoading, error };
 };
 
 export const useDefineOutcomeCategory = () => {

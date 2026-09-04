@@ -7,7 +7,11 @@ import { SearchClientsUseCase } from '../../../application/use-cases/SearchClien
 import { GetClientHistoryUseCase } from '../../../application/use-cases/GetClientHistoryUseCase';
 import { AddInteractionUseCase } from '../../../application/use-cases/AddInteractionUseCase';
 import { DefineCustomFieldUseCase } from '../../../application/use-cases/DefineCustomFieldUseCase';
+import { UpdateCustomFieldUseCase } from '../../../application/use-cases/UpdateCustomFieldUseCase';
+import { DeleteCustomFieldUseCase } from '../../../application/use-cases/DeleteCustomFieldUseCase';
+import { ReorderCustomFieldsUseCase } from '../../../application/use-cases/ReorderCustomFieldsUseCase';
 import { DefineOutcomeCategoryUseCase } from '../../../application/use-cases/DefineOutcomeCategoryUseCase';
+import { EnsureDefaultClientFieldsUseCase } from '../../../application/use-cases/EnsureDefaultClientFieldsUseCase';
 import { GetClientUseCase } from '../../../application/use-cases/GetClientUseCase';
 import { GetCustomFieldsUseCase } from '../../../application/use-cases/GetCustomFieldsUseCase';
 import { GetOutcomeCategoriesUseCase } from '../../../application/use-cases/GetOutcomeCategoriesUseCase';
@@ -90,18 +94,22 @@ export const createClientRouter = (
     new NotificationService(new PrismaNotificationRepository(prisma), new PrismaUserRepository());
 
   // Use Cases
-  const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, notifications);
-  const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, notifications);
+  const ensureDefaultClientFieldsUseCase = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
+  const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, notifications);
+  const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, notifications);
   const searchClientsUseCase = new SearchClientsUseCase(clientRepo);
   const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, appointmentRepo);
   const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo);
   const defineCustomFieldUseCase = new DefineCustomFieldUseCase(customFieldRepo);
+  const updateCustomFieldUseCase = new UpdateCustomFieldUseCase(customFieldRepo);
+  const deleteCustomFieldUseCase = new DeleteCustomFieldUseCase(customFieldRepo);
+  const reorderCustomFieldsUseCase = new ReorderCustomFieldsUseCase(customFieldRepo);
   const defineOutcomeCategoryUseCase = new DefineOutcomeCategoryUseCase(outcomeCategoryRepo);
   const getClientUseCase = new GetClientUseCase(clientRepo);
-  const getCustomFieldsUseCase = new GetCustomFieldsUseCase(customFieldRepo);
+  const getCustomFieldsUseCase = new GetCustomFieldsUseCase(ensureDefaultClientFieldsUseCase);
   const getOutcomeCategoriesUseCase = new GetOutcomeCategoriesUseCase(outcomeCategoryRepo);
   const importCustomFieldsUseCase = new ImportCustomFieldsUseCase(customFieldRepo);
-  const importClientsUseCase = new ImportClientsUseCase(createClientUseCase, customFieldRepo);
+  const importClientsUseCase = new ImportClientsUseCase(createClientUseCase, ensureDefaultClientFieldsUseCase);
 
   // Controller
   const clientController = new ClientController(
@@ -111,6 +119,9 @@ export const createClientRouter = (
     getClientHistoryUseCase,
     addInteractionUseCase,
     defineCustomFieldUseCase,
+    updateCustomFieldUseCase,
+    deleteCustomFieldUseCase,
+    reorderCustomFieldsUseCase,
     defineOutcomeCategoryUseCase,
     getClientUseCase,
     getCustomFieldsUseCase,
@@ -140,6 +151,9 @@ export const createClientRouter = (
   router.post('/:clientId/interactions', clientController.addInteraction);
   
   router.post('/settings/custom-fields', clientController.defineCustomField);
+  router.patch('/settings/custom-fields/:fieldId', clientController.updateCustomField);
+  router.delete('/settings/custom-fields/:fieldId', clientController.deleteCustomField);
+  router.post('/settings/custom-fields/reorder', clientController.reorderCustomFields);
   router.post('/settings/custom-fields/import', receiveSpreadsheet, clientController.importCustomFields);
   router.post('/import', receiveSpreadsheet, clientController.importClients);
   router.post('/settings/outcome-categories', clientController.defineOutcomeCategory);

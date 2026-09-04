@@ -1,10 +1,10 @@
-import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
+import { EnsureDefaultClientFieldsUseCase } from './EnsureDefaultClientFieldsUseCase';
 
 export class GetCustomFieldsUseCase {
-  constructor(private customFieldRepo: ICustomFieldDefinitionRepository) {}
+  constructor(private ensureDefaultFields: EnsureDefaultClientFieldsUseCase) {}
 
   async execute(tenantId: string): Promise<CustomFieldDefinition[]> {
-    return this.customFieldRepo.findByTenantId(tenantId);
+    return this.ensureDefaultFields.execute(tenantId);
   }
 }

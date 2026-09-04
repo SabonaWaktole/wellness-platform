@@ -111,6 +111,58 @@ describe('Client Routes', () => {
     expect(res.body.fieldName).toBe('industry');
   });
 
+  it('PATCH/DELETE/reorder custom-fields work end to end', async () => {
+    const create = await request(app)
+      .post('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ fieldName: 'temp-field', fieldType: 'TEXT' });
+    expect(create.status).toBe(201);
+    const fieldId = create.body.id;
+
+    const patch = await request(app)
+      .patch(`/api/t1/clients/settings/custom-fields/${fieldId}`)
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ fieldName: 'renamed-field', required: true });
+    expect(patch.status).toBe(200);
+    expect(patch.body.fieldName).toBe('renamed-field');
+    expect(patch.body.required).toBe(true);
+
+    // Staff cannot edit or delete field definitions.
+    const forbiddenPatch = await request(app)
+      .patch(`/api/t1/clients/settings/custom-fields/${fieldId}`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ fieldName: 'nope' });
+    expect(forbiddenPatch.status).toBe(403);
+
+    const before = await request(app)
+      .get('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`);
+    const orderedIds = before.body.map((f: any) => f.id);
+    const reordered = [orderedIds[orderedIds.length - 1], ...orderedIds.slice(0, -1)];
+
+    const reorderRes = await request(app)
+      .post('/api/t1/clients/settings/custom-fields/reorder')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({ orderedFieldIds: reordered });
+    expect(reorderRes.status).toBe(204);
+
+    const afterReorder = await request(app)
+      .get('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`);
+    expect(afterReorder.body.map((f: any) => f.id)).toEqual(reordered);
+
+    const del = await request(app)
+      .delete(`/api/t1/clients/settings/custom-fields/${fieldId}`)
+      .set('Authorization', `Bearer ${validToken}`);
+    expect(del.status).toBe(200);
+    expect(del.body.deletedFieldName).toBe('renamed-field');
+
+    const afterDelete = await request(app)
+      .get('/api/t1/clients/settings/custom-fields')
+      .set('Authorization', `Bearer ${validToken}`);
+    expect(afterDelete.body.some((f: any) => f.id === fieldId)).toBe(false);
+  });
+
   it('POST /settings/outcome-categories defines a category', async () => {
     const res = await request(app)
       .post('/api/t1/clients/settings/outcome-categories')
@@ -124,18 +176,17 @@ describe('Client Routes', () => {
   let createdClientId: string;
 
   it('POST / creates a client', async () => {
+    // name/email/phone/status/assignedUserId are no longer top-level fields —
+    // they're custom field values keyed by the tenant's default field names
+    // ("Name"/"Status"/...), auto-seeded on first use by
+    // EnsureDefaultClientFieldsUseCase.
     const res = await request(app)
       .post('/api/t1/clients')
       .set('Authorization', `Bearer ${validToken}`)
       .send({
-        name: 'Routes Test Corp',
-        status: ClientStatus.PROSPECT,
-        customFieldValues: { industry: 'Software' }
+        customFieldValues: { Name: 'Routes Test Corp', Status: ClientStatus.PROSPECT, industry: 'Software' }
       });
-    
-    if (res.status !== 201) {
-      console.log('CREATE CLIENT ERROR:', res.body);
-    }
+
     if (res.status !== 201) {
       console.log('CREATE CLIENT ERROR:', res.body);
     }
@@ -160,13 +211,13 @@ describe('Client Routes', () => {
     const res = await request(app)
       .put(`/api/t1/clients/${createdClientId}`)
       .set('Authorization', `Bearer ${validToken}`)
-      .send({ name: 'Updated Corp' }); // ONLY sending name
-    
+      .send({ customFieldValues: { Name: 'Updated Corp' } }); // ONLY sending Name
+
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Updated Corp');
     // Ensure omitted fields are NOT nulled out
     expect(res.body.status).toBe(ClientStatus.PROSPECT);
-    expect(res.body.customFieldValues).toEqual({ industry: 'Software' });
+    expect(res.body.customFieldValues).toMatchObject({ industry: 'Software', Name: 'Updated Corp' });
   });
 
   it('PUT /:clientId merges customFieldValues instead of wholesale replacing', async () => {
@@ -190,31 +241,7 @@ describe('Client Routes', () => {
 
     expect(res.status).toBe(200);
     // 'industry' should survive the merge!
-    expect(res.body.customFieldValues).toEqual({ industry: 'Software', region: 'US' });
-  });
-
-  it('PUT /:clientId merges customFieldValues instead of wholesale replacing', async () => {
-    // First, add another field definition
-    await request(app)
-      .post('/api/t1/clients/settings/custom-fields')
-      .set('Authorization', `Bearer ${validToken}`)
-      .send({ fieldName: 'region', fieldType: 'TEXT' });
-
-    // Update client to have two custom fields
-    await request(app)
-      .put(`/api/t1/clients/${createdClientId}`)
-      .set('Authorization', `Bearer ${validToken}`)
-      .send({ customFieldValues: { industry: 'Software', region: 'EU' } });
-
-    // Now do a partial update of ONLY the region
-    const res = await request(app)
-      .put(`/api/t1/clients/${createdClientId}`)
-      .set('Authorization', `Bearer ${validToken}`)
-      .send({ customFieldValues: { region: 'US' } });
-
-    expect(res.status).toBe(200);
-    // 'industry' should survive the merge!
-    expect(res.body.customFieldValues).toEqual({ industry: 'Software', region: 'US' });
+    expect(res.body.customFieldValues).toMatchObject({ industry: 'Software', region: 'US' });
   });
 
   it('GET /:clientId returns client details', async () => {
@@ -234,7 +261,7 @@ describe('Client Routes', () => {
     
     expect(res.status).toBe(200);
     expect(res.body.length).toBeGreaterThanOrEqual(1);
-    expect(res.body[0].fieldName).toBe('industry');
+    expect(res.body.map((f: any) => f.fieldName)).toContain('industry');
   });
 
   it('GET /settings/outcome-categories returns defined categories', async () => {
@@ -291,11 +318,13 @@ describe('Client Routes', () => {
 
   // Validation tests
   it('POST / returns 400 for missing name', async () => {
+    // "Name" is auto-seeded as `required: true` — omitting it from
+    // customFieldValues entirely must still be rejected domain-side.
     const res = await request(app)
       .post('/api/t1/clients')
       .set('Authorization', `Bearer ${validToken}`)
-      .send({ status: ClientStatus.PROSPECT });
-    
+      .send({ customFieldValues: { Status: ClientStatus.PROSPECT } });
+
     expect(res.status).toBe(400);
   });
 
@@ -365,7 +394,12 @@ describe('Client Routes', () => {
 
       const alpha = await prisma.client.findFirst({ where: { tenantId: 't1', name: 'Imported Alpha' } });
       expect(alpha).not.toBeNull();
-      expect(alpha!.customFieldValues).toEqual({ 'Company Size': 'AB 12' });
+      expect(alpha!.customFieldValues).toMatchObject({
+        'Company Size': 'AB 12',
+        Name: 'Imported Alpha',
+        Email: 'alpha@example.com',
+        Status: 'ACTIVE',
+      });
     });
 
     it('POST /import rejects an upload with no file', async () => {

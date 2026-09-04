@@ -7,7 +7,7 @@ import { http, HttpResponse } from 'msw';
 describe('useForgotPassword hook', () => {
   it('handles successful password reset request', async () => {
     server.use(
-      http.post('http://localhost:3000/api/tenant-1/auth/password-reset/request', () => {
+      http.post('http://localhost:3000/api/auth/password-reset/request', () => {
         return HttpResponse.json({ message: 'Reset email sent' });
       })
     );
@@ -29,7 +29,7 @@ describe('useForgotPassword hook', () => {
 
   it('handles request failure', async () => {
     server.use(
-      http.post('http://localhost:3000/api/tenant-1/auth/password-reset/request', () => {
+      http.post('http://localhost:3000/api/auth/password-reset/request', () => {
         return HttpResponse.json({ error: 'Server error' }, { status: 500 });
       })
     );
@@ -38,7 +38,7 @@ describe('useForgotPassword hook', () => {
 
     await act(async () => {
       try {
-        await result.current.requestReset('test@example.com', 'tenant-1');
+        await result.current.requestReset('test@example.com');
       } catch (e) {
         // Expected error
       }
