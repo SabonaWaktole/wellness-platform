@@ -43,9 +43,10 @@ export const ScaledPage: React.FC<ScaledPageProps> = ({
   }, [pageWidth, maxScale]);
 
   return (
-    <div ref={containerRef} className={styles.viewport} style={{ height: pageHeight * scale }}>
+    <div ref={containerRef} className={styles.viewport} data-scaled-page-viewport style={{ height: pageHeight * scale }}>
       <div
         className={styles.scaler}
+        data-scaled-page-scaler
         style={{ width: pageWidth, height: pageHeight, transform: `scale(${scale})` }}
       >
         {children}

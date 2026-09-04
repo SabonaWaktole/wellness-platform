@@ -1,0 +1,54 @@
+.page {
+  min-height: 100vh;
+  background: var(--surface-muted, #f2f2f2);
+}
+
+.actionBar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-base);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.backButton,
+.printButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+}
+
+.backButton {
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+  color: var(--text-primary);
+}
+
+.printButton {
+  margin-left: auto;
+  background: var(--color-primary, #1d4ed8);
+  border: none;
+  color: #fff;
+}
+
+.title {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sheetArea {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xl, 32px) 0;
+}

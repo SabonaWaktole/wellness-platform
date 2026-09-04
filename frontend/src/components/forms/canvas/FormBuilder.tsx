@@ -14,6 +14,7 @@ import {
   UploadCloud,
   History,
   Link as LinkIcon,
+  Printer,
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
 import { FormCanvas, type CanvasSelection } from './FormCanvas';
@@ -463,6 +464,14 @@ export const FormBuilder: React.FC = () => {
         </div>
 
         <div className={styles.toolbarSpacer} />
+        <Button
+          variant="outline"
+          type="button"
+          icon={<Printer size={16} />}
+          onClick={() => window.open(`/${tenantSlug}/settings/client-management/forms/${formId}/print`, '_blank')}
+        >
+          {t('formBuilder.print')}
+        </Button>
         <Button
           variant="outline"
           type="button"

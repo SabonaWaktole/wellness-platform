@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Download, Eye } from 'lucide-react';
+import { ArrowLeft, Download, Eye, Printer } from 'lucide-react';
 import { SettingsLayout } from '../../components/layout/SettingsLayout';
 import { Button } from '../../components/ui/Button/Button';
 import { FormRenderer, ScaledPage } from '../../components/forms/FormRenderer';
@@ -158,6 +158,18 @@ export const FormSubmissionsContent: React.FC = () => {
           <div className={styles.detailPanel}>
             <div className={styles.detailHeader}>
               <h2>{t('submissions.detailTitle')}</h2>
+              <Button
+                variant="outline"
+                icon={<Printer size={14} />}
+                onClick={() =>
+                  window.open(
+                    `/${tenantSlug}/settings/client-management/forms/${formId}/submissions/${viewingId}/print`,
+                    '_blank'
+                  )
+                }
+              >
+                {t('print.action')}
+              </Button>
               <Button variant="outline" onClick={handleCloseDetail}>
                 ×
               </Button>

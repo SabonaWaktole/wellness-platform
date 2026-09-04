@@ -75,6 +75,11 @@
     "defaultSuccess": "Grazie — la tua risposta è stata registrata.",
     "privateNotice": "La tua risposta viene inviata privatamente all'organizzazione che ha condiviso questo modulo."
   },
+  "print": {
+    "action": "Stampa",
+    "back": "Indietro",
+    "loading": "Caricamento…"
+  },
   "submissions": {
     "title": "Invii",
     "backToForm": "Torna al modulo",

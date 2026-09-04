@@ -75,6 +75,11 @@
     "defaultSuccess": "Thank you — your response has been recorded.",
     "privateNotice": "Your response is sent privately to the organisation that shared this form."
   },
+  "print": {
+    "action": "Print",
+    "back": "Back",
+    "loading": "Loading…"
+  },
   "submissions": {
     "title": "Submissions",
     "backToForm": "Back to form",

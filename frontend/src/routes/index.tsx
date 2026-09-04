@@ -29,6 +29,8 @@ import { QuotationDetail } from '../pages/quotations/QuotationDetail';
 import { PublicQuotationPage } from '../pages/quotations/PublicQuotationPage';
 import { PublicFormPage } from '../pages/forms/PublicFormPage';
 import { FormSubmissionsPage } from '../pages/settings/FormSubmissionsPage';
+import { FormPrintPage } from '../pages/settings/FormPrintPage';
+import { FormSubmissionPrintPage } from '../pages/settings/FormSubmissionPrintPage';
 import { NotificationSettingsPage } from '../pages/settings/NotificationSettingsPage';
 import { CreateQuotation } from '../pages/quotations/CreateQuotation';
 import { EditQuotation } from '../pages/quotations/EditQuotation';
@@ -257,6 +259,26 @@ export const router = createBrowserRouter([
           <ProtectedRoute>
             <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
               <FormSubmissionsPage />
+            </RoleGuard>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/client-management/forms/:formId/print',
+        element: (
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+              <FormPrintPage />
+            </RoleGuard>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/client-management/forms/:formId/submissions/:submissionId/print',
+        element: (
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+              <FormSubmissionPrintPage />
             </RoleGuard>
           </ProtectedRoute>
         ),

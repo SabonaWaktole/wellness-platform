@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, FileWarning } from 'lucide-react';
+import { CheckCircle2, FileWarning, Printer } from 'lucide-react';
 import { API_BASE_URL } from '../../api/baseUrl';
 import { FormRenderer, ScaledPage } from '../../components/forms/FormRenderer';
+import '../../components/forms/FormRenderer/print.css';
 import type { FormDocument } from '../../types/form';
 import styles from './PublicFormPage.module.css';
 
@@ -146,6 +147,10 @@ export const PublicFormPage = () => {
       <div className={styles.header}>
         <h1 className={styles.formName}>{view.formName}</h1>
         {view.formDescription && <p className={styles.formDescription}>{view.formDescription}</p>}
+        <button type="button" className={styles.printLink} data-print-hide onClick={() => window.print()}>
+          <Printer size={14} />
+          {t('print.action')}
+        </button>
       </div>
 
       {/* noValidate: this page's own errors (mirrored from the server's
@@ -167,19 +172,21 @@ export const PublicFormPage = () => {
         </ScaledPage>
 
         {submitError && (
-          <p className={styles.errorBanner} role="alert">
+          <p className={styles.errorBanner} role="alert" data-print-hide>
             {submitError}
           </p>
         )}
 
-        <div className={styles.submitRow}>
+        <div className={styles.submitRow} data-print-hide>
           <button type="submit" className={styles.submitButton} disabled={submitting}>
             {submitting ? t('public.submitting') : t('public.submit')}
           </button>
         </div>
       </form>
 
-      <footer className={styles.footer}>{t('public.privateNotice')}</footer>
+      <footer className={styles.footer} data-print-hide>
+        {t('public.privateNotice')}
+      </footer>
     </div>
   );
 };
