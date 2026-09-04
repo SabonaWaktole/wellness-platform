@@ -1,0 +1,93 @@
+{
+  "addMenu": {
+    "title": "Προσθήκη",
+    "section": "Ενότητα",
+    "selectSectionFirst": "Επιλέξτε μια ενότητα για να προσθέσετε στοιχεία.",
+    "addingTo": "Προσθήκη στην επιλεγμένη ενότητα.",
+    "uploadImage": "Μεταφόρτωση εικόνας",
+    "uploading": "Μεταφόρτωση…",
+    "addItem": "Προσθήκη {{item}}"
+  },
+  "components": {
+    "TEXT": "Μπλοκ κειμένου",
+    "IMAGE": "Εικόνα",
+    "DIVIDER": "Διαχωριστικό",
+    "INPUT": "Πεδίο κειμένου",
+    "TEXTAREA": "Μεγάλο κείμενο",
+    "CHECKBOX_GROUP": "Πλαίσια επιλογής",
+    "RADIO_GROUP": "Ομάδα επιλογών",
+    "DROPDOWN": "Αναπτυσσόμενη λίστα",
+    "DATE": "Ημερομηνία",
+    "SIGNATURE": "Υπογραφή",
+    "USER_SELECT": "Άτομο"
+  },
+  "signature": {
+    "clear": "Καθαρισμός",
+    "saving": "Αποθήκευση…"
+  },
+  "pageRail": {
+    "label": "Σελίδες",
+    "pages": "{{count}} σελίδα",
+    "pages_other": "{{count}} σελίδες",
+    "addPage": "Προσθήκη σελίδας",
+    "goToPage": "Μετάβαση στη σελίδα {{number}}",
+    "movePageUp": "Μετακίνηση σελίδας {{number}} πάνω",
+    "movePageDown": "Μετακίνηση σελίδας {{number}} κάτω",
+    "duplicatePage": "Αντιγραφή σελίδας {{number}}",
+    "deletePage": "Διαγραφή σελίδας {{number}}",
+    "removeEmptyPages": "Αφαίρεση κενών σελίδων"
+  },
+  "formattingToolbar": {
+    "label": "Μορφοποίηση κειμένου",
+    "paragraphStyle": "Στυλ παραγράφου",
+    "paragraph": "Παράγραφος",
+    "heading1": "Επικεφαλίδα 1",
+    "heading2": "Επικεφαλίδα 2",
+    "heading3": "Επικεφαλίδα 3",
+    "fontFamily": "Γραμματοσειρά",
+    "defaultFont": "Προεπιλεγμένη γραμματοσειρά",
+    "fontSize": "Μέγεθος γραμματοσειράς",
+    "defaultSize": "Προεπιλεγμένο μέγεθος",
+    "bold": "Έντονα",
+    "italic": "Πλάγια",
+    "underline": "Υπογράμμιση",
+    "strikethrough": "Διακριτική διαγραφή",
+    "align": {
+      "left": "Στοίχιση αριστερά",
+      "center": "Στοίχιση στο κέντρο",
+      "right": "Στοίχιση δεξιά",
+      "justify": "Πλήρης στοίχιση"
+    },
+    "bulletList": "Κουκκίδες",
+    "orderedList": "Αριθμημένη λίστα",
+    "textColor": "Κείμενο",
+    "highlight": "Επισήμανση",
+    "lineHeight": "Διάστιχο",
+    "defaultLineHeight": "Προεπιλεγμένο διάστιχο"
+  },
+  "public": {
+    "loading": "Φόρτωση…",
+    "notFound": "Η φόρμα δεν βρέθηκε",
+    "notFoundHint": "Αυτός ο σύνδεσμος μπορεί να είναι εσφαλμένος ή η φόρμα να μην δέχεται πλέον απαντήσεις.",
+    "submit": "Υποβολή",
+    "submitting": "Υποβολή…",
+    "submitError": "Κάτι πήγε στραβά κατά την υποβολή αυτής της φόρμας. Δοκιμάστε ξανά.",
+    "defaultSuccess": "Ευχαριστούμε — η απάντησή σας καταγράφηκε.",
+    "privateNotice": "Η απάντησή σας αποστέλλεται ιδιωτικά στον οργανισμό που κοινοποίησε αυτή τη φόρμα."
+  },
+  "submissions": {
+    "title": "Υποβολές",
+    "backToForm": "Πίσω στη φόρμα",
+    "empty": "Δεν υπάρχουν ακόμη υποβολές.",
+    "loading": "Φόρτωση υποβολών…",
+    "columnSubmitted": "Υποβλήθηκε",
+    "columnSource": "Πηγή",
+    "columnClient": "Εγγραφή πελάτη",
+    "view": "Προβολή",
+    "exportCsv": "Εξαγωγή CSV",
+    "detailTitle": "Υποβολή",
+    "viewClient": "Προβολή πελάτη",
+    "sourcePublicLink": "Δημόσιος σύνδεσμος",
+    "sourceInternal": "Εσωτερική"
+  }
+}

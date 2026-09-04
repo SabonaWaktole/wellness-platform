@@ -1,0 +1,93 @@
+{
+  "addMenu": {
+    "title": "Aggiungi",
+    "section": "Sezione",
+    "selectSectionFirst": "Seleziona una sezione per aggiungere componenti.",
+    "addingTo": "Aggiunta alla sezione selezionata.",
+    "uploadImage": "Carica un'immagine",
+    "uploading": "Caricamento…",
+    "addItem": "Aggiungi {{item}}"
+  },
+  "components": {
+    "TEXT": "Blocco di testo",
+    "IMAGE": "Immagine",
+    "DIVIDER": "Separatore",
+    "INPUT": "Campo di testo",
+    "TEXTAREA": "Testo lungo",
+    "CHECKBOX_GROUP": "Caselle di controllo",
+    "RADIO_GROUP": "Gruppo di opzioni",
+    "DROPDOWN": "Menu a tendina",
+    "DATE": "Data",
+    "SIGNATURE": "Firma",
+    "USER_SELECT": "Persona"
+  },
+  "signature": {
+    "clear": "Cancella",
+    "saving": "Salvataggio…"
+  },
+  "pageRail": {
+    "label": "Pagine",
+    "pages": "{{count}} pagina",
+    "pages_other": "{{count}} pagine",
+    "addPage": "Aggiungi pagina",
+    "goToPage": "Vai alla pagina {{number}}",
+    "movePageUp": "Sposta la pagina {{number}} su",
+    "movePageDown": "Sposta la pagina {{number}} giù",
+    "duplicatePage": "Duplica la pagina {{number}}",
+    "deletePage": "Elimina la pagina {{number}}",
+    "removeEmptyPages": "Rimuovi le pagine vuote"
+  },
+  "formattingToolbar": {
+    "label": "Formattazione testo",
+    "paragraphStyle": "Stile paragrafo",
+    "paragraph": "Paragrafo",
+    "heading1": "Titolo 1",
+    "heading2": "Titolo 2",
+    "heading3": "Titolo 3",
+    "fontFamily": "Famiglia font",
+    "defaultFont": "Font predefinito",
+    "fontSize": "Dimensione font",
+    "defaultSize": "Dimensione predefinita",
+    "bold": "Grassetto",
+    "italic": "Corsivo",
+    "underline": "Sottolineato",
+    "strikethrough": "Barrato",
+    "align": {
+      "left": "Allinea a sinistra",
+      "center": "Allinea al centro",
+      "right": "Allinea a destra",
+      "justify": "Giustifica"
+    },
+    "bulletList": "Elenco puntato",
+    "orderedList": "Elenco numerato",
+    "textColor": "Testo",
+    "highlight": "Evidenziazione",
+    "lineHeight": "Interlinea",
+    "defaultLineHeight": "Interlinea predefinita"
+  },
+  "public": {
+    "loading": "Caricamento…",
+    "notFound": "Modulo non trovato",
+    "notFoundHint": "Questo link potrebbe non essere corretto, oppure il modulo potrebbe non accettare più risposte.",
+    "submit": "Invia",
+    "submitting": "Invio…",
+    "submitError": "Si è verificato un errore durante l'invio del modulo. Riprova.",
+    "defaultSuccess": "Grazie — la tua risposta è stata registrata.",
+    "privateNotice": "La tua risposta viene inviata privatamente all'organizzazione che ha condiviso questo modulo."
+  },
+  "submissions": {
+    "title": "Invii",
+    "backToForm": "Torna al modulo",
+    "empty": "Nessun invio ancora.",
+    "loading": "Caricamento invii…",
+    "columnSubmitted": "Inviato",
+    "columnSource": "Origine",
+    "columnClient": "Scheda cliente",
+    "view": "Visualizza",
+    "exportCsv": "Esporta CSV",
+    "detailTitle": "Invio",
+    "viewClient": "Vedi cliente",
+    "sourcePublicLink": "Link pubblico",
+    "sourceInternal": "Interno"
+  }
+}
