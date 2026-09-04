@@ -1,0 +1,68 @@
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-base, 12px);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-caption, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.primaryItem,
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs, 6px);
+  padding: var(--spacing-sm, 8px);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface);
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm, 0.8125rem);
+  cursor: pointer;
+  text-align: left;
+}
+
+.primaryItem {
+  font-weight: 600;
+}
+
+.primaryItem:hover,
+.item:hover:not(:disabled) {
+  border-color: var(--color-primary, #1d4ed8);
+  background: var(--surface-raised, #f8fafc);
+}
+
+.item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Two columns: the menu must stay scannable as the registry grows (§8). */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xs, 6px);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--color-danger, #dc2626);
+}
+
+.fileInput {
+  display: none;
+}
