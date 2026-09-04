@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { IClientRepository, SearchClientsFilters } from '../../domain/repositories/IClientRepository';
+import { IClientRepository, SearchClientsFilters, ClientRelatedCounts } from '../../domain/repositories/IClientRepository';
 import { Client } from '../../domain/entities/Client';
 import { FieldRole } from '../../domain/enums/FieldRole';
 import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
@@ -33,15 +33,20 @@ export class PrismaClientRepository implements IClientRepository {
       customFieldValues: typeof record.customFieldValues === 'string' 
         ? JSON.parse(record.customFieldValues) 
         : record.customFieldValues,
+      notes: record.notes ?? null,
       lastUpdatedByUserId: record.lastUpdatedByUserId,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      deletedAt: record.deletedAt ?? null,
     });
   }
 
-  async findById(tenantId: string, id: string): Promise<Client | null> {
+  async findById(tenantId: string, id: string, options?: { includeArchived?: boolean }): Promise<Client | null> {
     const record = await this.prisma.client.findUnique({ where: { id } });
     if (!record || record.tenantId !== tenantId) return null;
+    // Archived clients read as "not found" everywhere except the archive and
+    // restore paths, which opt in explicitly.
+    if (record.deletedAt && !options?.includeArchived) return null;
     return this.mapToDomain(record);
   }
 
@@ -65,6 +70,7 @@ export class PrismaClientRepository implements IClientRepository {
       const whereClause = IS_MYSQL
         ? Prisma.sql`
             WHERE \`tenantId\` = ${tenantId}
+            ${filters.archived ? Prisma.sql`AND \`deletedAt\` IS NOT NULL` : Prisma.sql`AND \`deletedAt\` IS NULL`}
             ${filters.search ? Prisma.sql`AND (name LIKE ${like(filters.search)} OR email LIKE ${like(filters.search)} OR phone LIKE ${like(filters.search)})` : Prisma.empty}
             ${filters.name ? Prisma.sql`AND name LIKE ${like(filters.name)}` : Prisma.empty}
             ${filters.email ? Prisma.sql`AND email LIKE ${like(filters.email)}` : Prisma.empty}
@@ -78,6 +84,7 @@ export class PrismaClientRepository implements IClientRepository {
         // still matching on name via the OR.
         : Prisma.sql`
             WHERE "tenantId" = ${tenantId}
+            ${filters.archived ? Prisma.sql`AND "deletedAt" IS NOT NULL` : Prisma.sql`AND "deletedAt" IS NULL`}
             ${filters.search ? Prisma.sql`AND (name ILIKE ${like(filters.search)} OR email ILIKE ${like(filters.search)} OR phone ILIKE ${like(filters.search)})` : Prisma.empty}
             ${filters.name ? Prisma.sql`AND name ILIKE ${like(filters.name)}` : Prisma.empty}
             ${filters.email ? Prisma.sql`AND email ILIKE ${like(filters.email)}` : Prisma.empty}
@@ -118,6 +125,7 @@ export class PrismaClientRepository implements IClientRepository {
       const where: Prisma.ClientWhereInput = { tenantId };
 
       // Mirrors the raw-SQL branch above — keep both in step.
+      where.deletedAt = filters.archived ? { not: null } : null;
       if (filters.search) {
         where.OR = [
           { name: insensitiveContains(filters.search) },
@@ -144,7 +152,7 @@ export class PrismaClientRepository implements IClientRepository {
   }
 
   async countByTenant(tenantId: string, createdBefore?: Date): Promise<number> {
-    const where: Prisma.ClientWhereInput = { tenantId };
+    const where: Prisma.ClientWhereInput = { tenantId, deletedAt: null };
     if (createdBefore) {
       where.createdAt = { lt: createdBefore };
     }
@@ -152,7 +160,7 @@ export class PrismaClientRepository implements IClientRepository {
   }
 
   async findRecentByTenant(tenantId: string, limit: number, assignedUserId?: string): Promise<Client[]> {
-    const where: Prisma.ClientWhereInput = { tenantId };
+    const where: Prisma.ClientWhereInput = { tenantId, deletedAt: null };
     if (assignedUserId) {
       where.assignedUserId = assignedUserId;
     }
@@ -175,6 +183,7 @@ export class PrismaClientRepository implements IClientRepository {
         status: client.status,
         assignedUserId: client.assignedUserId,
         customFieldValues: client.customFieldValues,
+        notes: client.notes,
         lastUpdatedByUserId: client.lastUpdatedByUserId,
         createdAt: client.createdAt,
         updatedAt: client.updatedAt,
@@ -216,6 +225,38 @@ export class PrismaClientRepository implements IClientRepository {
     }
   }
 
+  async renameCustomFieldKey(tenantId: string, from: string, to: string): Promise<void> {
+    if (from === to) return;
+
+    if (IS_MYSQL) {
+      // JSON_REMOVE after JSON_SET rather than a single rename primitive —
+      // MySQL's JSON functions have no "rename key", so this is copy-then-drop
+      // in one statement. Only rows that actually have the old key are
+      // touched: the WHERE clause is what keeps clients who never set this
+      // field untouched rather than growing a null entry under the new name.
+      await this.prisma.$executeRaw`
+        UPDATE \`Client\`
+        SET \`customFieldValues\` = JSON_REMOVE(
+          JSON_SET(\`customFieldValues\`, CONCAT('$."', ${to}, '"'), JSON_EXTRACT(\`customFieldValues\`, CONCAT('$."', ${from}, '"'))),
+          CONCAT('$."', ${from}, '"')
+        )
+        WHERE \`tenantId\` = ${tenantId}
+          AND JSON_CONTAINS_PATH(\`customFieldValues\`, 'one', CONCAT('$."', ${from}, '"'))
+      `;
+    } else {
+      // `-` removes a jsonb key; `||` merges the renamed pair back in. Scoped by
+      // `? from` (the jsonb "has key" operator) so a client without this field
+      // set is never touched.
+      await this.prisma.$executeRaw`
+        UPDATE "Client"
+        SET "customFieldValues" = ("customFieldValues" - ${from})
+          || jsonb_build_object(${to}, "customFieldValues" -> ${from})
+        WHERE "tenantId" = ${tenantId}
+          AND "customFieldValues" ? ${from}
+      `;
+    }
+  }
+
   async update(tenantId: string, client: Client): Promise<void> {
     await this.prisma.client.update({
       where: { id: client.id },
@@ -226,9 +267,37 @@ export class PrismaClientRepository implements IClientRepository {
         status: client.status,
         assignedUserId: client.assignedUserId,
         customFieldValues: client.customFieldValues,
+        notes: client.notes,
         lastUpdatedByUserId: client.lastUpdatedByUserId,
         updatedAt: client.updatedAt,
       },
     });
+  }
+
+  async archive(tenantId: string, id: string, archivedByUserId: string): Promise<void> {
+    // updateMany, not update: the tenantId lives in the WHERE clause, so a
+    // client belonging to another workspace matches zero rows instead of
+    // being archived.
+    await this.prisma.client.updateMany({
+      where: { id, tenantId, deletedAt: null },
+      data: { deletedAt: new Date(), lastUpdatedByUserId: archivedByUserId },
+    });
+  }
+
+  async restore(tenantId: string, id: string, restoredByUserId: string): Promise<void> {
+    await this.prisma.client.updateMany({
+      where: { id, tenantId, deletedAt: { not: null } },
+      data: { deletedAt: null, lastUpdatedByUserId: restoredByUserId },
+    });
+  }
+
+  async countRelatedRecords(tenantId: string, id: string): Promise<ClientRelatedCounts> {
+    const [interactions, appointments, quotations, invoices] = await Promise.all([
+      this.prisma.interaction.count({ where: { tenantId, clientId: id } }),
+      this.prisma.appointment.count({ where: { tenantId, clientId: id } }),
+      this.prisma.quotation.count({ where: { tenantId, clientId: id } }),
+      this.prisma.invoice.count({ where: { tenantId, clientId: id } }),
+    ]);
+    return { interactions, appointments, quotations, invoices };
   }
 }

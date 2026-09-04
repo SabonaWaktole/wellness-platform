@@ -36,8 +36,14 @@ const DEFAULT_FIELDS: DefaultFieldSeed[] = [
  * merged into customFieldValues under the newly seeded field names so
  * existing clients don't appear to have lost their data).
  *
- * Idempotent and cheap once seeded: a single findByTenantId, early return if
- * every role already has a field.
+ * Seeds exactly ONCE per tenant, recorded by Tenant.clientFieldsSeededAt.
+ * This is deliberately not "recreate whichever roles are missing": these are
+ * ordinary tenant-editable fields, so a business owner is allowed to delete
+ * one, and re-deriving the work to do from the current roles made that
+ * impossible — the next read of the field list resurrected the deleted field
+ * at the bottom of the order.
+ *
+ * Cheap once seeded: one indexed tenant lookup, then a single findByTenantId.
  */
 export class EnsureDefaultClientFieldsUseCase {
   constructor(
@@ -46,9 +52,18 @@ export class EnsureDefaultClientFieldsUseCase {
   ) {}
 
   async execute(tenantId: string): Promise<CustomFieldDefinition[]> {
+    if (await this.customFieldRepo.hasSeededDefaults(tenantId)) {
+      return this.customFieldRepo.findByTenantId(tenantId);
+    }
+
     const existing = await this.customFieldRepo.findByTenantId(tenantId);
+    // Still filtered by role: a tenant seeded by an older build of this use
+    // case (before the stamp existed) may already hold some of these.
     const missing = DEFAULT_FIELDS.filter(seed => !existing.some(f => f.role === seed.role));
-    if (missing.length === 0) return existing;
+    if (missing.length === 0) {
+      await this.customFieldRepo.markDefaultsSeeded(tenantId);
+      return existing;
+    }
 
     const nextOrderStart = existing.reduce((max, f) => Math.max(max, f.order), -1) + 1;
     const created: CustomFieldDefinition[] = [];
@@ -74,6 +89,8 @@ export class EnsureDefaultClientFieldsUseCase {
         // move on rather than failing the caller's request.
       }
     }
+
+    await this.customFieldRepo.markDefaultsSeeded(tenantId);
 
     if (created.length > 0) {
       const fieldNameByRole: Partial<Record<FieldRole, string>> = {};

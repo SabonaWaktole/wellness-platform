@@ -153,7 +153,7 @@ export class GetTenantClientMetricsUseCase {
       // is not a filter to Prisma, so an anonymous caller would silently get
       // every client in the tenant under a card titled "My assigned clients".
       dto.userId
-        ? prisma.client.count({ where: { tenantId, assignedUserId: dto.userId } })
+        ? prisma.client.count({ where: { tenantId, assignedUserId: dto.userId, deletedAt: null } })
         : Promise.resolve(0),
       prisma.appointment.count({
         where: {

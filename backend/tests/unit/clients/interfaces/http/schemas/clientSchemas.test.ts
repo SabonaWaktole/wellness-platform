@@ -81,7 +81,12 @@ describe('clientSchemas', () => {
 
     it('requires options for SINGLE_SELECT', () => {
       expect(() => defineCustomFieldSchema.parse({ fieldName: 'size', fieldType: FieldType.SINGLE_SELECT }))
-        .toThrow('Options are required for SINGLE_SELECT fields');
+        .toThrow('Options are required for SINGLE_SELECT and MULTI_SELECT fields');
+    });
+
+    it('requires options for MULTI_SELECT too', () => {
+      expect(() => defineCustomFieldSchema.parse({ fieldName: 'services', fieldType: FieldType.MULTI_SELECT }))
+        .toThrow('Options are required for SINGLE_SELECT and MULTI_SELECT fields');
     });
 
     // The settings UI has always offered a "Boolean" option; before it existed
@@ -95,8 +100,10 @@ describe('clientSchemas', () => {
     it('accepts every FieldType the enum declares', () => {
       for (const fieldType of Object.values(FieldType)) {
         const data: any = { fieldName: 'someField', fieldType };
-        // SINGLE_SELECT is the one type carrying an extra requirement.
-        if (fieldType === FieldType.SINGLE_SELECT) data.options = ['a', 'b'];
+        // The two select types are the ones carrying an extra requirement.
+        if (fieldType === FieldType.SINGLE_SELECT || fieldType === FieldType.MULTI_SELECT) {
+          data.options = ['a', 'b'];
+        }
         expect(() => defineCustomFieldSchema.parse(data)).not.toThrow();
       }
     });

@@ -32,12 +32,28 @@ export class DefineCustomFieldUseCase {
     }
 
     const existingFields = await this.customFieldRepo.findByTenantId(dto.tenantId);
+
+    // Checked here rather than left to the database's unique constraint on
+    // (tenantId, fieldName): a raw P2002 violation reaching the controller
+    // becomes an unfiltered Prisma stack trace in the response (it doesn't
+    // match the "Only Business Owners" substring check, so it falls through
+    // to a bare 400 with the driver's own message) — the exact failure mode
+    // this closes. Case-insensitive, matching ImportCustomFieldsUseCase's
+    // existing duplicate check for the same field.
+    const trimmedName = dto.fieldName.trim();
+    const nameTaken = existingFields.some(
+      f => f.fieldName.toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (nameTaken) {
+      throw new DomainError(`A field named "${trimmedName}" already exists.`);
+    }
+
     const nextOrder = existingFields.reduce((max, f) => Math.max(max, f.order), -1) + 1;
 
     const definition = CustomFieldDefinition.create({
       id: randomUUID(),
       tenantId: dto.tenantId,
-      fieldName: dto.fieldName,
+      fieldName: trimmedName,
       fieldType: dto.fieldType,
       options: dto.options,
       order: nextOrder,

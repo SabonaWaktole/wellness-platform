@@ -19,9 +19,13 @@ export interface ClientProps {
   status: string;
   assignedUserId?: string | null;
   customFieldValues: Record<string, any>;
+  /** Free-text internal notes, private to the workspace. */
+  notes?: string | null;
   lastUpdatedByUserId: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Set when the client is archived; null/undefined means active. */
+  deletedAt?: Date | null;
 }
 
 export class Client {
@@ -32,9 +36,11 @@ export class Client {
   public readonly status: string;
   public readonly assignedUserId?: string | null;
   public readonly customFieldValues: Record<string, any>;
+  public readonly notes?: string | null;
   public readonly lastUpdatedByUserId: string;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
+  public readonly deletedAt?: Date | null;
 
   private constructor(props: ClientProps) {
     this.id = props.id;
@@ -44,9 +50,17 @@ export class Client {
     this.status = props.status;
     this.assignedUserId = props.assignedUserId;
     this.customFieldValues = props.customFieldValues;
+    this.notes = props.notes ?? null;
     this.lastUpdatedByUserId = props.lastUpdatedByUserId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.deletedAt = props.deletedAt ?? null;
+  }
+
+  /** Archived clients stay readable (invoices still reference them) but are
+   *  hidden from client lists, search and dashboard counts. */
+  public isArchived(): boolean {
+    return this.deletedAt != null;
   }
 
   public static create(props: ClientProps, fieldDefinitions: CustomFieldDefinition[]): Client {
@@ -70,7 +84,14 @@ export class Client {
         }
 
         const value = props.customFieldValues[key];
-        const isBlank = value === null || value === undefined || value === '';
+        // An empty array counts as blank: it is how a MULTI_SELECT reports
+        // "nothing chosen", and a required one must reject it just as a
+        // required text field rejects ''.
+        const isBlank =
+          value === null ||
+          value === undefined ||
+          value === '' ||
+          (Array.isArray(value) && value.length === 0);
 
         if (def.required && isBlank) {
           throw new DomainError(`Field "${key}" is required.`);
@@ -82,6 +103,27 @@ export class Client {
               throw new DomainError(`Value "${value}" is not a valid option for field "${key}".`);
             }
             break;
+
+          case FieldType.MULTI_SELECT: {
+            // The value is a list of chosen options. An empty array is how the
+            // form reports "nothing selected", so it counts as blank for the
+            // required check above — which has already run by this point.
+            if (isBlank) break;
+            if (!Array.isArray(value)) {
+              throw new DomainError(`Value for field "${key}" must be a list of options.`);
+            }
+            for (const entry of value) {
+              if (!def.options?.includes(entry)) {
+                throw new DomainError(`Value "${entry}" is not a valid option for field "${key}".`);
+              }
+            }
+            // Duplicates would make "how many chose X" wrong downstream and
+            // cannot be produced by the UI, so treat them as malformed input.
+            if (new Set(value).size !== value.length) {
+              throw new DomainError(`Field "${key}" contains duplicate options.`);
+            }
+            break;
+          }
 
           case FieldType.EMAIL:
             if (!isBlank && (typeof value !== 'string' || !EMAIL_PATTERN.test(value))) {

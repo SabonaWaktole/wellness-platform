@@ -55,6 +55,8 @@ describe('CreateClientUseCase', () => {
       update: jest.fn(),
       delete: jest.fn(),
       reorder: jest.fn(),
+      hasSeededDefaults: jest.fn().mockResolvedValue(false),
+      markDefaultsSeeded: jest.fn(),
     };
 
     ensureDefaultFields = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);

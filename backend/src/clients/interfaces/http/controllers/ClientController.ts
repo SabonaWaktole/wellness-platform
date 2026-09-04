@@ -11,6 +11,9 @@ import { DeleteCustomFieldUseCase } from '../../../application/use-cases/DeleteC
 import { ReorderCustomFieldsUseCase } from '../../../application/use-cases/ReorderCustomFieldsUseCase';
 import { DefineOutcomeCategoryUseCase } from '../../../application/use-cases/DefineOutcomeCategoryUseCase';
 import { GetClientUseCase } from '../../../application/use-cases/GetClientUseCase';
+import { ArchiveClientUseCase } from '../../../application/use-cases/ArchiveClientUseCase';
+import { RestoreClientUseCase } from '../../../application/use-cases/RestoreClientUseCase';
+import { GetClientRelatedCountsUseCase } from '../../../application/use-cases/GetClientRelatedCountsUseCase';
 import { GetCustomFieldsUseCase } from '../../../application/use-cases/GetCustomFieldsUseCase';
 import { GetOutcomeCategoriesUseCase } from '../../../application/use-cases/GetOutcomeCategoriesUseCase';
 import {
@@ -52,7 +55,10 @@ export class ClientController {
     private getCustomFieldsUseCase: GetCustomFieldsUseCase,
     private getOutcomeCategoriesUseCase: GetOutcomeCategoriesUseCase,
     private importCustomFieldsUseCase: ImportCustomFieldsUseCase,
-    private importClientsUseCase: ImportClientsUseCase
+    private importClientsUseCase: ImportClientsUseCase,
+    private archiveClientUseCase: ArchiveClientUseCase,
+    private restoreClientUseCase: RestoreClientUseCase,
+    private getClientRelatedCountsUseCase: GetClientRelatedCountsUseCase
   ) {}
 
   /**
@@ -100,6 +106,7 @@ export class ClientController {
       const buffer = await buildTemplate('Custom Fields', CUSTOM_FIELD_TEMPLATE_HEADERS, [
         ['Company Size', FieldType.ALPHANUMERIC, ''],
         ['Industry', FieldType.SINGLE_SELECT, 'Retail; Services; Manufacturing'],
+        ['Services Used', FieldType.MULTI_SELECT, 'Consulting; Support; Training'],
       ]);
       this.sendWorkbook(res, 'custom-fields-template.xlsx', buffer);
     } catch (error: any) {
@@ -173,6 +180,7 @@ export class ClientController {
         status: client.status,
         assignedUserId: client.assignedUserId,
         customFieldValues: client.customFieldValues,
+        notes: client.notes,
         lastUpdatedByUserId: client.lastUpdatedByUserId,
         createdAt: client.createdAt,
         updatedAt: client.updatedAt,
@@ -224,6 +232,7 @@ export class ClientController {
           phone: validatedData.phone,
           status: validatedData.status,
           assignedUserId: validatedData.assignedUserId,
+          archived: validatedData.archived,
           customFields: validatedData.customFields,
         },
         skip: validatedData.skip,
@@ -408,4 +417,65 @@ export class ClientController {
     }
   };
 
+
+  /**
+   * Archives a client. DELETE rather than POST because that is what the verb
+   * means to the caller — the soft/hard distinction is an implementation
+   * detail of how the row survives, not of the client's intent.
+   */
+  public archiveClient = async (req: Request, res: Response) => {
+    try {
+      const tenantId = requireTenantId(req);
+      const result = await this.archiveClientUseCase.execute({
+        tenantId,
+        requestingUserRole: req.user!.role,
+        requestingUserId: req.user!.userId,
+        clientId: req.params.clientId as string,
+      });
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error.message.includes('Only Business Owners')) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  };
+
+  public restoreClient = async (req: Request, res: Response) => {
+    try {
+      const tenantId = requireTenantId(req);
+      const result = await this.restoreClientUseCase.execute({
+        tenantId,
+        requestingUserRole: req.user!.role,
+        requestingUserId: req.user!.userId,
+        clientId: req.params.clientId as string,
+      });
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error.message.includes('Only Business Owners')) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  };
+
+  /** Powers the archive confirmation dialog. */
+  public getClientRelatedCounts = async (req: Request, res: Response) => {
+    try {
+      const tenantId = requireTenantId(req);
+      const counts = await this.getClientRelatedCountsUseCase.execute(
+        tenantId,
+        req.params.clientId as string
+      );
+      res.status(200).json(counts);
+    } catch (error: any) {
+      res.status(error.message.includes('not found') ? 404 : 400).json({ error: error.message });
+    }
+  };
 }
