@@ -11,3 +11,13 @@
 export type RibbonTabId = 'home' | 'insert' | 'layout';
 
 export const RIBBON_TABS: RibbonTabId[] = ['home', 'insert', 'layout'];
+
+/**
+ * Tabs that exist only while something is selected — Word's "Picture Format"
+ * and friends. They are appended after the permanent tabs and activate
+ * themselves, so the commands for the thing just clicked are already in front
+ * of the user rather than a tab away.
+ */
+export type ContextualTabId = 'picture' | 'field' | 'textBox' | 'shape' | 'section';
+
+export type AnyRibbonTabId = RibbonTabId | ContextualTabId;

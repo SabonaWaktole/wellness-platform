@@ -64,3 +64,59 @@
 .inlineAction:hover {
   background: var(--color-surface-variant);
 }
+
+.paneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.paneClose {
+  display: inline-flex;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.paneClose:hover {
+  background: var(--color-surface-variant);
+  color: var(--text-primary);
+}
+
+/*
+ * Progressive disclosure, Word's Format-pane shape: a titled row that opens to
+ * reveal a group. Previously referenced from the TSX but never defined here,
+ * so every disclosure rendered as an unstyled browser <details>.
+ */
+.disclosure {
+  border-top: 1px solid var(--border-hairline);
+  padding-top: var(--spacing-xs);
+}
+
+.disclosure > summary {
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.disclosure[open] > summary::before {
+  content: '▾';
+}

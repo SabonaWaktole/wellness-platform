@@ -423,8 +423,28 @@
       "editingGroup": "Modifica",
       "pagesGroup": "Pagine",
       "insertGroup": "Inserisci",
-      "viewGroup": "Visualizza"
+      "viewGroup": "Visualizza",
+      "picture": "Immagine",
+      "field": "Campo",
+      "textBox": "Casella di testo",
+      "shape": "Forma",
+      "section": "Sezione",
+      "arrangeGroup": "Disponi"
     },
-    "readViewBanner": "Stai leggendo questo modulo, non modificandolo."
+    "readViewBanner": "Stai leggendo questo modulo, non modificandolo.",
+    "fillAndLine": "Riempimento e bordo",
+    "advanced": "Avanzate",
+    "dataKey": "Chiave dati",
+    "size": "Dimensioni",
+    "position": "Posizione",
+    "height": "Altezza",
+    "measuredInPixels": "In pixel.",
+    "fromPageCorner": "Dall'angolo in alto a sinistra della pagina.",
+    "fromSectionCorner": "Dall'angolo in alto a sinistra della sezione.",
+    "imageObject": "Immagine",
+    "deleteObject": "Elimina",
+    "closePane": "Chiudi",
+    "formatPane": "Riquadro formato",
+    "editLabel": "Modifica etichetta"
   }
 }

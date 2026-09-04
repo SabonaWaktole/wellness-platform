@@ -1,12 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tabs } from '../../../ui/Tabs/Tabs';
-import { RIBBON_TABS, type RibbonTabId } from './ribbonTypes';
+import { RIBBON_TABS, type AnyRibbonTabId, type ContextualTabId } from './ribbonTypes';
 import styles from './Ribbon.module.css';
 
 export interface RibbonProps {
-  activeTab: RibbonTabId;
-  onChangeTab: (tab: RibbonTabId) => void;
+  activeTab: AnyRibbonTabId;
+  onChangeTab: (tab: AnyRibbonTabId) => void;
+  /** Raised by the current selection, or absent when nothing is selected. */
+  contextualTab?: ContextualTabId;
   /** The active tab's groups. */
   children: React.ReactNode;
 }
@@ -25,17 +27,22 @@ export interface RibbonProps {
  * point: the surface stays small, and controls that do not apply right now
  * are not competing for attention with the document.
  */
-export const Ribbon: React.FC<RibbonProps> = ({ activeTab, onChangeTab, children }) => {
+export const Ribbon: React.FC<RibbonProps> = ({ activeTab, onChangeTab, contextualTab, children }) => {
   const { t } = useTranslation('settings');
 
   return (
     <div className={styles.ribbon}>
-      <Tabs<RibbonTabId>
+      <Tabs<AnyRibbonTabId>
         className={styles.tabs}
         label={t('formBuilder.ribbon.label')}
         activeId={activeTab}
         onChange={onChangeTab}
-        tabs={RIBBON_TABS.map((id) => ({ id, label: t(`formBuilder.ribbon.${id}`) }))}
+        tabs={[
+          ...RIBBON_TABS.map((id) => ({ id: id as AnyRibbonTabId, label: t(`formBuilder.ribbon.${id}`) })),
+          ...(contextualTab
+            ? [{ id: contextualTab as AnyRibbonTabId, label: t(`formBuilder.ribbon.${contextualTab}`) }]
+            : []),
+        ]}
       />
       <div className={styles.panel} role="tabpanel" aria-label={t(`formBuilder.ribbon.${activeTab}`)}>
         {children}

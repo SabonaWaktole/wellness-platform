@@ -384,8 +384,8 @@
     "fieldKeyHelp": "Identifikuesi i qëndrueshëm nën të cilin ruhet vlera e kësaj fushe. Vendoset një herë kur krijohet fusha.",
     "boundToClientField": "Kjo fushë është e lidhur me një fushë të rekordit të klientit — ndryshimi këtu përditëson gjithashtu mënyrën si ruhet ajo fushë.",
     "dividerOrientation": "Orientimi",
-    "horizontal": "Horizontal",
-    "vertical": "Vertikal",
+    "horizontal": "Horizontale",
+    "vertical": "Vertikale",
     "appearance": "Pamja",
     "layout": "Struktura",
     "zoom": "Zmadhim",
@@ -424,8 +424,28 @@
       "editingGroup": "Redaktimi",
       "pagesGroup": "Faqet",
       "insertGroup": "Fut",
-      "viewGroup": "Pamja"
+      "viewGroup": "Pamja",
+      "picture": "Imazh",
+      "field": "Fushë",
+      "textBox": "Kuti teksti",
+      "shape": "Formë",
+      "section": "Seksion",
+      "arrangeGroup": "Rregullo"
     },
-    "readViewBanner": "Po e lexoni këtë formular, nuk po e redaktoni."
+    "readViewBanner": "Po e lexoni këtë formular, nuk po e redaktoni.",
+    "fillAndLine": "Mbushja dhe korniza",
+    "advanced": "Të avancuara",
+    "dataKey": "Çelësi i të dhënave",
+    "size": "Përmasat",
+    "position": "Pozicioni",
+    "height": "Lartësia",
+    "measuredInPixels": "Në piksel.",
+    "fromPageCorner": "Nga këndi i sipërm majtas i faqes.",
+    "fromSectionCorner": "Nga këndi i sipërm majtas i seksionit.",
+    "imageObject": "Imazh",
+    "deleteObject": "Fshi",
+    "closePane": "Mbyll",
+    "formatPane": "Paneli i formatit",
+    "editLabel": "Redakto etiketën"
   }
 }

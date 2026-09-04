@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Ribbon } from './ribbon/Ribbon';
+import { RIBBON_TABS } from './ribbon/ribbonTypes';
 import { TitleBar } from './ribbon/TitleBar';
 import { StatusBar } from './ribbon/StatusBar';
 import { HomeTab } from './ribbon/HomeTab';
 import { InsertTab } from './ribbon/InsertTab';
 import { LayoutTab } from './ribbon/LayoutTab';
-import type { RibbonTabId } from './ribbon/ribbonTypes';
+import { ContextualTab } from './ribbon/ContextualTab';
+import type { AnyRibbonTabId, ContextualTabId } from './ribbon/ribbonTypes';
 import { FormCanvas, type CanvasSelection } from './FormCanvas';
 import { PageRail } from './PageRail';
 import { PropertiesPanel } from './PropertiesPanel';
@@ -123,8 +125,9 @@ export const FormBuilder: React.FC = () => {
    *  owner is told why, instead of the edit silently doing nothing. */
   const [refusal, setRefusal] = useState<string | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<RibbonTabId>('home');
+  const [activeTab, setActiveTab] = useState<AnyRibbonTabId>('home');
   const [showNavigationPane, setShowNavigationPane] = useState(true);
+  const [showFormatPane, setShowFormatPane] = useState(true);
 
   /*
    * ONE UNDO ENTRY PER TYPING SESSION.
@@ -312,6 +315,42 @@ export const FormBuilder: React.FC = () => {
       : selectedSectionId
         ? pageContainingSection(layout, selectedSectionId)?.id ?? activePageId
         : activePageId;
+
+  const selectedElement = selection?.type === 'element' ? findElement(layout, selection.id) : undefined;
+  const selectedSection = selectedSectionId ? findSection(layout, selectedSectionId)?.section : undefined;
+
+  /*
+   * WHICH CONTEXTUAL TAB THE SELECTION RAISES. Word names the tab after the
+   * kind of object, not after the panel — "Picture Format", not "Settings" —
+   * because that is the word the user already has in their head for the thing
+   * they just clicked.
+   */
+  const contextualTab: ContextualTabId | undefined = selectedElement
+    ? selectedElement.type === 'IMAGE'
+      ? 'picture'
+      : selectedElement.type === 'TEXT'
+        ? 'textBox'
+        : selectedElement.type === 'DIVIDER'
+          ? 'shape'
+          : 'field'
+    : selectedSection && selection?.type === 'section'
+      ? 'section'
+      : undefined;
+
+  /*
+   * Follow the selection: raising a tab the user then has to click would be
+   * worse than not raising it at all. And when the object goes away, fall back
+   * to Home rather than leaving a tab selected that no longer exists.
+   */
+  useEffect(() => {
+    // Typing beats selecting: once a caret is open, Home is the tab that
+    // matters, because Font and Paragraph are what the owner reaches for next.
+    // Word does exactly this — the contextual tab stays available, it just
+    // stops being the one in front.
+    if (inline.target) setActiveTab('home');
+    else if (contextualTab) setActiveTab(contextualTab);
+    else setActiveTab((current) => (RIBBON_TABS.includes(current as never) ? current : 'home'));
+  }, [contextualTab, inline.target]);
 
   const activePageIndex = Math.max(
     0,
@@ -565,9 +604,6 @@ export const FormBuilder: React.FC = () => {
   if (error && !form) return <p role="alert">{error}</p>;
   if (!form) return null;
 
-  const selectedElement = selection?.type === 'element' ? findElement(layout, selection.id) : undefined;
-  const selectedSection = selectedSectionId ? findSection(layout, selectedSectionId)?.section : undefined;
-
   return (
     <div className={styles.shell}>
       <TitleBar
@@ -598,7 +634,7 @@ export const FormBuilder: React.FC = () => {
         onRedo={handleRedo}
       />
 
-      <Ribbon activeTab={activeTab} onChangeTab={setActiveTab}>
+      <Ribbon activeTab={activeTab} onChangeTab={setActiveTab} contextualTab={contextualTab}>
         {activeTab === 'home' && (
           <HomeTab
             canCut={sel.kind === 'element' && sel.ids.length > 0}
@@ -624,6 +660,32 @@ export const FormBuilder: React.FC = () => {
             onAddImage={handleAddImage}
             imageError={uploadError}
             isUploadingImage={isUploading}
+          />
+        )}
+
+        {contextualTab && activeTab === contextualTab && (
+          <ContextualTab
+            kind={contextualTab}
+            element={selectedElement}
+            section={selectedSection}
+            onDelete={() => {
+              if (selection?.type === 'section') apply(removeSection(layout, selection.id));
+              else if (selection?.type === 'element') apply(removeElement(layout, selection.id));
+              setSelection(null);
+            }}
+            onDuplicate={() => {
+              if (selection?.type === 'element') apply(clipboard.duplicate(layout, sel.ids));
+            }}
+            onEditText={
+              selectedElement
+                ? () => handleBeginEdit(
+                    selectedElement.type === 'TEXT'
+                      ? { kind: 'element-text', id: selectedElement.id }
+                      : { kind: 'field-label', id: selectedElement.id }
+                  )
+                : undefined
+            }
+            onOpenFormatPane={() => setShowFormatPane(true)}
           />
         )}
 
@@ -803,13 +865,14 @@ export const FormBuilder: React.FC = () => {
 
         {/* The Add menu moved into the ribbon's Insert tab; the sidebar is
             now just the format surface for whatever is selected. */}
-        {!showHistory && (
+        {!showHistory && showFormatPane && (
           <div className={styles.sidebar}>
             <PropertiesPanel
               selection={selection ? { section: selectedSection, element: selectedElement } : null}
               onChangeElement={(id, changes) => apply(updateElement(layout, id, changes))}
               onChangeSection={(id, changes) => apply(updateSection(layout, id, changes))}
               onEditText={(id) => handleBeginEdit({ kind: 'element-text', id })}
+              onClose={() => setShowFormatPane(false)}
             />
           </div>
         )}

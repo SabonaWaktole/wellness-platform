@@ -448,8 +448,28 @@
       "editingGroup": "Editing",
       "pagesGroup": "Pages",
       "insertGroup": "Insert",
-      "viewGroup": "View"
+      "viewGroup": "View",
+      "picture": "Picture",
+      "field": "Field",
+      "textBox": "Text box",
+      "shape": "Shape",
+      "section": "Section",
+      "arrangeGroup": "Arrange"
     },
-    "readViewBanner": "You are reading this form, not editing it."
+    "readViewBanner": "You are reading this form, not editing it.",
+    "fillAndLine": "Fill & line",
+    "advanced": "Advanced",
+    "dataKey": "Data key",
+    "size": "Size",
+    "position": "Position",
+    "height": "Height",
+    "measuredInPixels": "In pixels.",
+    "fromPageCorner": "From the top-left corner of the page.",
+    "fromSectionCorner": "From the top-left corner of the section.",
+    "imageObject": "Image",
+    "deleteObject": "Delete",
+    "closePane": "Close",
+    "formatPane": "Format pane",
+    "editLabel": "Edit label"
   }
 }
