@@ -97,7 +97,7 @@ describe('useDragMove', () => {
 
   it('divides the delta by scale, for a zoomed canvas', () => {
     const onMove = vi.fn();
-    const drag2 = (props: { onMove: (x: number, y: number) => void }) => {
+    const ZoomedHarness = (props: { onMove: (x: number, y: number) => void }) => {
       const drag = useDragMove(() => ({ x: 0, y: 0 }), props.onMove, () => 2);
       return (
         <div
@@ -107,7 +107,7 @@ describe('useDragMove', () => {
         />
       );
     };
-    const { getByTestId } = render(React.createElement(drag2, { onMove }));
+    const { getByTestId } = render(React.createElement(ZoomedHarness, { onMove }));
     const handle = getByTestId('handle');
 
     fireEvent.pointerDown(handle, pointerEvent(0, 0));
