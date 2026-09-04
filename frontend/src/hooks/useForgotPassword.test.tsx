@@ -19,7 +19,7 @@ describe('useForgotPassword hook', () => {
     expect(result.current.isSuccess).toBe(false);
 
     await act(async () => {
-      await result.current.requestReset('test@example.com', 'tenant-1');
+      await result.current.requestReset('test@example.com');
     });
 
     expect(result.current.isLoading).toBe(false);
