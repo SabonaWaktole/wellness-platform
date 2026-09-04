@@ -3,7 +3,7 @@ import { IClientFormRepository } from '../../domain/repositories/IClientFormRepo
 import { IFormVersionRepository } from '../../domain/repositories/IFormVersionRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
 import { FormVersion } from '../../domain/entities/FormVersion';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 import { FormVersionConflictError } from './UpdateClientFormLayoutUseCase';
 import { generateShareToken } from '../../../quotations/domain/shareToken';
@@ -44,7 +44,7 @@ export class PublishFormUseCase {
   ) {}
 
   async execute(dto: PublishFormDTO): Promise<{ form: ClientForm; version: FormVersion }> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(dto.requestingUserRole, 'forms:publish')) {
       throw new DomainError('Only Business Owners can publish client forms');
     }
 

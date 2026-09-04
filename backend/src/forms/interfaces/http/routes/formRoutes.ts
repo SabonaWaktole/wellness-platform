@@ -8,6 +8,8 @@ import { GetClientFormsUseCase } from '../../../application/use-cases/GetClientF
 import { CreateClientFormUseCase } from '../../../application/use-cases/CreateClientFormUseCase';
 import { UpdateClientFormSettingsUseCase } from '../../../application/use-cases/UpdateClientFormSettingsUseCase';
 import { DuplicateClientFormUseCase } from '../../../application/use-cases/DuplicateClientFormUseCase';
+import { SaveAsTemplateUseCase } from '../../../application/use-cases/SaveAsTemplateUseCase';
+import { CreateFormFromTemplateUseCase } from '../../../application/use-cases/CreateFormFromTemplateUseCase';
 import { DeleteClientFormUseCase } from '../../../application/use-cases/DeleteClientFormUseCase';
 import { StoreFormAssetUseCase } from '../../../application/use-cases/StoreFormAssetUseCase';
 import { UpdateClientFormLayoutUseCase } from '../../../application/use-cases/UpdateClientFormLayoutUseCase';
@@ -100,6 +102,8 @@ export const createFormRouter = (
   const createClientFormUseCase = new CreateClientFormUseCase(formRepo);
   const updateClientFormSettingsUseCase = new UpdateClientFormSettingsUseCase(formRepo);
   const duplicateClientFormUseCase = new DuplicateClientFormUseCase(formRepo);
+  const saveAsTemplateUseCase = new SaveAsTemplateUseCase(formRepo);
+  const createFormFromTemplateUseCase = new CreateFormFromTemplateUseCase(formRepo);
   const deleteClientFormUseCase = new DeleteClientFormUseCase(formRepo);
   const storeFormAssetUseCase = new StoreFormAssetUseCase(mediaService);
   const publishFormUseCase = new PublishFormUseCase(formRepo, formVersionRepo);
@@ -115,6 +119,8 @@ export const createFormRouter = (
     createClientFormUseCase,
     updateClientFormSettingsUseCase,
     duplicateClientFormUseCase,
+    saveAsTemplateUseCase,
+    createFormFromTemplateUseCase,
     deleteClientFormUseCase,
     storeFormAssetUseCase,
     publishFormUseCase,
@@ -126,19 +132,23 @@ export const createFormRouter = (
 
   router.use(authenticate(tokenService));
   router.use(resolveTenant(tenantRepository));
-  router.use(authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF]));
+  router.use(authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN]));
 
   router.get('/', formController.listForms);
   router.post('/', formController.createForm);
 
-  // Static path before '/:formId': that param would otherwise swallow
-  // '/default' and try to look up a form whose id is the literal "default".
+  // Static paths before '/:formId': that param would otherwise swallow
+  // '/default' or '/templates' and try to look up a form whose id is the
+  // literal string.
   router.get('/default', formController.getDefaultForm);
+  router.get('/templates', formController.listTemplates);
+  router.post('/templates/:templateId/instantiate', formController.createFormFromTemplate);
 
   router.get('/:formId', formController.getForm);
   router.patch('/:formId', formController.updateSettings);
   router.delete('/:formId', formController.deleteForm);
   router.post('/:formId/duplicate', formController.duplicateForm);
+  router.post('/:formId/save-as-template', formController.saveAsTemplate);
   router.put('/:formId/layout', formController.updateLayout);
   router.post('/:formId/assets', receiveImage, formController.uploadAsset);
   router.post('/:formId/publish', formController.publishForm);

@@ -25,6 +25,24 @@ if (!Element.prototype.setPointerCapture) {
 }
 
 /**
+ * jsdom has no IntersectionObserver either. FormCanvas's page virtualisation
+ * (spec §35, `useVisiblePages`) creates one unconditionally on mount — a
+ * no-op stub here is what lets every test that renders the canvas run at
+ * all; a test that needs to actually simulate visibility changes installs
+ * its own controllable stub locally (see `useVisiblePages.test.ts`).
+ */
+if (typeof globalThis.IntersectionObserver === 'undefined') {
+  globalThis.IntersectionObserver = class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  } as unknown as typeof globalThis.IntersectionObserver;
+}
+
+/**
  * jsdom has no layout engine, and — unlike Element — neither Range nor Text
  * carry a getClientRects()/getBoundingClientRect() at all. ProseMirror's
  * scrollIntoView calls these on essentially every state update (via Range for
@@ -44,15 +62,6 @@ if (!Range.prototype.getClientRects) Range.prototype.getClientRects = emptyClien
 if (!textProto.getClientRects) textProto.getClientRects = emptyClientRects;
 if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = zeroRect;
 if (!textProto.getBoundingClientRect) textProto.getBoundingClientRect = zeroRect;
-
-/** jsdom has no layout engine and so never implements ResizeObserver. */
-if (typeof globalThis.ResizeObserver === 'undefined') {
-  globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-}
 
 /**
  * jsdom has no layout engine and so never implements ResizeObserver. Real

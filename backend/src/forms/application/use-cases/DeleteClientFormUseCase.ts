@@ -1,5 +1,5 @@
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 /**
@@ -11,7 +11,7 @@ export class DeleteClientFormUseCase {
   constructor(private formRepo: IClientFormRepository) {}
 
   async execute(tenantId: string, requestingUserRole: string, formId: string): Promise<void> {
-    if (requestingUserRole !== UserRole.BUSINESS_OWNER && requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(requestingUserRole, 'forms:delete')) {
       throw new DomainError('Only Business Owners can delete client forms');
     }
 

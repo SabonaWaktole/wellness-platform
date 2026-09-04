@@ -255,6 +255,38 @@ export const elementsOf = (doc: FormDocument): FormElement[] =>
   doc.pages.flatMap((page) => page.sections.flatMap((section) => section.elements));
 
 /**
+ * Deep-copies a document for a NEW form (template instantiation, spec §30) —
+ * every page, section and element gets a fresh visual identity.
+ *
+ * `field.key` is deliberately left untouched: it is the DATA identity
+ * (duplicating a single component within one document mints a new key
+ * because two fields in the same form must not collide, but a key is only
+ * ever unique per-form — see FormDocumentValidator — so two different forms
+ * sharing "company_name" is not a conflict). Minting fresh element/page/
+ * section ids instead is what keeps the copy from being mistaken for the
+ * same visual object as the source once both exist independently — the
+ * template and the form made from it are two documents from the moment this
+ * returns, not two views of one.
+ */
+export const cloneDocumentWithFreshIds = (doc: FormDocument): FormDocument => {
+  // JSON round-trip first: every sub-object (styles, content, field.options,
+  // validation…) must be independent too, not just re-tagged with new ids —
+  // a plain object spread would leave those nested objects shared by
+  // reference between the source and the copy.
+  const clone: FormDocument = JSON.parse(JSON.stringify(doc));
+  for (const page of clone.pages) {
+    page.id = newDocumentId();
+    for (const section of page.sections) {
+      section.id = newDocumentId();
+      for (const element of section.elements) {
+        element.id = newDocumentId();
+      }
+    }
+  }
+  return clone;
+};
+
+/**
  * Fits a section inside one usable A4 page area — both axes, and position as
  * well as size.
  *

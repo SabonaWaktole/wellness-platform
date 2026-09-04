@@ -1,7 +1,7 @@
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
 import { FormStatus } from '../../domain/enums/FormStatus';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 import { FormVersionConflictError } from './UpdateClientFormLayoutUseCase';
 
@@ -37,7 +37,7 @@ export class UpdateClientFormSettingsUseCase {
   constructor(private formRepo: IClientFormRepository) {}
 
   async execute(dto: UpdateClientFormSettingsDTO): Promise<ClientForm> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(dto.requestingUserRole, 'forms:edit')) {
       throw new DomainError('Only Business Owners can edit client forms');
     }
 

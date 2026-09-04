@@ -206,6 +206,79 @@ export const useDuplicateClientForm = () => {
   return { duplicateForm, isDuplicating, error };
 };
 
+/** The "Create from template" picker's list — templates only. */
+export const useFormTemplates = () => {
+  const { tenantSlug } = useParams();
+  const [templates, setTemplates] = useState<ClientFormSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTemplates = useCallback(async () => {
+    if (!tenantSlug) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      setTemplates(await formService.listTemplates(tenantSlug));
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, 'Failed to load templates'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tenantSlug]);
+
+  return { templates, isLoading, error, fetchTemplates };
+};
+
+export const useSaveAsTemplate = () => {
+  const { tenantSlug } = useParams();
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const saveAsTemplate = useCallback(
+    async (formId: string, name: string) => {
+      if (!tenantSlug) throw new Error('Missing tenant context');
+      setIsSaving(true);
+      setError(null);
+      try {
+        return await formService.saveAsTemplate(tenantSlug, formId, name);
+      } catch (err: any) {
+        setError(extractApiErrorMessage(err, 'Failed to save this form as a template'));
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [tenantSlug]
+  );
+
+  return { saveAsTemplate, isSaving, error, clearError: () => setError(null) };
+};
+
+export const useCreateFormFromTemplate = () => {
+  const { tenantSlug } = useParams();
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createFormFromTemplate = useCallback(
+    async (templateId: string, name: string) => {
+      if (!tenantSlug) throw new Error('Missing tenant context');
+      setIsCreating(true);
+      setError(null);
+      try {
+        return await formService.createFormFromTemplate(tenantSlug, templateId, name);
+      } catch (err: any) {
+        setError(extractApiErrorMessage(err, 'Failed to create a form from this template'));
+        throw err;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [tenantSlug]
+  );
+
+  return { createFormFromTemplate, isCreating, error, clearError: () => setError(null) };
+};
+
 /** Freezes the draft as a new published version — the toolbar's Publish button. */
 export const usePublishForm = () => {
   const { tenantSlug } = useParams();

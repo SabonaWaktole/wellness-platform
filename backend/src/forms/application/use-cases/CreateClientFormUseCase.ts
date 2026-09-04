@@ -3,7 +3,7 @@ import { IClientFormRepository } from '../../domain/repositories/IClientFormRepo
 import { ClientForm } from '../../domain/entities/ClientForm';
 import { FormStatus } from '../../domain/enums/FormStatus';
 import { emptyDocument } from '../../domain/value-objects/FormDocument';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface CreateClientFormDTO {
@@ -30,7 +30,7 @@ export class CreateClientFormUseCase {
   constructor(private formRepo: IClientFormRepository) {}
 
   async execute(dto: CreateClientFormDTO): Promise<ClientForm> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
+    if (!FormPermissions.can(dto.requestingUserRole, 'forms:create')) {
       throw new DomainError('Only Business Owners can create client forms');
     }
 

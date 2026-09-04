@@ -547,6 +547,93 @@ describe('Form Routes', () => {
     });
   });
 
+  describe('templates', () => {
+    it('saves a form as a template without touching the source, and it appears only in the templates list', async () => {
+      await defineField('ff-1', 'Company Name');
+      const seeded = await getDefault();
+
+      const saved = await request(app)
+        .post(`/api/${TENANT}/forms/${seeded.body.id}/save-as-template`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Intake Template' });
+      expect(saved.status).toBe(201);
+      expect(saved.body.isTemplate).toBe(true);
+
+      const forms = await request(app)
+        .get(`/api/${TENANT}/forms`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      expect(forms.body.find((f: any) => f.id === saved.body.id)).toBeUndefined();
+
+      const templates = await request(app)
+        .get(`/api/${TENANT}/forms/templates`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      expect(templates.body.map((f: any) => f.id)).toContain(saved.body.id);
+
+      const source = await request(app)
+        .get(`/api/${TENANT}/forms/${seeded.body.id}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      expect(source.body.isTemplate).toBe(false);
+    });
+
+    it('creates a new ordinary form from a template, independent of it', async () => {
+      await defineField('ff-1', 'Company Name');
+      const seeded = await getDefault();
+      const saved = await request(app)
+        .post(`/api/${TENANT}/forms/${seeded.body.id}/save-as-template`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Reusable Template' });
+
+      const created = await request(app)
+        .post(`/api/${TENANT}/forms/templates/${saved.body.id}/instantiate`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'From Template' });
+      expect(created.status).toBe(201);
+      expect(created.body.isTemplate).toBe(false);
+      expect(created.body.isDefault).toBe(false);
+
+      // The new form is fully independent — editing it must never mutate
+      // the template, the core promise `cloneDocumentWithFreshIds` exists
+      // for (spec §30).
+      const newForm = await request(app)
+        .get(`/api/${TENANT}/forms/${created.body.id}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      const edit = await request(app)
+        .put(`/api/${TENANT}/forms/${created.body.id}/layout`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ layout: layoutWith([]), expectedVersion: newForm.body.version });
+      expect(edit.status).toBe(200);
+
+      const templateAfter = await request(app)
+        .get(`/api/${TENANT}/forms/${saved.body.id}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      expect(boundFieldIds(templateAfter.body.layout)).toEqual(['ff-1']);
+    });
+
+    it('refuses a staff member saving or instantiating a template', async () => {
+      const seeded = await getDefault();
+      const save = await request(app)
+        .post(`/api/${TENANT}/forms/${seeded.body.id}/save-as-template`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ name: 'X' });
+      expect(save.status).toBe(403);
+
+      const instantiate = await request(app)
+        .post(`/api/${TENANT}/forms/templates/00000000-0000-0000-0000-000000000000/instantiate`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ name: 'X' });
+      expect(instantiate.status).toBe(403);
+    });
+
+    it('404s instantiating a form that is not a template', async () => {
+      const seeded = await getDefault();
+      const res = await request(app)
+        .post(`/api/${TENANT}/forms/templates/${seeded.body.id}/instantiate`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'X' });
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('publishing and versions', () => {
     it('publishes a form, mints a share token, and the draft carries no unpublished-changes flag right after', async () => {
       const created = await request(app)

@@ -11,6 +11,8 @@ import { emptyDocument } from '../../../../../src/forms/domain/value-objects/For
 import { CreateClientFormUseCase } from '../../../../../src/forms/application/use-cases/CreateClientFormUseCase';
 import { UpdateClientFormSettingsUseCase } from '../../../../../src/forms/application/use-cases/UpdateClientFormSettingsUseCase';
 import { DuplicateClientFormUseCase } from '../../../../../src/forms/application/use-cases/DuplicateClientFormUseCase';
+import { SaveAsTemplateUseCase } from '../../../../../src/forms/application/use-cases/SaveAsTemplateUseCase';
+import { CreateFormFromTemplateUseCase } from '../../../../../src/forms/application/use-cases/CreateFormFromTemplateUseCase';
 import { DeleteClientFormUseCase } from '../../../../../src/forms/application/use-cases/DeleteClientFormUseCase';
 import { FormVersionConflictError } from '../../../../../src/forms/application/use-cases/UpdateClientFormLayoutUseCase';
 import { IClientFormRepository } from '../../../../../src/forms/domain/repositories/IClientFormRepository';
@@ -148,8 +150,28 @@ describe('GetClientFormsUseCase', () => {
     formRepo.findByTenantId.mockResolvedValue(forms);
 
     const result = await new GetClientFormsUseCase(formRepo).execute('t1');
-    expect(result).toBe(forms);
+    expect(result).toEqual(forms);
     expect(formRepo.findByTenantId).toHaveBeenCalledWith('t1');
+  });
+
+  it('excludes templates from the regular Forms tab list', async () => {
+    const formRepo = mockFormRepo();
+    const ordinary = ClientForm.create({ id: 'f1', tenantId: 't1', name: 'A' });
+    const template = ClientForm.create({ id: 'f2', tenantId: 't1', name: 'B', isTemplate: true });
+    formRepo.findByTenantId.mockResolvedValue([ordinary, template]);
+
+    const result = await new GetClientFormsUseCase(formRepo).execute('t1');
+    expect(result).toEqual([ordinary]);
+  });
+
+  it('executeTemplates lists only templates', async () => {
+    const formRepo = mockFormRepo();
+    const ordinary = ClientForm.create({ id: 'f1', tenantId: 't1', name: 'A' });
+    const template = ClientForm.create({ id: 'f2', tenantId: 't1', name: 'B', isTemplate: true });
+    formRepo.findByTenantId.mockResolvedValue([ordinary, template]);
+
+    const result = await new GetClientFormsUseCase(formRepo).executeTemplates('t1');
+    expect(result).toEqual([template]);
   });
 });
 
@@ -229,6 +251,120 @@ describe('DuplicateClientFormUseCase', () => {
     await expect(
       new DuplicateClientFormUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'gone', 'X')
     ).rejects.toThrow('Form not found');
+  });
+});
+
+describe('SaveAsTemplateUseCase', () => {
+  const source = ClientForm.create({
+    id: 'f1',
+    tenantId: 't1',
+    name: 'Original',
+    isDefault: true,
+    layout: {
+      version: 3,
+      page: emptyPageGeometry(),
+      pages: [{ id: 'p1', sections: [{ id: 's1', title: 'S', x: 0, y: 0, width: 100, height: 100, elements: [] }] }],
+    },
+  });
+
+  it('creates a new isTemplate row, never flipping the source form', async () => {
+    const formRepo = mockFormRepo();
+    formRepo.findById.mockResolvedValue(source);
+    formRepo.save.mockResolvedValue();
+
+    const template = await new SaveAsTemplateUseCase(formRepo).execute(
+      't1',
+      UserRole.BUSINESS_OWNER,
+      'f1',
+      'Intake Template'
+    );
+
+    expect(template.isTemplate).toBe(true);
+    expect(template.isDefault).toBe(false);
+    expect(template.id).not.toBe(source.id);
+    expect(source.isTemplate).toBe(false);
+  });
+
+  it('mints fresh section/element ids, independent of the source', async () => {
+    const formRepo = mockFormRepo();
+    formRepo.findById.mockResolvedValue(source);
+    formRepo.save.mockResolvedValue();
+
+    const template = await new SaveAsTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 'T');
+    expect(template.layout.pages[0].sections[0].id).not.toBe('s1');
+  });
+
+  it('refuses a staff member', async () => {
+    const formRepo = mockFormRepo();
+    await expect(
+      new SaveAsTemplateUseCase(formRepo).execute('t1', UserRole.STAFF, 'f1', 'T')
+    ).rejects.toThrow('Only Business Owners can manage form templates');
+    expect(formRepo.findById).not.toHaveBeenCalled();
+  });
+
+  it('404s a form that does not exist', async () => {
+    const formRepo = mockFormRepo();
+    formRepo.findById.mockResolvedValue(null);
+    await expect(
+      new SaveAsTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'gone', 'T')
+    ).rejects.toThrow('Form not found');
+  });
+});
+
+describe('CreateFormFromTemplateUseCase', () => {
+  const template = ClientForm.create({
+    id: 't-1',
+    tenantId: 't1',
+    name: 'Template',
+    isTemplate: true,
+    layout: {
+      version: 3,
+      page: emptyPageGeometry(),
+      pages: [{ id: 'p1', sections: [{ id: 's1', title: 'S', x: 0, y: 0, width: 100, height: 100, elements: [] }] }],
+    },
+  });
+
+  it('creates an ordinary (non-template) form from a template, with fresh ids', async () => {
+    const formRepo = mockFormRepo();
+    formRepo.findById.mockResolvedValue(template);
+    formRepo.save.mockResolvedValue();
+
+    const form = await new CreateFormFromTemplateUseCase(formRepo).execute(
+      't1',
+      UserRole.BUSINESS_OWNER,
+      't-1',
+      'From Template'
+    );
+
+    expect(form.isTemplate).toBe(false);
+    expect(form.name).toBe('From Template');
+    expect(form.layout.pages[0].sections[0].id).not.toBe('s1');
+    expect(template.layout.pages[0].sections[0].id).toBe('s1');
+  });
+
+  it('refuses a staff member', async () => {
+    const formRepo = mockFormRepo();
+    await expect(
+      new CreateFormFromTemplateUseCase(formRepo).execute('t1', UserRole.STAFF, 't-1', 'X')
+    ).rejects.toThrow('Only Business Owners can manage form templates');
+  });
+
+  it('404s a template that does not exist', async () => {
+    const formRepo = mockFormRepo();
+    formRepo.findById.mockResolvedValue(null);
+    await expect(
+      new CreateFormFromTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'gone', 'X')
+    ).rejects.toThrow('Template not found');
+  });
+
+  it('404s a regular (non-template) form used as a template source', async () => {
+    const formRepo = mockFormRepo();
+    formRepo.findById.mockResolvedValue(
+      ClientForm.create({ id: 'f1', tenantId: 't1', name: 'Ordinary', isTemplate: false })
+    );
+    await expect(
+      new CreateFormFromTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 'X')
+    ).rejects.toThrow('Template not found');
   });
 });
 
