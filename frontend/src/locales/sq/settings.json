@@ -248,7 +248,8 @@
       "APPOINTMENT_REMINDER": "Appointment reminder",
       "QUOTATION_FOLLOW_UP": "Quotation follow-up",
       "CLIENT_ASSIGNED": "Client assigned",
-      "INVITATION_ACCEPTED": "Invitation accepted"
+      "INVITATION_ACCEPTED": "Invitation accepted",
+      "FORM_SUBMITTED": "Form submitted"
     },
     "role": {
       "BUSINESS_OWNER": "Business Owners",
