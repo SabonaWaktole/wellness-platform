@@ -1,0 +1,456 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-base);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--color-surface);
+  flex-wrap: wrap;
+}
+
+.formName {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  min-width: 120px;
+}
+
+.formName:hover,
+.formName:focus {
+  border-color: var(--border-hairline);
+  background: var(--surface-raised, var(--color-surface-variant));
+}
+
+.toolbarSpacer {
+  margin-left: auto;
+}
+
+.statusBadge {
+  font-size: var(--font-size-caption, 0.75rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  white-space: nowrap;
+}
+
+.statusBadgeDraft {
+  color: var(--text-secondary);
+  background: var(--surface-raised, #f1f5f9);
+}
+
+.statusBadgePublished {
+  color: var(--color-success-dark, #15803d);
+  background: var(--color-success-bg, #dcfce7);
+}
+
+.shareLinkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption, 0.75rem);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.shareLinkButton:hover {
+  background: var(--surface-raised, #f1f5f9);
+  color: var(--text-primary);
+}
+
+.unpublishedHint {
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--color-warning, #b45309);
+  white-space: nowrap;
+}
+
+.hint {
+  padding: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+.historyPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-right: 1px solid var(--border-hairline);
+  background: var(--color-surface);
+  overflow-y: auto;
+}
+
+.historyTitle {
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  margin: 0;
+  padding: 0 var(--spacing-xs);
+}
+
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.historyItem {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.historyItem:hover {
+  background: var(--surface-raised, #f1f5f9);
+}
+
+.historyItemActive {
+  border-color: var(--color-primary, #1d4ed8);
+  background: var(--surface-raised, #f1f5f9);
+}
+
+.historyItemNumber {
+  font-weight: 600;
+  font-size: var(--font-size-body-sm);
+}
+
+.historyItemDate {
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.zoomGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+}
+
+.zoomGroup button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.zoomGroup button:hover:not(:disabled) {
+  background: var(--surface-raised, #f1f5f9);
+}
+
+.zoomGroup button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoomPercent {
+  min-width: 40px;
+  text-align: center;
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.zoomDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-hairline);
+  margin: 2px 2px;
+}
+
+.banner {
+  border-left: 3px solid var(--color-warning, #b45309);
+  border: 1px solid var(--border-hairline);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-base);
+  margin: var(--spacing-sm) var(--spacing-base) 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.errorBanner {
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-base);
+  margin: var(--spacing-sm) var(--spacing-base) 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--color-error);
+}
+
+.errorBanner button {
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+/*
+ * Three columns: page rail, canvas, properties sidebar. `flex:` on a grid
+ * item is a no-op — the rail's own `flex: 0 0 132px` (PageRail.module.css)
+ * has no effect here, so its width MUST be pinned from this side instead.
+ * Without an explicit rail column, the rail's grid track defaults to `auto`
+ * and the rail balloons to its content's natural size (a full-height page
+ * thumbnail, well over 1000px) rather than staying a 132px strip.
+ */
+.body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) 280px;
+  min-height: 0;
+}
+
+/* History mode swaps the 132px page rail for a wider version list and drops
+ * the properties sidebar entirely (there is nothing to edit while viewing a
+ * frozen version) — a dedicated template rather than trying to squeeze dates
+ * and version labels into the rail's 132px track. */
+.bodyHistory {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.canvasArea {
+  overflow: auto;
+  background: var(--color-surface-variant, #f0f0f2);
+  padding: var(--spacing-xl);
+  display: flex;
+  justify-content: center;
+}
+
+/* The page itself, positioned so absolute-positioned sections have a frame
+ * to sit inside. Rendered by FormRenderer inside this wrapper in edit mode. */
+.pageFrame {
+  position: relative;
+}
+
+.sidebar {
+  overflow-y: auto;
+  border-left: 1px solid var(--border-hairline);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- section (edit chrome layered over FormRenderer's own section box) --- */
+
+.sectionOverlay {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.sectionSelected {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 1px;
+}
+
+/* The section that "Add field"/"Add image" will target, when it isn't the
+ * direct selection itself (e.g. a field inside it is selected instead) — a
+ * softer cue than .sectionSelected so the two states stay visually distinct. */
+.sectionActive {
+  outline: 2px dashed var(--color-primary, #2563eb);
+  outline-offset: 1px;
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 4%, transparent);
+}
+
+.sectionDragHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  cursor: grab;
+  touch-action: none;
+}
+
+/*
+ * Opaque at all times, not just on hover — FormRenderer draws its own real
+ * .sectionTitle text underneath at the identical position (same box, so the
+ * builder and the rendered form agree pixel-for-pixel on where the title
+ * sits), and this input is what the owner actually edits. A transparent
+ * background let both layers' text show through at once, doubled.
+ */
+.sectionTitleInput {
+  position: absolute;
+  top: 4px;
+  /* Matches FormRenderer's .sectionHeader horizontal padding (--spacing-base)
+   * now that the section-number badge that used to sit before the title is
+   * gone — this has to line up with wherever the real <h2> now starts, or
+   * the opaque background stops short and the real title peeks out from
+   * underneath it on the left. */
+  left: 12px;
+  right: 32px;
+  height: 24px;
+  z-index: 1;
+  background: var(--surface-raised, var(--color-surface));
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0 4px;
+}
+
+.sectionTitleInput:hover,
+.sectionTitleInput:focus {
+  border-color: var(--border-hairline);
+}
+
+.sectionDelete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.sectionDelete:hover {
+  color: var(--color-error);
+}
+
+/* --- element chrome --- */
+
+.elementOverlay {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: grab;
+  touch-action: none;
+}
+
+.elementSelected {
+  outline: 2px dashed var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--color-primary, #2563eb);
+  border: 1px solid var(--color-surface);
+  border-radius: 2px;
+  touch-action: none;
+  z-index: 2;
+}
+
+.handle-n { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.handle-s { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.handle-e { right: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+.handle-w { left: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+.handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+
+.elementDelete {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--color-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.elementDelete:hover {
+  color: var(--color-error);
+}
+
+/* ---------------------------------------------------------------------------
+ * v3: the document is a STACK of fixed A4 sheets (spec §5, §6).
+ * ------------------------------------------------------------------------ */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+  /* Whitespace around the sheets so a page reads as paper on a desk (§5). */
+  background: var(--canvas-backdrop, #e5e7eb);
+}
+
+.scaler {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sheetWrap {
+  position: relative;
+}
+
+/* Visible page boundaries — a real bounded sheet, never an infinite canvas. */
+.sheet {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+/* The usable area inside the page margins. Non-interactive: it is a guide,
+ * not a container — sections are positioned in page coordinates. */
+.marginGuide {
+  position: absolute;
+  border: 1px dashed var(--border-hairline, #cbd5e1);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.pageNumber {
+  position: absolute;
+  right: -28px;
+  bottom: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
