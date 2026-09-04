@@ -1,0 +1,32 @@
+.text {
+  font-family: var(--font-family-base);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  width: 100%;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.divider {
+  border-radius: 1px;
+  color: var(--border-hairline);
+}
+
+.readOnlyLabel {
+  margin: 0;
+  font-size: var(--font-size-caption, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.readOnlyValue {
+  margin: 0;
+  font-family: var(--font-family-base);
+  color: var(--text-primary);
+  overflow-wrap: break-word;
+}
