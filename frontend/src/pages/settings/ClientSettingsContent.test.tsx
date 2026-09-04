@@ -22,6 +22,9 @@ describe('ClientSettingsContent', () => {
   const mockFetchSettings = vi.fn();
   const mockDefineCustomField = vi.fn();
   const mockDefineOutcomeCategory = vi.fn();
+  const mockUpdateCustomField = vi.fn();
+  const mockDeleteCustomField = vi.fn();
+  const mockReorderCustomFields = vi.fn();
 
   const setup = (overrides: { fieldError?: string | null; outcomeError?: string | null } = {}) => {
     (useClientSettings as any).mockReturnValue({
@@ -43,17 +46,17 @@ describe('ClientSettingsContent', () => {
     // These three were added to the component later; without them the whole
     // suite failed on a destructure of undefined before rendering anything.
     (useUpdateCustomField as any).mockReturnValue({
-      updateCustomField: vi.fn(),
+      updateCustomField: mockUpdateCustomField,
       isLoading: false,
       error: null,
     });
     (useDeleteCustomField as any).mockReturnValue({
-      deleteCustomField: vi.fn(),
+      deleteCustomField: mockDeleteCustomField,
       isLoading: false,
       error: null,
     });
     (useReorderCustomFields as any).mockReturnValue({
-      reorderCustomFields: vi.fn(),
+      reorderCustomFields: mockReorderCustomFields,
       isLoading: false,
       error: null,
     });
