@@ -358,8 +358,68 @@
 .elementOverlay {
   position: absolute;
   box-sizing: border-box;
-  cursor: grab;
+  /*
+   * NOT `grab`. A grab cursor over every object announces "this is a canvas of
+   * shapes to be dragged" before the owner has touched anything — the single
+   * loudest signal that this is a design tool rather than a document. The
+   * pointer stays neutral until the object is actually selected, at which
+   * point `move` is honest about what dragging will do.
+   */
+  cursor: default;
   touch-action: none;
+}
+
+.elementSelected {
+  cursor: move;
+}
+
+/*
+ * While a caret is live inside this element, the chrome steps out of the way
+ * so the pointer reaches the editor rendered underneath — selecting text,
+ * placing the caret, dragging through a word. The children re-enable
+ * themselves; see `.elementEditing > *`.
+ */
+.elementEditing {
+  pointer-events: none;
+  cursor: text;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.elementEditing > * {
+  pointer-events: auto;
+}
+
+/*
+ * The on-page editor for a field's LABEL. Opaque on purpose: it sits directly
+ * over the label the renderer drew, and a transparent background would show
+ * both layers of text at once, doubled and half a pixel apart.
+ */
+.labelInput {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+  box-sizing: border-box;
+  padding: 0 2px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-md, 0.8125rem);
+  font-weight: 540;
+}
+
+.labelInput:focus {
+  outline: none;
+}
+
+/* A section whose heading is being typed into reads as active, not selected. */
+.sectionEditing {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .elementSelected {

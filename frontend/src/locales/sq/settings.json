@@ -392,6 +392,8 @@
     "zoomIn": "Zmadho",
     "zoomOut": "Zvogëlo",
     "fitPage": "Përshtat faqen",
-    "fitWidth": "Përshtat gjerësinë"
+    "fitWidth": "Përshtat gjerësinë",
+    "textEditsOnPage": "Ky tekst redaktohet drejtpërdrejt në faqe.",
+    "editOnPage": "Redakto në faqe"
   }
 }

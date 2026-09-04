@@ -391,6 +391,8 @@
     "zoomIn": "Aumenta zoom",
     "zoomOut": "Riduci zoom",
     "fitPage": "Adatta pagina",
-    "fitWidth": "Adatta larghezza"
+    "fitWidth": "Adatta larghezza",
+    "textEditsOnPage": "Questo testo si modifica direttamente nella pagina.",
+    "editOnPage": "Modifica nella pagina"
   }
 }

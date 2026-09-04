@@ -2,7 +2,13 @@ import React from 'react';
 import type { Control, FieldValues } from 'react-hook-form';
 import { componentFor } from '../registry/componentRegistry';
 import type { RenderMode } from '../registry/types';
-import type { DocumentPage, FormElement, FormSection } from '../../../types/form';
+import type { Editor } from '@tiptap/react';
+import type {
+  DocumentPage,
+  ElementContent,
+  FormElement,
+  FormSection,
+} from '../../../types/form';
 import styles from './FormRenderer.module.css';
 
 export type { RenderMode };
@@ -24,6 +30,15 @@ export interface FormPageRendererProps<TValues extends FieldValues = FieldValues
   onUploadAsset?: (dataUrl: string) => Promise<string>;
   /** react-hook-form name prefix. Submissions key off `field.key`. */
   namePrefix?: string;
+  /**
+   * BUILDER ONLY (spec §7). The element the owner currently has a caret
+   * inside, so that element renders a live editor in place of its static
+   * text. `fill` and `print` never pass it — the paper version has no caret
+   * and must keep rendering through the read-only path.
+   */
+  editingElementId?: string;
+  onElementContentChange?: (elementId: string, content: ElementContent) => void;
+  onEditorReady?: (editor: Editor | null) => void;
 }
 
 /**
@@ -53,10 +68,18 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
   userOptions = [],
   onUploadAsset,
   namePrefix = 'data',
+  editingElementId,
+  onElementContentChange,
+  onEditorReady,
 }: FormPageRendererProps<TValues>) => (
   <>
     {page.sections.map((section) => (
-      <div key={section.id} className={styles.section} style={sectionStyle(section)}>
+      <div
+        key={section.id}
+        className={styles.section}
+        style={sectionStyle(section)}
+        data-section-id={section.id}
+      >
         {section.title ? (
           <div className={styles.sectionHeader}>
             <h3 className={styles.sectionTitle} style={titleStyle(section)}>
@@ -70,6 +93,7 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
             <div
               key={element.id}
               className={styles.element}
+              data-element-id={element.id}
               style={{
                 position: 'absolute',
                 left: element.x,
@@ -87,6 +111,9 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
                 userOptions={userOptions}
                 onUploadAsset={onUploadAsset}
                 namePrefix={namePrefix}
+                isEditing={element.id === editingElementId}
+                onElementContentChange={onElementContentChange}
+                onEditorReady={onEditorReady}
               />
             </div>
           ))}
@@ -105,7 +132,22 @@ const ElementRenderer: React.FC<{
   userOptions: { id: string; label: string }[];
   onUploadAsset?: (dataUrl: string) => Promise<string>;
   namePrefix: string;
-}> = ({ element, mode, control, errors, values, userOptions, onUploadAsset, namePrefix }) => {
+  isEditing: boolean;
+  onElementContentChange?: (elementId: string, content: ElementContent) => void;
+  onEditorReady?: (editor: Editor | null) => void;
+}> = ({
+  element,
+  mode,
+  control,
+  errors,
+  values,
+  userOptions,
+  onUploadAsset,
+  namePrefix,
+  isEditing,
+  onElementContentChange,
+  onEditorReady,
+}) => {
   const definition = componentFor(element.type);
 
   /*
@@ -130,6 +172,13 @@ const ElementRenderer: React.FC<{
       value={key ? values[key] : undefined}
       userOptions={userOptions}
       onUploadAsset={onUploadAsset}
+      isEditing={isEditing}
+      onContentChange={
+        isEditing && onElementContentChange
+          ? (content) => onElementContentChange(element.id, content)
+          : undefined
+      }
+      onEditorReady={isEditing ? onEditorReady : undefined}
     />
   );
 };

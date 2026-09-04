@@ -79,6 +79,20 @@ const form = (over = {}) => ({
 const updateLayout = vi.fn();
 const defineCustomField = vi.fn();
 
+/*
+ * The section heading on the PAGE — the real <h3> `FormPageRenderer` draws.
+ *
+ * These tests used to probe `getByDisplayValue` on a title <input> that was
+ * permanently mounted over that heading. The input is now revealed only when
+ * the owner double-clicks to type, so the heading itself is the stable probe
+ * for "this section exists", and it is also the thing the owner actually sees.
+ */
+const heading = (text) => screen.queryByText(text);
+
+/** The on-page title editor, once revealed. The Format panel shows a field of
+ *  the same name beside the page, so the query has to say which one it means. */
+const pageTitleInput = () => document.querySelector('[class*="sectionTitleInput"]');
+
 describe('FormBuilder', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -140,15 +154,18 @@ describe('FormBuilder', () => {
 
   it('renames a section and enables Save', () => {
     render(<FormBuilder />);
-    fireEvent.change(screen.getByDisplayValue('Company Information'), { target: { value: 'Company Details' } });
-    expect(screen.getByDisplayValue('Company Details')).toBeInTheDocument();
+    // Double-click the heading band to open it for typing, as in Word.
+    fireEvent.doubleClick(document.querySelector('[class*="sectionDragHandle"]'));
+    fireEvent.change(pageTitleInput(), { target: { value: 'Company Details' } });
+
+    expect(heading('Company Details')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save/i })).toBeEnabled();
   });
 
   it('adds a section', () => {
     render(<FormBuilder />);
     fireEvent.click(screen.getByRole('button', { name: /add section/i }));
-    expect(screen.getByDisplayValue(/new section/i)).toBeInTheDocument();
+    expect(heading(/new section/i)).toBeInTheDocument();
   });
 
   it('strips the synthetic unplaced rescue PAGE and saves the real document', async () => {
@@ -370,37 +387,40 @@ describe('FormBuilder — undo/redo, keyboard, autosave wiring', () => {
     render(<FormBuilder />);
     fireEvent.click(screen.getByRole('button', { name: /add section/i }));
     expect(screen.getByRole('button', { name: /undo/i })).toBeEnabled();
-    expect(screen.getAllByDisplayValue(/new section/i)).toHaveLength(1);
+    expect(heading(/new section/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /undo/i }));
-    expect(screen.queryByDisplayValue(/new section/i)).not.toBeInTheDocument();
+    expect(heading(/new section/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /redo/i })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: /redo/i }));
-    expect(screen.getByDisplayValue(/new section/i)).toBeInTheDocument();
+    expect(heading(/new section/i)).toBeInTheDocument();
   });
 
   it('Ctrl+Z undoes and Ctrl+Shift+Z redoes', () => {
     render(<FormBuilder />);
     fireEvent.click(screen.getByRole('button', { name: /add section/i }));
-    expect(screen.getByDisplayValue(/new section/i)).toBeInTheDocument();
+    expect(heading(/new section/i)).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
-    expect(screen.queryByDisplayValue(/new section/i)).not.toBeInTheDocument();
+    expect(heading(/new section/i)).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true });
-    expect(screen.getByDisplayValue(/new section/i)).toBeInTheDocument();
+    expect(heading(/new section/i)).toBeInTheDocument();
   });
 
   /* Spec §21: text editing wins over object shortcuts. */
   it('does not undo while typing in the section title field', () => {
     render(<FormBuilder />);
     fireEvent.click(screen.getByRole('button', { name: /add section/i }));
-    const titleInput = screen.getByDisplayValue(/new section/i);
+    // Inserting a section opens its title for typing, so the caret is already
+    // where this test needs it.
+    const titleInput = pageTitleInput();
 
     fireEvent.keyDown(titleInput, { key: 'z', ctrlKey: true });
-    // Still there — the shortcut was not intercepted.
-    expect(screen.getByDisplayValue(/new section/i)).toBeInTheDocument();
+    // Still there — the shortcut was not intercepted. A plain <input> keeps the
+    // browser's own undo; only a contenteditable defers to the document's.
+    expect(heading(/new section/i)).toBeInTheDocument();
   });
 
   it('Delete removes the selected element', () => {
