@@ -167,6 +167,18 @@ const mockHooks = () => {
 
 const caret = () => document.querySelector('[contenteditable="true"]');
 
+/*
+ * Insert controls now live on the ribbon's Insert tab rather than in a sidebar
+ * that was always open. Opening the tab is the gesture a Word user makes, so
+ * the tests make it too — the assertions after it are unchanged.
+ */
+const openInsertTab = () => fireEvent.click(screen.getByRole('tab', { name: /insert/i }));
+const addSection = () => {
+  openInsertTab();
+  fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+};
+
+
 /**
  * Queries scoped to the sheet itself. The Format panel legitimately shows the
  * same label text beside the page, so an unscoped `getByDisplayValue` cannot
@@ -337,7 +349,7 @@ describe('FormBuilder — section titles edit in place', () => {
   /* Word puts the caret in a text box the moment you insert one. */
   it('opens a newly inserted section with its title ready to type', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
 
     expect(onPage().getByDisplayValue(/new section/i)).toBeInTheDocument();
   });
@@ -384,7 +396,7 @@ describe('FormBuilder — field labels edit in place', () => {
    */
   it('lets Ctrl+Z through from a caret on the page, since TipTap has no history of its own', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onPage().getByText(/new section/i)).toBeInTheDocument();
 

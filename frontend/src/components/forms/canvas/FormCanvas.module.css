@@ -514,3 +514,20 @@
   font-size: 11px;
   color: var(--text-secondary);
 }
+
+.historyHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.historyClose {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  color: var(--color-primary);
+  cursor: pointer;
+}

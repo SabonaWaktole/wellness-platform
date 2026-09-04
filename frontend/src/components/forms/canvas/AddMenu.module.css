@@ -66,3 +66,22 @@
 .fileInput {
   display: none;
 }
+
+/*
+ * Ribbon host. The same buttons as the sidebar grid, laid out along the row a
+ * ribbon group occupies instead of down a column.
+ */
+.ribbonMenu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 46px;
+}
+
+.ribbonGrid {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  max-width: 420px;
+}

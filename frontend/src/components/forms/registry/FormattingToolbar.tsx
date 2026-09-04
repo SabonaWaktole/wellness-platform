@@ -16,6 +16,13 @@ import {
 import styles from './FormattingToolbar.module.css';
 
 export interface FormattingToolbarProps {
+  /**
+   * Render the controls greyed out instead of nothing when no editor holds the
+   * caret. The ribbon needs this: Word's Font and Paragraph groups are always
+   * on the Home tab, dimmed until there is text to apply them to — a toolbar
+   * that vanishes and reappears is far more disorienting than one that waits.
+   */
+  showWhenInactive?: boolean;
   editor: Editor | null;
 }
 
@@ -33,7 +40,7 @@ const LINE_HEIGHTS = ['1', '1.15', '1.5', '1.75', '2'];
  * (`.focus()...run()`), which is what keeps clicking a toolbar button from
  * blurring the editor and losing the current selection.
  */
-export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) => {
+export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, showWhenInactive }) => {
   const { t } = useTranslation('forms');
 
   // TipTap's Editor emits 'transaction' on every state change (typing,
@@ -66,18 +73,33 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
     () => version.current
   );
 
-  if (!editor) return null;
+  if (!editor && !showWhenInactive) return null;
 
-  const isActive = (name: string, attrs?: Record<string, unknown>) => editor.isActive(name, attrs);
-  const currentAttrs = (name: string): Record<string, unknown> => editor.getAttributes(name);
+  const isActive = (name: string, attrs?: Record<string, unknown>) =>
+    editor ? editor.isActive(name, attrs) : false;
+  const currentAttrs = (name: string): Record<string, unknown> =>
+    editor ? editor.getAttributes(name) : {};
+
+  /*
+   * Every command runs through here. When the group is showing but inactive
+   * the surrounding <fieldset disabled> means no handler can fire at all, so
+   * the assertion is safe — but it is written as a guard rather than a `!` so
+   * that stays true if a control is ever moved outside the fieldset.
+   */
+  const chain = () => editor!.chain().focus();
 
   const toggleHeading = (level: '' | '1' | '2' | '3') => {
-    if (level === '') editor.chain().focus().setParagraph().run();
-    else editor.chain().focus().toggleHeading({ level: Number(level) as 1 | 2 | 3 }).run();
+    if (level === '') chain().setParagraph().run();
+    else chain().toggleHeading({ level: Number(level) as 1 | 2 | 3 }).run();
   };
 
   return (
     <div className={styles.bar} role="toolbar" aria-label={t('formattingToolbar.label')}>
+      {/* A disabled <fieldset> disables every control inside it, which is both
+          less code and more correct than threading a `disabled` prop through
+          twenty controls — and it keeps them in the accessibility tree, so the
+          owner can see what formatting exists before selecting text. */}
+      <fieldset className={styles.fieldset} disabled={!editor}>
       <select
         className={styles.select}
         aria-label={t('formattingToolbar.paragraphStyle')}
@@ -94,7 +116,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
         className={styles.select}
         aria-label={t('formattingToolbar.fontFamily')}
         value={(currentAttrs('textStyle').fontFamily as string) ?? ''}
-        onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+        onChange={(e) => chain().setFontFamily(e.target.value).run()}
       >
         <option value="">{t('formattingToolbar.defaultFont')}</option>
         {FONT_FAMILIES.map((f) => (
@@ -107,8 +129,8 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
         aria-label={t('formattingToolbar.fontSize')}
         value={(currentAttrs('textStyle').fontSize as string) ?? ''}
         onChange={(e) => {
-          if (e.target.value) editor.chain().focus().setFontSize(e.target.value).run();
-          else editor.chain().focus().unsetFontSize().run();
+          if (e.target.value) chain().setFontSize(e.target.value).run();
+          else chain().unsetFontSize().run();
         }}
       >
         <option value="">{t('formattingToolbar.defaultSize')}</option>
@@ -118,16 +140,16 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
       </select>
 
       <div className={styles.group}>
-        <ToggleButton active={isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} label={t('formattingToolbar.bold')}>
+        <ToggleButton active={isActive('bold')} onClick={() => chain().toggleBold().run()} label={t('formattingToolbar.bold')}>
           <Bold size={14} />
         </ToggleButton>
-        <ToggleButton active={isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} label={t('formattingToolbar.italic')}>
+        <ToggleButton active={isActive('italic')} onClick={() => chain().toggleItalic().run()} label={t('formattingToolbar.italic')}>
           <Italic size={14} />
         </ToggleButton>
-        <ToggleButton active={isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} label={t('formattingToolbar.underline')}>
+        <ToggleButton active={isActive('underline')} onClick={() => chain().toggleUnderline().run()} label={t('formattingToolbar.underline')}>
           <UnderlineIcon size={14} />
         </ToggleButton>
-        <ToggleButton active={isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} label={t('formattingToolbar.strikethrough')}>
+        <ToggleButton active={isActive('strike')} onClick={() => chain().toggleStrike().run()} label={t('formattingToolbar.strikethrough')}>
           <Strikethrough size={14} />
         </ToggleButton>
       </div>
@@ -138,8 +160,12 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
           return (
             <ToggleButton
               key={align}
-              active={isActive({ textAlign: align } as never) || editor.isActive('paragraph', { textAlign: align }) || editor.isActive('heading', { textAlign: align })}
-              onClick={() => editor.chain().focus().setTextAlign(align).run()}
+              active={
+                isActive({ textAlign: align } as never) ||
+                isActive('paragraph', { textAlign: align }) ||
+                isActive('heading', { textAlign: align })
+              }
+              onClick={() => chain().setTextAlign(align).run()}
               label={t(`formattingToolbar.align.${align}`)}
             >
               <Icon size={14} />
@@ -149,10 +175,10 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
       </div>
 
       <div className={styles.group}>
-        <ToggleButton active={isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} label={t('formattingToolbar.bulletList')}>
+        <ToggleButton active={isActive('bulletList')} onClick={() => chain().toggleBulletList().run()} label={t('formattingToolbar.bulletList')}>
           <List size={14} />
         </ToggleButton>
-        <ToggleButton active={isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} label={t('formattingToolbar.orderedList')}>
+        <ToggleButton active={isActive('orderedList')} onClick={() => chain().toggleOrderedList().run()} label={t('formattingToolbar.orderedList')}>
           <ListOrdered size={14} />
         </ToggleButton>
       </div>
@@ -162,7 +188,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
         <input
           type="color"
           value={(currentAttrs('textStyle').color as string) ?? '#000000'}
-          onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+          onChange={(e) => chain().setColor(e.target.value).run()}
         />
       </label>
 
@@ -171,7 +197,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
         <input
           type="color"
           value={(currentAttrs('textStyle').backgroundColor as string) ?? '#ffffff'}
-          onChange={(e) => editor.chain().focus().setBackgroundColor(e.target.value).run()}
+          onChange={(e) => chain().setBackgroundColor(e.target.value).run()}
         />
       </label>
 
@@ -191,7 +217,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
           // node attribute directly via updateAttributes is what actually
           // reaches the schema this extension was configured for.
           const blockType = isActive('heading') ? 'heading' : 'paragraph';
-          editor.chain().focus().updateAttributes(blockType, { lineHeight: e.target.value || null }).run();
+          chain().updateAttributes(blockType, { lineHeight: e.target.value || null }).run();
         }}
       >
         <option value="">{t('formattingToolbar.defaultLineHeight')}</option>
@@ -199,6 +225,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor }) 
           <option key={h} value={h}>{h}</option>
         ))}
       </select>
+      </fieldset>
     </div>
   );
 };

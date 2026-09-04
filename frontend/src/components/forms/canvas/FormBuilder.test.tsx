@@ -77,6 +77,29 @@ const form = (over = {}) => ({
 });
 
 const updateLayout = vi.fn();
+
+/*
+ * Insert controls now live on the ribbon's Insert tab rather than in a sidebar
+ * that was always open. Opening the tab is the gesture a Word user makes, so
+ * the tests make it too — the assertions after it are unchanged.
+ */
+/** Read view / version history moved behind File, with Print and Copy link. */
+const openFileMenu = () => fireEvent.click(screen.getByRole('button', { name: /^file$/i }));
+const readViewItem = () => {
+  openFileMenu();
+  return screen.getByRole('button', { name: /read view|hide preview/i });
+};
+const historyItem = () => {
+  openFileMenu();
+  return screen.getByRole('button', { name: /version history|hide history/i });
+};
+
+const openInsertTab = () => fireEvent.click(screen.getByRole('tab', { name: /insert/i }));
+const addSection = () => {
+  openInsertTab();
+  fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+};
+
 const defineCustomField = vi.fn();
 
 /*
@@ -164,7 +187,7 @@ describe('FormBuilder', () => {
 
   it('adds a section', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
     expect(heading(/new section/i)).toBeInTheDocument();
   });
 
@@ -186,7 +209,7 @@ describe('FormBuilder', () => {
     });
 
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i })); // makes it dirty
+    addSection(); // makes it dirty
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
     await waitFor(() => expect(updateLayout).toHaveBeenCalled());
@@ -232,7 +255,7 @@ describe('FormBuilder', () => {
 
   it('toggles into a read-only preview', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /preview/i }));
+    fireEvent.click(readViewItem());
     // Print mode renders values as static text, not inputs.
     expect(screen.queryByRole('textbox', { name: /company name/i })).not.toBeInTheDocument();
     expect(screen.getByText(/hide preview/i)).toBeInTheDocument();
@@ -248,17 +271,18 @@ describe('FormBuilder', () => {
   it('closes preview when history is opened, and vice versa', () => {
     render(<FormBuilder />);
 
-    fireEvent.click(screen.getByRole('button', { name: /preview/i }));
+    // Each mode is probed by the exit affordance it puts on the surface it
+    // takes over, which is also the thing that makes it escapable at all.
+    fireEvent.click(readViewItem());
     expect(screen.getByText(/hide preview/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /version history/i }));
-    expect(screen.getByText(/hide history/i)).toBeInTheDocument();
+    fireEvent.click(historyItem());
+    expect(screen.getByRole('heading', { name: /version history/i })).toBeInTheDocument();
     expect(screen.queryByText(/hide preview/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^preview$/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /preview/i }));
+    fireEvent.click(readViewItem());
     expect(screen.getByText(/hide preview/i)).toBeInTheDocument();
-    expect(screen.queryByText(/hide history/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /version history/i })).not.toBeInTheDocument();
   });
 
   it('navigates back to client management on Back', () => {
@@ -297,6 +321,7 @@ describe('FormBuilder', () => {
     render(<FormBuilder />);
     const overlays = document.querySelectorAll('[class*="elementOverlay"][style*="left: 10px"]');
     fireEvent.click(overlays[0]);
+    openInsertTab();
 
     expect(screen.getByRole('button', { name: /add text field/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /add image/i })).toBeEnabled();
@@ -309,6 +334,7 @@ describe('FormBuilder', () => {
    */
   it('offers every addable component type from the registry', () => {
     render(<FormBuilder />);
+    openInsertTab();
     for (const component of ADDABLE_COMPONENTS) {
       const label = (enForms.components as Record<string, string>)[component.type];
       // Exact, not a regex: "Add Text block" and "Add Text field" would both
@@ -323,6 +349,7 @@ describe('FormBuilder', () => {
   it('adds a component to the selected section without opening a dialog', () => {
     render(<FormBuilder />);
     fireEvent.click(document.querySelectorAll('[class*="sectionOverlay"]')[0]);
+    openInsertTab();
     fireEvent.click(screen.getByRole('button', { name: /add date/i }));
 
     // Landed straight on the canvas and became the selection — no modal.
@@ -385,7 +412,7 @@ describe('FormBuilder — undo/redo, keyboard, autosave wiring', () => {
 
   it('an edit enables Undo; clicking it reverts the edit and enables Redo', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
     expect(screen.getByRole('button', { name: /undo/i })).toBeEnabled();
     expect(heading(/new section/i)).toBeInTheDocument();
 
@@ -399,7 +426,7 @@ describe('FormBuilder — undo/redo, keyboard, autosave wiring', () => {
 
   it('Ctrl+Z undoes and Ctrl+Shift+Z redoes', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
     expect(heading(/new section/i)).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
@@ -412,7 +439,7 @@ describe('FormBuilder — undo/redo, keyboard, autosave wiring', () => {
   /* Spec §21: text editing wins over object shortcuts. */
   it('does not undo while typing in the section title field', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
     // Inserting a section opens its title for typing, so the caret is already
     // where this test needs it.
     const titleInput = pageTitleInput();
@@ -460,7 +487,7 @@ describe('FormBuilder — undo/redo, keyboard, autosave wiring', () => {
     updateLayout.mockResolvedValue(form({ version: 4 }));
 
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
 
     await vi.advanceTimersByTimeAsync(3000);
     expect(updateLayout).toHaveBeenCalled();

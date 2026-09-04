@@ -1,26 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  ArrowLeft,
-  Eye,
-  Save,
-  Undo2,
-  Redo2,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  MoveHorizontal,
-  UploadCloud,
-  History,
-  Link as LinkIcon,
-  Printer,
-} from 'lucide-react';
-import { Button } from '../../ui/Button/Button';
+import { Ribbon } from './ribbon/Ribbon';
+import { TitleBar } from './ribbon/TitleBar';
+import { StatusBar } from './ribbon/StatusBar';
+import { HomeTab } from './ribbon/HomeTab';
+import { InsertTab } from './ribbon/InsertTab';
+import { LayoutTab } from './ribbon/LayoutTab';
+import type { RibbonTabId } from './ribbon/ribbonTypes';
 import { FormCanvas, type CanvasSelection } from './FormCanvas';
 import { PageRail } from './PageRail';
 import { PropertiesPanel } from './PropertiesPanel';
-import { AddMenu } from './AddMenu';
 import { FormRenderer, ScaledPage } from '../FormRenderer';
 import { useCanvasViewport } from './useCanvasViewport';
 import { useHistory } from './useHistory';
@@ -133,6 +123,8 @@ export const FormBuilder: React.FC = () => {
    *  owner is told why, instead of the edit silently doing nothing. */
   const [refusal, setRefusal] = useState<string | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<RibbonTabId>('home');
+  const [showNavigationPane, setShowNavigationPane] = useState(true);
 
   /*
    * ONE UNDO ENTRY PER TYPING SESSION.
@@ -217,6 +209,27 @@ export const FormBuilder: React.FC = () => {
   const autosaveRef = useRef(autosave);
   autosaveRef.current = autosave;
 
+  /*
+   * Undo and redo close any open editor first: the document it was showing is
+   * about to be replaced, and a caret left inside stale content is the kind of
+   * state that produces a lost keystroke.
+   */
+  const handleUndo = useCallback(() => {
+    inline.end();
+    history.undo();
+    setIsDirty(true);
+    autosaveRef.current?.schedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, inline]);
+
+  const handleRedo = useCallback(() => {
+    inline.end();
+    history.redo();
+    setIsDirty(true);
+    autosaveRef.current?.schedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, inline]);
+
   const handleSave = useCallback(() => {
     void autosave.retry();
   }, [autosave]);
@@ -299,6 +312,22 @@ export const FormBuilder: React.FC = () => {
       : selectedSectionId
         ? pageContainingSection(layout, selectedSectionId)?.id ?? activePageId
         : activePageId;
+
+  const activePageIndex = Math.max(
+    0,
+    layout.pages.findIndex((p) => p.id === targetPageId)
+  );
+
+  /**
+   * Word's Ctrl+A over the body of the document — every element on the page
+   * being worked on. Shared by the shortcut and the ribbon's Select all, so
+   * the two can never mean different things.
+   */
+  const selectAllOnPage = useCallback(() => {
+    const page = layout.pages.find((p) => p.id === targetPageId) ?? layout.pages[0];
+    const ids = page.sections.flatMap((section) => section.elements.map((el) => el.id));
+    if (ids.length > 0) sel.selectMany('element', ids);
+  }, [layout, targetPageId, sel]);
 
   const handleAddSection = () => {
     const pageId = targetPageId ?? layout.pages[0].id;
@@ -499,13 +528,10 @@ export const FormBuilder: React.FC = () => {
          * every element in a fifty-page form, which no operation could
          * usefully act on at once.
          */
-        case 'selectAll': {
+        case 'selectAll':
           event.preventDefault();
-          const page = layout.pages.find((p) => p.id === targetPageId) ?? layout.pages[0];
-          const ids = page.sections.flatMap((section) => section.elements.map((el) => el.id));
-          if (ids.length > 0) sel.selectMany('element', ids);
+          selectAllOnPage();
           break;
-        }
         case 'duplicate':
           event.preventDefault();
           if (sel.kind === 'element') {
@@ -528,6 +554,7 @@ export const FormBuilder: React.FC = () => {
     setSelection,
     inline,
     targetPageId,
+    selectAllOnPage,
     selectedSectionId,
     apply,
     clipboard,
@@ -543,129 +570,84 @@ export const FormBuilder: React.FC = () => {
 
   return (
     <div className={styles.shell}>
-      <div className={styles.toolbar}>
-        <Button
-          variant="outline"
-          type="button"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => navigate(`/${tenantSlug}/settings/client-management`)}
-        >
-          {t('formBuilder.back')}
-        </Button>
-        <span className={styles.formName}>{form.name}</span>
-        <span
-          className={`${styles.statusBadge} ${
-            form.status === 'PUBLISHED' ? styles.statusBadgePublished : styles.statusBadgeDraft
-          }`}
-        >
-          {form.status === 'PUBLISHED' ? t('formBuilder.published') : t('formBuilder.draft')}
-        </span>
-        {form.status === 'PUBLISHED' && form.hasUnpublishedChanges && (
-          <span className={styles.unpublishedHint}>{t('formBuilder.unpublishedChanges')}</span>
-        )}
-        {form.status === 'PUBLISHED' && form.shareToken && (
-          <button
-            type="button"
-            className={styles.shareLinkButton}
-            onClick={() => void navigator.clipboard.writeText(`${window.location.origin}/f/${form.shareToken}`)}
-            title={`${window.location.origin}/f/${form.shareToken}`}
-          >
-            <LinkIcon size={13} />
-            {t('formBuilder.copyLink')}
-          </button>
+      <TitleBar
+        formName={form.name}
+        status={form.status}
+        hasUnpublishedChanges={form.hasUnpublishedChanges}
+        onBack={() => navigate(`/${tenantSlug}/settings/client-management`)}
+        onCopyLink={
+          form.status === 'PUBLISHED' && form.shareToken
+            ? () => void navigator.clipboard.writeText(`${window.location.origin}/f/${form.shareToken}`)
+            : undefined
+        }
+        onPrint={() =>
+          window.open(`/${tenantSlug}/settings/client-management/forms/${formId}/print`, '_blank')
+        }
+        onToggleReadView={handleTogglePreview}
+        isReadView={showPreview}
+        onToggleHistory={handleToggleHistory}
+        isHistory={showHistory}
+        onSave={handleSave}
+        isSaving={isSaving}
+        isDirty={isDirty}
+        onPublish={() => void handlePublish()}
+        isPublishing={isPublishing}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+      />
+
+      <Ribbon activeTab={activeTab} onChangeTab={setActiveTab}>
+        {activeTab === 'home' && (
+          <HomeTab
+            canCut={sel.kind === 'element' && sel.ids.length > 0}
+            canPaste={clipboard.hasContent && !!selectedSectionId}
+            onCut={() => {
+              apply(clipboard.cut(layout, sel.ids));
+              setSelection(null);
+            }}
+            onCopy={() => clipboard.copy(layout, sel.ids)}
+            onPaste={() => apply(clipboard.paste(layout, selectedSectionId))}
+            onDuplicate={() => apply(clipboard.duplicate(layout, sel.ids))}
+            onSelectAll={selectAllOnPage}
+            editor={inline.editor}
+          />
         )}
 
-        <div className={styles.zoomGroup} role="group" aria-label={t('formBuilder.zoom')}>
-          <button
-            type="button"
-            onClick={() => history.undo()}
-            disabled={!history.canUndo}
-            aria-label={t('formBuilder.undo')}
-          >
-            <Undo2 size={15} />
-          </button>
-          <button
-            type="button"
-            onClick={() => history.redo()}
-            disabled={!history.canRedo}
-            aria-label={t('formBuilder.redo')}
-          >
-            <Redo2 size={15} />
-          </button>
-          <span className={styles.zoomDivider} aria-hidden="true" />
-          <button type="button" onClick={viewport.zoomOut} aria-label={t('formBuilder.zoomOut')}>
-            <ZoomOut size={15} />
-          </button>
-          <span className={styles.zoomPercent}>{viewport.zoomPercent}%</span>
-          <button type="button" onClick={viewport.zoomIn} aria-label={t('formBuilder.zoomIn')}>
-            <ZoomIn size={15} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const el = canvasAreaRef.current;
-              if (el) viewport.fitPage(el.clientWidth, el.clientHeight);
-            }}
-            aria-label={t('formBuilder.fitPage')}
-          >
-            <Maximize2 size={15} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const el = canvasAreaRef.current;
-              if (el) viewport.fitWidth(el.clientWidth);
-            }}
-            aria-label={t('formBuilder.fitWidth')}
-          >
-            <MoveHorizontal size={15} />
-          </button>
-        </div>
+        {activeTab === 'insert' && (
+          <InsertTab
+            onAddPage={() => apply(addPage(layout))}
+            onAddSection={handleAddSection}
+            targetSectionId={selectedSectionId}
+            onAddComponent={handleAddComponent}
+            onAddImage={handleAddImage}
+            imageError={uploadError}
+            isUploadingImage={isUploading}
+          />
+        )}
 
-        <div className={styles.toolbarSpacer} />
-        <Button
-          variant="outline"
-          type="button"
-          icon={<Printer size={16} />}
-          onClick={() => window.open(`/${tenantSlug}/settings/client-management/forms/${formId}/print`, '_blank')}
-        >
-          {t('formBuilder.print')}
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          icon={<History size={16} />}
-          onClick={handleToggleHistory}
-        >
-          {showHistory ? t('formBuilder.hideHistory') : t('formBuilder.showHistory')}
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          icon={<Eye size={16} />}
-          onClick={handleTogglePreview}
-        >
-          {showPreview ? t('formBuilder.hidePreview') : t('formBuilder.showPreview')}
-        </Button>
-        <Button
-          variant="primary"
-          type="button"
-          icon={<Save size={16} />}
-          disabled={isSaving || !isDirty}
-          onClick={handleSave}
-        >
-          {isSaving ? t('formBuilder.saving') : t('formBuilder.save')}
-        </Button>
-        <Button
-          variant="primary"
-          type="button"
-          icon={<UploadCloud size={16} />}
-          disabled={isPublishing || isSaving}
-          onClick={() => void handlePublish()}
-        >
-          {isPublishing ? t('formBuilder.publishing') : t('formBuilder.publish')}
-        </Button>
-      </div>
+        {activeTab === 'layout' && (
+          <LayoutTab
+            canDeletePage={layout.pages.length > 1}
+            canMovePageUp={activePageIndex > 0}
+            canMovePageDown={activePageIndex < layout.pages.length - 1}
+            hasEmptyPages={layout.pages.some((p) => p.sections.length === 0)}
+            onDuplicatePage={() => targetPageId && apply(duplicatePage(layout, targetPageId))}
+            onDeletePage={() => targetPageId && apply(deletePage(layout, targetPageId))}
+            onMovePageUp={() =>
+              targetPageId && apply(reorderPage(layout, targetPageId, activePageIndex - 1))
+            }
+            onMovePageDown={() =>
+              targetPageId && apply(reorderPage(layout, targetPageId, activePageIndex + 1))
+            }
+            onRemoveEmptyPages={() => apply(removeEmptyPages(layout))}
+            isNavigationPaneOpen={showNavigationPane}
+            onToggleNavigationPane={() => setShowNavigationPane((v) => !v)}
+          />
+        )}
+      </Ribbon>
+
 
       {publishError && (
         <p className={styles.errorBanner}>
@@ -695,19 +677,18 @@ export const FormBuilder: React.FC = () => {
         </p>
       )}
       {saveError && !hasConflict && <p className={styles.errorBanner}>{saveError}</p>}
-      {autosave.status === 'error' && (
-        <p className={styles.errorBanner}>
-          {t('formBuilder.autosaveFailed')}{' '}
-          <button type="button" onClick={() => void autosave.retry()}>
-            {t('formBuilder.retry')}
-          </button>
-        </p>
-      )}
 
       <div className={`${styles.body} ${showHistory ? styles.bodyHistory : ''}`}>
         {showHistory ? (
           <aside className={styles.historyPanel}>
-            <h3 className={styles.historyTitle}>{t('formBuilder.versionHistory')}</h3>
+            {/* Same rule as read view: a mode gets a visible way out on the
+                surface it takes over, not only in the menu that opened it. */}
+            <div className={styles.historyHeader}>
+              <h3 className={styles.historyTitle}>{t('formBuilder.versionHistory')}</h3>
+              <button type="button" className={styles.historyClose} onClick={handleToggleHistory}>
+                {t('formBuilder.hideHistory')}
+              </button>
+            </div>
             {isLoadingVersions && <p className={styles.hint}>{t('formBuilder.loading')}</p>}
             {!isLoadingVersions && versions.length === 0 && (
               <p className={styles.hint}>{t('formBuilder.noVersionsYet')}</p>
@@ -734,7 +715,8 @@ export const FormBuilder: React.FC = () => {
             </ul>
           </aside>
         ) : (
-          !showPreview && (
+          !showPreview &&
+          showNavigationPane && (
             <PageRail
               layout={layout}
               activePageId={targetPageId}
@@ -771,9 +753,23 @@ export const FormBuilder: React.FC = () => {
           ) : showHistory ? (
             <p className={styles.hint}>{t('formBuilder.selectVersionToView')}</p>
           ) : showPreview ? (
-            <ScaledPage pageWidth={layout.page.width} pageHeight={layout.page.height * layout.pages.length}>
-              <FormRenderer layout={layout} mode="print" />
-            </ScaledPage>
+            <>
+              {/*
+                Read view is a MODE, and a mode with no visible way out is a
+                trap — the command that opened it lives behind the File menu,
+                which closes on click. Word's read view keeps its exit on the
+                document surface for the same reason.
+              */}
+              <p className={styles.banner}>
+                {t('formBuilder.readViewBanner')}{' '}
+                <button type="button" onClick={handleTogglePreview}>
+                  {t('formBuilder.hidePreview')}
+                </button>
+              </p>
+              <ScaledPage pageWidth={layout.page.width} pageHeight={layout.page.height * layout.pages.length}>
+                <FormRenderer layout={layout} mode="print" />
+              </ScaledPage>
+            </>
           ) : (
             <FormCanvas
               layout={layout}
@@ -805,16 +801,10 @@ export const FormBuilder: React.FC = () => {
           )}
         </div>
 
+        {/* The Add menu moved into the ribbon's Insert tab; the sidebar is
+            now just the format surface for whatever is selected. */}
         {!showHistory && (
           <div className={styles.sidebar}>
-            <AddMenu
-              onAddSection={handleAddSection}
-              targetSectionId={selectedSectionId}
-              onAddComponent={handleAddComponent}
-              onAddImage={handleAddImage}
-              imageError={uploadError}
-              isUploadingImage={isUploading}
-            />
             <PropertiesPanel
               selection={selection ? { section: selectedSection, element: selectedElement } : null}
               onChangeElement={(id, changes) => apply(updateElement(layout, id, changes))}
@@ -824,6 +814,24 @@ export const FormBuilder: React.FC = () => {
           </div>
         )}
       </div>
+
+      <StatusBar
+        pageNumber={activePageIndex + 1}
+        pageCount={layout.pages.length}
+        autosave={autosave.status}
+        onRetrySave={() => void autosave.retry()}
+        zoomPercent={viewport.zoomPercent}
+        onZoomIn={viewport.zoomIn}
+        onZoomOut={viewport.zoomOut}
+        onFitPage={() => {
+          const el = canvasAreaRef.current;
+          if (el) viewport.fitPage(el.clientWidth, el.clientHeight);
+        }}
+        onFitWidth={() => {
+          const el = canvasAreaRef.current;
+          if (el) viewport.fitWidth(el.clientWidth);
+        }}
+      />
     </div>
   );
 };
