@@ -389,7 +389,8 @@
       "textBox": "Casella di testo",
       "shape": "Forma",
       "section": "Sezione",
-      "arrangeGroup": "Disponi"
+      "arrangeGroup": "Disponi",
+      "alignGroup": "Allinea"
     },
     "readViewBanner": "Stai leggendo questo modulo, non modificandolo.",
     "fillAndLine": "Riempimento e bordo",
@@ -408,6 +409,16 @@
     "editLabel": "Modifica etichetta",
     "insertPageBefore": "Inserisci pagina prima",
     "moveToNextPage": "Sposta alla pagina successiva",
-    "canvasMenu": "Azioni del documento"
+    "canvasMenu": "Azioni del documento",
+    "align": {
+      "left": "Allinea a sinistra",
+      "center-x": "Allinea al centro",
+      "right": "Allinea a destra",
+      "top": "Allinea in alto",
+      "center-y": "Allinea al centro",
+      "bottom": "Allinea in basso"
+    },
+    "distributeHorizontally": "Distribuisci orizzontalmente",
+    "distributeVertically": "Distribuisci verticalmente"
   }
 }

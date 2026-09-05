@@ -390,7 +390,8 @@
       "textBox": "Kuti teksti",
       "shape": "Formë",
       "section": "Seksion",
-      "arrangeGroup": "Rregullo"
+      "arrangeGroup": "Rregullo",
+      "alignGroup": "Rreshtimi"
     },
     "readViewBanner": "Po e lexoni këtë formular, nuk po e redaktoni.",
     "fillAndLine": "Mbushja dhe korniza",
@@ -409,6 +410,16 @@
     "editLabel": "Redakto etiketën",
     "insertPageBefore": "Fut faqe para",
     "moveToNextPage": "Zhvendos te faqja tjetër",
-    "canvasMenu": "Veprimet e dokumentit"
+    "canvasMenu": "Veprimet e dokumentit",
+    "align": {
+      "left": "Rreshto majtas",
+      "center-x": "Rreshto në qendër",
+      "right": "Rreshto djathtas",
+      "top": "Rreshto lart",
+      "center-y": "Rreshto në mes",
+      "bottom": "Rreshto poshtë"
+    },
+    "distributeHorizontally": "Shpërnda horizontalisht",
+    "distributeVertically": "Shpërnda vertikalisht"
   }
 }

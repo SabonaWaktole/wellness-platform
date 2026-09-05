@@ -20,6 +20,7 @@ import {
   stripSyntheticPages,
   usableHeight,
   emptyDocument,
+  applyBoxes,
 } from './layoutOps';
 import {
   A4_PORTRAIT,
@@ -413,5 +414,57 @@ describe('emptyDocument', () => {
     expect(d.pages).toHaveLength(1);
     expect(d.pages[0].sections).toEqual([]);
     expect(d.page.width).toBe(A4_PORTRAIT.width);
+  });
+});
+
+
+/*
+ * `alignBoxes` and `distributeBoxes` produce geometry; something has to write
+ * that geometry back. Doing it by calling `moveElement` in a loop from the UI
+ * would skip the guarantee that makes the ladder trustworthy — a batch that
+ * cannot fit must be rejected WHOLE, never half-applied.
+ */
+describe('applyBoxes', () => {
+  const twoElements = (): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [
+      {
+        id: 'p1',
+        sections: [
+          {
+            id: 's1',
+            title: 'S',
+            x: 48,
+            y: 48,
+            width: 400,
+            height: 300,
+            elements: [
+              { id: 'e1', type: 'TEXT', x: 10, y: 10, width: 100, height: 40 },
+              { id: 'e2', type: 'TEXT', x: 200, y: 80, width: 100, height: 40 },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  it('writes an aligned batch back through the ladder', () => {
+    const doc = twoElements();
+    const result = applyBoxes(doc, 'element', [
+      { id: 'e1', x: 10, y: 10, width: 100, height: 40 },
+      { id: 'e2', x: 10, y: 80, width: 100, height: 40 },
+    ]);
+
+    expect(result.refusal).toBeNull();
+    expect(findElement(result.document, 'e2')?.x).toBe(10);
+    expect(findElement(result.document, 'e1')?.x).toBe(10);
+  });
+
+  it('leaves the document untouched when the batch names something missing', () => {
+    const doc = twoElements();
+    const result = applyBoxes(doc, 'element', [{ id: 'nope', x: 0, y: 0, width: 10, height: 10 }]);
+
+    expect(result.document).toEqual(doc);
   });
 });
