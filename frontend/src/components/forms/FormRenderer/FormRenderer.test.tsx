@@ -291,3 +291,61 @@ describe('FormRenderer — the client fills the form, it does not edit it', () =
     expect(container.querySelector('[class*="handle-"]')).toBeNull();
   });
 });
+
+/*
+ * A text host holds words typed straight onto the page. The owner asked for a
+ * caret, not a section, so the container must not appear as one — on the
+ * canvas, in the client's form, or in print. Drawing it would put a bordered,
+ * filled box on the paper exactly where they wanted bare page.
+ */
+describe('FormRenderer — a text host is not a box', () => {
+  const hosted = (id) => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [
+      {
+        id: 'p1',
+        sections: [
+          {
+            id,
+            title: '',
+            x: 40,
+            y: 40,
+            width: 320,
+            height: 40,
+            elements: [
+              {
+                id: 't1',
+                type: 'TEXT',
+                x: 0,
+                y: 0,
+                width: 320,
+                height: 40,
+                content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Appendix A' }] }] },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  it('draws no section box around text typed onto the page', () => {
+    const { container } = render(<Harness layout={hosted('text-host-abc')} mode="fill" />);
+    const section = container.querySelector('[data-section-id]');
+
+    expect(section.className).toBe('');
+  });
+
+  it('still draws the box for a section the owner actually made', () => {
+    const { container } = render(<Harness layout={hosted('s1')} mode="fill" />);
+    const section = container.querySelector('[data-section-id]');
+
+    expect(section.className).not.toBe('');
+  });
+
+  it('shows the text either way', () => {
+    render(<Harness layout={hosted('text-host-abc')} mode="fill" />);
+    expect(screen.getByText('Appendix A')).toBeInTheDocument();
+  });
+});

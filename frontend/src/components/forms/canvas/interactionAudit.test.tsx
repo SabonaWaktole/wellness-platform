@@ -781,3 +781,32 @@ describe('Free placement — a block holds what is written in it', () => {
     expect(overlays()[0].style.height).toBe(before);
   });
 });
+
+describe('Free placement — a caret, and nothing else', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * A box around the words is object vocabulary: it says "you have selected a
+   * thing", when what is true is "you are writing here". Word and Docs show a
+   * caret and the text and nothing else — the blink is the whole affordance.
+   */
+  it('drops the selection outline for as long as the caret is in the block', () => {
+    render(<FormBuilder />);
+    const overlay = overlays()[0];
+
+    fireEvent.click(overlay);
+    expect(overlays()[0].className).toMatch(/elementSelected/);
+
+    fireEvent.doubleClick(overlays()[0]);
+    expect(overlays()[0].className).not.toMatch(/elementSelected/);
+    expect(overlays()[0].className).toMatch(/elementEditing/);
+  });
+
+  it('gives the outline back when the caret leaves', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(overlays()[0]);
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(overlays()[0].className).toMatch(/elementSelected/);
+  });
+});

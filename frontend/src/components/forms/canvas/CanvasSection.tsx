@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { useDragMove } from './useDragMove';
 import { useResize, RESIZE_HANDLES, type ResizedBox } from './useResize';
-import { isSyntheticSection } from './layoutOps';
+import { isSyntheticSection, isTextHostSection } from './layoutOps';
 import type { FormSection } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
@@ -49,7 +49,12 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('settings');
-  const synthetic = isSyntheticSection(section);
+  /*
+   * Two kinds of section the owner never made and must never be shown: the
+   * server's rescue section, and the invisible host that holds text typed onto
+   * bare page. Both render their contents and nothing of their own.
+   */
+  const synthetic = isSyntheticSection(section) || isTextHostSection(section);
 
   const drag = useDragMove(() => ({ x: section.x, y: section.y }), onMove, getScale);
   const resize = useResize(
@@ -60,8 +65,11 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
 
   const classes = [
     styles.sectionOverlay,
-    isSelected ? styles.sectionSelected : '',
-    !isSelected && isTarget ? styles.sectionActive : '',
+    // A section the owner never made draws no outline either — the dashes and
+    // the accent border are how a section says "I am a thing you selected",
+    // and a text host is not one.
+    !synthetic && isSelected ? styles.sectionSelected : '',
+    !synthetic && !isSelected && isTarget ? styles.sectionActive : '',
     isEditingTitle ? styles.sectionEditing : '',
   ]
     .filter(Boolean)

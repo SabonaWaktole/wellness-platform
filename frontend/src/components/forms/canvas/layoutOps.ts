@@ -4,8 +4,10 @@ import {
   MAX_PAGE_COUNT,
   MAX_SIZE_PX,
   MIN_SIZE_PX,
+  TEXT_HOST_PREFIX,
   UNPLACED_PAGE_ID,
   UNPLACED_SECTION_ID,
+  isTextHostSection,
   emptyPageGeometry,
   usablePageHeight,
   usablePageWidth,
@@ -452,13 +454,16 @@ export const addSection = (
   doc: FormDocument,
   pageId: string,
   title: string,
-  box: { x: number; y: number; width: number; height: number }
+  box: { x: number; y: number; width: number; height: number },
+  /** Caller-chosen id, so a section created to hold free text can be
+   *  recognised later (see `TEXT_HOST_PREFIX`). */
+  id?: string
 ): ApplyResult => {
   const index = doc.pages.findIndex((p) => p.id === pageId);
   if (index < 0) return ok(doc);
 
   const section: FormSection = {
-    id: newId(),
+    id: id ?? newId(),
     title,
     x: clampCoord(box.x),
     y: clampCoord(box.y),
@@ -710,6 +715,9 @@ export const applyBoxes = (
 };
 
 export const isSyntheticSection = (section: FormSection): boolean => section.id === UNPLACED_SECTION_ID;
+
+/** Re-exported so canvas callers have one import for document helpers. */
+export { TEXT_HOST_PREFIX, isTextHostSection };
 
 /**
  * The rescue page is produced by the server on read so fields created outside

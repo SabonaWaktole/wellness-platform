@@ -415,12 +415,17 @@
  * so the pointer reaches the editor rendered underneath — selecting text,
  * placing the caret, dragging through a word. The children re-enable
  * themselves; see `.elementEditing > *`.
+ *
+ * AND IT DRAWS NOTHING. A box around the words is object vocabulary: it says
+ * "you have selected a thing", when what is true is "you are writing here".
+ * Word and Docs show a caret and the text, and nothing else — the blink is the
+ * whole affordance. `CanvasElement` drops `.elementSelected` for the duration
+ * for the same reason, so an empty block the owner has just clicked into is
+ * exactly as invisible as the blank page around it.
  */
 .elementEditing {
   pointer-events: none;
   cursor: text;
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
 }
 
 .elementEditing > * {

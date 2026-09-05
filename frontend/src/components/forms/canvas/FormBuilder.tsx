@@ -35,6 +35,7 @@ import {
   removeEmptyPages,
   insertPageAt,
   normaliseControls,
+  TEXT_HOST_PREFIX,
   moveSectionToPage,
   moveSection,
   resizeSection,
@@ -614,12 +615,20 @@ export const FormBuilder: React.FC = () => {
 
       if (!host) {
         const before = new Set(document.pages.flatMap((p) => p.sections).map((sec) => sec.id));
-        const created = addSection(document, pageId, '', {
-          x: Math.max(layout.page.margin.left, Math.min(x, layout.page.width - layout.page.margin.right - NEW_TEXT_WIDTH)),
-          y,
-          width: NEW_TEXT_WIDTH,
-          height: NEW_TEXT_HEIGHT,
-        });
+        const created = addSection(
+          document,
+          pageId,
+          '',
+          {
+            x: Math.max(layout.page.margin.left, Math.min(x, layout.page.width - layout.page.margin.right - NEW_TEXT_WIDTH)),
+            y,
+            width: NEW_TEXT_WIDTH,
+            height: NEW_TEXT_HEIGHT,
+          },
+          // Marked as a text host so the canvas leaves off its chrome — the
+          // owner asked for a caret, not a section.
+          `${TEXT_HOST_PREFIX}${newId()}`
+        );
         if (created.refusal) {
           setRefusal(created.refusal);
           return;
@@ -632,11 +641,10 @@ export const FormBuilder: React.FC = () => {
         sectionId = added.id;
         localX = 0;
         localY = 0;
-        // Invisible: the page should read as a page, not as a box.
-        const plain = updateSection(document, added.id, {
-          styles: { background: 'transparent', borderColor: 'transparent' },
-        });
-        if (!plain.refusal) document = plain.document;
+        // Invisibility comes from WHAT the section is, not from colours put on
+        // it: the renderer draws no box for a text host, and the canvas draws
+        // no chrome. Painting it "transparent" instead would both lie in the
+        // model and be refused — section colours must be six-digit hex.
       }
 
       if (!sectionId) return;
