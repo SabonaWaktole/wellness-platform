@@ -623,3 +623,47 @@ describe('Audit — the tab order belongs to the editor, not to the form being d
     expect(document.querySelectorAll('[data-element-id]:not([inert])')).toHaveLength(1);
   });
 });
+
+describe('Audit — the read view shows the form, not a printout of it', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * "Read view" answers the question "what will my client get?", and a form's
+   * answer to that is a form. It rendered `mode="print"` — the question a
+   * printer asks — so every field came out as a label over an em dash and the
+   * owner could not tell whether what they had built was fillable at all.
+   *
+   * It is the same mode and the same renderer the public `/f/` page uses,
+   * which is what makes it a preview rather than an impression of one.
+   */
+  const openReadView = () => {
+    fireEvent.click(screen.getByRole('button', { name: /^file$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /read view/i }));
+  };
+
+  it('gives every field a working control, not a dash', () => {
+    render(<FormBuilder />);
+    openReadView();
+
+    const preview = document.querySelector('[data-print-document]');
+    expect(preview).not.toBeNull();
+    expect(preview.querySelectorAll('input, select, textarea').length).toBeGreaterThan(0);
+    expect(preview.textContent).not.toMatch(/—/);
+  });
+
+  it('leaves the controls usable, since a client will use them', () => {
+    render(<FormBuilder />);
+    openReadView();
+
+    const controls = [...document.querySelectorAll('[data-print-document] input, [data-print-document] select')];
+    expect(controls.every((c) => !c.disabled && !c.readOnly)).toBe(true);
+    expect(controls.every((c) => !c.closest('[inert]'))).toBe(true);
+  });
+
+  /* The canvas keeps its preview controls out of reach — there the author is
+   * laying the form out, not filling it. The two must not be confused. */
+  it('still keeps the editing canvas out of the tab order', () => {
+    render(<FormBuilder />);
+    expect([...document.querySelectorAll('[data-element-id]')].every((w) => w.hasAttribute('inert'))).toBe(true);
+  });
+});

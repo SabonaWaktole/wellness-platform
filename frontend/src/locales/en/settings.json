@@ -417,7 +417,7 @@
       "arrangeGroup": "Arrange",
       "alignGroup": "Align"
     },
-    "readViewBanner": "You are reading this form, not editing it.",
+    "readViewBanner": "This is what your client sees. Nothing you type here is saved.",
     "fillAndLine": "Fill & line",
     "advanced": "Advanced",
     "dataKey": "Data key",

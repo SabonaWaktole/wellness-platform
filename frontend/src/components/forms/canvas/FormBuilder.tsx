@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Ribbon } from './ribbon/Ribbon';
 import { RIBBON_TABS } from './ribbon/ribbonTypes';
@@ -179,6 +180,13 @@ export const FormBuilder: React.FC = () => {
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const viewport = useCanvasViewport(layout.page);
+
+  /*
+   * A throwaway form instance so the PREVIEW's controls are real ones. Nothing
+   * here is ever submitted — see the read view below for why it is bound at
+   * all. `FormCanvas` keeps its own for the same reason on the edit canvas.
+   */
+  const { control: previewControl } = useForm({ defaultValues: { data: {} } });
 
   /**
    * The `<form id>@<version>` this session last produced BY SAVING.
@@ -1044,8 +1052,30 @@ export const FormBuilder: React.FC = () => {
                   {t('formBuilder.hidePreview')}
                 </button>
               </p>
+              {/*
+                FILL, NOT PRINT. The point of the read view is "show me what my
+                client will get", and a form's answer to that is a form: boxes
+                to type in, a date picker, a dropdown with the options on it.
+                Rendering `print` here answered a different question — how the
+                page comes out of a printer — so every field showed as a label
+                over a dash and the owner could not tell whether the thing they
+                had built was fillable at all.
+
+                This is the SAME mode and the same renderer the public `/f/`
+                page uses, which is what makes it a preview rather than an
+                impression of one. Nothing typed here is submitted or kept: the
+                control below is a throwaway, and the banner says so.
+              */}
               <ScaledPage pageWidth={layout.page.width} pageHeight={layout.page.height * layout.pages.length}>
-                <FormRenderer layout={layout} mode="print" />
+                <FormRenderer
+                  layout={layout}
+                  mode="fill"
+                  control={previewControl}
+                  // The staff roster is not loaded here, so a USER_REFERENCE
+                  // field previews as an empty picker — exactly what the
+                  // public page shows, and for the same reason.
+                  userOptions={[]}
+                />
               </ScaledPage>
             </>
           ) : (
