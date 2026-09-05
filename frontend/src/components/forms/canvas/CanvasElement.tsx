@@ -16,6 +16,7 @@ export interface CanvasElementProps {
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
   onBeginEdit: (target: EditTarget) => void;
   onMove: (x: number, y: number) => void;
   onResize: (box: ResizedBox) => void;
@@ -50,6 +51,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
   isEditing,
   getScale,
   onSelect,
+  onContextMenu,
   onBeginEdit,
   onMove,
   onResize,
@@ -101,6 +103,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
           e.stopPropagation();
           if (editTarget) onBeginEdit(editTarget);
         },
+        // While a caret is open the browser's own menu wins — spell-check and
+        // paste belong to the text, not to the object around it. That falls
+        // out of `gestures` being empty in the editing state.
+        onContextMenu,
         onPointerDown: drag.onPointerDown,
         onPointerMove: (e: React.PointerEvent) => {
           drag.onPointerMove(e);

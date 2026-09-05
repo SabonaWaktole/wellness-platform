@@ -20,6 +20,8 @@ export type ShortcutAction =
   | { action: 'selectAll' }
   | { action: 'delete' }
   | { action: 'escape' }
+  | { action: 'save' }
+  | { action: 'print' }
   | { action: 'nudge'; dx: number; dy: number };
 
 /**
@@ -84,6 +86,13 @@ export const resolveShortcut = (event: KeyboardEvent): ShortcutAction | null => 
       return { action: 'duplicate' };
     case 'a':
       return { action: 'selectAll' };
+    // Ctrl+S and Ctrl+P are reflexes in any desktop editor, and both were
+    // reaching the BROWSER instead: "save this web page" and the browser's own
+    // print dialog for the builder chrome rather than the document.
+    case 's':
+      return { action: 'save' };
+    case 'p':
+      return { action: 'print' };
     default:
       return null;
   }

@@ -164,3 +164,55 @@ describe('The panes around the document', () => {
     expect(document.querySelector('[data-format-pane]')).not.toBeNull();
   });
 });
+
+describe('Right-click', () => {
+  beforeEach(mockHooks);
+
+  const rightClick = (el) => fireEvent.contextMenu(el, { clientX: 40, clientY: 40 });
+
+  it('selects what was clicked and opens its menu', () => {
+    render(<FormBuilder />);
+    rightClick(document.querySelector('[class*="elementOverlay"]'));
+
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /cut/i })).toBeInTheDocument();
+  });
+
+  it('deletes the element from the menu', () => {
+    render(<FormBuilder />);
+    rightClick(document.querySelector('[class*="elementOverlay"]'));
+    fireEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+
+    expect(document.querySelector('[class*="elementOverlay"]')).toBeNull();
+  });
+
+  /*
+   * `moveSectionToPage` and `insertPageAt` were both implemented and tested in
+   * layoutOps and had no caller anywhere — the document could not be
+   * reorganised from the UI at all.
+   */
+  it('moves a section to the next page from the menu', () => {
+    render(<FormBuilder />);
+    rightClick(document.querySelector('[class*="sectionOverlay"]'));
+    fireEvent.click(screen.getByRole('menuitem', { name: /move to next page/i }));
+
+    expect(document.querySelector('[data-page-id="p1"] [class*="sectionOverlay"]')).toBeNull();
+    expect(document.querySelector('[data-page-id="p2"] [class*="sectionOverlay"]')).not.toBeNull();
+  });
+
+  it('inserts a page before the current one from the menu', () => {
+    render(<FormBuilder />);
+    rightClick(document.querySelector('[class*="sectionOverlay"]'));
+    fireEvent.click(screen.getByRole('menuitem', { name: /insert page before/i }));
+
+    expect(pageIds()).toHaveLength(4);
+  });
+
+  it('leaves the browser its own menu while a caret is open', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(document.querySelector('[class*="elementOverlay"]'));
+    rightClick(document.querySelector('[class*="elementOverlay"]'));
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});

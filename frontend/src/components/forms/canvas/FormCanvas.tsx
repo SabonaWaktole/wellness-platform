@@ -39,6 +39,11 @@ export interface FormCanvasProps {
   onChangeElementContent: (elementId: string, content: ElementContent) => void;
   onRenameField: (elementId: string, label: string) => void;
   onEditorReady: (editor: Editor | null) => void;
+  /** Right-click. The target decides which menu is built. */
+  onContextMenu: (
+    event: React.MouseEvent,
+    target: { type: 'element' | 'section' | 'page'; id: string }
+  ) => void;
   onMoveSection: (sectionId: string, x: number, y: number) => void;
   onResizeSection: (sectionId: string, box: ResizedBox) => void;
   onRenameSection: (sectionId: string, title: string) => void;
@@ -77,6 +82,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onChangeElementContent,
   onRenameField,
   onEditorReady,
+  onContextMenu,
   onMoveSection,
   onResizeSection,
   onRenameSection,
@@ -269,6 +275,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onChangeElementContent={onChangeElementContent}
             onRenameField={onRenameField}
             onEditorReady={onEditorReady}
+            onContextMenu={onContextMenu}
             onMoveSection={handleMoveSection}
             onResizeSection={onResizeSection}
             onRenameSection={onRenameSection}
@@ -317,6 +324,7 @@ const Sheet: React.FC<SheetProps> = ({
   onChangeElementContent,
   onRenameField,
   onEditorReady,
+  onContextMenu,
   onMoveSection,
   onResizeSection,
   onRenameSection,
@@ -340,6 +348,10 @@ const Sheet: React.FC<SheetProps> = ({
       onClick={(e) => {
         e.stopPropagation();
         onSelect({ type: 'page', id: page.id });
+      }}
+      onContextMenu={(e) => {
+        onSelect({ type: 'page', id: page.id });
+        onContextMenu(e, { type: 'page', id: page.id });
       }}
     >
       {/* Margin guides: the usable area a section is constrained to (spec §5). */}
@@ -379,6 +391,7 @@ const Sheet: React.FC<SheetProps> = ({
                 getScale={getScale}
                 onSelect={(options) => onSelect({ type: 'section', id: section.id }, options)}
                 onBeginEditTitle={() => onBeginEdit({ kind: 'section-title', id: section.id })}
+                onContextMenu={(e) => onContextMenu(e, { type: 'section', id: section.id })}
                 onMove={(x, y) => onMoveSection(section.id, x, y)}
                 onResize={(box) => onResizeSection(section.id, box)}
                 onRename={(title) => onRenameSection(section.id, title)}
@@ -393,6 +406,7 @@ const Sheet: React.FC<SheetProps> = ({
                     getScale={getScale}
                     onSelect={(options) => onSelect({ type: 'element', id: element.id }, options)}
                     onBeginEdit={onBeginEdit}
+                    onContextMenu={(e) => onContextMenu(e, { type: 'element', id: element.id })}
                     onRenameField={(label) => onRenameField(element.id, label)}
                     onMove={(x, y) => onMoveElement(element.id, x, y)}
                     onResize={(box) => onResizeElement(element.id, box)}

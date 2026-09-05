@@ -81,6 +81,18 @@ describe('resolveShortcut', () => {
   });
 
   /* Ctrl+Shift+Z and Ctrl+Y are both common redo bindings. */
+  /*
+   * Save and print are the two document-level commands every desktop editor
+   * binds. Both were absent: Ctrl+S fell through to the browser's "save this
+   * web page" dialog, which for an editor that autosaves is not merely
+   * useless but actively misleading about where the work has gone.
+   */
+  it('maps Ctrl+S to save and Ctrl+P to print', () => {
+    expect(resolveShortcut(ev({ key: 's', ctrlKey: true }))).toEqual({ action: 'save' });
+    expect(resolveShortcut(ev({ key: 'p', ctrlKey: true }))).toEqual({ action: 'print' });
+    expect(resolveShortcut(ev({ key: 's', metaKey: true }))).toEqual({ action: 'save' });
+  });
+
   it('accepts Ctrl+Y as redo', () => {
     expect(resolveShortcut(ev({ key: 'y', ctrlKey: true }))).toEqual({ action: 'redo' });
   });

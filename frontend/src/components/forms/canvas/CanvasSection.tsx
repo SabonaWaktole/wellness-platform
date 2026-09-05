@@ -18,6 +18,7 @@ export interface CanvasSectionProps {
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
   onBeginEditTitle: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (box: ResizedBox) => void;
@@ -40,6 +41,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   isEditingTitle,
   getScale,
   onSelect,
+  onContextMenu,
   onBeginEditTitle,
   onMove,
   onResize,
@@ -73,6 +75,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
         e.stopPropagation();
         onSelect({ additive: e.shiftKey || e.ctrlKey || e.metaKey });
       }}
+      onContextMenu={onContextMenu}
       onPointerMove={(e) => {
         drag.onPointerMove(e);
         resize.onPointerMove(e);

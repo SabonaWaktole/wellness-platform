@@ -9,6 +9,8 @@ import { HomeTab } from './ribbon/HomeTab';
 import { InsertTab } from './ribbon/InsertTab';
 import { LayoutTab } from './ribbon/LayoutTab';
 import { ContextualTab } from './ribbon/ContextualTab';
+import { ContextMenu } from '../../ui/ContextMenu';
+import { buildCanvasMenu, type MenuTarget } from './canvasMenus';
 import type { AnyRibbonTabId, ContextualTabId } from './ribbon/ribbonTypes';
 import { FormCanvas, type CanvasSelection } from './FormCanvas';
 import { PageRail } from './PageRail';
@@ -29,6 +31,8 @@ import {
   duplicatePage,
   reorderPage,
   removeEmptyPages,
+  insertPageAt,
+  moveSectionToPage,
   moveSection,
   resizeSection,
   renameSection,
@@ -57,6 +61,9 @@ import {
 } from '../../../hooks/useClientForm';
 import { COMPONENT_REGISTRY } from '../registry/componentRegistry';
 import { nextFieldKey } from './fieldKeys';
+import {
+  isDataBearing,
+} from '../../../types/form';
 import type {
   ComponentType,
   ElementContent,
@@ -128,6 +135,8 @@ export const FormBuilder: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnyRibbonTabId>('home');
   const [showNavigationPane, setShowNavigationPane] = useState(true);
   const [showFormatPane, setShowFormatPane] = useState(true);
+  /** Where the right-click menu is open, if it is. */
+  const [menu, setMenu] = useState<{ x: number; y: number; target: MenuTarget } | null>(null);
 
   /*
    * ONE UNDO ENTRY PER TYPING SESSION.
@@ -368,6 +377,32 @@ export const FormBuilder: React.FC = () => {
     if (ids.length > 0) sel.selectMany('element', ids);
   }, [layout, targetPageId, sel]);
 
+  /*
+   * RIGHT-CLICK SELECTS FIRST — unless the target is already part of a
+   * multi-selection, in which case the selection is preserved so "delete
+   * these five" works from a right-click on any one of them. Both are desktop
+   * conventions users rely on without noticing.
+   */
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent, target: { type: MenuTarget; id: string }) => {
+      /*
+       * While a caret is open the BROWSER's menu wins — spell-check, and paste
+       * of plain text, belong to the text rather than to the object around it.
+       * The check has to live here rather than on the element, because the
+       * event bubbles up to the sheet, which would otherwise answer with the
+       * page menu instead.
+       */
+      if (inline.target) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!sel.isSelected(target.id)) {
+        setSelection(target.type === 'page' ? { type: 'page', id: target.id } : { type: target.type, id: target.id });
+      }
+      setMenu({ x: event.clientX, y: event.clientY, target: target.type });
+    },
+    [sel, setSelection, inline.target]
+  );
+
   const handleAddSection = () => {
     const pageId = targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
@@ -549,17 +584,36 @@ export const FormBuilder: React.FC = () => {
           }
           break;
         }
+        // The clipboard verbs work on whichever KIND is selected. They used
+        // to silently do nothing for a section, so Ctrl+C worked on a field
+        // and not on the thing containing it — the sort of inconsistency that
+        // teaches a user to stop trusting the shortcut everywhere.
         case 'copy':
-          if (sel.kind === 'element') clipboard.copy(layout, sel.ids);
+          if (sel.kind === 'section') clipboard.copySections(layout, sel.ids);
+          else if (sel.kind === 'element') clipboard.copy(layout, sel.ids);
           break;
         case 'cut':
-          if (sel.kind === 'element') {
+          if (sel.kind === 'section') {
+            apply(clipboard.cutSections(layout, sel.ids));
+            setSelection(null);
+          } else if (sel.kind === 'element') {
             apply(clipboard.cut(layout, sel.ids));
             setSelection(null);
           }
           break;
         case 'paste':
-          if (clipboard.hasContent) apply(clipboard.paste(layout, selectedSectionId));
+          if (clipboard.hasContent) apply(clipboard.paste(layout, selectedSectionId, targetPageId));
+          break;
+        case 'save':
+          // Otherwise this reaches the browser's "save this web page", which
+          // for an editor that autosaves is worse than useless — it is
+          // actively misleading about where the work has gone.
+          event.preventDefault();
+          handleSave();
+          break;
+        case 'print':
+          event.preventDefault();
+          window.open(`/${tenantSlug}/settings/client-management/forms/${formId}/print`, '_blank');
           break;
         /*
          * Word's Ctrl+A selects the body of the document. The nearest true
@@ -575,6 +629,8 @@ export const FormBuilder: React.FC = () => {
           event.preventDefault();
           if (sel.kind === 'element') {
             apply(clipboard.duplicate(layout, sel.ids));
+          } else if (sel.kind === 'section') {
+            apply(clipboard.duplicateSections(layout, sel.ids));
           } else if (selection?.type === 'page') {
             apply(duplicatePage(layout, selection.id));
           }
@@ -593,6 +649,9 @@ export const FormBuilder: React.FC = () => {
     setSelection,
     inline,
     targetPageId,
+    tenantSlug,
+    formId,
+    handleSave,
     selectAllOnPage,
     selectedSectionId,
     apply,
@@ -877,6 +936,7 @@ export const FormBuilder: React.FC = () => {
               }}
               onMoveElement={(id, x, y) => apply(moveElement(layout, id, x, y))}
               onResizeElement={(id, box) => apply(resizeElement(layout, id, box))}
+              onContextMenu={handleContextMenu}
               onDeleteElement={(id) => {
                 apply(removeElement(layout, id));
                 setSelection(null);
@@ -899,6 +959,73 @@ export const FormBuilder: React.FC = () => {
           </div>
         )}
       </div>
+
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          label={t('formBuilder.canvasMenu')}
+          items={buildCanvasMenu(
+            {
+              target: menu.target,
+              canEditText:
+                !!selectedElement &&
+                (selectedElement.type === 'TEXT' || isDataBearing(selectedElement.type)),
+              canPaste: clipboard.hasContent,
+              canDeletePage: layout.pages.length > 1,
+              hasEmptyPages: layout.pages.some((p) => p.sections.length === 0),
+              canMoveToNextPage: activePageIndex < layout.pages.length - 1,
+            },
+            {
+              cut: () => {
+                if (sel.kind === 'section') apply(clipboard.cutSections(layout, sel.ids));
+                else apply(clipboard.cut(layout, sel.ids));
+                setSelection(null);
+              },
+              copy: () => {
+                if (sel.kind === 'section') clipboard.copySections(layout, sel.ids);
+                else clipboard.copy(layout, sel.ids);
+              },
+              paste: () => apply(clipboard.paste(layout, selectedSectionId, targetPageId)),
+              duplicate: () => {
+                if (sel.kind === 'section') apply(clipboard.duplicateSections(layout, sel.ids));
+                else apply(clipboard.duplicate(layout, sel.ids));
+              },
+              remove: () => {
+                if (sel.kind === 'section') apply(removeSection(layout, sel.ids[0]));
+                else if (sel.kind === 'element') apply(removeElement(layout, sel.ids[0]));
+                setSelection(null);
+              },
+              editText: () => {
+                if (!selectedElement) return;
+                handleBeginEdit(
+                  selectedElement.type === 'TEXT'
+                    ? { kind: 'element-text', id: selectedElement.id }
+                    : { kind: 'field-label', id: selectedElement.id }
+                );
+              },
+              openFormatPane: () => setShowFormatPane(true),
+              insertPageBefore: () => apply(insertPageAt(layout, activePageIndex)),
+              moveToNextPage: () => {
+                const next = layout.pages[activePageIndex + 1];
+                const section = selectedSectionId ? findSection(layout, selectedSectionId)?.section : undefined;
+                if (!next || !section) return;
+                // Keep the horizontal placement, and land at the top margin —
+                // the section is arriving at the start of the next page, which
+                // is where the reader's eye goes.
+                apply(
+                  moveSectionToPage(layout, section.id, next.id, section.x, layout.page.margin.top)
+                );
+              },
+              duplicatePage: () => targetPageId && apply(duplicatePage(layout, targetPageId)),
+              deletePage: () => targetPageId && apply(deletePage(layout, targetPageId)),
+              removeEmptyPages: () => apply(removeEmptyPages(layout)),
+            },
+            t
+          )}
+        />
+      )}
 
       <StatusBar
         pageNumber={activePageIndex + 1}

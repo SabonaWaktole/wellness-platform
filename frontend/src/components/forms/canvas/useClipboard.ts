@@ -1,7 +1,17 @@
 import { useCallback, useState } from 'react';
-import { addElement, findSection, newId, removeElement, sectionContaining, type ApplyResult } from './layoutOps';
+import {
+  addElement,
+  addSection,
+  findSection,
+  newId,
+  pageContainingSection,
+  removeElement,
+  removeSection,
+  sectionContaining,
+  type ApplyResult,
+} from './layoutOps';
 import { nextFieldKey } from './fieldKeys';
-import type { FormDocument, FormElement } from '../../../types/form';
+import type { FormDocument, FormElement, FormSection } from '../../../types/form';
 
 /**
  * Copy / cut / paste / duplicate for canvas elements (spec §20).
@@ -25,10 +35,28 @@ export interface Clipboard {
   hasContent: boolean;
   copy: (doc: FormDocument, elementIds: string[]) => void;
   cut: (doc: FormDocument, elementIds: string[]) => ApplyResult;
-  paste: (doc: FormDocument, targetSectionId: string | null) => ApplyResult;
+  /**
+   * Pastes whatever is held, into the section or the page as appropriate for
+   * what that is. One verb, because Ctrl+V is one key and the user should not
+   * have to know which kind of thing they copied.
+   */
+  paste: (doc: FormDocument, targetSectionId: string | null, targetPageId?: string | null) => ApplyResult;
   /** Copy + paste in one step, without disturbing the clipboard. */
   duplicate: (doc: FormDocument, elementIds: string[]) => ApplyResult;
+  copySections: (doc: FormDocument, sectionIds: string[]) => void;
+  cutSections: (doc: FormDocument, sectionIds: string[]) => ApplyResult;
+  duplicateSections: (doc: FormDocument, sectionIds: string[]) => ApplyResult;
 }
+
+/**
+ * What the clipboard is holding. A tagged union rather than two buffers: with
+ * two, a paste after copying a section and then a field has to guess which one
+ * the user meant, and "most recently copied wins" is a rule nobody can see.
+ */
+type Buffer =
+  | { kind: 'none' }
+  | { kind: 'elements'; items: FormElement[] }
+  | { kind: 'sections'; items: FormSection[] };
 
 const collect = (doc: FormDocument, elementIds: string[]): FormElement[] => {
   const wanted = new Set(elementIds);
@@ -79,25 +107,119 @@ const pasteInto = (
   return { document: working, refusal: null };
 };
 
+const sectionIdsOf = (doc: FormDocument): string[] =>
+  doc.pages.flatMap((p) => p.sections).map((s) => s.id);
+
+const collectSections = (doc: FormDocument, sectionIds: string[]): FormSection[] => {
+  const wanted = new Set(sectionIds);
+  return doc.pages.flatMap((p) => p.sections).filter((s) => wanted.has(s.id));
+};
+
+/**
+ * Places whole sections onto a page, offset so a copy never lands exactly on
+ * its original.
+ *
+ * Every id is minted fresh — the section's, each element's, and each field's
+ * key — for the same reason a pasted element gets a new key: two components
+ * sharing one submission key both render, both get filled, and whichever
+ * serialises last silently wins. A refusal from the overflow ladder aborts the
+ * whole paste rather than leaving half a section on the page.
+ */
+const pasteSectionsOnto = (
+  doc: FormDocument,
+  pageId: string,
+  sections: FormSection[]
+): ApplyResult => {
+  let working = doc;
+
+  for (const section of sections) {
+    // `addSection` mints the id internally and returns only the document, so
+    // the new section is identified by diffing against the ids that existed
+    // immediately before this call — not against the original `doc`, which
+    // would also match sections added by an earlier turn of this loop.
+    const before = new Set(sectionIdsOf(working));
+    const added = addSection(working, pageId, section.title ?? '', {
+      x: section.x + PASTE_OFFSET,
+      y: section.y + PASTE_OFFSET,
+      width: section.width,
+      height: section.height,
+    });
+    if (added.refusal) return { document: doc, refusal: added.refusal };
+    working = added.document;
+
+    const targetId = sectionIdsOf(working).find((id) => !before.has(id));
+    if (!targetId) return { document: doc, refusal: null };
+
+    for (const element of section.elements) {
+      const copied: FormElement = {
+        ...element,
+        id: newId(),
+        field: element.field
+          ? { ...element.field, key: nextFieldKey(working, element.field.label) }
+          : undefined,
+      };
+      const placed = addElement(working, targetId, copied);
+      if (placed.refusal) return { document: doc, refusal: placed.refusal };
+      working = placed.document;
+    }
+  }
+
+  return { document: working, refusal: null };
+};
+
 export const useClipboard = (): Clipboard => {
-  const [buffer, setBuffer] = useState<FormElement[]>([]);
+  const [buffer, setBuffer] = useState<Buffer>({ kind: 'none' });
 
   const copy = useCallback((doc: FormDocument, elementIds: string[]) => {
-    setBuffer(collect(doc, elementIds));
+    setBuffer({ kind: 'elements', items: collect(doc, elementIds) });
   }, []);
 
   const cut = useCallback((doc: FormDocument, elementIds: string[]): ApplyResult => {
     const elements = collect(doc, elementIds);
-    setBuffer(elements);
+    setBuffer({ kind: 'elements', items: elements });
     let working = doc;
     for (const element of elements) working = removeElement(working, element.id).document;
     return { document: working, refusal: null };
   }, []);
 
+  const copySections = useCallback((doc: FormDocument, sectionIds: string[]) => {
+    setBuffer({ kind: 'sections', items: collectSections(doc, sectionIds) });
+  }, []);
+
+  const cutSections = useCallback((doc: FormDocument, sectionIds: string[]): ApplyResult => {
+    const sections = collectSections(doc, sectionIds);
+    setBuffer({ kind: 'sections', items: sections });
+    let working = doc;
+    for (const section of sections) working = removeSection(working, section.id).document;
+    return { document: working, refusal: null };
+  }, []);
+
+  const duplicateSections = useCallback((doc: FormDocument, sectionIds: string[]): ApplyResult => {
+    const sections = collectSections(doc, sectionIds);
+    if (sections.length === 0) return { document: doc, refusal: null };
+    const pageId = pageContainingSection(doc, sections[0].id)?.id;
+    if (!pageId) return { document: doc, refusal: null };
+    return pasteSectionsOnto(doc, pageId, sections);
+  }, []);
+
   const paste = useCallback(
-    (doc: FormDocument, targetSectionId: string | null): ApplyResult => {
-      if (buffer.length === 0 || !targetSectionId) return { document: doc, refusal: null };
-      return pasteInto(doc, targetSectionId, buffer);
+    (doc: FormDocument, targetSectionId: string | null, targetPageId?: string | null): ApplyResult => {
+      if (buffer.kind === 'elements') {
+        if (!targetSectionId) return { document: doc, refusal: null };
+        return pasteInto(doc, targetSectionId, buffer.items);
+      }
+      if (buffer.kind === 'sections') {
+        // A section lands on a page. Falling back to the page the target
+        // section lives on means Ctrl+V works with a field selected, rather
+        // than silently doing nothing because the "wrong" thing was selected.
+        const pageId =
+          targetPageId ??
+          (targetSectionId ? pageContainingSection(doc, targetSectionId)?.id : undefined) ??
+          doc.pages[0]?.id;
+        if (!pageId) return { document: doc, refusal: null };
+        return pasteSectionsOnto(doc, pageId, buffer.items);
+      }
+      return { document: doc, refusal: null };
     },
     [buffer]
   );
@@ -112,5 +234,14 @@ export const useClipboard = (): Clipboard => {
     return pasteInto(doc, sectionId, elements);
   }, []);
 
-  return { hasContent: buffer.length > 0, copy, cut, paste, duplicate };
+  return {
+    hasContent: buffer.kind !== 'none',
+    copy,
+    cut,
+    paste,
+    duplicate,
+    copySections,
+    cutSections,
+    duplicateSections,
+  };
 };
