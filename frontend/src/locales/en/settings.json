@@ -416,6 +416,8 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitPage": "Fit page",
-    "fitWidth": "Fit width"
+    "fitWidth": "Fit width",
+    "textEditsOnPage": "This text is edited on the page.",
+    "editOnPage": "Edit on the page"
   }
 }

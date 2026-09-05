@@ -13,9 +13,12 @@ export interface CanvasSectionProps {
   /** True when this is the section "Add field"/"Add image" would target —
    *  either it's directly selected, or one of its own fields is. */
   isTarget: boolean;
+  /** True while the owner has a caret in this section's heading (spec §7). */
+  isEditingTitle: boolean;
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
-  onSelect: () => void;
+  onSelect: (options?: { additive?: boolean }) => void;
+  onBeginEditTitle: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (box: ResizedBox) => void;
   onRename: (title: string) => void;
@@ -34,8 +37,10 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   section,
   isSelected,
   isTarget,
+  isEditingTitle,
   getScale,
   onSelect,
+  onBeginEditTitle,
   onMove,
   onResize,
   onRename,
@@ -55,6 +60,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
     styles.sectionOverlay,
     isSelected ? styles.sectionSelected : '',
     !isSelected && isTarget ? styles.sectionActive : '',
+    isEditingTitle ? styles.sectionEditing : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -65,7 +71,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
       style={{ left: section.x, top: section.y, width: section.width, height: section.height }}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect();
+        onSelect({ additive: e.shiftKey || e.ctrlKey || e.metaKey });
       }}
       onPointerMove={(e) => {
         drag.onPointerMove(e);
@@ -82,18 +88,33 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
     >
       {!synthetic && (
         <>
+          {/*
+            The heading band. Dragging it moves the section; double-clicking it
+            opens the heading for typing — the same two gestures Word gives a
+            text box, and the reason the title is no longer a permanently
+            mounted input. That input used to sit on top of the real <h3>, so
+            the FIRST click anywhere near a section landed in a text field
+            instead of selecting the section.
+          */}
           <div
             className={styles.sectionDragHandle}
             onPointerDown={drag.onPointerDown}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onBeginEditTitle();
+            }}
             aria-hidden="true"
           />
-          <input
-            className={styles.sectionTitleInput}
-            value={section.title ?? ''}
-            aria-label={t('formBuilder.sectionTitle')}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => onRename(e.target.value)}
-          />
+          {isEditingTitle && (
+            <input
+              className={styles.sectionTitleInput}
+              autoFocus
+              value={section.title ?? ''}
+              aria-label={t('formBuilder.sectionTitle')}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onRename(e.target.value)}
+            />
+          )}
           <button
             type="button"
             className={styles.sectionDelete}

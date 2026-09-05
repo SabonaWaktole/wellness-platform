@@ -9,7 +9,9 @@ import { GuideOverlay } from './GuideOverlay';
 import { computeSnap, type Guide } from './snapping';
 import { findSection, pageContainingSection, sectionContaining } from './layoutOps';
 import { useVisiblePages } from './useVisiblePages';
-import type { DocumentPage, FormDocument } from '../../../types/form';
+import type { EditTarget } from './useInlineEditing';
+import type { Editor } from '@tiptap/react';
+import type { DocumentPage, ElementContent, FormDocument } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
 const EMPTY_GUIDES: Guide[] = [];
@@ -24,7 +26,19 @@ export interface FormCanvasProps {
   layout: FormDocument;
   viewport: CanvasViewport;
   selection: CanvasSelection;
-  onSelect: (selection: CanvasSelection) => void;
+  /**
+   * Every selected id when more than one object is selected. Optional: with
+   * it absent, `selection` alone decides, which is exactly the single-select
+   * behaviour this component had before.
+   */
+  selectedIds?: ReadonlySet<string>;
+  onSelect: (selection: CanvasSelection, options?: { additive?: boolean }) => void;
+  /** Which piece of text currently holds the caret, if any (spec §7). */
+  editing?: EditTarget | null;
+  onBeginEdit: (target: EditTarget) => void;
+  onChangeElementContent: (elementId: string, content: ElementContent) => void;
+  onRenameField: (elementId: string, label: string) => void;
+  onEditorReady: (editor: Editor | null) => void;
   onMoveSection: (sectionId: string, x: number, y: number) => void;
   onResizeSection: (sectionId: string, box: ResizedBox) => void;
   onRenameSection: (sectionId: string, title: string) => void;
@@ -56,7 +70,13 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   layout,
   viewport,
   selection,
+  selectedIds,
   onSelect,
+  editing,
+  onBeginEdit,
+  onChangeElementContent,
+  onRenameField,
+  onEditorReady,
   onMoveSection,
   onResizeSection,
   onRenameSection,
@@ -95,7 +115,9 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
     const clear = () => {
       setGuides([]);
       setGuidePageId(null);
-      onGestureEnd?.();
+      // Same rule as `onPointerDownCapture` above: an edit session brackets
+      // its own history entry, so a stray release must not close it early.
+      if (!editing) onGestureEnd?.();
     };
     window.addEventListener('pointerup', clear);
     window.addEventListener('pointercancel', clear);
@@ -103,7 +125,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
       window.removeEventListener('pointerup', clear);
       window.removeEventListener('pointercancel', clear);
     };
-  }, [onGestureEnd]);
+  }, [onGestureEnd, editing]);
 
   /**
    * Snaps a section move against its page siblings and the page edges/centre,
@@ -177,7 +199,9 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   // component document. The page holding the current selection is always
   // force-rendered regardless of visibility, so drag/resize handles never
   // vanish out from under an in-progress gesture just because a resize
-  // elsewhere scrolled it off-screen.
+  // elsewhere scrolled it off-screen. The page holding the CARET is force-
+  // rendered for the same reason and a worse failure: unmounting a live
+  // editor mid-word loses both the focus and the keystrokes in flight.
   const pageIds = layout.pages.map((p) => p.id);
   const { isVisible, setPageRef } = useVisiblePages(pageIds);
   const selectedPageId =
@@ -189,12 +213,31 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
           ? pageContainingSection(layout, sectionContaining(layout, selection.id)?.id ?? '')?.id ?? null
           : null;
 
+  const editingPageId = editing
+    ? editing.kind === 'section-title'
+      ? pageContainingSection(layout, editing.id)?.id ?? null
+      : pageContainingSection(layout, sectionContaining(layout, editing.id)?.id ?? '')?.id ?? null
+    : null;
+
   return (
     <div
       className={styles.stack}
       style={{ padding: CANVAS_GUTTER }}
       onClick={() => onSelect(null)}
-      onPointerDownCapture={() => onGestureStart?.()}
+      /*
+       * Two jobs, both keyed to "a gesture is starting somewhere on the sheet
+       * stack".
+       *
+       * The gesture window is what makes a whole drag one undo entry — but it
+       * must NOT open while a caret is live. The matching `pointerup` listener
+       * below is on `window`, so it fires on the very click that focuses an
+       * editor; with the window open, that release would close it and every
+       * subsequent keystroke would become its own undo step. While editing,
+       * the edit session owns the window instead (see `FormBuilder`).
+       */
+      onPointerDownCapture={() => {
+        if (!editing) onGestureStart?.();
+      }}
     >
       <div
         className={styles.scaler}
@@ -218,8 +261,14 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             control={control}
             guides={page.id === guidePageId ? guides : EMPTY_GUIDES}
             selection={selection}
+            selectedIds={selectedIds}
+            editing={editing}
             targetSectionId={targetSectionId}
             onSelect={onSelect}
+            onBeginEdit={onBeginEdit}
+            onChangeElementContent={onChangeElementContent}
+            onRenameField={onRenameField}
+            onEditorReady={onEditorReady}
             onMoveSection={handleMoveSection}
             onResizeSection={onResizeSection}
             onRenameSection={onRenameSection}
@@ -228,7 +277,9 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onResizeElement={onResizeElement}
             onDeleteElement={onDeleteElement}
             getScale={viewport.getScale}
-            shouldRender={isVisible(page.id) || page.id === selectedPageId}
+            shouldRender={
+              isVisible(page.id) || page.id === selectedPageId || page.id === editingPageId
+            }
             wrapRef={setPageRef(page.id)}
           />
         ))}
@@ -258,8 +309,14 @@ const Sheet: React.FC<SheetProps> = ({
   control,
   guides,
   selection,
+  selectedIds,
+  editing,
   targetSectionId,
   onSelect,
+  onBeginEdit,
+  onChangeElementContent,
+  onRenameField,
+  onEditorReady,
   onMoveSection,
   onResizeSection,
   onRenameSection,
@@ -299,7 +356,14 @@ const Sheet: React.FC<SheetProps> = ({
 
       {shouldRender && (
         <>
-          <FormPageRenderer page={page} mode="edit" control={control} />
+          <FormPageRenderer
+            page={page}
+            mode="edit"
+            control={control}
+            editingElementId={editing && editing.kind !== 'section-title' ? editing.id : undefined}
+            onElementContentChange={onChangeElementContent}
+            onEditorReady={onEditorReady}
+          />
           {/* Guides are computed in this page's coordinate space, but only the
               page currently being dragged on ever has any — drawing them on
               every sheet is harmless since the array is empty elsewhere. */}
@@ -309,10 +373,12 @@ const Sheet: React.FC<SheetProps> = ({
             <React.Fragment key={section.id}>
               <CanvasSection
                 section={section}
-                isSelected={selection?.type === 'section' && selection.id === section.id}
+                isSelected={isChosen(selection, selectedIds, 'section', section.id)}
                 isTarget={targetSectionId === section.id}
+                isEditingTitle={editing?.kind === 'section-title' && editing.id === section.id}
                 getScale={getScale}
-                onSelect={() => onSelect({ type: 'section', id: section.id })}
+                onSelect={(options) => onSelect({ type: 'section', id: section.id }, options)}
+                onBeginEditTitle={() => onBeginEdit({ kind: 'section-title', id: section.id })}
                 onMove={(x, y) => onMoveSection(section.id, x, y)}
                 onResize={(box) => onResizeSection(section.id, box)}
                 onRename={(title) => onRenameSection(section.id, title)}
@@ -322,9 +388,12 @@ const Sheet: React.FC<SheetProps> = ({
                 <div key={element.id} style={{ position: 'absolute', left: section.x, top: section.y }}>
                   <CanvasElement
                     element={element}
-                    isSelected={selection?.type === 'element' && selection.id === element.id}
+                    isSelected={isChosen(selection, selectedIds, 'element', element.id)}
+                    isEditing={editing?.kind !== 'section-title' && editing?.id === element.id}
                     getScale={getScale}
-                    onSelect={() => onSelect({ type: 'element', id: element.id })}
+                    onSelect={(options) => onSelect({ type: 'element', id: element.id }, options)}
+                    onBeginEdit={onBeginEdit}
+                    onRenameField={(label) => onRenameField(element.id, label)}
                     onMove={(x, y) => onMoveElement(element.id, x, y)}
                     onResize={(box) => onResizeElement(element.id, box)}
                     onDelete={() => onDeleteElement(element.id)}
@@ -342,3 +411,18 @@ const Sheet: React.FC<SheetProps> = ({
     </div>
   </div>
 );
+
+/**
+ * Whether this object is part of the current selection.
+ *
+ * `selectedIds` is the multi-selection; when it is absent the single
+ * `selection` decides on its own, which is what keeps this component's
+ * behaviour identical for any caller that never selects more than one thing.
+ */
+const isChosen = (
+  selection: CanvasSelection,
+  selectedIds: ReadonlySet<string> | undefined,
+  kind: 'section' | 'element',
+  id: string
+): boolean =>
+  selectedIds ? selection?.type === kind && selectedIds.has(id) : selection?.type === kind && selection.id === id;

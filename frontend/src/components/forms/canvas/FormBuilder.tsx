@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,6 +26,8 @@ import { useCanvasViewport } from './useCanvasViewport';
 import { useHistory } from './useHistory';
 import { useClipboard } from './useClipboard';
 import { useAutosave } from './useAutosave';
+import { useSelection } from './useSelection';
+import { useInlineEditing, type EditTarget } from './useInlineEditing';
 import { resolveShortcut, isTextEntryTarget } from './keyboard';
 import {
   addSection,
@@ -63,7 +65,12 @@ import {
 } from '../../../hooks/useClientForm';
 import { COMPONENT_REGISTRY } from '../registry/componentRegistry';
 import { nextFieldKey } from './fieldKeys';
-import type { ComponentType, FormDocument, FormElement } from '../../../types/form';
+import type {
+  ComponentType,
+  ElementContent,
+  FormDocument,
+  FormElement,
+} from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
 const NEW_SECTION_WIDTH = 420;
@@ -93,7 +100,32 @@ export const FormBuilder: React.FC = () => {
   const layout = history.present;
   const clipboard = useClipboard();
 
-  const [selection, setSelection] = useState<CanvasSelection>(null);
+  /*
+   * SELECTION is the tested `useSelection` hook rather than a bare useState,
+   * so shift-click extends, the properties panel follows the last-added
+   * object, and align/distribute have a batch to work on. `CanvasSelection`
+   * stays the shape the canvas speaks; the adapter below is the whole of the
+   * translation.
+   */
+  const sel = useSelection();
+  // Memoised, not rebuilt per render: the keyboard effect below depends on
+  // both, and a fresh object each render would tear down and re-attach the
+  // window listener on every keystroke.
+  const selection: CanvasSelection = useMemo(
+    () => (sel.primary ? { type: sel.primary.type, id: sel.primary.id } : null),
+    [sel.primary]
+  );
+  const selectedIds = useMemo(() => new Set(sel.ids), [sel.ids]);
+  const setSelection = useCallback(
+    (next: CanvasSelection, options?: { additive?: boolean }) => {
+      if (next) sel.select({ type: next.type, id: next.id }, options);
+      else sel.clear();
+    },
+    [sel]
+  );
+
+  /** Which piece of text has the caret, if any (spec §7). */
+  const inline = useInlineEditing();
   const [isDirty, setIsDirty] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -101,6 +133,22 @@ export const FormBuilder: React.FC = () => {
    *  owner is told why, instead of the edit silently doing nothing. */
   const [refusal, setRefusal] = useState<string | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
+
+  /*
+   * ONE UNDO ENTRY PER TYPING SESSION.
+   *
+   * `useHistory` coalesces every commit made between `beginInteraction` and
+   * `endInteraction` into a single entry — the same mechanism a drag uses. An
+   * effect keyed to the edit target is what guarantees the two calls stay
+   * paired: React runs the cleanup when the target changes or the editor
+   * unmounts, so there is no path that opens a window without closing it.
+   */
+  useEffect(() => {
+    if (!inline.target) return;
+    history.beginInteraction();
+    return () => history.endInteraction();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inline.target?.kind, inline.target?.id]);
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const viewport = useCanvasViewport(layout.page);
@@ -115,8 +163,11 @@ export const FormBuilder: React.FC = () => {
     history.reset(form.layout);
     setIsDirty(false);
     setSelection(null);
+    inline.end();
     setRefusal(null);
     setActivePageId(form.layout.pages?.[0]?.id ?? null);
+    // Deliberately keyed to the identity of the loaded form only: this is a
+    // "throw away local state and start again" effect, not a sync.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form?.id, form?.version]);
 
@@ -134,10 +185,15 @@ export const FormBuilder: React.FC = () => {
       }
       setRefusal(null);
       history.commit(result.document);
+      // An undo, a delete or an overflow relocation can remove an object that
+      // is still selected. Dropping dead ids here — rather than letting the
+      // panel read a ghost — is what keeps the selection honest after every
+      // mutation, including the ones the owner did not initiate.
+      sel.retain(aliveIds(result.document));
       setIsDirty(true);
       autosaveRef.current?.schedule();
     },
-    [history] // eslint-disable-line react-hooks/exhaustive-deps
+    [history, sel] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const doSave = useCallback(async () => {
@@ -251,15 +307,53 @@ export const FormBuilder: React.FC = () => {
       (max, s) => Math.max(max, s.y + s.height + 24),
       layout.page.margin.top
     );
-    apply(
-      addSection(layout, pageId, t('formBuilder.newSectionTitle'), {
-        x: layout.page.margin.left,
-        y,
-        width: NEW_SECTION_WIDTH,
-        height: NEW_SECTION_HEIGHT,
-      })
-    );
+    const result = addSection(layout, pageId, t('formBuilder.newSectionTitle'), {
+      x: layout.page.margin.left,
+      y,
+      width: NEW_SECTION_WIDTH,
+      height: NEW_SECTION_HEIGHT,
+    });
+    apply(result);
+    if (result.refusal) return;
+
+    // Word drops the caret into a text box the moment you insert one, so the
+    // placeholder title is typed over rather than hunted down and cleared.
+    const inserted = result.document.pages
+      .find((p) => p.id === pageId)
+      ?.sections.find((section) => !layout.pages.some((p) => p.sections.some((s2) => s2.id === section.id)));
+    if (inserted) {
+      setSelection({ type: 'section', id: inserted.id });
+      inline.begin({ kind: 'section-title', id: inserted.id });
+    }
   };
+
+  /** Commits a keystroke made inside a TEXT block's on-page editor. */
+  const handleChangeElementContent = useCallback(
+    (elementId: string, content: ElementContent) => {
+      apply(updateElement(layout, elementId, { content }));
+    },
+    [layout, apply]
+  );
+
+  /** Commits a keystroke made inside a field's on-page label editor. */
+  const handleRenameField = useCallback(
+    (elementId: string, label: string) => {
+      const element = findElement(layout, elementId);
+      if (!element?.field) return;
+      // The label is presentation; `field.key` is the data identity and must
+      // not move because a heading was reworded (§11).
+      apply(updateElement(layout, elementId, { field: { ...element.field, label } }));
+    },
+    [layout, apply]
+  );
+
+  const handleBeginEdit = useCallback(
+    (target: EditTarget) => {
+      setSelection({ type: target.kind === 'section-title' ? 'section' : 'element', id: target.id });
+      inline.begin(target);
+    },
+    [setSelection, inline]
+  );
 
   const handleAddComponent = (type: ComponentType) => {
     if (!selectedSectionId) return;
@@ -307,35 +401,76 @@ export const FormBuilder: React.FC = () => {
   // ---------------------------------------------------------------------
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (isTextEntryTarget(event.target)) return;
       const shortcut = resolveShortcut(event);
       if (!shortcut) return;
+
+      /*
+       * WHOSE KEYSTROKE IS THIS — the caret's, or the document's?
+       *
+       * Text entry wins by default (`isTextEntryTarget`): typing `d` in a
+       * label must not duplicate the field, and Backspace must delete a
+       * character rather than the element. Two shortcuts are exceptions,
+       * because inside a caret they would otherwise reach nothing at all:
+       *
+       *   Escape — the only way back out of text editing.
+       *   Undo/redo from a CONTENTEDITABLE — TipTap's own history is switched
+       *     off (`richTextExtensions.ts`, `undoRedo: false`) precisely because
+       *     the canvas owns undo, so Ctrl+Z on the page was a dead key. A
+       *     plain <input> is deliberately NOT included: there the browser's
+       *     native undo is the right behaviour, and hijacking it would undo
+       *     the document while the owner was fixing a typo.
+       */
+      if (isTextEntryTarget(event.target)) {
+        const inContentEditable =
+          event.target instanceof Element &&
+          event.target.closest('[contenteditable="true"], [contenteditable=""]') !== null;
+        const allowed =
+          shortcut.action === 'escape' ||
+          (inContentEditable && (shortcut.action === 'undo' || shortcut.action === 'redo'));
+        if (!allowed) return;
+      }
 
       switch (shortcut.action) {
         case 'undo':
           event.preventDefault();
+          inline.end();
           history.undo();
           setIsDirty(true);
           autosaveRef.current.schedule();
           break;
         case 'redo':
           event.preventDefault();
+          inline.end();
           history.redo();
           setIsDirty(true);
           autosaveRef.current.schedule();
           break;
+        /*
+         * One level back, not all the way out — Word's behaviour. From a
+         * caret, Escape returns to the object being typed into (the selection
+         * is already pointing at it); from an object, it clears the selection.
+         */
         case 'escape':
+          if (inline.target) inline.end();
+          else setSelection(null);
+          break;
+        case 'delete': {
+          // Every selected object, not just the primary — a Delete that
+          // removed one of five highlighted fields would be indefensible.
+          if (!sel.kind || sel.ids.length === 0) break;
+          let next = layout;
+          for (const id of sel.ids) {
+            const step = sel.kind === 'element' ? removeElement(next, id) : removeSection(next, id);
+            if (step.refusal) {
+              setRefusal(step.refusal);
+              return;
+            }
+            next = step.document;
+          }
+          apply({ document: next, refusal: null });
           setSelection(null);
           break;
-        case 'delete':
-          if (selection?.type === 'element') {
-            apply(removeElement(layout, selection.id));
-            setSelection(null);
-          } else if (selection?.type === 'section') {
-            apply(removeSection(layout, selection.id));
-            setSelection(null);
-          }
-          break;
+        }
         case 'nudge': {
           if (selection?.type === 'element') {
             const el = findElement(layout, selection.id);
@@ -347,21 +482,34 @@ export const FormBuilder: React.FC = () => {
           break;
         }
         case 'copy':
-          if (selection?.type === 'element') clipboard.copy(layout, [selection.id]);
+          if (sel.kind === 'element') clipboard.copy(layout, sel.ids);
           break;
         case 'cut':
-          if (selection?.type === 'element') {
-            apply(clipboard.cut(layout, [selection.id]));
+          if (sel.kind === 'element') {
+            apply(clipboard.cut(layout, sel.ids));
             setSelection(null);
           }
           break;
         case 'paste':
           if (clipboard.hasContent) apply(clipboard.paste(layout, selectedSectionId));
           break;
+        /*
+         * Word's Ctrl+A selects the body of the document. The nearest true
+         * analogue here is every element on the page being worked on — not
+         * every element in a fifty-page form, which no operation could
+         * usefully act on at once.
+         */
+        case 'selectAll': {
+          event.preventDefault();
+          const page = layout.pages.find((p) => p.id === targetPageId) ?? layout.pages[0];
+          const ids = page.sections.flatMap((section) => section.elements.map((el) => el.id));
+          if (ids.length > 0) sel.selectMany('element', ids);
+          break;
+        }
         case 'duplicate':
           event.preventDefault();
-          if (selection?.type === 'element') {
-            apply(clipboard.duplicate(layout, [selection.id]));
+          if (sel.kind === 'element') {
+            apply(clipboard.duplicate(layout, sel.ids));
           } else if (selection?.type === 'page') {
             apply(duplicatePage(layout, selection.id));
           }
@@ -373,7 +521,18 @@ export const FormBuilder: React.FC = () => {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [layout, selection, selectedSectionId, apply, clipboard, history]);
+  }, [
+    layout,
+    selection,
+    sel,
+    setSelection,
+    inline,
+    targetPageId,
+    selectedSectionId,
+    apply,
+    clipboard,
+    history,
+  ]);
 
   if (isLoading && !form) return <p>{t('formBuilder.loading')}</p>;
   if (error && !form) return <p role="alert">{error}</p>;
@@ -620,7 +779,13 @@ export const FormBuilder: React.FC = () => {
               layout={layout}
               viewport={viewport}
               selection={selection}
+              selectedIds={selectedIds}
               onSelect={setSelection}
+              editing={inline.target}
+              onBeginEdit={handleBeginEdit}
+              onChangeElementContent={handleChangeElementContent}
+              onRenameField={handleRenameField}
+              onEditorReady={inline.setEditor}
               onGestureStart={history.beginInteraction}
               onGestureEnd={history.endInteraction}
               onMoveSection={(id, x, y) => apply(moveSection(layout, id, x, y))}
@@ -654,6 +819,7 @@ export const FormBuilder: React.FC = () => {
               selection={selection ? { section: selectedSection, element: selectedElement } : null}
               onChangeElement={(id, changes) => apply(updateElement(layout, id, changes))}
               onChangeSection={(id, changes) => apply(updateSection(layout, id, changes))}
+              onEditText={(id) => handleBeginEdit({ kind: 'element-text', id })}
             />
           </div>
         )}
@@ -661,6 +827,22 @@ export const FormBuilder: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Every object id the document still contains — what the selection is pruned
+ * against after each mutation.
+ */
+function aliveIds(document: FormDocument): Set<string> {
+  const ids = new Set<string>();
+  for (const page of document.pages) {
+    ids.add(page.id);
+    for (const section of page.sections) {
+      ids.add(section.id);
+      for (const element of section.elements) ids.add(element.id);
+    }
+  }
+  return ids;
+}
 
 /**
  * Where a newly added field/image should land: directly below the lowest

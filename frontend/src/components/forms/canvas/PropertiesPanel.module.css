@@ -47,3 +47,20 @@
   border-radius: var(--radius-sm, 4px);
   background: var(--color-surface);
 }
+
+/* A pointer back to where the work actually happens — the page itself. */
+.inlineAction {
+  align-self: flex-start;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.inlineAction:hover {
+  background: var(--color-surface-variant);
+}

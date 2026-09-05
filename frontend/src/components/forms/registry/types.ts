@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { Editor } from '@tiptap/react';
 import type { Control, FieldValues } from 'react-hook-form';
 import type {
   ComponentType,
@@ -23,6 +24,25 @@ export interface ComponentRenderProps {
   userOptions: { id: string; label: string }[];
   /** Uploads a data URL (a drawn signature) and returns its stored path. */
   onUploadAsset?: (dataUrl: string) => Promise<string>;
+  /**
+   * True while the owner has a caret open inside THIS element on the builder
+   * canvas (spec §7). Only ever set in `edit`; `fill` and `print` leave it
+   * undefined, so a component that ignores it behaves exactly as before.
+   *
+   * A component that has editable text of its own swaps its read-only render
+   * for a live editor here rather than the canvas layering a second copy of
+   * the text on top — one render tree means the text cannot shift position
+   * the instant the caret lands in it.
+   */
+  isEditing?: boolean;
+  /** Commits a change made through that live editor. Present iff `isEditing`. */
+  onContentChange?: (content: ElementContent) => void;
+  /**
+   * Surfaces the live rich-text instance so the ribbon's Font and Paragraph
+   * controls can drive whichever editor currently holds the caret — the same
+   * way Word's Home tab acts on the insertion point rather than on a panel.
+   */
+  onEditorReady?: (editor: Editor | null) => void;
 }
 
 export interface ComponentPropertiesProps {

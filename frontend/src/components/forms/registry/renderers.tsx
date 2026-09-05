@@ -6,6 +6,7 @@ import { SignaturePad } from './SignaturePad';
 import type { ComponentRenderProps } from './types';
 import { formatValue } from './content';
 import { RichTextReadOnly } from './RichTextReadOnly';
+import { RichTextEditor } from './RichTextEditor';
 import type { DividerContent, ImageContent, RichTextDoc } from '../../../types/form';
 import styles from './components.module.css';
 
@@ -76,7 +77,24 @@ export const inputRenderer =
 // Presentation-only components
 // ---------------------------------------------------------------------------
 
-export const TextRender: React.FC<ComponentRenderProps> = ({ element }) => (
+/**
+ * A TEXT block, static or live.
+ *
+ * The two branches share this wrapper — same class, same styles, same box —
+ * so entering and leaving editing does not move a single glyph. That is the
+ * whole point: the owner is editing the document they can see, not a copy of
+ * it parked in a side panel.
+ *
+ * `isEditing` is only ever true on the builder canvas. `fill` and `print`
+ * never pass it, so the paper version still renders through
+ * `RichTextReadOnly` exactly as before.
+ */
+export const TextRender: React.FC<ComponentRenderProps> = ({
+  element,
+  isEditing,
+  onContentChange,
+  onEditorReady,
+}) => (
   <div
     className={styles.text}
     style={{
@@ -85,9 +103,21 @@ export const TextRender: React.FC<ComponentRenderProps> = ({ element }) => (
       textAlign: element.styles?.align,
     }}
   >
-    <RichTextReadOnly content={element.content as RichTextDoc | undefined} />
+    {isEditing && onContentChange ? (
+      <RichTextEditor
+        content={(element.content as RichTextDoc | undefined) ?? EMPTY_DOC}
+        onChange={onContentChange}
+        onEditorReady={onEditorReady}
+        autoFocus
+      />
+    ) : (
+      <RichTextReadOnly content={element.content as RichTextDoc | undefined} />
+    )}
   </div>
 );
+
+/** A TEXT element authored before any text was typed into it has no content. */
+const EMPTY_DOC: RichTextDoc = { type: 'doc', content: [] };
 
 export const ImageRender: React.FC<ComponentRenderProps> = ({ element }) => {
   const content = element.content as ImageContent | undefined;

@@ -1,14 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Editor } from '@tiptap/react';
 import { TextInput } from '../../ui/TextInput/TextInput';
 import { SelectInput } from '../../ui/SelectInput/SelectInput';
 import { TagInput } from '../../ui/TagInput/TagInput';
 import { ColorPicker } from '../../ui/ColorPicker';
 import { componentOptionsFor } from '../FormRenderer/fieldControl';
-import { RichTextEditor } from '../registry/RichTextEditor';
-import { FormattingToolbar } from '../registry/FormattingToolbar';
-import { wrapText } from '../registry/content';
 import {
   isDataBearing,
   type DividerContent,
@@ -17,7 +13,6 @@ import {
   type FormFieldType,
   type FormSection,
   type ImageContent,
-  type RichTextDoc,
 } from '../../../types/form';
 import styles from './PropertiesPanel.module.css';
 
@@ -25,6 +20,8 @@ export interface PropertiesPanelProps {
   selection: { section?: FormSection; element?: FormElement } | null;
   onChangeElement: (elementId: string, changes: Partial<FormElement>) => void;
   onChangeSection: (sectionId: string, changes: Partial<FormSection>) => void;
+  /** Puts the caret into this element's text on the page (spec §7). */
+  onEditText?: (elementId: string) => void;
 }
 
 /**
@@ -45,12 +42,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selection,
   onChangeElement,
   onChangeSection,
+  onEditText,
 }) => {
   const { t } = useTranslation('settings');
-  // Must be unconditional — called before every early return below, or
-  // switching selection between "section only" and "element" throws
-  // ("Rendered fewer hooks than expected").
-  const [textEditor, setTextEditor] = useState<Editor | null>(null);
 
   if (!selection || (!selection.section && !selection.element)) {
     return (
@@ -217,18 +211,21 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         </>
       )}
 
+      {/*
+        Text is no longer edited HERE. A document editor puts the caret on the
+        page; a copy of the text in a side panel is the thing that made this
+        feel like a form for configuring a document rather than the document
+        itself. The panel now says where the text lives and offers a way in.
+      */}
       {element.type === 'TEXT' && (
         <div className={styles.field}>
           <span className={styles.label}>{t('formBuilder.text')}</span>
-          <FormattingToolbar editor={textEditor} />
-          <div className={styles.textEditorHost}>
-            <RichTextEditor
-              key={element.id}
-              content={(element.content as RichTextDoc | undefined) ?? wrapText('')}
-              onChange={(content) => onChangeElement(element.id, { content })}
-              onEditorReady={setTextEditor}
-            />
-          </div>
+          <p className={styles.hint}>{t('formBuilder.textEditsOnPage')}</p>
+          {onEditText && (
+            <button type="button" className={styles.inlineAction} onClick={() => onEditText(element.id)}>
+              {t('formBuilder.editOnPage')}
+            </button>
+          )}
         </div>
       )}
 
