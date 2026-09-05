@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { useDragMove } from './useDragMove';
 import { useResize, RESIZE_HANDLES, type ResizedBox } from './useResize';
-import { isSyntheticSection } from './layoutOps';
+import { isSyntheticSection, isTextHostSection } from './layoutOps';
 import type { FormSection } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
@@ -15,18 +15,6 @@ export interface CanvasSectionProps {
   isTarget: boolean;
   /** True while the owner has a caret in this section's heading (spec §7). */
   isEditingTitle: boolean;
-  /**
-   * True while a caret is open in one of this section's ELEMENTS.
-   *
-   * The section's chrome is drawn over the whole section box, above the text
-   * the renderer drew underneath it. `CanvasElement` already turns itself
-   * pointer-transparent while it is being typed into — but a TEXT block's
-   * editor lives in the renderer's own DOM, BELOW this overlay too, so the
-   * section went on swallowing every click aimed at the text: clicking to
-   * place the caret selected the surrounding section instead and closed the
-   * editor. The owner could type, but could not click their own words.
-   */
-  hasCaretInside: boolean;
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
@@ -51,7 +39,6 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   isSelected,
   isTarget,
   isEditingTitle,
-  hasCaretInside,
   getScale,
   onSelect,
   onContextMenu,
@@ -62,7 +49,12 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('settings');
-  const synthetic = isSyntheticSection(section);
+  /*
+   * Two kinds of section the owner never made and must never be shown: the
+   * server's rescue section, and the invisible host that holds text typed onto
+   * bare page. Both render their contents and nothing of their own.
+   */
+  const synthetic = isSyntheticSection(section) || isTextHostSection(section);
 
   const drag = useDragMove(() => ({ x: section.x, y: section.y }), onMove, getScale);
   const resize = useResize(
@@ -73,12 +65,12 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
 
   const classes = [
     styles.sectionOverlay,
-    isSelected ? styles.sectionSelected : '',
-    !isSelected && isTarget ? styles.sectionActive : '',
+    // A section the owner never made draws no outline either — the dashes and
+    // the accent border are how a section says "I am a thing you selected",
+    // and a text host is not one.
+    !synthetic && isSelected ? styles.sectionSelected : '',
+    !synthetic && !isSelected && isTarget ? styles.sectionActive : '',
     isEditingTitle ? styles.sectionEditing : '',
-    // Let the caret underneath have its own clicks; the section's own chrome
-    // stays live through `.sectionPassThrough > *`.
-    hasCaretInside ? styles.sectionPassThrough : '',
   ]
     .filter(Boolean)
     .join(' ');

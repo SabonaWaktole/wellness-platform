@@ -253,12 +253,36 @@ describe('FormBuilder', () => {
     expect(fetchForm).toHaveBeenCalled();
   });
 
-  it('toggles into a read-only preview', () => {
+  /*
+   * CHANGED DELIBERATELY, and the invariant it guards has not moved.
+   *
+   * This used to assert "no inputs" as its proof that preview is read-only,
+   * because the view rendered `print`. But "read-only" was never about the
+   * CONTROLS — it is about the DOCUMENT: the owner cannot lay anything out
+   * from in here. Read view answers "what will my client get?", and a form's
+   * answer to that is a form, so the controls are now real ones (the same
+   * `fill` mode the public /f/ page uses). What must still hold is that
+   * nothing done in here touches the document, which is what this now says.
+   */
+  it('toggles into a preview of the form the client will fill', () => {
     render(<FormBuilder />);
     fireEvent.click(readViewItem());
-    // Print mode renders values as static text, not inputs.
-    expect(screen.queryByRole('textbox', { name: /company name/i })).not.toBeInTheDocument();
+
+    const preview = document.querySelector('[data-print-document]');
+    expect(preview.querySelectorAll('input, select, textarea').length).toBeGreaterThan(0);
     expect(screen.getByText(/hide preview/i)).toBeInTheDocument();
+  });
+
+  it('leaves the document alone while the preview is being filled in', () => {
+    render(<FormBuilder />);
+    fireEvent.click(readViewItem());
+
+    const box = document.querySelector('[data-print-document] input');
+    fireEvent.change(box, { target: { value: 'Acme Ltd' } });
+
+    // The builder's own editing surface is gone, and nothing became dirty.
+    expect(document.querySelector('[class*="elementOverlay"]')).toBeNull();
+    expect(screen.getByRole('button', { name: /save form/i })).toBeDisabled();
   });
 
   /*

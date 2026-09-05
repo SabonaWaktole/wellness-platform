@@ -22,6 +22,8 @@ import {
   emptyDocument,
   applyBoxes,
   normaliseControls,
+  pullUpOneLine,
+  pruneEmptyTextHosts,
 } from './layoutOps';
 import {
   A4_PORTRAIT,
@@ -555,5 +557,131 @@ describe('normaliseControls', () => {
   it('leaves presentation-only elements, which have no field, alone', () => {
     const doc = emptyDocument();
     expect(normaliseControls(doc)).toEqual(doc);
+  });
+});
+
+/*
+ * BACKSPACE IN AN EMPTY LINE ABOVE A PICTURE.
+ *
+ * Free-placed text sits on a page whose layout is absolute — nothing pushes
+ * anything else, which is what makes this a form builder rather than a word
+ * processor. But with the caret in an empty line above an image, Backspace has
+ * to do what it does in Word: eat ONE line and let the image come up by one
+ * line, again on the next press. Closing the whole gap at once takes the
+ * owner's control away and is hard to undo by eye.
+ */
+describe('pullUpOneLine', () => {
+  const stacked = (elements: FormElement[]): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [{ id: 'p1', sections: [{ id: 's1', title: '', x: 48, y: 48, width: 400, height: 400, elements }] }],
+  });
+
+  const LINE = 40;
+  const gap = (over: Partial<FormElement> = {}) =>
+    ({ id: 'gap', type: 'TEXT', x: 0, y: 40, width: 320, height: LINE, ...over }) as FormElement;
+  const picture = (over: Partial<FormElement> = {}) =>
+    ({ id: 'img', type: 'IMAGE', x: 0, y: 200, width: 200, height: 200, ...over }) as FormElement;
+
+  it('brings the picture up by one line, not by the whole gap', () => {
+    const result = pullUpOneLine(stacked([gap(), picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+  });
+
+  it('leaves the empty line in place so the next press moves the next line', () => {
+    const result = pullUpOneLine(stacked([gap(), picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeDefined();
+  });
+
+  it('walks the picture up a line at a time', () => {
+    let doc = stacked([gap(), picture()]);
+    const seen: (number | undefined)[] = [];
+    for (let press = 0; press < 4; press += 1) {
+      doc = pullUpOneLine(doc, 'gap', LINE).document;
+      seen.push(findElement(doc, 'img')?.y);
+    }
+
+    // 200 -> 160 -> 120 -> 80 -> 40, landing flush against the line above it.
+    expect(seen).toEqual([160, 120, 80, 40]);
+  });
+
+  /* Less than a line left: take only what is there rather than jumping past. */
+  it('never overshoots the line above it', () => {
+    const result = pullUpOneLine(stacked([gap(), picture({ y: 55 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(40);
+  });
+
+  /* With the space used up, Backspace does its other job. */
+  it('deletes the empty line once there is no space left to take', () => {
+    const result = pullUpOneLine(stacked([gap(), picture({ y: 40 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeUndefined();
+  });
+
+  it('deletes the empty line when nothing is underneath', () => {
+    const above = { id: 'above', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([above, gap()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeUndefined();
+    expect(findElement(result.document, 'above')?.y).toBe(0);
+  });
+
+  it('keeps the spacing between everything that moves', () => {
+    const trailing = { id: 'after', type: 'TEXT', x: 0, y: 300, width: 320, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([gap(), picture(), trailing]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+    expect(findElement(result.document, 'after')?.y).toBe(260);
+  });
+
+  /* Boxes on the same line are neighbours, not things underneath. */
+  it('leaves a box beside the empty line where it is', () => {
+    const beside = { id: 'beside', type: 'TEXT', x: 340, y: 40, width: 200, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([gap(), beside, picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'beside')?.y).toBe(40);
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+  });
+
+  /* A line dropped into a gap smaller than itself overlaps what follows;
+   * measuring from its bottom edge would move nothing at all. */
+  it('still moves what it overlaps', () => {
+    const result = pullUpOneLine(stacked([gap({ y: 100 }), picture({ y: 120 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(100);
+  });
+});
+
+describe('pruneEmptyTextHosts', () => {
+  const doc = (sections): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [{ id: 'p1', sections }],
+  });
+  const section = (id: string, elements: FormElement[] = []) =>
+    ({ id, title: '', x: 48, y: 48, width: 320, height: 40, elements });
+  const text = { id: 't1', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
+
+  /* A host with nothing in it renders nothing, draws no chrome and cannot be
+   * selected — so nobody can ever remove it by hand. */
+  it('drops a host that holds nothing', () => {
+    const result = pruneEmptyTextHosts(doc([section('text-host-a'), section('text-host-b', [text])]));
+
+    expect(result.pages[0].sections.map((s) => s.id)).toEqual(['text-host-b']);
+  });
+
+  /* An empty section the OWNER placed is a deliberate space on the page. */
+  it('leaves an empty section the owner made alone', () => {
+    const result = pruneEmptyTextHosts(doc([section('s1'), section('text-host-a')]));
+
+    expect(result.pages[0].sections.map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('leaves a document with nothing to prune untouched', () => {
+    const original = doc([section('s1', [text])]);
+    expect(pruneEmptyTextHosts(original)).toEqual(original);
   });
 });

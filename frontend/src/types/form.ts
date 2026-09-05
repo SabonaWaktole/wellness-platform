@@ -58,6 +58,22 @@ export const A4_LANDSCAPE = { width: 1123, height: 794 } as const;
 export const DEFAULT_MARGIN = { top: 48, right: 48, bottom: 48, left: 48 } as const;
 
 export const MIN_SIZE_PX = 20;
+
+/**
+ * Sections that exist only to hold text the owner typed onto bare page.
+ *
+ * Every element lives in a section, so writing where no section covers the
+ * page needs one — but the owner asked for a caret, not a section, and must
+ * never be shown the container. Marked in the id (the one field the builder
+ * chooses at creation and the server treats as free-form) so BOTH the builder
+ * chrome and the renderer can leave off the box: it is invisible on the canvas,
+ * in the client's form and in print alike, which is what keeps the three
+ * agreeing about what the document looks like.
+ */
+export const TEXT_HOST_PREFIX = 'text-host-';
+
+export const isTextHostSection = (section: { id: string }): boolean =>
+  section.id.startsWith(TEXT_HOST_PREFIX);
 export const MAX_SIZE_PX = 2000;
 export const MAX_PAGE_COUNT = 100;
 

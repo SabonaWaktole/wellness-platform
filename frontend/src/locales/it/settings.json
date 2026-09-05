@@ -392,7 +392,7 @@
       "arrangeGroup": "Disponi",
       "alignGroup": "Allinea"
     },
-    "readViewBanner": "Stai leggendo questo modulo, non modificandolo.",
+    "readViewBanner": "Questo è ciò che vede il tuo cliente. Nulla di ciò che digiti qui viene salvato.",
     "fillAndLine": "Riempimento e bordo",
     "advanced": "Avanzate",
     "dataKey": "Chiave dati",

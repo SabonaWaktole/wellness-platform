@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Ribbon } from './ribbon/Ribbon';
 import { RIBBON_TABS } from './ribbon/ribbonTypes';
@@ -34,6 +35,9 @@ import {
   removeEmptyPages,
   insertPageAt,
   normaliseControls,
+  pruneEmptyTextHosts,
+  TEXT_HOST_PREFIX,
+  isTextHostSection,
   moveSectionToPage,
   moveSection,
   resizeSection,
@@ -44,6 +48,7 @@ import {
   updateElement,
   updateSection,
   removeElement,
+  pullUpOneLine,
   applyBoxes,
   stripSyntheticPages,
   emptyDocument,
@@ -64,6 +69,7 @@ import {
 } from '../../../hooks/useClientForm';
 import { COMPONENT_REGISTRY } from '../registry/componentRegistry';
 import { nextFieldKey } from './fieldKeys';
+import { normaliseRichText, plainTextOf, wrapText } from '../registry/content';
 import {
   isDataBearing,
 } from '../../../types/form';
@@ -77,6 +83,11 @@ import styles from './FormCanvas.module.css';
 
 const NEW_SECTION_WIDTH = 420;
 const NEW_SECTION_HEIGHT = 220;
+/** A freshly typed block: wide enough for a line of prose, one line tall. */
+const NEW_TEXT_WIDTH = 320;
+const NEW_TEXT_HEIGHT = 40;
+/** Fallback when the editor's own line-height cannot be read from the DOM. */
+const DEFAULT_LINE_HEIGHT = 24;
 
 /**
  * The full-page document builder: a minimal toolbar, the A4 sheet stack as
@@ -180,6 +191,13 @@ export const FormBuilder: React.FC = () => {
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const viewport = useCanvasViewport(layout.page);
 
+  /*
+   * A throwaway form instance so the PREVIEW's controls are real ones. Nothing
+   * here is ever submitted — see the read view below for why it is bound at
+   * all. `FormCanvas` keeps its own for the same reason on the edit canvas.
+   */
+  const { control: previewControl } = useForm({ defaultValues: { data: {} } });
+
   /**
    * The `<form id>@<version>` this session last produced BY SAVING.
    *
@@ -211,7 +229,7 @@ export const FormBuilder: React.FC = () => {
     // Repaired on the way in, not on the way out: a document seeded outside
     // the builder can carry a control its data type cannot be shown in, and
     // every save of it would fail (see `normaliseControls`).
-    history.reset(normaliseControls(form.layout));
+    history.reset(pruneEmptyTextHosts(normaliseControls(form.layout)));
     setIsDirty(false);
     setSelection(null);
     inline.end();
@@ -554,6 +572,150 @@ export const FormBuilder: React.FC = () => {
     setSelection(null);
   }, [sel, layout, apply, setSelection]);
 
+
+  /*
+   * WRITING ON THE PAGE, WITHOUT FIRST BUILDING SOMEWHERE TO WRITE.
+   *
+   * A document editor's contract is click -> caret -> type, and the owner
+   * should never have to reach for "Add -> Text" to put a sentence on a page.
+   * The document model still stores that sentence as a TEXT element inside a
+   * section, because that is what makes it render, print and lay out like
+   * everything else — but that is an implementation detail and it stays behind
+   * the interaction (spec §3).
+   *
+   * TWO THINGS KEEP THIS FROM BECOMING LITTER. The element is created QUIETLY:
+   * `history.commit` without marking the document dirty, so the stray clicks
+   * everyone makes to dismiss a selection do not schedule a save of a document
+   * that has not changed. And when the caret leaves a block that was never
+   * typed into, the block goes with it — see the effect below.
+   */
+  const autoCreated = useRef<string | null>(null);
+  // Read by that effect's cleanup, which must see the CURRENT document rather
+  // than the one captured when the caret was opened.
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+
+  const handleTypeAt = useCallback(
+    (pageId: string, x: number, y: number) => {
+      const page = layoutRef.current.pages.find((p) => p.id === pageId);
+      if (!page) return;
+
+      /*
+       * A click inside an existing section writes into that section, so the
+       * text belongs to the thing it looks like it is inside — and moves,
+       * paginates and reflows with it. Only a click on bare page needs a host,
+       * and that host is deliberately invisible: no title, no fill, no line,
+       * so what the owner sees is text on a page rather than a box they never
+       * asked for.
+       */
+      const host = page.sections.find(
+        (section) =>
+          x >= section.x && x <= section.x + section.width && y >= section.y && y <= section.y + section.height
+      );
+
+      let document = layoutRef.current;
+      let sectionId = host?.id;
+      let localX = x - (host?.x ?? 0);
+      let localY = y - (host?.y ?? 0);
+
+      if (!host) {
+        const before = new Set(document.pages.flatMap((p) => p.sections).map((sec) => sec.id));
+        const created = addSection(
+          document,
+          pageId,
+          '',
+          {
+            x: Math.max(layout.page.margin.left, Math.min(x, layout.page.width - layout.page.margin.right - NEW_TEXT_WIDTH)),
+            y,
+            width: NEW_TEXT_WIDTH,
+            height: NEW_TEXT_HEIGHT,
+          },
+          // Marked as a text host so the canvas leaves off its chrome — the
+          // owner asked for a caret, not a section.
+          `${TEXT_HOST_PREFIX}${newId()}`
+        );
+        if (created.refusal) {
+          setRefusal(created.refusal);
+          return;
+        }
+        document = created.document;
+        const added = document.pages
+          .flatMap((p) => p.sections)
+          .find((sec) => !before.has(sec.id));
+        if (!added) return;
+        sectionId = added.id;
+        localX = 0;
+        localY = 0;
+        // Invisibility comes from WHAT the section is, not from colours put on
+        // it: the renderer draws no box for a text host, and the canvas draws
+        // no chrome. Painting it "transparent" instead would both lie in the
+        // model and be refused — section colours must be six-digit hex.
+      }
+
+      if (!sectionId) return;
+
+      const element: FormElement = {
+        id: newId(),
+        type: 'TEXT',
+        x: Math.max(0, Math.round(localX)),
+        y: Math.max(0, Math.round(localY)),
+        width: NEW_TEXT_WIDTH,
+        height: NEW_TEXT_HEIGHT,
+        content: wrapText(''),
+      };
+
+      const placed = addElement(document, sectionId, element);
+      if (placed.refusal) {
+        setRefusal(placed.refusal);
+        return;
+      }
+
+      // Quiet: no dirty flag, no autosave — nothing has been written yet.
+      history.commit(placed.document);
+      autoCreated.current = element.id;
+      setSelection({ type: 'element', id: element.id });
+      inline.begin({ kind: 'element-text', id: element.id });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout.page, history, setSelection, inline]
+  );
+
+  /*
+   * A block the owner clicked into but never wrote in is not content, and
+   * leaving it behind would turn every stray click into an empty box the
+   * document has to carry. Removed on the way out, as quietly as it arrived.
+   */
+  useEffect(() => {
+    const id = inline.target?.kind === 'element-text' ? inline.target.id : null;
+    if (!id || autoCreated.current !== id) return;
+    return () => {
+      const element = findElement(layoutRef.current, id);
+      if (!element || plainTextOf(element.content as never) !== '') {
+        autoCreated.current = null;
+        return;
+      }
+      const host = sectionContaining(layoutRef.current, id);
+      const pruned = removeElement(layoutRef.current, id);
+      if (!pruned.refusal) {
+        /*
+         * The host was created FOR this block. With the block gone it holds
+         * nothing, renders nothing and can never be selected — an invisible
+         * empty section the document would carry for ever. It goes too.
+         */
+        const emptied =
+          host &&
+          isTextHostSection(host) &&
+          !pruned.document.pages
+            .flatMap((page) => page.sections)
+            .find((section) => section.id === host.id)?.elements.length;
+        const next = emptied ? removeSection(pruned.document, host.id) : pruned;
+        history.commit(next.refusal ? pruned.document : next.document);
+      }
+      autoCreated.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inline.target?.kind, inline.target?.id]);
+
   const handleAddSection = () => {
     const pageId = targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
@@ -584,9 +746,97 @@ export const FormBuilder: React.FC = () => {
   /** Commits a keystroke made inside a TEXT block's on-page editor. */
   const handleChangeElementContent = useCallback(
     (elementId: string, content: ElementContent) => {
-      apply(updateElement(layout, elementId, { content }));
+      // Normalised on the way in: an attribute the editor left as `''` would
+      // be refused by the stored schema and take the whole save down with it
+      // (see `normaliseRichText`).
+      apply(updateElement(layout, elementId, { content: normaliseRichText(content) }));
+      growToFitText(elementId);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [layout, apply]
+  );
+
+  /**
+   * How tall one line of text is in this block.
+   *
+   * Taken from the editor's own computed line-height, which is what a line
+   * actually measures — NOT the block's height. A block is only one line tall
+   * when it is new; one that has been typed in, or grown, or dragged taller is
+   * many lines, and using its height made a single Backspace move whatever was
+   * below it by the entire block — the whole empty space at once, which is the
+   * one thing this was meant not to do.
+   *
+   * Computed styles are in unscaled CSS pixels, so this is the same number at
+   * every zoom level, which is what the document's coordinates need.
+   */
+  const oneLineOf = useCallback((elementId: string): number => {
+    const host = window.document.querySelector(`[data-element-id="${elementId}"]`);
+    const line = host?.querySelector('.ProseMirror p') ?? host?.querySelector('.ProseMirror');
+    if (line instanceof HTMLElement) {
+      const computed = Number.parseFloat(window.getComputedStyle(line).lineHeight);
+      if (Number.isFinite(computed) && computed > 0) return Math.round(computed);
+    }
+    return DEFAULT_LINE_HEIGHT;
+  }, []);
+
+  /**
+   * A block grows to hold what has been typed into it.
+   *
+   * A text block is stored with a height, and that height is what the renderer,
+   * print and the page-overflow ladder all lay out against. Typing a second
+   * paragraph into a one-line block therefore spilled the words outside the box
+   * that was supposed to contain them: the canvas showed text the document did
+   * not think was there, and what the owner saw stopped matching what the
+   * client would get. Word grows a text frame for the same reason.
+   *
+   * Measured synchronously: the change being committed CAME from the editor,
+   * so its DOM already holds the new text — there is nothing to wait for, and
+   * waiting on a frame would mean the box quietly failed to grow whenever the
+   * tab was not the one in front.
+   *
+   * Grows only, never shrinks, so a box the owner deliberately made large is
+   * never yanked back to its content.
+   */
+  const growToFitText = useCallback(
+    (elementId: string) => {
+      const host = window.document.querySelector(`[data-element-id="${elementId}"]`);
+      if (!(host instanceof HTMLElement)) return;
+      const element = findElement(layoutRef.current, elementId);
+      if (!element) return;
+
+      /*
+       * The wrapper carries the stored height; the editor node inside it is
+       * what knows how tall the words actually are. Both are consulted so the
+       * measurement holds whichever one the browser reports the overflow on.
+       */
+      const editor = host.querySelector('.ProseMirror');
+      const needed = Math.ceil(
+        Math.max(host.scrollHeight, editor instanceof HTMLElement ? editor.scrollHeight : 0)
+      );
+      if (needed <= element.height + 1) return;
+
+      /*
+       * A measurement taken while the DOM is between states can come back
+       * wildly large — the editor briefly filling its section rather than its
+       * own box. Growing on one of those leaves a block hundreds of pixels
+       * tall holding a single line, which then reads as an enormous empty gap
+       * on the page. A block never needs to be taller than the section that
+       * contains it, so anything past that is not a measurement worth having.
+       */
+      const section = sectionContaining(layoutRef.current, elementId);
+      if (section && needed > section.height) return;
+
+      apply(
+        resizeElement(layoutRef.current, elementId, {
+          x: element.x,
+          y: element.y,
+          width: element.width,
+          height: needed,
+        })
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apply]
   );
 
   /** Commits a keystroke made inside a field's on-page label editor. */
@@ -678,6 +928,42 @@ export const FormBuilder: React.FC = () => {
         const inContentEditable =
           event.target instanceof Element &&
           event.target.closest('[contenteditable="true"], [contenteditable=""]') !== null;
+
+        /*
+         * BACKSPACE IN AN EMPTY BLOCK IS A DOCUMENT EDIT, NOT A TEXT ONE.
+         *
+         * There is no character left to delete, so the keystroke would do
+         * nothing at all — but what the person meant is the thing every editor
+         * does here: take this empty line away and let what is under it come
+         * up. Only when the block is genuinely empty, so a Backspace that has
+         * text to eat still belongs entirely to the text.
+         */
+        const backspaceInEmptyBlock =
+          inContentEditable &&
+          event.key === 'Backspace' &&
+          inline.target?.kind === 'element-text' &&
+          inline.editor?.isEmpty === true;
+
+        if (backspaceInEmptyBlock && inline.target) {
+          event.preventDefault();
+          const id = inline.target.id;
+          /*
+           * One line per press. The caret stays in the empty line so the next
+           * press moves the next line up — the picture walks up under the
+           * owner's control instead of snapping flush in one keystroke. The
+           * line only goes when there is no space left below it to take, and
+           * that is the press that ends the sequence.
+           */
+          const step = oneLineOf(id);
+          const next = pullUpOneLine(layout, id, step);
+          if (!findElement(next.document, id)) {
+            inline.end();
+            setSelection(null);
+          }
+          apply(next);
+          return;
+        }
+
         const allowed =
           shortcut.action === 'escape' ||
           (inContentEditable && (shortcut.action === 'undo' || shortcut.action === 'redo'));
@@ -781,6 +1067,7 @@ export const FormBuilder: React.FC = () => {
     selectAllOnPage,
     apply,
     history,
+    oneLineOf,
     doCopy,
     doCut,
     doPaste,
@@ -1044,8 +1331,30 @@ export const FormBuilder: React.FC = () => {
                   {t('formBuilder.hidePreview')}
                 </button>
               </p>
+              {/*
+                FILL, NOT PRINT. The point of the read view is "show me what my
+                client will get", and a form's answer to that is a form: boxes
+                to type in, a date picker, a dropdown with the options on it.
+                Rendering `print` here answered a different question — how the
+                page comes out of a printer — so every field showed as a label
+                over a dash and the owner could not tell whether the thing they
+                had built was fillable at all.
+
+                This is the SAME mode and the same renderer the public `/f/`
+                page uses, which is what makes it a preview rather than an
+                impression of one. Nothing typed here is submitted or kept: the
+                control below is a throwaway, and the banner says so.
+              */}
               <ScaledPage pageWidth={layout.page.width} pageHeight={layout.page.height * layout.pages.length}>
-                <FormRenderer layout={layout} mode="print" />
+                <FormRenderer
+                  layout={layout}
+                  mode="fill"
+                  control={previewControl}
+                  // The staff roster is not loaded here, so a USER_REFERENCE
+                  // field previews as an empty picker — exactly what the
+                  // public page shows, and for the same reason.
+                  userOptions={[]}
+                />
               </ScaledPage>
             </>
           ) : (
@@ -1076,6 +1385,7 @@ export const FormBuilder: React.FC = () => {
                 apply(removeElement(layout, id));
                 setSelection(null);
               }}
+              onTypeAt={handleTypeAt}
             />
           )}
         </div>

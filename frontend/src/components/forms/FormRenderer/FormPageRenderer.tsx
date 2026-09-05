@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Control, FieldValues } from 'react-hook-form';
 import { componentFor } from '../registry/componentRegistry';
+import { isTextHostSection } from '../../../types/form';
 import type { RenderMode } from '../registry/types';
 import type { Editor } from '@tiptap/react';
 import type {
@@ -76,7 +77,14 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
     {page.sections.map((section) => (
       <div
         key={section.id}
-        className={styles.section}
+        /*
+         * A text host is a container the owner never asked for — it holds
+         * words they typed straight onto the page. Drawing `.section` around
+         * it would put a bordered, filled box on the paper in the builder, in
+         * the client's form and in print alike, which is exactly the box they
+         * did not want.
+         */
+        className={isTextHostSection(section) ? undefined : styles.section}
         style={sectionStyle(section)}
         data-section-id={section.id}
       >

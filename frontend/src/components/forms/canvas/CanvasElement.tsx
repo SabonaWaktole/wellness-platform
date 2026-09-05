@@ -81,7 +81,9 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
 
   const classes = [
     styles.elementOverlay,
-    isSelected ? styles.elementSelected : '',
+    // Not while typing: the selection outline is about an OBJECT, and during
+    // an edit the thing in hand is text. See `.elementEditing`.
+    isSelected && !isEditing ? styles.elementSelected : '',
     isEditing ? styles.elementEditing : '',
   ]
     .filter(Boolean)

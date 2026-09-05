@@ -117,6 +117,14 @@ const overlayAt = (left) =>
 const overlays = () => [...document.querySelectorAll('[class*="elementOverlay"]')];
 
 const isSelected = (el) => /elementSelected/.test(el.className);
+/*
+ * An element the owner is TYPING into no longer wears the selection outline —
+ * a box around the words is object vocabulary, and during an edit the thing in
+ * hand is text (see `.elementEditing`). It is still the one object involved,
+ * so tests that count "how many objects is this operation touching?" ask this
+ * rather than the outline alone.
+ */
+const isInvolved = (el) => /elementSelected|elementEditing/.test(el.className);
 
 const mockHooks = () => {
     vi.clearAllMocks();
@@ -306,7 +314,7 @@ describe('FormBuilder — selection', () => {
     fireEvent.keyDown(caret(), { key: 'a', ctrlKey: true });
 
     // Still exactly one object involved — the one being typed into.
-    expect(overlays().filter(isSelected)).toHaveLength(1);
+    expect(overlays().filter(isInvolved)).toHaveLength(1);
   });
 
   it('Delete removes every element in a multi-selection', () => {

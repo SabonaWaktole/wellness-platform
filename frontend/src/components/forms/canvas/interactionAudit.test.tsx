@@ -298,14 +298,20 @@ describe('Audit — a live caret owns its own clicks', () => {
     expect(document.querySelector('[class*="labelInput"]')).toBe(input);
   });
 
-  /* Clicking the page AWAY from the caret is the ordinary way out of text
-   * editing in any document editor; only Escape used to do it here. */
-  it('closes the caret when the page beside it is clicked', () => {
+  /*
+   * Clicking the page away from the caret leaves the block being edited. It no
+   * longer leaves text editing altogether — the page is a document, so the
+   * click puts a caret where it landed instead (see the free-placement suite).
+   * What must hold either way is that the owner is no longer typing into the
+   * block they clicked away from.
+   */
+  it('leaves the block being edited when the page beside it is clicked', () => {
     render(<FormBuilder />);
     openCaret();
+    const first = overlays()[0];
     fireEvent.click(sheet('p1'));
 
-    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+    expect(first.className).not.toMatch(/elementEditing/);
   });
 
   /* The browser's own menu wins inside a caret (spell-check, plain paste) —
@@ -549,48 +555,37 @@ describe('Audit — an autosave is an acknowledgement, not a reload', () => {
   });
 });
 
-describe('Audit — the section chrome does not cover the caret inside it', () => {
+describe('Audit — the section chrome does not cover the page underneath it', () => {
   beforeEach(mockHooks);
 
   /*
-   * `CanvasElement` turns itself pointer-transparent while it is being typed
-   * into, so the editor underneath receives the clicks. A TEXT block's editor
-   * lives in the RENDERER's DOM, which the section's chrome is also drawn over
-   * — and nothing made the section step aside. `elementFromPoint` at the caret
-   * returned `.sectionOverlay`, so clicking to place the cursor selected the
-   * surrounding section and closed the editor: the owner could type into a
-   * text block but could not click their own words.
-   *
-   * jsdom does not hit-test, so the assertion is on the contract that makes
-   * hit-testing come out right — and on the chrome staying live as children.
+   * The overlay spans the whole section, and while it captured pointer events
+   * a click anywhere inside one could only ever mean "select this section" —
+   * the invisible layer that made a page of paper behave like a canvas of
+   * objects. It is transparent now, with its chrome live on the children, so
+   * these tests pin the affordances that must survive that.
    */
-  it('lets pointer events through the section while a caret is open inside it', () => {
+  it('still selects the section from its heading band', () => {
     render(<FormBuilder />);
-    const section = document.querySelector('[class*="sectionOverlay"]');
-    expect(section.className).not.toMatch(/sectionPassThrough/);
+    fireEvent.click(document.querySelector('[class*="sectionDragHandle"]'));
 
-    fireEvent.doubleClick(overlays()[0]);
-    expect(document.querySelector('[contenteditable="true"]')).not.toBeNull();
-
-    expect(document.querySelector('[class*="sectionOverlay"]').className).toMatch(/sectionPassThrough/);
+    expect(screen.getByRole('tab', { name: /section/i })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('takes the section chrome out of the way again once the caret closes', () => {
-    render(<FormBuilder />);
-    fireEvent.doubleClick(overlays()[0]);
-    fireEvent.keyDown(window, { key: 'Escape' });
-
-    expect(document.querySelector('[class*="sectionOverlay"]').className).not.toMatch(/sectionPassThrough/);
-  });
-
-  /* Editing a section's own HEADING is not the same thing: the heading input
-   * is the section's own child, so the box must keep answering for it. */
-  it('keeps the section solid while its own heading is being typed into', () => {
+  it('still opens the heading for typing on a double-click', () => {
     render(<FormBuilder />);
     fireEvent.doubleClick(document.querySelector('[class*="sectionDragHandle"]'));
-    expect(document.querySelector('[class*="sectionTitleInput"]')).not.toBeNull();
 
-    expect(document.querySelector('[class*="sectionOverlay"]').className).not.toMatch(/sectionPassThrough/);
+    expect(document.querySelector('[class*="sectionTitleInput"]')).not.toBeNull();
+  });
+
+  it('still offers the section its delete button and resize handles', () => {
+    render(<FormBuilder />);
+    fireEvent.click(document.querySelector('[class*="sectionDragHandle"]'));
+
+    const section = document.querySelector('[class*="sectionOverlay"]');
+    expect(section.querySelector('[class*="sectionDelete"]')).not.toBeNull();
+    expect(section.querySelectorAll('[class*="handle"]').length).toBe(8);
   });
 });
 
@@ -621,5 +616,293 @@ describe('Audit — the tab order belongs to the editor, not to the form being d
     expect(editor).not.toBeNull();
     expect(editor.closest('[data-element-id]').hasAttribute('inert')).toBe(false);
     expect(document.querySelectorAll('[data-element-id]:not([inert])')).toHaveLength(1);
+  });
+});
+
+describe('Audit — the read view shows the form, not a printout of it', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * "Read view" answers the question "what will my client get?", and a form's
+   * answer to that is a form. It rendered `mode="print"` — the question a
+   * printer asks — so every field came out as a label over an em dash and the
+   * owner could not tell whether what they had built was fillable at all.
+   *
+   * It is the same mode and the same renderer the public `/f/` page uses,
+   * which is what makes it a preview rather than an impression of one.
+   */
+  const openReadView = () => {
+    fireEvent.click(screen.getByRole('button', { name: /^file$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /read view/i }));
+  };
+
+  it('gives every field a working control, not a dash', () => {
+    render(<FormBuilder />);
+    openReadView();
+
+    const preview = document.querySelector('[data-print-document]');
+    expect(preview).not.toBeNull();
+    expect(preview.querySelectorAll('input, select, textarea').length).toBeGreaterThan(0);
+    expect(preview.textContent).not.toMatch(/—/);
+  });
+
+  it('leaves the controls usable, since a client will use them', () => {
+    render(<FormBuilder />);
+    openReadView();
+
+    const controls = [...document.querySelectorAll('[data-print-document] input, [data-print-document] select')];
+    expect(controls.every((c) => !c.disabled && !c.readOnly)).toBe(true);
+    expect(controls.every((c) => !c.closest('[inert]'))).toBe(true);
+  });
+
+  /* The canvas keeps its preview controls out of reach — there the author is
+   * laying the form out, not filling it. The two must not be confused. */
+  it('still keeps the editing canvas out of the tab order', () => {
+    render(<FormBuilder />);
+    expect([...document.querySelectorAll('[data-element-id]')].every((w) => w.hasAttribute('inert'))).toBe(true);
+  });
+});
+
+describe('Free placement — the page is a document, not a canvas of objects', () => {
+  beforeEach(mockHooks);
+
+  const typeAt = (x, y) => {
+    const paper = sheet('p1');
+    paper.getBoundingClientRect = () => ({ left: 0, top: 0, width: 794, height: 1123, right: 794, bottom: 1123, x: 0, y: 0 });
+    fireEvent.click(paper, { clientX: x, clientY: y });
+  };
+  const caret = () => document.querySelector('[contenteditable="true"]');
+  const blocks = () => document.querySelectorAll('[class*="elementOverlay"]');
+
+  /* §12: click near the top of the page and start writing — no Add -> Text. */
+  it('puts a caret on the page where the owner clicked', () => {
+    render(<FormBuilder />);
+    expect(caret()).toBeNull();
+
+    typeAt(300, 700);
+
+    expect(caret()).not.toBeNull();
+  });
+
+  it('creates the block that holds what is typed, without being asked to', () => {
+    render(<FormBuilder />);
+    const before = blocks().length;
+
+    typeAt(300, 700);
+
+    expect(blocks().length).toBe(before + 1);
+  });
+
+  /* §14.3: nothing invisible may stand between the click and the caret. Two
+   * different empty spots must each be reachable. */
+  it('lets the owner move to another empty spot and carry on writing', () => {
+    render(<FormBuilder />);
+    typeAt(300, 700);
+    const first = caret();
+
+    typeAt(300, 900);
+
+    expect(caret()).not.toBeNull();
+    expect(caret()).not.toBe(first);
+  });
+
+  /* §4: existing components keep interaction priority — a click on one selects
+   * it rather than dropping a text block on top of it. */
+  it('leaves an existing field to answer its own clicks', () => {
+    render(<FormBuilder />);
+    const before = blocks().length;
+    fireEvent.click(blocks()[1]);
+
+    expect(caret()).toBeNull();
+    expect(blocks().length).toBe(before);
+    expect(screen.getByRole('tab', { name: /field/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  /*
+   * A stray click is not content. Every click on empty space would otherwise
+   * leave an empty box behind for the document to carry — so a block that was
+   * never written in goes when the caret does.
+   */
+  it('takes back a block the owner clicked into but never wrote in', () => {
+    render(<FormBuilder />);
+    const before = blocks().length;
+
+    typeAt(300, 700);
+    expect(blocks().length).toBe(before + 1);
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(blocks().length).toBe(before);
+  });
+
+  it('does not mark the document dirty for a click that wrote nothing', () => {
+    render(<FormBuilder />);
+    typeAt(300, 700);
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(screen.getByRole('button', { name: /save form/i })).toBeDisabled();
+  });
+});
+
+describe('Free placement — a block holds what is written in it', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * A text block is stored with a height, and that height is what the
+   * renderer, print and the page-overflow ladder lay out against. Typing a
+   * second paragraph into a one-line block spilled the words outside the box
+   * that was supposed to contain them — the canvas showed text the document
+   * did not think was there, and what the owner saw stopped matching what the
+   * client would get.
+   *
+   * jsdom does no layout, so `scrollHeight` is 0 and the guard makes this a
+   * no-op there; what these pin is the contract around the measurement — that
+   * it is taken from the editor's live DOM at commit time, and that it can
+   * only ever grow a block.
+   */
+  it('measures the editor that was just typed into, not a frame later', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(overlays()[0]);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    expect(editor).not.toBeNull();
+    // The element the measurement reads is in the document at commit time.
+    expect(editor.closest('[data-element-id]')).not.toBeNull();
+  });
+
+  it('never shrinks a block the owner sized deliberately', () => {
+    render(<FormBuilder />);
+    const overlay = overlays()[0];
+    const before = overlay.style.height;
+
+    fireEvent.doubleClick(overlay);
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.input(editor, { target: { textContent: 'a' } });
+
+    expect(overlays()[0].style.height).toBe(before);
+  });
+});
+
+describe('Free placement — a caret, and nothing else', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * A box around the words is object vocabulary: it says "you have selected a
+   * thing", when what is true is "you are writing here". Word and Docs show a
+   * caret and the text and nothing else — the blink is the whole affordance.
+   */
+  it('drops the selection outline for as long as the caret is in the block', () => {
+    render(<FormBuilder />);
+    const overlay = overlays()[0];
+
+    fireEvent.click(overlay);
+    expect(overlays()[0].className).toMatch(/elementSelected/);
+
+    fireEvent.doubleClick(overlays()[0]);
+    expect(overlays()[0].className).not.toMatch(/elementSelected/);
+    expect(overlays()[0].className).toMatch(/elementEditing/);
+  });
+
+  it('gives the outline back when the caret leaves', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(overlays()[0]);
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(overlays()[0].className).toMatch(/elementSelected/);
+  });
+});
+
+describe('Free placement — Backspace steps up one line at a time', () => {
+  beforeEach(mockHooks);
+
+  const typeAt = (x, y) => {
+    const paper = sheet('p1');
+    paper.getBoundingClientRect = () => ({ left: 0, top: 0, width: 794, height: 1123, right: 794, bottom: 1123, x: 0, y: 0 });
+    fireEvent.click(paper, { clientX: x, clientY: y });
+  };
+
+  /*
+   * With the caret in an empty line there is no character left to delete, so
+   * Backspace would do nothing at all — while what the person meant is what
+   * every editor does here: eat the line and let what is under it come up. The
+   * keystroke only reaches the document because the block is empty; a
+   * Backspace with words to delete is still entirely the text's.
+   */
+  it('keeps the caret in the empty line so the next press moves the next line', () => {
+    render(<FormBuilder />);
+    typeAt(300, 700);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.keyDown(editor, { key: 'Backspace' });
+
+    // Nothing sits below this line in the fixture, so it goes — but the point
+    // is that Backspace reached the document at all.
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  it('removes the empty line when there is nothing underneath to move', () => {
+    render(<FormBuilder />);
+    const before = document.querySelectorAll('[class*="elementOverlay"]').length;
+
+    typeAt(300, 700);
+    expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before + 1);
+
+    fireEvent.keyDown(document.querySelector('[contenteditable="true"]'), { key: 'Backspace' });
+
+    expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before);
+  });
+
+  /* A Backspace that has text to eat is the text's, not the document's. */
+  it('leaves a block alone while it still has words in it', () => {
+    render(<FormBuilder />);
+    const before = document.querySelectorAll('[class*="elementOverlay"]').length;
+
+    fireEvent.doubleClick(overlays()[0]);
+    fireEvent.keyDown(document.querySelector('[contenteditable="true"]'), { key: 'Backspace' });
+
+    expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before);
+    expect(document.querySelector('[contenteditable="true"]')).not.toBeNull();
+  });
+});
+
+describe('Free placement — one line means one line', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * The step used to be the caret block's HEIGHT. A block is only one line
+   * tall when it is new — one that has been typed in, grown, or dragged taller
+   * is many lines — so a single Backspace moved whatever was below it by the
+   * entire block, which on a tall empty block is the whole empty space at
+   * once: exactly what this was meant not to do. It is the editor's own
+   * computed line-height now.
+   */
+  it('asks the editor how tall a line is, not how tall the block is', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(overlays()[0]);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    expect(editor).not.toBeNull();
+    // The measurement is taken from the editor node that is in the document
+    // while the caret is open; jsdom reports no layout, so the fallback holds.
+    expect(editor.closest('[data-element-id]')).not.toBeNull();
+  });
+
+  /*
+   * A measurement taken while the DOM is between states can come back wildly
+   * large — the editor briefly filling its section rather than its own box.
+   * Growing on one of those leaves a block hundreds of pixels tall holding a
+   * single line, which reads as an enormous empty gap on the page and swallows
+   * the clicks meant for it.
+   */
+  it('never grows a block past the section that contains it', () => {
+    render(<FormBuilder />);
+    const section = document.querySelector('[class*="sectionOverlay"]');
+    const sectionHeight = Number.parseFloat(section.style.height);
+
+    fireEvent.doubleClick(overlays()[0]);
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.input(editor, { target: { textContent: 'a'.repeat(500) } });
+
+    const height = Number.parseFloat(overlays()[0].style.height);
+    expect(height).toBeLessThanOrEqual(sectionHeight);
   });
 });

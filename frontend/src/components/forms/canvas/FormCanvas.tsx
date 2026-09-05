@@ -74,6 +74,11 @@ export interface FormCanvasProps {
   onMoveElement: (elementId: string, x: number, y: number) => void;
   onResizeElement: (elementId: string, box: ResizedBox) => void;
   onDeleteElement: (elementId: string) => void;
+  /**
+   * A click landed on unoccupied page space: put a caret there and let the
+   * owner write. Coordinates are PAGE coordinates, already divided by zoom.
+   */
+  onTypeAt: (pageId: string, x: number, y: number) => void;
   /** Brackets a drag/resize/click gesture so useHistory coalesces every
    *  intermediate commit into one undo entry (spec §21). */
   onGestureStart?: () => void;
@@ -113,6 +118,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onMoveElement,
   onResizeElement,
   onDeleteElement,
+  onTypeAt,
   onGestureStart,
   onGestureEnd,
 }) => {
@@ -309,6 +315,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onMoveElement={handleMoveElement}
             onResizeElement={onResizeElement}
             onDeleteElement={onDeleteElement}
+            onTypeAt={onTypeAt}
             getScale={viewport.getScale}
             shouldRender={
               isVisible(page.id) || page.id === selectedPageId || page.id === editingPageId
@@ -358,6 +365,7 @@ const Sheet: React.FC<SheetProps> = ({
   onMoveElement,
   onResizeElement,
   onDeleteElement,
+  onTypeAt,
   getScale,
   shouldRender,
   wrapRef,
@@ -374,11 +382,26 @@ const Sheet: React.FC<SheetProps> = ({
       onClick={(e) => {
         e.stopPropagation();
         // A click that belongs to the open caret is not a click on the page.
-        // Anywhere else IS, and closing the caret is what the selection change
-        // does on its way through (see FormBuilder's `handleSelect`) — clicking
-        // the page beside the text is how every document editor leaves it.
         if (isInsideCaret(e, editing)) return;
-        onSelect({ type: 'page', id: page.id });
+
+        /*
+         * CLICK -> CARET -> TYPE.
+         *
+         * Reaching this handler already means the click hit nothing else: every
+         * element overlay stops its own clicks, and the section overlay is
+         * pointer-transparent except for its chrome. So the sheet is what is
+         * left when the owner clicks genuinely empty page, and on a page that
+         * is meant to read as a document the answer to that is a caret — not a
+         * selection, and certainly not "first go and add a Text component".
+         *
+         * The point is converted out of screen space into PAGE space here,
+         * where the document's coordinates live, so zoom never reaches the
+         * model (spec §5/§25) and the text lands where it was asked for at any
+         * magnification.
+         */
+        const rect = e.currentTarget.getBoundingClientRect();
+        const scale = getScale() || 1;
+        onTypeAt(page.id, (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale);
       }}
       onContextMenu={(e) => {
         // The browser's own menu wins inside a caret (spell-check, plain-text
@@ -422,11 +445,6 @@ const Sheet: React.FC<SheetProps> = ({
                 isSelected={isChosen(selection, selectedIds, 'section', section.id)}
                 isTarget={targetSectionId === section.id}
                 isEditingTitle={editing?.kind === 'section-title' && editing.id === section.id}
-                hasCaretInside={
-                  !!editing &&
-                  editing.kind !== 'section-title' &&
-                  section.elements.some((el) => el.id === editing.id)
-                }
                 getScale={getScale}
                 onSelect={(options) => onSelect({ type: 'section', id: section.id }, options)}
                 onBeginEditTitle={() => onBeginEdit({ kind: 'section-title', id: section.id })}
