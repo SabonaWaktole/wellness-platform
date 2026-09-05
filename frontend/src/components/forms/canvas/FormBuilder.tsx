@@ -717,12 +717,27 @@ export const FormBuilder: React.FC = () => {
   }, [inline.target?.kind, inline.target?.id]);
 
   const handleAddSection = () => {
-    const pageId = targetPageId ?? layout.pages[0].id;
+    /*
+     * A section is a page-level thing, so "at the cursor" means at the height
+     * the caret is sitting at on the page it is on — not tacked onto the
+     * bottom of the document, which is where it used to appear regardless of
+     * what the owner was looking at.
+     */
+    const caretHost = inline.target && inline.target.kind !== 'section-title'
+      ? sectionContaining(layout, inline.target.id)
+      : inline.target?.kind === 'section-title'
+        ? findSection(layout, inline.target.id)?.section
+        : undefined;
+    const caretPage = caretHost ? pageContainingSection(layout, caretHost.id) : undefined;
+
+    const pageId = caretPage?.id ?? targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
-    const y = (page?.sections ?? []).reduce(
-      (max, s) => Math.max(max, s.y + s.height + 24),
-      layout.page.margin.top
-    );
+    const y = caretHost
+      ? caretHost.y
+      : (page?.sections ?? []).reduce(
+          (max, s) => Math.max(max, s.y + s.height + 24),
+          layout.page.margin.top
+        );
     const result = addSection(layout, pageId, t('formBuilder.newSectionTitle'), {
       x: layout.page.margin.left,
       y,
@@ -859,24 +874,110 @@ export const FormBuilder: React.FC = () => {
     [setSelection, inline]
   );
 
+  /**
+   * WHERE THE NEXT INSERTED THING LANDS.
+   *
+   * Insert used to drop everything at the bottom of the target section,
+   * whatever the owner happened to be doing — click halfway down a page, ask
+   * for a picture, and it appeared somewhere else entirely, to be dragged back
+   * to where it was wanted. In a document editor Insert means "here", and here
+   * is wherever the caret is.
+   *
+   * Read in order of how specific the intent is:
+   *
+   *   a live caret   — the owner is writing at that exact spot, so the thing
+   *                    goes there and the empty line it replaces gets out of
+   *                    the way (see `handleInsertAt`);
+   *   a selected object — under the thing they just pointed at, which is where
+   *                    "another one of these" belongs;
+   *   neither        — the old behaviour, below whatever is already in the
+   *                    section, because there is nothing better to go on.
+   */
+  const insertionPoint = useCallback(
+    (width: number): { sectionId: string; x: number; y: number; replacing?: string } | null => {
+      if (inline.target && inline.target.kind !== 'section-title') {
+        const element = findElement(layout, inline.target.id);
+        const host = sectionContaining(layout, inline.target.id);
+        if (element && host) {
+          return {
+            sectionId: host.id,
+            x: Math.max(0, Math.min(element.x, host.width - width)),
+            y: element.y,
+            // An empty line the owner clicked into is a placeholder for
+            // exactly this: it makes way rather than sitting above the thing
+            // it was standing in for.
+            replacing: plainTextOf(element.content as never) === '' ? element.id : undefined,
+          };
+        }
+      }
+
+      if (selection?.type === 'element') {
+        const element = findElement(layout, selection.id);
+        const host = sectionContaining(layout, selection.id);
+        if (element && host) {
+          return {
+            sectionId: host.id,
+            x: Math.max(0, Math.min(element.x, host.width - width)),
+            y: element.y + element.height + 16,
+          };
+        }
+      }
+
+      return null;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout, selection, inline.target]
+  );
+
+  /**
+   * Places a ready-made element at the insertion point, standing the empty
+   * line it lands on down first so the two do not overlap.
+   */
+  const handleInsertAt = useCallback(
+    (element: FormElement, fallbackSectionId: string, width: number) => {
+      const point = insertionPoint(width);
+      const sectionId = point?.sectionId ?? fallbackSectionId;
+
+      let document = layout;
+      if (point?.replacing) {
+        // The caret is inside the line being replaced; close it before the
+        // element it was standing in for goes away underneath it.
+        inline.end();
+        const pruned = removeElement(document, point.replacing);
+        if (!pruned.refusal) document = pruned.document;
+      }
+
+      const placed: FormElement = point
+        ? { ...element, x: point.x, y: point.y }
+        : { ...element, ...nextElementPosition(document, sectionId, width) };
+
+      apply(addElement(document, sectionId, placed));
+      setSelection({ type: 'element', id: placed.id });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout, insertionPoint, apply, setSelection, inline]
+  );
+
   const handleAddComponent = (type: ComponentType) => {
     if (!selectedSectionId) return;
     const definition = COMPONENT_REGISTRY[type];
     if (!definition) return;
 
     const defaults = definition.defaultField?.();
-    const element: FormElement = {
-      id: newId(),
-      type,
-      ...nextElementPosition(layout, selectedSectionId, definition.defaultSize.width),
-      width: definition.defaultSize.width,
-      height: definition.defaultSize.height,
-      content: definition.defaultContent?.(),
-      field: defaults ? { ...defaults, key: nextFieldKey(layout, defaults.label) } : undefined,
-    };
-
-    apply(addElement(layout, selectedSectionId, element));
-    setSelection({ type: 'element', id: element.id });
+    handleInsertAt(
+      {
+        id: newId(),
+        type,
+        x: 0,
+        y: 0,
+        width: definition.defaultSize.width,
+        height: definition.defaultSize.height,
+        content: definition.defaultContent?.(),
+        field: defaults ? { ...defaults, key: nextFieldKey(layout, defaults.label) } : undefined,
+      },
+      selectedSectionId,
+      definition.defaultSize.width
+    );
   };
 
   const handleAddImage = async (file: File) => {
@@ -885,15 +986,18 @@ export const FormBuilder: React.FC = () => {
       const asset = await uploadAsset(form.id, file);
       const ratio = asset.height > 0 ? asset.width / asset.height : 1;
       const width = COMPONENT_REGISTRY.IMAGE.defaultSize.width;
-      apply(
-        addElement(layout, selectedSectionId, {
+      handleInsertAt(
+        {
           id: newId(),
           type: 'IMAGE',
           content: { url: asset.url },
-          ...nextElementPosition(layout, selectedSectionId, width),
+          x: 0,
+          y: 0,
           width,
           height: Math.round(width / ratio),
-        })
+        },
+        selectedSectionId,
+        width
       );
     } catch {
       // surfaced through uploadError

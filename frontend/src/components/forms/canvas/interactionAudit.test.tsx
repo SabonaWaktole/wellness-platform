@@ -906,3 +906,66 @@ describe('Free placement — one line means one line', () => {
     expect(height).toBeLessThanOrEqual(sectionHeight);
   });
 });
+
+describe('Free placement — Insert puts things where the cursor is', () => {
+  beforeEach(mockHooks);
+
+  const typeAt = (x, y) => {
+    const paper = sheet('p1');
+    paper.getBoundingClientRect = () => ({ left: 0, top: 0, width: 794, height: 1123, right: 794, bottom: 1123, x: 0, y: 0 });
+    fireEvent.click(paper, { clientX: x, clientY: y });
+  };
+  const insert = (name) => {
+    fireEvent.click(screen.getByRole('tab', { name: /insert/i }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`add ${name}`, 'i') }));
+  };
+  const selected = () => overlays().find((o) => /elementSelected/.test(o.className));
+
+  /*
+   * Insert used to drop everything at the bottom of the target section,
+   * whatever the owner happened to be doing — click halfway down a page, ask
+   * for a field, and it appeared somewhere else entirely, to be dragged back
+   * to where it was wanted. In a document editor Insert means "here".
+   */
+  it('drops a new field where the caret is, not at the end of the section', () => {
+    render(<FormBuilder />);
+    typeAt(200, 640);
+
+    // The editor lives in the renderer's DOM, so the caret's own box is the
+    // `[data-element-id]` wrapper rather than the overlay drawn above it.
+    const caret = document.querySelector('[contenteditable="true"]').closest('[data-element-id]');
+    const top = caret.style.top;
+
+    insert('text field');
+
+    expect(selected().style.top).toBe(top);
+  });
+
+  /* The empty line the owner clicked into was standing in for exactly this,
+   * so it makes way rather than sitting above the thing it announced. */
+  it('takes the empty line away instead of leaving it above the new field', () => {
+    render(<FormBuilder />);
+    const before = overlays().length;
+
+    typeAt(200, 640);
+    expect(overlays().length).toBe(before + 1);
+
+    insert('text field');
+
+    expect(overlays().length).toBe(before + 1);
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  /* No caret, but something pointed at: "another one of these" belongs under
+   * the thing that was pointed at. */
+  it('drops it under the selected object when there is no caret', () => {
+    render(<FormBuilder />);
+    fireEvent.click(overlays()[1]);
+    const anchor = overlays()[1];
+    const below = Number.parseFloat(anchor.style.top) + Number.parseFloat(anchor.style.height) + 16;
+
+    insert('text field');
+
+    expect(Number.parseFloat(selected().style.top)).toBe(below);
+  });
+});
