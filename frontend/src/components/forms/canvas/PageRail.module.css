@@ -4,13 +4,13 @@
    * component is not silently unbounded if it is ever reused somewhere
    * without that grid (flex: 0 0 132px alone is a no-op inside a grid
    * parent — see the comment on `.body`, the bug this pins down). */
-  width: 132px;
-  flex: 0 0 132px;
+  width: 150px;
+  flex: 0 0 150px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm, 8px);
   padding: var(--spacing-sm, 8px);
-  border-right: 1px solid var(--border-hairline);
+  border-right: 1px solid var(--color-outline-variant, var(--border-hairline));
   background: var(--color-surface);
   overflow-y: auto;
 }

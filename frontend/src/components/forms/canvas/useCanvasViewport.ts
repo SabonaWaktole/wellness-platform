@@ -32,6 +32,10 @@ const clamp = (z: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 export interface CanvasViewport {
   zoom: number;
   zoomPercent: number;
+  /** False at the ends of the ladder, so the control can say so rather than
+   *  staying lit and doing nothing when pressed. */
+  canZoomIn: boolean;
+  canZoomOut: boolean;
   /** Document geometry, ALWAYS unscaled — see the module note above. */
   pageWidth: number;
   pageHeight: number;
@@ -86,6 +90,8 @@ export const useCanvasViewport = (page: FormPage): CanvasViewport => {
   return {
     zoom,
     zoomPercent: Math.round(zoom * 100),
+    canZoomIn: zoom < MAX_ZOOM - 1e-6,
+    canZoomOut: zoom > MIN_ZOOM + 1e-6,
     pageWidth: page.width,
     pageHeight: page.height,
     zoomIn,

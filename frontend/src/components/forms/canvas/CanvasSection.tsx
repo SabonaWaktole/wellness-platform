@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { useDragMove } from './useDragMove';
 import { useResize, RESIZE_HANDLES, type ResizedBox } from './useResize';
-import { isSyntheticSection } from './layoutOps';
+import { isSyntheticSection, isTextHostSection } from './layoutOps';
 import type { FormSection } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
@@ -18,6 +18,7 @@ export interface CanvasSectionProps {
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
   onBeginEditTitle: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (box: ResizedBox) => void;
@@ -40,6 +41,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   isEditingTitle,
   getScale,
   onSelect,
+  onContextMenu,
   onBeginEditTitle,
   onMove,
   onResize,
@@ -47,7 +49,12 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('settings');
-  const synthetic = isSyntheticSection(section);
+  /*
+   * Two kinds of section the owner never made and must never be shown: the
+   * server's rescue section, and the invisible host that holds text typed onto
+   * bare page. Both render their contents and nothing of their own.
+   */
+  const synthetic = isSyntheticSection(section) || isTextHostSection(section);
 
   const drag = useDragMove(() => ({ x: section.x, y: section.y }), onMove, getScale);
   const resize = useResize(
@@ -58,8 +65,11 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
 
   const classes = [
     styles.sectionOverlay,
-    isSelected ? styles.sectionSelected : '',
-    !isSelected && isTarget ? styles.sectionActive : '',
+    // A section the owner never made draws no outline either — the dashes and
+    // the accent border are how a section says "I am a thing you selected",
+    // and a text host is not one.
+    !synthetic && isSelected ? styles.sectionSelected : '',
+    !synthetic && !isSelected && isTarget ? styles.sectionActive : '',
     isEditingTitle ? styles.sectionEditing : '',
   ]
     .filter(Boolean)
@@ -73,6 +83,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
         e.stopPropagation();
         onSelect({ additive: e.shiftKey || e.ctrlKey || e.metaKey });
       }}
+      onContextMenu={onContextMenu}
       onPointerMove={(e) => {
         drag.onPointerMove(e);
         resize.onPointerMove(e);
@@ -96,9 +107,17 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
             the FIRST click anywhere near a section landed in a text field
             instead of selecting the section.
           */}
+          {/*
+            The band drags the section — except while the heading inside it is
+            being typed into. It stayed live through an edit, so a pointer-down
+            on the margin either side of the input dragged the section out from
+            under the caret: text editing moving the object, which is the one
+            thing the two-gesture split exists to prevent. `CanvasElement`
+            unbinds its gestures during an edit for the same reason.
+          */}
           <div
             className={styles.sectionDragHandle}
-            onPointerDown={drag.onPointerDown}
+            onPointerDown={isEditingTitle ? undefined : drag.onPointerDown}
             onDoubleClick={(e) => {
               e.stopPropagation();
               onBeginEditTitle();
@@ -109,6 +128,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
             <input
               className={styles.sectionTitleInput}
               autoFocus
+              data-editing-surface="true"
               value={section.title ?? ''}
               aria-label={t('formBuilder.sectionTitle')}
               onClick={(e) => e.stopPropagation()}

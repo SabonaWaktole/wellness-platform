@@ -316,6 +316,18 @@
   --chart-6: #12864a; /* green   */
   --chart-grid: rgba(17, 17, 22, 0.07);
   --chart-axis: #8a8a94;
+
+  /* --- Document canvas -------------------------------------------------
+   * The workspace a page of paper sits on. Deliberately a shade darker than
+   * any surface token: the sheet has to read as an object resting ON
+   * something, and a white page on a white background reads as no page at
+   * all. The paper itself is always white in both themes — paper is white,
+   * and the owner is designing something that will be printed.
+   */
+  --canvas-backdrop: #9a9aa2;
+  --canvas-paper: #ffffff;
+  --canvas-paper-edge: rgba(17, 17, 22, 0.28);
+  --canvas-page-label: #6d6d78;
 }
 
 /* ==========================================================================
@@ -413,4 +425,9 @@
      stays stable when a user flips themes mid-session. */
   --chart-grid: rgba(255, 255, 255, 0.08);
   --chart-axis: #7a7a83;
+
+  /* The workspace darkens with the theme; the paper does not. */
+  --canvas-backdrop: #2a2a30;
+  --canvas-paper-edge: rgba(0, 0, 0, 0.55);
+  --canvas-page-label: #8a8a94;
 }

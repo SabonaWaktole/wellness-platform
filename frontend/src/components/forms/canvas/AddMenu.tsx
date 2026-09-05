@@ -7,6 +7,8 @@ import type { ComponentType } from '../../../types/form';
 import styles from './AddMenu.module.css';
 
 export interface AddMenuProps {
+  /** `ribbon` drops the heading and hint, which the ribbon group supplies. */
+  layout?: 'sidebar' | 'ribbon';
   onAddSection: () => void;
   /** Null when no section is selected — a component needs somewhere to land. */
   targetSectionId: string | null;
@@ -28,6 +30,7 @@ export interface AddMenuProps {
  * would be invalid the moment it was saved.
  */
 export const AddMenu: React.FC<AddMenuProps> = ({
+  layout = 'sidebar',
   onAddSection,
   targetSectionId,
   onAddComponent,
@@ -48,9 +51,18 @@ export const AddMenu: React.FC<AddMenuProps> = ({
 
   const disabled = !targetSectionId;
 
+  /*
+   * Two hosts, one component. In the ribbon the surrounding group already
+   * carries the caption, so repeating "Add" above the buttons would be noise;
+   * everything else — the registry-driven grid, the image upload path, the
+   * accessible names — is identical, which is the point of not rebuilding
+   * these buttons as ribbon-specific ones.
+   */
+  const ribbon = layout === 'ribbon';
+
   return (
-    <div className={styles.menu}>
-      <h3 className={styles.title}>{t('addMenu.title')}</h3>
+    <div className={ribbon ? styles.ribbonMenu : styles.menu}>
+      {!ribbon && <h3 className={styles.title}>{t('addMenu.title')}</h3>}
 
       {/* Explicit aria-labels: the visible text is just the noun ("Section",
           "Date"), which is ambiguous read on its own by a screen reader
@@ -60,16 +72,19 @@ export const AddMenu: React.FC<AddMenuProps> = ({
         className={styles.primaryItem}
         onClick={onAddSection}
         aria-label={t('addMenu.addItem', { item: t('addMenu.section') })}
+        title={t('addMenu.addItem', { item: t('addMenu.section') })}
       >
         <LayoutTemplate size={16} />
         <span>{t('addMenu.section')}</span>
       </button>
 
-      <p className={styles.hint}>
-        {disabled ? t('addMenu.selectSectionFirst') : t('addMenu.addingTo')}
-      </p>
+      {!ribbon && (
+        <p className={styles.hint}>
+          {disabled ? t('addMenu.selectSectionFirst') : t('addMenu.addingTo')}
+        </p>
+      )}
 
-      <div className={styles.grid}>
+      <div className={ribbon ? styles.ribbonGrid : styles.grid}>
         {ADDABLE_COMPONENTS.map((component) => {
           const Icon = component.icon;
           const isImage = component.type === 'IMAGE';
@@ -81,6 +96,20 @@ export const AddMenu: React.FC<AddMenuProps> = ({
               className={styles.item}
               disabled={disabled || (isImage && isUploadingImage)}
               aria-label={t('addMenu.addItem', { item: label })}
+              /*
+               * The sidebar explains a disabled state with the hint line below;
+               * the ribbon has no room for it, so the reason travels on the
+               * control itself. A row of grey buttons with nothing saying why
+               * is the exact failure §44 names — the UI has to communicate why
+               * a control is unavailable, wherever it is hosted.
+               */
+              title={
+                disabled
+                  ? t('addMenu.selectSectionFirst')
+                  : isImage && isUploadingImage
+                    ? t('addMenu.uploading')
+                    : t('addMenu.addItem', { item: label })
+              }
               onClick={() => (isImage ? fileInputRef.current?.click() : onAddComponent(component.type))}
             >
               <Icon size={16} />

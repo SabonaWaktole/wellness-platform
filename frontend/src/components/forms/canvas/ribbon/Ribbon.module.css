@@ -1,0 +1,285 @@
+/*
+ * The command surface. Deliberately quiet: flat fills, hairline rules, one
+ * accent colour used only for the active tab and the primary action. A
+ * document editor's chrome should recede behind the page — the paper is the
+ * only thing in the window that gets to look like an object.
+ */
+
+/* -------------------------------------------------------------------------
+   Title bar
+   ------------------------------------------------------------------------- */
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-base);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-outline-variant, var(--border-hairline));
+}
+
+.backButton,
+.fileButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.backButton:hover,
+.fileButton:hover {
+  background: var(--color-surface-variant);
+  color: var(--text-primary);
+}
+
+/* Always-available commands, independent of which ribbon tab is open. */
+.quickAccess {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.quickAccess button {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.quickAccess button:hover:not(:disabled) {
+  background: var(--color-surface-variant);
+  color: var(--text-primary);
+}
+
+.quickAccess button:disabled {
+  color: var(--text-quaternary, var(--text-tertiary));
+  cursor: not-allowed;
+}
+
+/* The document's own identity sits centred, the way a title bar reads. */
+.titleCentre {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.formName {
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statusBadge {
+  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 999px);
+  white-space: nowrap;
+}
+
+.statusBadgeDraft {
+  color: var(--text-secondary);
+  background: var(--color-surface-variant);
+}
+
+.statusBadgePublished {
+  color: var(--color-success);
+  background: var(--color-success-container, var(--color-surface-variant));
+}
+
+.unpublishedHint {
+  font-size: var(--font-size-label-sm, 0.6875rem);
+  color: var(--color-warning);
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   Ribbon
+   ------------------------------------------------------------------------- */
+
+.ribbon {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-outline-variant, var(--border-hairline));
+}
+
+.tabs {
+  padding: 0 var(--spacing-base);
+}
+
+.panel {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: var(--spacing-xs) var(--spacing-base);
+  overflow-x: auto;
+}
+
+/*
+ * A group is a cluster of controls with its name written underneath and a rule
+ * separating it from the next. That caption is the entire reason the ribbon
+ * reads as organised where a toolbar row does not.
+ */
+.group {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2px;
+  padding: 0 var(--spacing-sm);
+  border-right: 1px solid var(--color-outline-variant, var(--border-hairline));
+}
+
+.group:last-child {
+  border-right: none;
+}
+
+.groupBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  flex-wrap: wrap;
+  min-height: 46px;
+}
+
+.groupLabel {
+  text-align: center;
+  font-size: var(--font-size-label-sm, 0.6875rem);
+  color: var(--text-tertiary, var(--text-secondary));
+  user-select: none;
+}
+
+/* -------------------------------------------------------------------------
+   Ribbon buttons
+   ------------------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* The one command a group is really about: icon over label, twice the height. */
+.buttonLarge {
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  min-width: 56px;
+  height: 46px;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-surface-variant);
+}
+
+.button:disabled {
+  color: var(--text-quaternary, var(--text-tertiary));
+  cursor: not-allowed;
+}
+
+.buttonIcon {
+  display: inline-flex;
+  color: currentColor;
+}
+
+.buttonLabel {
+  line-height: 1.2;
+}
+
+/* The reused FormattingToolbar, laid out to sit inside a ribbon group. */
+.formatting {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+}
+
+/* -------------------------------------------------------------------------
+   Status bar
+   ------------------------------------------------------------------------- */
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-base);
+  padding: 2px var(--spacing-base);
+  border-top: 1px solid var(--color-outline-variant, var(--border-hairline));
+  background: var(--color-surface);
+  font-size: var(--font-size-label-md, 0.75rem);
+  color: var(--text-secondary);
+}
+
+.statusItem {
+  white-space: nowrap;
+}
+
+.statusRetry {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.zoomCluster {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.zoomCluster button {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.zoomCluster button:hover:not(:disabled) {
+  background: var(--color-surface-variant);
+  color: var(--text-primary);
+}
+
+/* The ladder has ends. Without this a button at 25% (or 300%) looked and
+ * hovered exactly like a live one while doing nothing — the same lie the
+ * quick-access cluster above already avoids. */
+.zoomCluster button:disabled {
+  color: var(--text-quaternary, var(--text-tertiary));
+  cursor: not-allowed;
+}
+
+.zoomPercent {
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

@@ -24,6 +24,7 @@ const doc = (elements: FormElement[]): FormDocument => ({
 });
 
 const elementsOf = (d: FormDocument) => d.pages.flatMap((p) => p.sections).flatMap((s) => s.elements);
+const sectionsOf = (d: FormDocument) => d.pages.flatMap((p) => p.sections);
 
 describe('useClipboard', () => {
   it('copies then pastes a duplicate into the same section', () => {
@@ -136,5 +137,79 @@ describe('useClipboard', () => {
 
     expect(elementsOf(next)).toHaveLength(2);
     expect(result.current.hasContent).toBe(true);
+  });
+});
+
+
+/*
+ * SECTIONS COPY TOO.
+ *
+ * The clipboard handled elements only, so Ctrl+C on a section did nothing at
+ * all while Ctrl+C on a field worked — the sort of inconsistency that makes a
+ * user stop trusting a shortcut everywhere. A section is the unit an owner
+ * actually reuses (a whole address block, a whole signature area), so it is
+ * the more valuable of the two.
+ */
+describe('useClipboard — sections', () => {
+  it('copies a section and pastes it onto a page', () => {
+    const d = doc([el()]);
+    const { result } = renderHook(() => useClipboard());
+
+    act(() => result.current.copySections(d, ['s1']));
+    let next: FormDocument = d;
+    act(() => {
+      next = result.current.paste(d, 's1', 'p1').document;
+    });
+
+    expect(sectionsOf(next)).toHaveLength(2);
+  });
+
+  it('gives the copy fresh ids and fresh field keys', () => {
+    const d = doc([el()]);
+    const { result } = renderHook(() => useClipboard());
+
+    act(() => result.current.copySections(d, ['s1']));
+    let next: FormDocument = d;
+    act(() => {
+      next = result.current.paste(d, 's1', 'p1').document;
+    });
+
+    const ids = sectionsOf(next).map((s) => s.id);
+    expect(new Set(ids).size).toBe(2);
+    // Two components on one submission key would both render, both be filled,
+    // and whichever serialised last would silently win (§11, §20).
+    const keys = elementsOf(next).map((e) => e.field?.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('cut removes the section and still pastes it back', () => {
+    const d = doc([el()]);
+    const { result } = renderHook(() => useClipboard());
+
+    let afterCut: FormDocument = d;
+    act(() => {
+      afterCut = result.current.cutSections(d, ['s1']).document;
+    });
+    expect(sectionsOf(afterCut)).toHaveLength(0);
+
+    let next: FormDocument = afterCut;
+    act(() => {
+      next = result.current.paste(afterCut, null, 'p1').document;
+    });
+    expect(sectionsOf(next)).toHaveLength(1);
+  });
+
+  it('duplicates a section in place', () => {
+    const d = doc([el()]);
+    const { result } = renderHook(() => useClipboard());
+
+    let next: FormDocument = d;
+    act(() => {
+      next = result.current.duplicateSections(d, ['s1']).document;
+    });
+
+    expect(sectionsOf(next)).toHaveLength(2);
+    // Duplicating must not disturb what is on the clipboard.
+    expect(result.current.hasContent).toBe(false);
   });
 });

@@ -4,8 +4,10 @@ import {
   MAX_PAGE_COUNT,
   MAX_SIZE_PX,
   MIN_SIZE_PX,
+  TEXT_HOST_PREFIX,
   UNPLACED_PAGE_ID,
   UNPLACED_SECTION_ID,
+  isTextHostSection,
   emptyPageGeometry,
   usablePageHeight,
   usablePageWidth,
@@ -15,6 +17,7 @@ import {
   type FormPage,
   type FormSection,
 } from '../../../types/form';
+import { componentOptionsFor } from '../FormRenderer/fieldControl';
 
 /**
  * Pure transforms over a FormDocument (v3). Geometry logic lives here, out of
@@ -451,13 +454,16 @@ export const addSection = (
   doc: FormDocument,
   pageId: string,
   title: string,
-  box: { x: number; y: number; width: number; height: number }
+  box: { x: number; y: number; width: number; height: number },
+  /** Caller-chosen id, so a section created to hold free text can be
+   *  recognised later (see `TEXT_HOST_PREFIX`). */
+  id?: string
 ): ApplyResult => {
   const index = doc.pages.findIndex((p) => p.id === pageId);
   if (index < 0) return ok(doc);
 
   const section: FormSection = {
-    id: newId(),
+    id: id ?? newId(),
     title,
     x: clampCoord(box.x),
     y: clampCoord(box.y),
@@ -675,7 +681,137 @@ export const moveElementToSection = (
 // Read-model artefacts
 // ---------------------------------------------------------------------------
 
+/**
+ * Writes a batch of already-computed boxes back into the document.
+ *
+ * What align and distribute need: they produce geometry for several objects at
+ * once, and the result has to reach the same overflow ladder every other
+ * mutation goes through — otherwise an alignment could push a section past the
+ * bottom margin without repaginating. Folding the batch through `moveElement`
+ * / `moveSection` one at a time is what preserves that, and a refusal anywhere
+ * discards the whole batch rather than leaving a half-aligned row.
+ */
+export const applyBoxes = (
+  doc: FormDocument,
+  kind: 'element' | 'section',
+  boxes: { id: string; x: number; y: number }[]
+): ApplyResult => {
+  let working = doc;
+
+  for (const box of boxes) {
+    const exists =
+      kind === 'element' ? !!findElement(working, box.id) : !!findSection(working, box.id);
+    if (!exists) return ok(doc);
+
+    const step =
+      kind === 'element'
+        ? moveElement(working, box.id, box.x, box.y)
+        : moveSection(working, box.id, box.x, box.y);
+    if (step.refusal) return refuse(doc, step.refusal);
+    working = step.document;
+  }
+
+  return ok(working);
+};
+
 export const isSyntheticSection = (section: FormSection): boolean => section.id === UNPLACED_SECTION_ID;
+
+/**
+ * One press of Backspace in an empty line: what sits below comes up by ONE
+ * LINE, and the line the caret is in stays so the next press does it again.
+ *
+ * Free-placed text sits on a page whose layout is ABSOLUTE — every box carries
+ * its own coordinates and nothing pushes anything else. That is what makes
+ * this a form builder rather than a word processor, and what lets a field be
+ * dragged anywhere on the paper. So this is a deliberate local operation
+ * rather than a change of model.
+ *
+ * IT MOVES ONE LINE, NOT THE WHOLE GAP. Closing the entire space in a single
+ * keystroke is not what Backspace does anywhere else: in Word each press eats
+ * one empty line and the picture walks up a line at a time, under the owner's
+ * control and reversible one step at a time. Pulling it flush in one go takes
+ * that control away and is hard to undo by eye.
+ *
+ * The step never overshoots: when less than a line of space is left, only that
+ * much is taken, so the thing below lands exactly against the line above it
+ * rather than jumping past. Once there is no space left at all, the empty line
+ * itself goes — which is Backspace's other job, and the end of the sequence.
+ *
+ * The reflow stays inside the deleted line's own section, and moves only what
+ * starts BELOW it: boxes beside it keep their line rather than sliding up past
+ * their neighbours, and sections the owner placed elsewhere on the page are
+ * never moved by a keystroke aimed at one line.
+ */
+export const pullUpOneLine = (
+  doc: FormDocument,
+  elementId: string,
+  /** How tall one empty line is — the caret's own block. */
+  step: number
+): ApplyResult => {
+  const section = sectionContaining(doc, elementId);
+  const element = section?.elements.find((e) => e.id === elementId);
+  if (!section || !element) return removeElement(doc, elementId);
+
+  /*
+   * Below means "starts lower down", not "clears the box". A line dropped into
+   * a gap smaller than itself overlaps what follows, and measuring against its
+   * bottom edge would decide nothing was below it and move nothing at all.
+   */
+  const below = section.elements.filter(
+    (candidate) => candidate.id !== elementId && candidate.y > element.y
+  );
+  if (below.length === 0) return removeElement(doc, elementId);
+
+  const available = Math.min(...below.map((candidate) => candidate.y)) - element.y;
+  // Nothing left to close: the empty line has done its work and goes.
+  if (available <= 0) return removeElement(doc, elementId);
+
+  const delta = Math.min(Math.max(1, Math.round(step)), available);
+  const moved = new Set(below.map((candidate) => candidate.id));
+
+  return ok({
+    ...doc,
+    pages: doc.pages.map((page) => ({
+      ...page,
+      sections: page.sections.map((candidate) =>
+        candidate.id !== section.id
+          ? candidate
+          : {
+              ...candidate,
+              elements: candidate.elements.map((e) =>
+                moved.has(e.id) ? { ...e, y: Math.max(0, e.y - delta) } : e
+              ),
+            }
+      ),
+    })),
+  });
+};
+
+/**
+ * Drops text-host sections that hold nothing.
+ *
+ * A host exists only to carry a block of free text. Once that block is gone
+ * the host renders nothing, draws no chrome and cannot be selected — so
+ * nobody can ever remove it, and the document carries it for ever. They
+ * accumulate a click at a time.
+ *
+ * Pruned when the document is adopted, which cleans up both the ones an
+ * earlier build left behind and any that escape the live cleanup. Sections the
+ * OWNER made are never touched, empty or not: an empty section they placed is
+ * a deliberate space on the page.
+ */
+export const pruneEmptyTextHosts = (doc: FormDocument): FormDocument => ({
+  ...doc,
+  pages: doc.pages.map((page) => ({
+    ...page,
+    sections: page.sections.filter(
+      (section) => !isTextHostSection(section) || section.elements.length > 0
+    ),
+  })),
+});
+
+/** Re-exported so canvas callers have one import for document helpers. */
+export { TEXT_HOST_PREFIX, isTextHostSection };
 
 /**
  * The rescue page is produced by the server on read so fields created outside
@@ -688,6 +824,46 @@ export const stripSyntheticPages = (doc: FormDocument): FormDocument => ({
   pages: doc.pages
     .filter((p) => p.id !== UNPLACED_PAGE_ID)
     .map((p) => ({ ...p, sections: p.sections.filter((s) => !isSyntheticSection(s)) })),
+});
+
+/**
+ * Brings a loaded document into line with the component/data-type pairings the
+ * server will accept.
+ *
+ * THE SERVER REFUSES A PAIRING IT CANNOT RENDER — a BOOLEAN shown as a text
+ * INPUT would take a string where a boolean belongs, and the mismatch would
+ * surface as a failed submission in front of a customer rather than here. That
+ * rule is right, and `PropertiesPanel` already honours it: changing a field's
+ * type moves the control to a compatible one in the same edit.
+ *
+ * What nothing handled was a document that arrived ALREADY mismatched. Forms
+ * seeded or migrated outside the builder carry pairings the validator now
+ * rejects — "Client Intake" shipped with a BOOLEAN, a SINGLE_SELECT, a
+ * USER_REFERENCE and a DATE all stored as INPUT. Every save of such a form
+ * failed on the first mismatch, so autosave retried and failed forever and the
+ * form could not be edited at all: not a validation message the owner could
+ * act on, just a red banner over a document they never touched.
+ *
+ * Repairing on adoption is the only reading that makes the form usable, and it
+ * is not a guess: for each data type there is exactly one sensible control and
+ * `componentOptionsFor` already names it. The field, its key and its geometry
+ * are untouched — only the control changes, and it changes to the one that can
+ * actually hold the value.
+ */
+export const normaliseControls = (doc: FormDocument): FormDocument => ({
+  ...doc,
+  pages: doc.pages.map((page) => ({
+    ...page,
+    sections: page.sections.map((section) => ({
+      ...section,
+      elements: section.elements.map((element) => {
+        if (!element.field) return element;
+        const allowed = componentOptionsFor(element.field.dataType);
+        if (allowed.length === 0 || allowed.includes(element.type)) return element;
+        return { ...element, type: allowed[0] };
+      }),
+    })),
+  })),
 });
 
 export { A4_PORTRAIT, DEFAULT_MARGIN };

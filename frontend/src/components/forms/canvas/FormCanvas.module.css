@@ -1,7 +1,22 @@
 .shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /*
+   * NOT `height: 100%`. The builder's route wrapper is auto-height, so a
+   * percentage resolved to `auto` and nothing in the chain ever capped the
+   * shell: `.canvasArea`'s `overflow: auto` had no height to scroll within, so
+   * it grew to the full height of the page stack instead. On a two-page form
+   * the shell came out 2685px tall in a 775px window — the whole WINDOW
+   * scrolled rather than the document, and the status bar (page number,
+   * autosave state, zoom) sat 2600px below the fold where it was never seen.
+   *
+   * Pinning the shell to the viewport is what makes the canvas the thing that
+   * scrolls, and the ribbon and status bar the fixed edges of a document
+   * editor.
+   */
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
 
 .toolbar {
@@ -233,7 +248,8 @@
 .body {
   flex: 1;
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr) 280px;
+  /* Columns are described by FormBuilder from which panes are actually open;
+     see the comment there. */
   min-height: 0;
 }
 
@@ -247,7 +263,9 @@
 
 .canvasArea {
   overflow: auto;
-  background: var(--color-surface-variant, #f0f0f2);
+  /* One continuous workspace behind the whole page stack, so scrolling between
+     pages never crosses a change of ground. */
+  background: var(--canvas-backdrop);
   padding: var(--spacing-xl);
   display: flex;
   justify-content: center;
@@ -272,6 +290,25 @@
 .sectionOverlay {
   position: absolute;
   box-sizing: border-box;
+  /*
+   * THE BOX ITSELF ANSWERS NOTHING; ITS CHROME ANSWERS EVERYTHING.
+   *
+   * This overlay spans the whole section, and while it captured pointer events
+   * a click anywhere inside one could only ever mean "select this section".
+   * That is the invisible layer that made the page feel like a canvas of
+   * objects: the owner could not put a caret in the empty half of a section
+   * and simply write, because something they could not see answered first.
+   *
+   * Transparent here, live on the children, so the section's real affordances
+   * — the heading band that drags and selects it, the delete button, the
+   * resize handles — keep working exactly as before, while empty space inside
+   * the section belongs to the document and reaches the sheet underneath.
+   */
+  pointer-events: none;
+}
+
+.sectionOverlay > * {
+  pointer-events: auto;
 }
 
 .sectionSelected {
@@ -378,12 +415,17 @@
  * so the pointer reaches the editor rendered underneath — selecting text,
  * placing the caret, dragging through a word. The children re-enable
  * themselves; see `.elementEditing > *`.
+ *
+ * AND IT DRAWS NOTHING. A box around the words is object vocabulary: it says
+ * "you have selected a thing", when what is true is "you are writing here".
+ * Word and Docs show a caret and the text, and nothing else — the blink is the
+ * whole affordance. `CanvasElement` drops `.elementSelected` for the duration
+ * for the same reason, so an empty block the owner has just clicked into is
+ * exactly as invisible as the blank page around it.
  */
 .elementEditing {
   pointer-events: none;
   cursor: text;
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
 }
 
 .elementEditing > * {
@@ -422,18 +464,29 @@
   outline-offset: 1px;
 }
 
+/*
+ * SOLID, not dashed. Dashed is the vocabulary of "provisional" — a drop
+ * target, a guide. A selected object is a definite state and should say so,
+ * and it also has to be distinguishable at a glance from `.sectionActive`,
+ * which IS provisional and keeps the dashes.
+ */
 .elementSelected {
-  outline: 2px dashed var(--color-primary, #2563eb);
+  outline: 1.5px solid var(--color-primary);
   outline-offset: 2px;
 }
 
+/*
+ * White fill, accent border — the office-suite convention, and legible over
+ * dark and light content alike, where a solid accent square disappears into
+ * anything of a similar colour underneath it.
+ */
 .handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background: var(--color-primary, #2563eb);
-  border: 1px solid var(--color-surface);
-  border-radius: 2px;
+  width: 9px;
+  height: 9px;
+  background: var(--canvas-paper);
+  border: 1.5px solid var(--color-primary);
+  border-radius: 1px;
   touch-action: none;
   z-index: 2;
 }
@@ -477,7 +530,7 @@
   align-items: center;
   min-height: 100%;
   /* Whitespace around the sheets so a page reads as paper on a desk (§5). */
-  background: var(--canvas-backdrop, #e5e7eb);
+  background: var(--canvas-backdrop);
 }
 
 .scaler {
@@ -490,27 +543,75 @@
   position: relative;
 }
 
-/* Visible page boundaries — a real bounded sheet, never an infinite canvas. */
+/*
+ * A sheet of paper, not an artboard.
+ *
+ * The difference is carried almost entirely by the shadow: a single tight
+ * contact shadow plus a wider soft one reads as a physical sheet lying on a
+ * surface, where a uniform blur reads as a floating rectangle in a design
+ * tool. The page stays white in dark mode because paper is white and this
+ * document is going to be printed — theming the paper would misrepresent the
+ * output.
+ */
 .sheet {
   position: relative;
-  background: #fff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
+  background: var(--canvas-paper);
+  box-shadow:
+    0 0 0 1px var(--canvas-paper-edge),
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 8px 24px -6px rgba(0, 0, 0, 0.22);
   overflow: hidden;
 }
 
-/* The usable area inside the page margins. Non-interactive: it is a guide,
- * not a container — sections are positioned in page coordinates. */
+/*
+ * The usable area inside the page margins. Non-interactive: it is a guide, not
+ * a container — sections are positioned in page coordinates.
+ *
+ * Much quieter than it was. A dashed rectangle at 70% opacity competed with
+ * the content for attention on every page; Word draws margins as faint corner
+ * marks you notice only when you go looking for them.
+ */
 .marginGuide {
   position: absolute;
-  border: 1px dashed var(--border-hairline, #cbd5e1);
-  opacity: 0.7;
+  border: 1px dashed var(--canvas-paper-edge);
+  opacity: 0.25;
   pointer-events: none;
 }
 
+/*
+ * ONE DOCUMENT, SEVERAL PAGES — not several documents.
+ *
+ * The page number sits in the gutter BETWEEN sheets rather than floating off
+ * the right edge of each one, so scrolling past it reads as crossing a page
+ * break in a continuous document rather than moving between unrelated
+ * canvases. That is the entire perceptual difference between a word processor
+ * and an artboard tool, and it costs one rule.
+ */
 .pageNumber {
   position: absolute;
-  right: -28px;
-  bottom: 0;
-  font-size: 11px;
-  color: var(--text-secondary);
+  left: 0;
+  right: 0;
+  bottom: -34px;
+  text-align: center;
+  font-size: var(--font-size-label-sm, 0.6875rem);
+  letter-spacing: 0.04em;
+  color: var(--canvas-page-label);
+  user-select: none;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.historyClose {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  color: var(--color-primary);
+  cursor: pointer;
 }

@@ -117,6 +117,14 @@ const overlayAt = (left) =>
 const overlays = () => [...document.querySelectorAll('[class*="elementOverlay"]')];
 
 const isSelected = (el) => /elementSelected/.test(el.className);
+/*
+ * An element the owner is TYPING into no longer wears the selection outline —
+ * a box around the words is object vocabulary, and during an edit the thing in
+ * hand is text (see `.elementEditing`). It is still the one object involved,
+ * so tests that count "how many objects is this operation touching?" ask this
+ * rather than the outline alone.
+ */
+const isInvolved = (el) => /elementSelected|elementEditing/.test(el.className);
 
 const mockHooks = () => {
     vi.clearAllMocks();
@@ -166,6 +174,18 @@ const mockHooks = () => {
 };
 
 const caret = () => document.querySelector('[contenteditable="true"]');
+
+/*
+ * Insert controls now live on the ribbon's Insert tab rather than in a sidebar
+ * that was always open. Opening the tab is the gesture a Word user makes, so
+ * the tests make it too — the assertions after it are unchanged.
+ */
+const openInsertTab = () => fireEvent.click(screen.getByRole('tab', { name: /insert/i }));
+const addSection = () => {
+  openInsertTab();
+  fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+};
+
 
 /**
  * Queries scoped to the sheet itself. The Format panel legitimately shows the
@@ -294,7 +314,7 @@ describe('FormBuilder — selection', () => {
     fireEvent.keyDown(caret(), { key: 'a', ctrlKey: true });
 
     // Still exactly one object involved — the one being typed into.
-    expect(overlays().filter(isSelected)).toHaveLength(1);
+    expect(overlays().filter(isInvolved)).toHaveLength(1);
   });
 
   it('Delete removes every element in a multi-selection', () => {
@@ -337,7 +357,7 @@ describe('FormBuilder — section titles edit in place', () => {
   /* Word puts the caret in a text box the moment you insert one. */
   it('opens a newly inserted section with its title ready to type', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
 
     expect(onPage().getByDisplayValue(/new section/i)).toBeInTheDocument();
   });
@@ -384,7 +404,7 @@ describe('FormBuilder — field labels edit in place', () => {
    */
   it('lets Ctrl+Z through from a caret on the page, since TipTap has no history of its own', () => {
     render(<FormBuilder />);
-    fireEvent.click(screen.getByRole('button', { name: /add section/i }));
+    addSection();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onPage().getByText(/new section/i)).toBeInTheDocument();
 

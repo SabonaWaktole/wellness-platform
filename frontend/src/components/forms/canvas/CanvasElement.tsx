@@ -16,6 +16,7 @@ export interface CanvasElementProps {
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
   onBeginEdit: (target: EditTarget) => void;
   onMove: (x: number, y: number) => void;
   onResize: (box: ResizedBox) => void;
@@ -50,6 +51,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
   isEditing,
   getScale,
   onSelect,
+  onContextMenu,
   onBeginEdit,
   onMove,
   onResize,
@@ -79,7 +81,9 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
 
   const classes = [
     styles.elementOverlay,
-    isSelected ? styles.elementSelected : '',
+    // Not while typing: the selection outline is about an OBJECT, and during
+    // an edit the thing in hand is text. See `.elementEditing`.
+    isSelected && !isEditing ? styles.elementSelected : '',
     isEditing ? styles.elementEditing : '',
   ]
     .filter(Boolean)
@@ -101,6 +105,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
           e.stopPropagation();
           if (editTarget) onBeginEdit(editTarget);
         },
+        // While a caret is open the browser's own menu wins — spell-check and
+        // paste belong to the text, not to the object around it. That falls
+        // out of `gestures` being empty in the editing state.
+        onContextMenu,
         onPointerDown: drag.onPointerDown,
         onPointerMove: (e: React.PointerEvent) => {
           drag.onPointerMove(e);
@@ -132,6 +140,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
         <input
           className={styles.labelInput}
           autoFocus
+          /* Marks this as the caret's own surface, so the sheet underneath
+             does not answer a click meant for the text (see FormCanvas's
+             `isInsideCaret`). */
+          data-editing-surface="true"
           value={element.field?.label ?? ''}
           aria-label={t('formBuilder.label')}
           onChange={(e) => onRenameField(e.target.value)}

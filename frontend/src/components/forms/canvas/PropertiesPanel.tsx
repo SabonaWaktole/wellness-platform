@@ -1,10 +1,12 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TextInput } from '../../ui/TextInput/TextInput';
 import { SelectInput } from '../../ui/SelectInput/SelectInput';
 import { TagInput } from '../../ui/TagInput/TagInput';
 import { ColorPicker } from '../../ui/ColorPicker';
 import { componentOptionsFor } from '../FormRenderer/fieldControl';
+import { componentFor } from '../registry/componentRegistry';
 import {
   isDataBearing,
   type DividerContent,
@@ -22,6 +24,8 @@ export interface PropertiesPanelProps {
   onChangeSection: (sectionId: string, changes: Partial<FormSection>) => void;
   /** Puts the caret into this element's text on the page (spec §7). */
   onEditText?: (elementId: string) => void;
+  /** Dismisses the pane. Reopened from the contextual tab's launcher. */
+  onClose?: () => void;
 }
 
 /**
@@ -43,50 +47,57 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   onChangeElement,
   onChangeSection,
   onEditText,
+  onClose,
 }) => {
   const { t } = useTranslation('settings');
+  // Component type names live beside the registry that defines them.
+  const { t: tForms } = useTranslation('forms');
 
-  if (!selection || (!selection.section && !selection.element)) {
-    return (
-      <aside className={styles.panel}>
-        <h3 className={styles.title}>{t('formBuilder.inspectorTitle')}</h3>
-        <p className={styles.hint}>{t('formBuilder.inspectorEmpty')}</p>
-      </aside>
-    );
-  }
+  /*
+   * Nothing selected, nothing to format. The pane used to render an empty
+   * shell explaining that it was empty, permanently occupying a column beside
+   * the page — the opposite of letting the document be the focus.
+   */
+  if (!selection || (!selection.section && !selection.element)) return null;
 
   if (selection.section && !selection.element) {
     const section = selection.section;
     return (
-      <aside className={styles.panel}>
-        <h3 className={styles.title}>{t('formBuilder.sectionSettings')}</h3>
+      <aside className={styles.panel} data-format-pane>
+        <PaneHeader title={t('formBuilder.sectionSettings')} onClose={onClose} />
         <TextInput
           label={t('formBuilder.sectionTitle')}
           value={section.title ?? ''}
           onChange={(e) => onChangeSection(section.id, { title: e.target.value || undefined })}
         />
+
+        <details className={styles.disclosure} open>
+          <summary>{t('formBuilder.fillAndLine')}</summary>
+          <ColorPicker
+            label={t('formBuilder.backgroundColour')}
+            value={section.styles?.background}
+            clearLabel={t('formBuilder.clearColour')}
+            onChange={(background) =>
+              onChangeSection(section.id, { styles: { ...section.styles, background } })
+            }
+          />
+          <ColorPicker
+            label={t('formBuilder.borderColour')}
+            value={section.styles?.borderColor}
+            clearLabel={t('formBuilder.clearColour')}
+            onChange={(borderColor) =>
+              onChangeSection(section.id, { styles: { ...section.styles, borderColor } })
+            }
+          />
+        </details>
+
         <SizeFields
           x={section.x}
           y={section.y}
           width={section.width}
           height={section.height}
+          origin="page"
           onChange={(box) => onChangeSection(section.id, box)}
-        />
-        <ColorPicker
-          label={t('formBuilder.backgroundColour')}
-          value={section.styles?.background}
-          clearLabel={t('formBuilder.clearColour')}
-          onChange={(background) =>
-            onChangeSection(section.id, { styles: { ...section.styles, background } })
-          }
-        />
-        <ColorPicker
-          label={t('formBuilder.borderColour')}
-          value={section.styles?.borderColor}
-          clearLabel={t('formBuilder.clearColour')}
-          onChange={(borderColor) =>
-            onChangeSection(section.id, { styles: { ...section.styles, borderColor } })
-          }
         />
       </aside>
     );
@@ -94,6 +105,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
   const element = selection.element!;
   const field = element.field;
+  const objectName = tForms(componentFor(element.type)?.labelKey ?? '', {
+    defaultValue: element.type,
+  });
 
   const patchField = (changes: Partial<FieldSpec>) => {
     if (!field) return;
@@ -101,8 +115,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   };
 
   return (
-    <aside className={styles.panel}>
-      <h3 className={styles.title}>{t('formBuilder.inspectorTitle')}</h3>
+    <aside className={styles.panel} data-format-pane>
+      <PaneHeader title={objectName} onClose={onClose} />
 
       {isDataBearing(element.type) && field && (
         <>
@@ -110,20 +124,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             label={t('formBuilder.label')}
             value={field.label}
             onChange={(e) => patchField({ label: e.target.value })}
-          />
-
-          {/*
-            The stable data identity. Shown read-only: renaming a key would
-            orphan every submission already stored under the old one (§11),
-            so it is minted once and never edited in place.
-          */}
-          <TextInput
-            label={t('formBuilder.fieldKey')}
-            helperText={t('formBuilder.fieldKeyHelp')}
-            value={field.key}
-            readOnly
-            disabled
-            onChange={() => undefined}
           />
 
           <div className={styles.field}>
@@ -208,6 +208,24 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           {field.clientFieldId && (
             <p className={styles.hint}>{t('formBuilder.boundToClientField')}</p>
           )}
+
+          {/*
+            The stable data identity, kept but demoted. It is read-only —
+            renaming a key would orphan every submission already stored under
+            the old one (§11) — and it is an implementation concern for
+            whoever consumes the submissions, not something the person laying
+            out a page should have to read past on the way to the label.
+          */}
+          <details className={styles.disclosure}>
+            <summary>{t('formBuilder.advanced')}</summary>
+            <TextInput
+              label={t('formBuilder.dataKey')}
+              helperText={t('formBuilder.fieldKeyHelp')}
+              value={field.key}
+              readOnly
+              onChange={() => undefined}
+            />
+          </details>
         </>
       )}
 
@@ -266,7 +284,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       )}
 
       <details className={styles.disclosure}>
-        <summary>{t('formBuilder.appearance')}</summary>
+        <summary>{t('formBuilder.fillAndLine')}</summary>
         <ColorPicker
           label={t('formBuilder.textColour')}
           value={element.styles?.textColor}
@@ -287,16 +305,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         />
       </details>
 
-      <details className={styles.disclosure}>
-        <summary>{t('formBuilder.layout')}</summary>
-        <SizeFields
-          x={element.x}
-          y={element.y}
-          width={element.width}
-          height={element.height}
-          onChange={(box) => onChangeElement(element.id, box)}
-        />
-      </details>
+      <SizeFields
+        x={element.x}
+        y={element.y}
+        width={element.width}
+        height={element.height}
+        origin="section"
+        onChange={(box) => onChangeElement(element.id, box)}
+      />
     </aside>
   );
 };
@@ -317,24 +333,90 @@ const FORM_FIELD_TYPES: FormFieldType[] = [
 const slugifyOption = (label: string): string =>
   label.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'option';
 
+/**
+ * The pane names what it is formatting and offers a way to dismiss itself —
+ * Word's format pane closes, and a panel that cannot be put away is a panel
+ * permanently competing with the page for width.
+ */
+const PaneHeader: React.FC<{ title: string; onClose?: () => void }> = ({ title, onClose }) => {
+  const { t } = useTranslation('settings');
+  return (
+    <div className={styles.paneHeader}>
+      <h3 className={styles.title}>{title}</h3>
+      {onClose && (
+        <button type="button" className={styles.paneClose} onClick={onClose} aria-label={t('formBuilder.closePane')}>
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const SizeFields: React.FC<{
   x: number;
   y: number;
   width: number;
   height: number;
+  /** What the position is measured FROM, so the numbers mean something. */
+  origin: 'page' | 'section';
   onChange: (box: { x: number; y: number; width: number; height: number }) => void;
-}> = ({ x, y, width, height, onChange }) => {
+}> = ({ x, y, width, height, origin, onChange }) => {
   const { t } = useTranslation('settings');
   const num = (value: string, fallback: number) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+
+  /*
+   * These four numbers used to be presented as "Width (px)", "Height (px)",
+   * "X" and "Y" — the last two untranslated, and all four framed as the
+   * document's internal coordinates. They are the same numbers, but the owner
+   * is positioning something on a page, so they are labelled the way a page
+   * layout tool labels them: a size, and a position measured from a stated
+   * corner. The unit is stated once per group rather than repeated inside
+   * four separate labels.
+   */
   return (
-    <div className={styles.sizeRow}>
-      <TextInput type="number" label={t('formBuilder.widthPx')} value={String(Math.round(width))} onChange={(e) => onChange({ x, y, width: num(e.target.value, width), height })} />
-      <TextInput type="number" label={t('formBuilder.heightPx')} value={String(Math.round(height))} onChange={(e) => onChange({ x, y, width, height: num(e.target.value, height) })} />
-      <TextInput type="number" label="X" value={String(Math.round(x))} onChange={(e) => onChange({ x: num(e.target.value, x), y, width, height })} />
-      <TextInput type="number" label="Y" value={String(Math.round(y))} onChange={(e) => onChange({ x, y: num(e.target.value, y), width, height })} />
-    </div>
+    <>
+      <details className={styles.disclosure} open>
+        <summary>{t('formBuilder.size')}</summary>
+        <div className={styles.sizeRow}>
+          <TextInput
+            type="number"
+            label={t('formBuilder.width')}
+            value={String(Math.round(width))}
+            onChange={(e) => onChange({ x, y, width: num(e.target.value, width), height })}
+          />
+          <TextInput
+            type="number"
+            label={t('formBuilder.height')}
+            value={String(Math.round(height))}
+            onChange={(e) => onChange({ x, y, width, height: num(e.target.value, height) })}
+          />
+        </div>
+        <p className={styles.hint}>{t('formBuilder.measuredInPixels')}</p>
+      </details>
+
+      <details className={styles.disclosure}>
+        <summary>{t('formBuilder.position')}</summary>
+        <div className={styles.sizeRow}>
+          <TextInput
+            type="number"
+            label={t('formBuilder.horizontal')}
+            value={String(Math.round(x))}
+            onChange={(e) => onChange({ x: num(e.target.value, x), y, width, height })}
+          />
+          <TextInput
+            type="number"
+            label={t('formBuilder.vertical')}
+            value={String(Math.round(y))}
+            onChange={(e) => onChange({ x, y: num(e.target.value, y), width, height })}
+          />
+        </div>
+        <p className={styles.hint}>
+          {origin === 'page' ? t('formBuilder.fromPageCorner') : t('formBuilder.fromSectionCorner')}
+        </p>
+      </details>
+    </>
   );
 };

@@ -10,7 +10,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--color-primary, #ec4899);
+  background: var(--color-primary);
 }
 
 .horizontal {
@@ -18,5 +18,5 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--color-primary, #ec4899);
+  background: var(--color-primary);
 }

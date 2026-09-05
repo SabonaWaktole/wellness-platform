@@ -20,6 +20,10 @@ import {
   stripSyntheticPages,
   usableHeight,
   emptyDocument,
+  applyBoxes,
+  normaliseControls,
+  pullUpOneLine,
+  pruneEmptyTextHosts,
 } from './layoutOps';
 import {
   A4_PORTRAIT,
@@ -413,5 +417,271 @@ describe('emptyDocument', () => {
     expect(d.pages).toHaveLength(1);
     expect(d.pages[0].sections).toEqual([]);
     expect(d.page.width).toBe(A4_PORTRAIT.width);
+  });
+});
+
+
+/*
+ * `alignBoxes` and `distributeBoxes` produce geometry; something has to write
+ * that geometry back. Doing it by calling `moveElement` in a loop from the UI
+ * would skip the guarantee that makes the ladder trustworthy — a batch that
+ * cannot fit must be rejected WHOLE, never half-applied.
+ */
+describe('applyBoxes', () => {
+  const twoElements = (): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [
+      {
+        id: 'p1',
+        sections: [
+          {
+            id: 's1',
+            title: 'S',
+            x: 48,
+            y: 48,
+            width: 400,
+            height: 300,
+            elements: [
+              { id: 'e1', type: 'TEXT', x: 10, y: 10, width: 100, height: 40 },
+              { id: 'e2', type: 'TEXT', x: 200, y: 80, width: 100, height: 40 },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  it('writes an aligned batch back through the ladder', () => {
+    const doc = twoElements();
+    const result = applyBoxes(doc, 'element', [
+      { id: 'e1', x: 10, y: 10, width: 100, height: 40 },
+      { id: 'e2', x: 10, y: 80, width: 100, height: 40 },
+    ]);
+
+    expect(result.refusal).toBeNull();
+    expect(findElement(result.document, 'e2')?.x).toBe(10);
+    expect(findElement(result.document, 'e1')?.x).toBe(10);
+  });
+
+  it('leaves the document untouched when the batch names something missing', () => {
+    const doc = twoElements();
+    const result = applyBoxes(doc, 'element', [{ id: 'nope', x: 0, y: 0, width: 10, height: 10 }]);
+
+    expect(result.document).toEqual(doc);
+  });
+});
+
+/*
+ * A document seeded or migrated outside the builder can carry a control its
+ * data type cannot be shown in. The server refuses such a pairing on save, so
+ * before this every save of "Client Intake" failed on the first mismatch:
+ * autosave retried and failed forever and the form could not be edited at all.
+ */
+describe('normaliseControls', () => {
+  const withField = (type: FormElement['type'], dataType: string): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [
+      {
+        id: 'p1',
+        sections: [
+          {
+            id: 's1',
+            title: 'S',
+            x: 48,
+            y: 48,
+            width: 400,
+            height: 300,
+            elements: [
+              {
+                id: 'e1',
+                type,
+                x: 10,
+                y: 10,
+                width: 200,
+                height: 60,
+                field: { key: 'k', label: 'L', dataType, required: false },
+              } as FormElement,
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  const controlOf = (doc: FormDocument) => findElement(doc, 'e1')?.type;
+
+  it.each([
+    ['BOOLEAN', 'CHECKBOX_GROUP'],
+    ['SINGLE_SELECT', 'DROPDOWN'],
+    ['MULTI_SELECT', 'CHECKBOX_GROUP'],
+    ['DATE', 'DATE'],
+    ['SIGNATURE', 'SIGNATURE'],
+    ['USER_REFERENCE', 'USER_SELECT'],
+  ])('moves a %s stored as INPUT onto %s', (dataType, expected) => {
+    expect(controlOf(normaliseControls(withField('INPUT', dataType)))).toBe(expected);
+  });
+
+  /* A pairing the server already accepts is left exactly as the owner set it —
+   * TEXT may be either an INPUT or a TEXTAREA, and the choice is theirs. */
+  it.each([
+    ['TEXT', 'TEXTAREA'],
+    ['TEXT', 'INPUT'],
+    ['LONG_TEXT', 'INPUT'],
+    ['SINGLE_SELECT', 'RADIO_GROUP'],
+  ])('leaves a %s shown as %s alone', (dataType, type) => {
+    expect(controlOf(normaliseControls(withField(type as FormElement['type'], dataType)))).toBe(type);
+  });
+
+  it('keeps the field, its key and its geometry untouched', () => {
+    const before = withField('INPUT', 'BOOLEAN');
+    const after = normaliseControls(before);
+    const element = findElement(after, 'e1')!;
+
+    expect(element.field).toEqual(findElement(before, 'e1')!.field);
+    expect([element.x, element.y, element.width, element.height]).toEqual([10, 10, 200, 60]);
+  });
+
+  /* THE FAILURE THAT STARTED THIS: nothing may be dropped. A repair that lost
+   * the element would trade an unsavable form for a silently emptied one. */
+  it('repairs in place without dropping anything', () => {
+    const doc = withField('INPUT', 'BOOLEAN');
+    const after = normaliseControls(doc);
+
+    expect(after.pages).toHaveLength(1);
+    expect(after.pages[0].sections).toHaveLength(1);
+    expect(after.pages[0].sections[0].elements).toHaveLength(1);
+  });
+
+  it('leaves presentation-only elements, which have no field, alone', () => {
+    const doc = emptyDocument();
+    expect(normaliseControls(doc)).toEqual(doc);
+  });
+});
+
+/*
+ * BACKSPACE IN AN EMPTY LINE ABOVE A PICTURE.
+ *
+ * Free-placed text sits on a page whose layout is absolute — nothing pushes
+ * anything else, which is what makes this a form builder rather than a word
+ * processor. But with the caret in an empty line above an image, Backspace has
+ * to do what it does in Word: eat ONE line and let the image come up by one
+ * line, again on the next press. Closing the whole gap at once takes the
+ * owner's control away and is hard to undo by eye.
+ */
+describe('pullUpOneLine', () => {
+  const stacked = (elements: FormElement[]): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [{ id: 'p1', sections: [{ id: 's1', title: '', x: 48, y: 48, width: 400, height: 400, elements }] }],
+  });
+
+  const LINE = 40;
+  const gap = (over: Partial<FormElement> = {}) =>
+    ({ id: 'gap', type: 'TEXT', x: 0, y: 40, width: 320, height: LINE, ...over }) as FormElement;
+  const picture = (over: Partial<FormElement> = {}) =>
+    ({ id: 'img', type: 'IMAGE', x: 0, y: 200, width: 200, height: 200, ...over }) as FormElement;
+
+  it('brings the picture up by one line, not by the whole gap', () => {
+    const result = pullUpOneLine(stacked([gap(), picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+  });
+
+  it('leaves the empty line in place so the next press moves the next line', () => {
+    const result = pullUpOneLine(stacked([gap(), picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeDefined();
+  });
+
+  it('walks the picture up a line at a time', () => {
+    let doc = stacked([gap(), picture()]);
+    const seen: (number | undefined)[] = [];
+    for (let press = 0; press < 4; press += 1) {
+      doc = pullUpOneLine(doc, 'gap', LINE).document;
+      seen.push(findElement(doc, 'img')?.y);
+    }
+
+    // 200 -> 160 -> 120 -> 80 -> 40, landing flush against the line above it.
+    expect(seen).toEqual([160, 120, 80, 40]);
+  });
+
+  /* Less than a line left: take only what is there rather than jumping past. */
+  it('never overshoots the line above it', () => {
+    const result = pullUpOneLine(stacked([gap(), picture({ y: 55 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(40);
+  });
+
+  /* With the space used up, Backspace does its other job. */
+  it('deletes the empty line once there is no space left to take', () => {
+    const result = pullUpOneLine(stacked([gap(), picture({ y: 40 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeUndefined();
+  });
+
+  it('deletes the empty line when nothing is underneath', () => {
+    const above = { id: 'above', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([above, gap()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeUndefined();
+    expect(findElement(result.document, 'above')?.y).toBe(0);
+  });
+
+  it('keeps the spacing between everything that moves', () => {
+    const trailing = { id: 'after', type: 'TEXT', x: 0, y: 300, width: 320, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([gap(), picture(), trailing]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+    expect(findElement(result.document, 'after')?.y).toBe(260);
+  });
+
+  /* Boxes on the same line are neighbours, not things underneath. */
+  it('leaves a box beside the empty line where it is', () => {
+    const beside = { id: 'beside', type: 'TEXT', x: 340, y: 40, width: 200, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([gap(), beside, picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'beside')?.y).toBe(40);
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+  });
+
+  /* A line dropped into a gap smaller than itself overlaps what follows;
+   * measuring from its bottom edge would move nothing at all. */
+  it('still moves what it overlaps', () => {
+    const result = pullUpOneLine(stacked([gap({ y: 100 }), picture({ y: 120 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(100);
+  });
+});
+
+describe('pruneEmptyTextHosts', () => {
+  const doc = (sections): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [{ id: 'p1', sections }],
+  });
+  const section = (id: string, elements: FormElement[] = []) =>
+    ({ id, title: '', x: 48, y: 48, width: 320, height: 40, elements });
+  const text = { id: 't1', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
+
+  /* A host with nothing in it renders nothing, draws no chrome and cannot be
+   * selected — so nobody can ever remove it by hand. */
+  it('drops a host that holds nothing', () => {
+    const result = pruneEmptyTextHosts(doc([section('text-host-a'), section('text-host-b', [text])]));
+
+    expect(result.pages[0].sections.map((s) => s.id)).toEqual(['text-host-b']);
+  });
+
+  /* An empty section the OWNER placed is a deliberate space on the page. */
+  it('leaves an empty section the owner made alone', () => {
+    const result = pruneEmptyTextHosts(doc([section('s1'), section('text-host-a')]));
+
+    expect(result.pages[0].sections.map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('leaves a document with nothing to prune untouched', () => {
+    const original = doc([section('s1', [text])]);
+    expect(pruneEmptyTextHosts(original)).toEqual(original);
   });
 });

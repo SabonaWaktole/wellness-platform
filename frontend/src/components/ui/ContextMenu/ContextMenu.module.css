@@ -1,0 +1,73 @@
+/*
+ * A desktop context menu: dense, hairline-bordered, no rounded-card styling.
+ * It should read as part of the operating system's furniture rather than as
+ * another card in the application.
+ */
+.menu {
+  position: fixed;
+  z-index: var(--z-dropdown, 60);
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-radius: var(--radius-default, 6px);
+  background: var(--color-surface-container-lowest, var(--color-surface));
+  box-shadow: var(--shadow-lg);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: var(--color-surface-variant);
+  outline: none;
+}
+
+.item:disabled {
+  color: var(--text-quaternary, var(--text-tertiary));
+  cursor: default;
+}
+
+.itemDanger {
+  color: var(--color-error);
+}
+
+/* A fixed gutter so the labels line up whether or not an item has an icon. */
+.itemIcon {
+  display: inline-flex;
+  justify-content: center;
+  width: 16px;
+  flex: 0 0 16px;
+}
+
+.itemLabel {
+  flex: 1;
+  white-space: nowrap;
+}
+
+/* Right-aligned and quiet: a reminder for next time, not a second label. */
+.itemShortcut {
+  color: var(--text-tertiary, var(--text-secondary));
+  font-size: var(--font-size-label-md, 0.75rem);
+  font-variant-numeric: tabular-nums;
+  padding-left: var(--spacing-base);
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--color-outline-variant, var(--border-hairline));
+}

@@ -16,6 +16,29 @@ import styles from './FormCanvas.module.css';
 
 const EMPTY_GUIDES: Guide[] = [];
 
+/**
+ * Whether a pointer/click event started inside whatever currently holds the
+ * caret.
+ *
+ * The sheet answers a click by selecting its page. While a caret is open the
+ * element's overlay is deliberately pointer-transparent (see `CanvasElement`),
+ * so every click INSIDE the editor — placing the caret, selecting a word —
+ * reached the sheet underneath and deselected the object being typed into: the
+ * contextual tab vanished, the format pane collapsed, and the page jumped, all
+ * from putting the cursor where the user wanted it.
+ *
+ * Two markers are needed because the two kinds of editor live in different
+ * trees: the label/title inputs are inside this component's own overlay
+ * chrome (`data-editing-surface`), while a TEXT block's rich editor is drawn by
+ * `FormPageRenderer` inside the element's own box (`data-element-id`).
+ */
+const isInsideCaret = (event: React.SyntheticEvent, editing: EditTarget | null | undefined): boolean => {
+  if (!editing) return false;
+  const target = event.target as Element | null;
+  if (!target?.closest) return false;
+  return !!target.closest(`[data-editing-surface="true"], [data-element-id="${editing.id}"]`);
+};
+
 export type CanvasSelection =
   | { type: 'page'; id: string }
   | { type: 'section'; id: string }
@@ -39,6 +62,11 @@ export interface FormCanvasProps {
   onChangeElementContent: (elementId: string, content: ElementContent) => void;
   onRenameField: (elementId: string, label: string) => void;
   onEditorReady: (editor: Editor | null) => void;
+  /** Right-click. The target decides which menu is built. */
+  onContextMenu: (
+    event: React.MouseEvent,
+    target: { type: 'element' | 'section' | 'page'; id: string }
+  ) => void;
   onMoveSection: (sectionId: string, x: number, y: number) => void;
   onResizeSection: (sectionId: string, box: ResizedBox) => void;
   onRenameSection: (sectionId: string, title: string) => void;
@@ -46,6 +74,11 @@ export interface FormCanvasProps {
   onMoveElement: (elementId: string, x: number, y: number) => void;
   onResizeElement: (elementId: string, box: ResizedBox) => void;
   onDeleteElement: (elementId: string) => void;
+  /**
+   * A click landed on unoccupied page space: put a caret there and let the
+   * owner write. Coordinates are PAGE coordinates, already divided by zoom.
+   */
+  onTypeAt: (pageId: string, x: number, y: number) => void;
   /** Brackets a drag/resize/click gesture so useHistory coalesces every
    *  intermediate commit into one undo entry (spec §21). */
   onGestureStart?: () => void;
@@ -77,6 +110,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onChangeElementContent,
   onRenameField,
   onEditorReady,
+  onContextMenu,
   onMoveSection,
   onResizeSection,
   onRenameSection,
@@ -84,6 +118,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onMoveElement,
   onResizeElement,
   onDeleteElement,
+  onTypeAt,
   onGestureStart,
   onGestureEnd,
 }) => {
@@ -223,7 +258,10 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
     <div
       className={styles.stack}
       style={{ padding: CANVAS_GUTTER }}
-      onClick={() => onSelect(null)}
+      onClick={(e) => {
+        if (isInsideCaret(e, editing)) return;
+        onSelect(null);
+      }}
       /*
        * Two jobs, both keyed to "a gesture is starting somewhere on the sheet
        * stack".
@@ -269,6 +307,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onChangeElementContent={onChangeElementContent}
             onRenameField={onRenameField}
             onEditorReady={onEditorReady}
+            onContextMenu={onContextMenu}
             onMoveSection={handleMoveSection}
             onResizeSection={onResizeSection}
             onRenameSection={onRenameSection}
@@ -276,6 +315,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onMoveElement={handleMoveElement}
             onResizeElement={onResizeElement}
             onDeleteElement={onDeleteElement}
+            onTypeAt={onTypeAt}
             getScale={viewport.getScale}
             shouldRender={
               isVisible(page.id) || page.id === selectedPageId || page.id === editingPageId
@@ -317,6 +357,7 @@ const Sheet: React.FC<SheetProps> = ({
   onChangeElementContent,
   onRenameField,
   onEditorReady,
+  onContextMenu,
   onMoveSection,
   onResizeSection,
   onRenameSection,
@@ -324,6 +365,7 @@ const Sheet: React.FC<SheetProps> = ({
   onMoveElement,
   onResizeElement,
   onDeleteElement,
+  onTypeAt,
   getScale,
   shouldRender,
   wrapRef,
@@ -339,7 +381,34 @@ const Sheet: React.FC<SheetProps> = ({
       style={{ width: layout.page.width, height: layout.page.height }}
       onClick={(e) => {
         e.stopPropagation();
+        // A click that belongs to the open caret is not a click on the page.
+        if (isInsideCaret(e, editing)) return;
+
+        /*
+         * CLICK -> CARET -> TYPE.
+         *
+         * Reaching this handler already means the click hit nothing else: every
+         * element overlay stops its own clicks, and the section overlay is
+         * pointer-transparent except for its chrome. So the sheet is what is
+         * left when the owner clicks genuinely empty page, and on a page that
+         * is meant to read as a document the answer to that is a caret — not a
+         * selection, and certainly not "first go and add a Text component".
+         *
+         * The point is converted out of screen space into PAGE space here,
+         * where the document's coordinates live, so zoom never reaches the
+         * model (spec §5/§25) and the text lands where it was asked for at any
+         * magnification.
+         */
+        const rect = e.currentTarget.getBoundingClientRect();
+        const scale = getScale() || 1;
+        onTypeAt(page.id, (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale);
+      }}
+      onContextMenu={(e) => {
+        // The browser's own menu wins inside a caret (spell-check, plain-text
+        // paste). It must not cost the user their selection on the way past.
+        if (isInsideCaret(e, editing)) return;
         onSelect({ type: 'page', id: page.id });
+        onContextMenu(e, { type: 'page', id: page.id });
       }}
     >
       {/* Margin guides: the usable area a section is constrained to (spec §5). */}
@@ -379,6 +448,7 @@ const Sheet: React.FC<SheetProps> = ({
                 getScale={getScale}
                 onSelect={(options) => onSelect({ type: 'section', id: section.id }, options)}
                 onBeginEditTitle={() => onBeginEdit({ kind: 'section-title', id: section.id })}
+                onContextMenu={(e) => onContextMenu(e, { type: 'section', id: section.id })}
                 onMove={(x, y) => onMoveSection(section.id, x, y)}
                 onResize={(box) => onResizeSection(section.id, box)}
                 onRename={(title) => onRenameSection(section.id, title)}
@@ -393,6 +463,7 @@ const Sheet: React.FC<SheetProps> = ({
                     getScale={getScale}
                     onSelect={(options) => onSelect({ type: 'element', id: element.id }, options)}
                     onBeginEdit={onBeginEdit}
+                    onContextMenu={(e) => onContextMenu(e, { type: 'element', id: element.id })}
                     onRenameField={(label) => onRenameField(element.id, label)}
                     onMove={(x, y) => onMoveElement(element.id, x, y)}
                     onResize={(box) => onResizeElement(element.id, box)}

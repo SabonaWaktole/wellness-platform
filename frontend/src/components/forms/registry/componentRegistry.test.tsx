@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
 import { COMPONENT_REGISTRY, ADDABLE_COMPONENTS, componentFor } from './componentRegistry';
+import { normaliseRichText } from './content';
 import { PRESENTATION_ONLY_TYPES, isDataBearing, type ComponentType, type FormElement } from '../../../types/form';
 import enForms from '../../../locales/en/forms.json';
 
@@ -141,5 +142,53 @@ describe('component registry — rendering', () => {
   it('renders a drawable canvas for a signature in fill mode', () => {
     render(<Harness type="SIGNATURE" mode="fill" />);
     expect(document.querySelector('canvas')).toBeTruthy();
+  });
+});
+
+/*
+ * ONE PRESS OF ENTER MADE A FORM UNSAVABLE.
+ *
+ * TipTap registers block attributes with `default: null`, but its `parseHTML`
+ * reads them off `element.style`, where an unset property is `''` rather than
+ * `null`. A paragraph that had been through the DOM serialised as
+ * `lineHeight: ""`, which the stored schema refuses — and the owner saw a Zod
+ * dump they had no way to act on instead of their work being saved.
+ */
+describe('normaliseRichText', () => {
+  it('turns an empty attribute into the null the schema expects', () => {
+    const doc = {
+      type: 'doc',
+      content: [{ type: 'paragraph', attrs: { lineHeight: '', textAlign: null }, content: [{ type: 'text', text: 'Hi' }] }],
+    };
+
+    expect(normaliseRichText(doc).content[0].attrs).toEqual({ lineHeight: null, textAlign: null });
+  });
+
+  it('leaves a real measure exactly as the owner set it', () => {
+    const doc = { type: 'doc', content: [{ type: 'paragraph', attrs: { lineHeight: '1.5', textAlign: 'center' } }] };
+
+    expect(normaliseRichText(doc).content[0].attrs).toEqual({ lineHeight: '1.5', textAlign: 'center' });
+  });
+
+  it('reaches attributes nested anywhere in the document', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'bulletList',
+          content: [
+            { type: 'listItem', content: [{ type: 'paragraph', attrs: { lineHeight: '' } }] },
+          ],
+        },
+      ],
+    };
+
+    expect(normaliseRichText(doc).content[0].content[0].content[0].attrs.lineHeight).toBeNull();
+  });
+
+  it('leaves the text itself alone', () => {
+    const doc = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] };
+
+    expect(normaliseRichText(doc).content[0].content[0].text).toBe('');
   });
 });

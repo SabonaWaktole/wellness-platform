@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Control, FieldValues } from 'react-hook-form';
 import { componentFor } from '../registry/componentRegistry';
+import { isTextHostSection } from '../../../types/form';
 import type { RenderMode } from '../registry/types';
 import type { Editor } from '@tiptap/react';
 import type {
@@ -76,7 +77,14 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
     {page.sections.map((section) => (
       <div
         key={section.id}
-        className={styles.section}
+        /*
+         * A text host is a container the owner never asked for — it holds
+         * words they typed straight onto the page. Drawing `.section` around
+         * it would put a bordered, filled box on the paper in the builder, in
+         * the client's form and in print alike, which is exactly the box they
+         * did not want.
+         */
+        className={isTextHostSection(section) ? undefined : styles.section}
         style={sectionStyle(section)}
         data-section-id={section.id}
       >
@@ -94,6 +102,19 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
               key={element.id}
               className={styles.element}
               data-element-id={element.id}
+              /*
+               * IN THE BUILDER THE CONTROLS ARE A PICTURE OF THE FORM, NOT THE
+               * FORM. They are real inputs so the canvas and the filled form
+               * can never disagree about how a field looks — but the author
+               * cannot fill them (the selection overlay takes the clicks), and
+               * they were still in the tab order: 24 dead stops between the
+               * page rail and the format pane, each one focusable and none of
+               * them doing anything.
+               *
+               * The element being TYPED INTO is the exception: its editor has
+               * to keep both focus and pointer events.
+               */
+              inert={mode === 'edit' && element.id !== editingElementId}
               style={{
                 position: 'absolute',
                 left: element.x,
