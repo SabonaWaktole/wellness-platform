@@ -94,6 +94,19 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
               key={element.id}
               className={styles.element}
               data-element-id={element.id}
+              /*
+               * IN THE BUILDER THE CONTROLS ARE A PICTURE OF THE FORM, NOT THE
+               * FORM. They are real inputs so the canvas and the filled form
+               * can never disagree about how a field looks — but the author
+               * cannot fill them (the selection overlay takes the clicks), and
+               * they were still in the tab order: 24 dead stops between the
+               * page rail and the format pane, each one focusable and none of
+               * them doing anything.
+               *
+               * The element being TYPED INTO is the exception: its editor has
+               * to keep both focus and pointer events.
+               */
+              inert={mode === 'edit' && element.id !== editingElementId}
               style={{
                 position: 'absolute',
                 left: element.x,

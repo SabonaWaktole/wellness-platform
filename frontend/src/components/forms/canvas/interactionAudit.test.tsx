@@ -593,3 +593,33 @@ describe('Audit — the section chrome does not cover the caret inside it', () =
     expect(document.querySelector('[class*="sectionOverlay"]').className).not.toMatch(/sectionPassThrough/);
   });
 });
+
+describe('Audit — the tab order belongs to the editor, not to the form being drawn', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * The canvas renders REAL inputs so that it and the filled form can never
+   * disagree about how a field looks. The author cannot fill them — the
+   * selection overlay takes the clicks — but they were still in the tab
+   * order: on a modest form, two dozen dead stops between the page rail and
+   * the format pane, each one focusable and none of them doing anything.
+   */
+  it('keeps the preview controls out of reach of the keyboard', () => {
+    render(<FormBuilder />);
+    const wrappers = [...document.querySelectorAll('[data-element-id]')];
+    expect(wrappers.length).toBeGreaterThan(0);
+    expect(wrappers.every((w) => w.hasAttribute('inert'))).toBe(true);
+  });
+
+  /* The element being typed into is the exception: its editor has to keep
+   * both focus and pointer events. */
+  it('releases the element being edited so its caret can be reached', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(overlays()[0]);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    expect(editor).not.toBeNull();
+    expect(editor.closest('[data-element-id]').hasAttribute('inert')).toBe(false);
+    expect(document.querySelectorAll('[data-element-id]:not([inert])')).toHaveLength(1);
+  });
+});
