@@ -740,7 +740,29 @@ export const FormBuilder: React.FC = () => {
       )}
       {saveError && !hasConflict && <p className={styles.errorBanner}>{saveError}</p>}
 
-      <div className={`${styles.body} ${showHistory ? styles.bodyHistory : ''}`}>
+      {/*
+        The document is the only column that always exists. Both side panes are
+        dismissible, and the grid is described from what is actually open
+        rather than reserving tracks for panels that are not there — a fixed
+        three-column shell is what made the page feel like it was sharing the
+        window with a dashboard.
+      */}
+      <div
+        className={styles.body}
+        style={
+          showHistory
+            ? { gridTemplateColumns: '280px minmax(0, 1fr)' }
+            : {
+                gridTemplateColumns: [
+                  showNavigationPane && !showPreview ? '150px' : null,
+                  'minmax(0, 1fr)',
+                  showFormatPane && (selectedElement || selectedSection) ? '280px' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' '),
+              }
+        }
+      >
         {showHistory ? (
           <aside className={styles.historyPanel}>
             {/* Same rule as read view: a mode gets a visible way out on the
