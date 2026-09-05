@@ -863,3 +863,46 @@ describe('Free placement — Backspace steps up one line at a time', () => {
     expect(document.querySelector('[contenteditable="true"]')).not.toBeNull();
   });
 });
+
+describe('Free placement — one line means one line', () => {
+  beforeEach(mockHooks);
+
+  /*
+   * The step used to be the caret block's HEIGHT. A block is only one line
+   * tall when it is new — one that has been typed in, grown, or dragged taller
+   * is many lines — so a single Backspace moved whatever was below it by the
+   * entire block, which on a tall empty block is the whole empty space at
+   * once: exactly what this was meant not to do. It is the editor's own
+   * computed line-height now.
+   */
+  it('asks the editor how tall a line is, not how tall the block is', () => {
+    render(<FormBuilder />);
+    fireEvent.doubleClick(overlays()[0]);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    expect(editor).not.toBeNull();
+    // The measurement is taken from the editor node that is in the document
+    // while the caret is open; jsdom reports no layout, so the fallback holds.
+    expect(editor.closest('[data-element-id]')).not.toBeNull();
+  });
+
+  /*
+   * A measurement taken while the DOM is between states can come back wildly
+   * large — the editor briefly filling its section rather than its own box.
+   * Growing on one of those leaves a block hundreds of pixels tall holding a
+   * single line, which reads as an enormous empty gap on the page and swallows
+   * the clicks meant for it.
+   */
+  it('never grows a block past the section that contains it', () => {
+    render(<FormBuilder />);
+    const section = document.querySelector('[class*="sectionOverlay"]');
+    const sectionHeight = Number.parseFloat(section.style.height);
+
+    fireEvent.doubleClick(overlays()[0]);
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.input(editor, { target: { textContent: 'a'.repeat(500) } });
+
+    const height = Number.parseFloat(overlays()[0].style.height);
+    expect(height).toBeLessThanOrEqual(sectionHeight);
+  });
+});

@@ -86,6 +86,8 @@ const NEW_SECTION_HEIGHT = 220;
 /** A freshly typed block: wide enough for a line of prose, one line tall. */
 const NEW_TEXT_WIDTH = 320;
 const NEW_TEXT_HEIGHT = 40;
+/** Fallback when the editor's own line-height cannot be read from the DOM. */
+const DEFAULT_LINE_HEIGHT = 24;
 
 /**
  * The full-page document builder: a minimal toolbar, the A4 sheet stack as
@@ -755,6 +757,29 @@ export const FormBuilder: React.FC = () => {
   );
 
   /**
+   * How tall one line of text is in this block.
+   *
+   * Taken from the editor's own computed line-height, which is what a line
+   * actually measures — NOT the block's height. A block is only one line tall
+   * when it is new; one that has been typed in, or grown, or dragged taller is
+   * many lines, and using its height made a single Backspace move whatever was
+   * below it by the entire block — the whole empty space at once, which is the
+   * one thing this was meant not to do.
+   *
+   * Computed styles are in unscaled CSS pixels, so this is the same number at
+   * every zoom level, which is what the document's coordinates need.
+   */
+  const oneLineOf = useCallback((elementId: string): number => {
+    const host = window.document.querySelector(`[data-element-id="${elementId}"]`);
+    const line = host?.querySelector('.ProseMirror p') ?? host?.querySelector('.ProseMirror');
+    if (line instanceof HTMLElement) {
+      const computed = Number.parseFloat(window.getComputedStyle(line).lineHeight);
+      if (Number.isFinite(computed) && computed > 0) return Math.round(computed);
+    }
+    return DEFAULT_LINE_HEIGHT;
+  }, []);
+
+  /**
    * A block grows to hold what has been typed into it.
    *
    * A text block is stored with a height, and that height is what the renderer,
@@ -789,6 +814,17 @@ export const FormBuilder: React.FC = () => {
         Math.max(host.scrollHeight, editor instanceof HTMLElement ? editor.scrollHeight : 0)
       );
       if (needed <= element.height + 1) return;
+
+      /*
+       * A measurement taken while the DOM is between states can come back
+       * wildly large — the editor briefly filling its section rather than its
+       * own box. Growing on one of those leaves a block hundreds of pixels
+       * tall holding a single line, which then reads as an enormous empty gap
+       * on the page. A block never needs to be taller than the section that
+       * contains it, so anything past that is not a measurement worth having.
+       */
+      const section = sectionContaining(layoutRef.current, elementId);
+      if (section && needed > section.height) return;
 
       apply(
         resizeElement(layoutRef.current, elementId, {
@@ -918,7 +954,7 @@ export const FormBuilder: React.FC = () => {
            * line only goes when there is no space left below it to take, and
            * that is the press that ends the sequence.
            */
-          const step = findElement(layout, id)?.height ?? NEW_TEXT_HEIGHT;
+          const step = oneLineOf(id);
           const next = pullUpOneLine(layout, id, step);
           if (!findElement(next.document, id)) {
             inline.end();
@@ -1031,6 +1067,7 @@ export const FormBuilder: React.FC = () => {
     selectAllOnPage,
     apply,
     history,
+    oneLineOf,
     doCopy,
     doCut,
     doPaste,
