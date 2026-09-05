@@ -33,6 +33,7 @@ import {
   reorderPage,
   removeEmptyPages,
   insertPageAt,
+  normaliseControls,
   moveSectionToPage,
   moveSection,
   resizeSection,
@@ -207,7 +208,10 @@ export const FormBuilder: React.FC = () => {
     // document on screen already IS this version. Resetting to it would only
     // destroy the caret, the selection and the undo history (see the ref).
     if (selfSavedVersion.current === `${form.id}@${form.version}`) return;
-    history.reset(form.layout);
+    // Repaired on the way in, not on the way out: a document seeded outside
+    // the builder can carry a control its data type cannot be shown in, and
+    // every save of it would fail (see `normaliseControls`).
+    history.reset(normaliseControls(form.layout));
     setIsDirty(false);
     setSelection(null);
     inline.end();

@@ -15,6 +15,7 @@ import {
   type FormPage,
   type FormSection,
 } from '../../../types/form';
+import { componentOptionsFor } from '../FormRenderer/fieldControl';
 
 /**
  * Pure transforms over a FormDocument (v3). Geometry logic lives here, out of
@@ -721,6 +722,46 @@ export const stripSyntheticPages = (doc: FormDocument): FormDocument => ({
   pages: doc.pages
     .filter((p) => p.id !== UNPLACED_PAGE_ID)
     .map((p) => ({ ...p, sections: p.sections.filter((s) => !isSyntheticSection(s)) })),
+});
+
+/**
+ * Brings a loaded document into line with the component/data-type pairings the
+ * server will accept.
+ *
+ * THE SERVER REFUSES A PAIRING IT CANNOT RENDER — a BOOLEAN shown as a text
+ * INPUT would take a string where a boolean belongs, and the mismatch would
+ * surface as a failed submission in front of a customer rather than here. That
+ * rule is right, and `PropertiesPanel` already honours it: changing a field's
+ * type moves the control to a compatible one in the same edit.
+ *
+ * What nothing handled was a document that arrived ALREADY mismatched. Forms
+ * seeded or migrated outside the builder carry pairings the validator now
+ * rejects — "Client Intake" shipped with a BOOLEAN, a SINGLE_SELECT, a
+ * USER_REFERENCE and a DATE all stored as INPUT. Every save of such a form
+ * failed on the first mismatch, so autosave retried and failed forever and the
+ * form could not be edited at all: not a validation message the owner could
+ * act on, just a red banner over a document they never touched.
+ *
+ * Repairing on adoption is the only reading that makes the form usable, and it
+ * is not a guess: for each data type there is exactly one sensible control and
+ * `componentOptionsFor` already names it. The field, its key and its geometry
+ * are untouched — only the control changes, and it changes to the one that can
+ * actually hold the value.
+ */
+export const normaliseControls = (doc: FormDocument): FormDocument => ({
+  ...doc,
+  pages: doc.pages.map((page) => ({
+    ...page,
+    sections: page.sections.map((section) => ({
+      ...section,
+      elements: section.elements.map((element) => {
+        if (!element.field) return element;
+        const allowed = componentOptionsFor(element.field.dataType);
+        if (allowed.length === 0 || allowed.includes(element.type)) return element;
+        return { ...element, type: allowed[0] };
+      }),
+    })),
+  })),
 });
 
 export { A4_PORTRAIT, DEFAULT_MARGIN };

@@ -21,6 +21,7 @@ import {
   usableHeight,
   emptyDocument,
   applyBoxes,
+  normaliseControls,
 } from './layoutOps';
 import {
   A4_PORTRAIT,
@@ -466,5 +467,93 @@ describe('applyBoxes', () => {
     const result = applyBoxes(doc, 'element', [{ id: 'nope', x: 0, y: 0, width: 10, height: 10 }]);
 
     expect(result.document).toEqual(doc);
+  });
+});
+
+/*
+ * A document seeded or migrated outside the builder can carry a control its
+ * data type cannot be shown in. The server refuses such a pairing on save, so
+ * before this every save of "Client Intake" failed on the first mismatch:
+ * autosave retried and failed forever and the form could not be edited at all.
+ */
+describe('normaliseControls', () => {
+  const withField = (type: FormElement['type'], dataType: string): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [
+      {
+        id: 'p1',
+        sections: [
+          {
+            id: 's1',
+            title: 'S',
+            x: 48,
+            y: 48,
+            width: 400,
+            height: 300,
+            elements: [
+              {
+                id: 'e1',
+                type,
+                x: 10,
+                y: 10,
+                width: 200,
+                height: 60,
+                field: { key: 'k', label: 'L', dataType, required: false },
+              } as FormElement,
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  const controlOf = (doc: FormDocument) => findElement(doc, 'e1')?.type;
+
+  it.each([
+    ['BOOLEAN', 'CHECKBOX_GROUP'],
+    ['SINGLE_SELECT', 'DROPDOWN'],
+    ['MULTI_SELECT', 'CHECKBOX_GROUP'],
+    ['DATE', 'DATE'],
+    ['SIGNATURE', 'SIGNATURE'],
+    ['USER_REFERENCE', 'USER_SELECT'],
+  ])('moves a %s stored as INPUT onto %s', (dataType, expected) => {
+    expect(controlOf(normaliseControls(withField('INPUT', dataType)))).toBe(expected);
+  });
+
+  /* A pairing the server already accepts is left exactly as the owner set it —
+   * TEXT may be either an INPUT or a TEXTAREA, and the choice is theirs. */
+  it.each([
+    ['TEXT', 'TEXTAREA'],
+    ['TEXT', 'INPUT'],
+    ['LONG_TEXT', 'INPUT'],
+    ['SINGLE_SELECT', 'RADIO_GROUP'],
+  ])('leaves a %s shown as %s alone', (dataType, type) => {
+    expect(controlOf(normaliseControls(withField(type as FormElement['type'], dataType)))).toBe(type);
+  });
+
+  it('keeps the field, its key and its geometry untouched', () => {
+    const before = withField('INPUT', 'BOOLEAN');
+    const after = normaliseControls(before);
+    const element = findElement(after, 'e1')!;
+
+    expect(element.field).toEqual(findElement(before, 'e1')!.field);
+    expect([element.x, element.y, element.width, element.height]).toEqual([10, 10, 200, 60]);
+  });
+
+  /* THE FAILURE THAT STARTED THIS: nothing may be dropped. A repair that lost
+   * the element would trade an unsavable form for a silently emptied one. */
+  it('repairs in place without dropping anything', () => {
+    const doc = withField('INPUT', 'BOOLEAN');
+    const after = normaliseControls(doc);
+
+    expect(after.pages).toHaveLength(1);
+    expect(after.pages[0].sections).toHaveLength(1);
+    expect(after.pages[0].sections[0].elements).toHaveLength(1);
+  });
+
+  it('leaves presentation-only elements, which have no field, alone', () => {
+    const doc = emptyDocument();
+    expect(normaliseControls(doc)).toEqual(doc);
   });
 });
