@@ -810,3 +810,49 @@ describe('Free placement — a caret, and nothing else', () => {
     expect(overlays()[0].className).toMatch(/elementSelected/);
   });
 });
+
+describe('Free placement — Backspace in an empty line closes the gap', () => {
+  beforeEach(mockHooks);
+
+  const typeAt = (x, y) => {
+    const paper = sheet('p1');
+    paper.getBoundingClientRect = () => ({ left: 0, top: 0, width: 794, height: 1123, right: 794, bottom: 1123, x: 0, y: 0 });
+    fireEvent.click(paper, { clientX: x, clientY: y });
+  };
+
+  /*
+   * With the caret in an empty line there is no character left to delete, so
+   * Backspace would do nothing at all — while what the person meant is what
+   * every editor does here: take the line away and let what is under it come
+   * up. The keystroke has to reach the document for that, which it only may
+   * because the block is empty; a Backspace with text to eat still belongs
+   * entirely to the text.
+   */
+  it('removes the empty block the caret is in', () => {
+    render(<FormBuilder />);
+    const before = document.querySelectorAll('[class*="elementOverlay"]').length;
+
+    typeAt(300, 700);
+    expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before + 1);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.keyDown(editor, { key: 'Backspace' });
+
+    expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before);
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  /* A Backspace that has text to eat is the text's, not the document's. */
+  it('leaves a block alone while it still has words in it', () => {
+    render(<FormBuilder />);
+    const before = document.querySelectorAll('[class*="elementOverlay"]').length;
+
+    // overlays()[0] is a TEXT block with content in the fixture.
+    fireEvent.doubleClick(overlays()[0]);
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.keyDown(editor, { key: 'Backspace' });
+
+    expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before);
+    expect(document.querySelector('[contenteditable="true"]')).not.toBeNull();
+  });
+});

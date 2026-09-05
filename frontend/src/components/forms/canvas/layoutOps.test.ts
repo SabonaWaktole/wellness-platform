@@ -22,6 +22,8 @@ import {
   emptyDocument,
   applyBoxes,
   normaliseControls,
+  removeElementClosingGap,
+  pruneEmptyTextHosts,
 } from './layoutOps';
 import {
   A4_PORTRAIT,
@@ -555,5 +557,105 @@ describe('normaliseControls', () => {
   it('leaves presentation-only elements, which have no field, alone', () => {
     const doc = emptyDocument();
     expect(normaliseControls(doc)).toEqual(doc);
+  });
+});
+
+/*
+ * BACKSPACE IN AN EMPTY LINE ABOVE A PICTURE.
+ *
+ * Free-placed text sits on a page whose layout is absolute — nothing pushes
+ * anything else, which is what makes this a form builder rather than a word
+ * processor. But with the caret in an empty line above an image, Backspace
+ * has to do what it does in Word: take the line away and let the image come
+ * up. Removing alone leaves a hole exactly the size of the line.
+ */
+describe('removeElementClosingGap', () => {
+  const stacked = (elements: FormElement[]): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [{ id: 'p1', sections: [{ id: 's1', title: '', x: 48, y: 48, width: 400, height: 400, elements }] }],
+  });
+
+  const gap = (over: Partial<FormElement> = {}) =>
+    ({ id: 'gap', type: 'TEXT', x: 0, y: 40, width: 320, height: 40, ...over }) as FormElement;
+  const picture = (over: Partial<FormElement> = {}) =>
+    ({ id: 'img', type: 'IMAGE', x: 0, y: 120, width: 200, height: 200, ...over }) as FormElement;
+
+  it('pulls the picture up to where the deleted line began', () => {
+    const result = removeElementClosingGap(stacked([gap(), picture()]), 'gap');
+
+    expect(findElement(result.document, 'gap')).toBeUndefined();
+    expect(findElement(result.document, 'img')?.y).toBe(40);
+  });
+
+  it('keeps the spacing between everything that moves', () => {
+    const trailing = { id: 'after', type: 'TEXT', x: 0, y: 400, width: 320, height: 40 } as FormElement;
+    const result = removeElementClosingGap(stacked([gap(), picture(), trailing]), 'gap');
+
+    // The picture closed an 80px gap, so the block below it moves the same.
+    expect(findElement(result.document, 'img')?.y).toBe(40);
+    expect(findElement(result.document, 'after')?.y).toBe(320);
+  });
+
+  /* A line dropped into a gap smaller than itself overlaps what follows;
+   * measuring against its bottom edge would close no gap at all. */
+  it('closes the gap even when the deleted line overlapped the picture', () => {
+    const result = removeElementClosingGap(stacked([gap({ y: 100, height: 40 }), picture({ y: 120 })]), 'gap');
+
+    expect(findElement(result.document, 'img')?.y).toBe(100);
+  });
+
+  /* Boxes on the same line are neighbours, not things underneath. */
+  it('leaves a box beside the deleted one where it is', () => {
+    const beside = { id: 'beside', type: 'TEXT', x: 340, y: 40, width: 200, height: 40 } as FormElement;
+    const result = removeElementClosingGap(stacked([gap(), beside, picture()]), 'gap');
+
+    expect(findElement(result.document, 'beside')?.y).toBe(40);
+    expect(findElement(result.document, 'img')?.y).toBe(40);
+  });
+
+  it('is a plain delete when nothing is underneath', () => {
+    const above = { id: 'above', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
+    const result = removeElementClosingGap(stacked([above, gap()]), 'gap');
+
+    expect(findElement(result.document, 'gap')).toBeUndefined();
+    expect(findElement(result.document, 'above')?.y).toBe(0);
+  });
+
+  it('never lifts anything above the top of its section', () => {
+    const result = removeElementClosingGap(stacked([gap({ y: 0 }), picture({ y: 10 })]), 'gap');
+
+    expect(findElement(result.document, 'img')?.y).toBe(0);
+  });
+});
+
+describe('pruneEmptyTextHosts', () => {
+  const doc = (sections): FormDocument => ({
+    version: 3,
+    page: emptyPageGeometry(),
+    pages: [{ id: 'p1', sections }],
+  });
+  const section = (id: string, elements: FormElement[] = []) =>
+    ({ id, title: '', x: 48, y: 48, width: 320, height: 40, elements });
+  const text = { id: 't1', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
+
+  /* A host with nothing in it renders nothing, draws no chrome and cannot be
+   * selected — so nobody can ever remove it by hand. */
+  it('drops a host that holds nothing', () => {
+    const result = pruneEmptyTextHosts(doc([section('text-host-a'), section('text-host-b', [text])]));
+
+    expect(result.pages[0].sections.map((s) => s.id)).toEqual(['text-host-b']);
+  });
+
+  /* An empty section the OWNER placed is a deliberate space on the page. */
+  it('leaves an empty section the owner made alone', () => {
+    const result = pruneEmptyTextHosts(doc([section('s1'), section('text-host-a')]));
+
+    expect(result.pages[0].sections.map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('leaves a document with nothing to prune untouched', () => {
+    const original = doc([section('s1', [text])]);
+    expect(pruneEmptyTextHosts(original)).toEqual(original);
   });
 });

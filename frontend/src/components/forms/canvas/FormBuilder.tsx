@@ -35,7 +35,9 @@ import {
   removeEmptyPages,
   insertPageAt,
   normaliseControls,
+  pruneEmptyTextHosts,
   TEXT_HOST_PREFIX,
+  isTextHostSection,
   moveSectionToPage,
   moveSection,
   resizeSection,
@@ -46,6 +48,7 @@ import {
   updateElement,
   updateSection,
   removeElement,
+  removeElementClosingGap,
   applyBoxes,
   stripSyntheticPages,
   emptyDocument,
@@ -224,7 +227,7 @@ export const FormBuilder: React.FC = () => {
     // Repaired on the way in, not on the way out: a document seeded outside
     // the builder can carry a control its data type cannot be shown in, and
     // every save of it would fail (see `normaliseControls`).
-    history.reset(normaliseControls(form.layout));
+    history.reset(pruneEmptyTextHosts(normaliseControls(form.layout)));
     setIsDirty(false);
     setSelection(null);
     inline.end();
@@ -689,8 +692,23 @@ export const FormBuilder: React.FC = () => {
         autoCreated.current = null;
         return;
       }
+      const host = sectionContaining(layoutRef.current, id);
       const pruned = removeElement(layoutRef.current, id);
-      if (!pruned.refusal) history.commit(pruned.document);
+      if (!pruned.refusal) {
+        /*
+         * The host was created FOR this block. With the block gone it holds
+         * nothing, renders nothing and can never be selected — an invisible
+         * empty section the document would carry for ever. It goes too.
+         */
+        const emptied =
+          host &&
+          isTextHostSection(host) &&
+          !pruned.document.pages
+            .flatMap((page) => page.sections)
+            .find((section) => section.id === host.id)?.elements.length;
+        const next = emptied ? removeSection(pruned.document, host.id) : pruned;
+        history.commit(next.refusal ? pruned.document : next.document);
+      }
       autoCreated.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -874,6 +892,31 @@ export const FormBuilder: React.FC = () => {
         const inContentEditable =
           event.target instanceof Element &&
           event.target.closest('[contenteditable="true"], [contenteditable=""]') !== null;
+
+        /*
+         * BACKSPACE IN AN EMPTY BLOCK IS A DOCUMENT EDIT, NOT A TEXT ONE.
+         *
+         * There is no character left to delete, so the keystroke would do
+         * nothing at all — but what the person meant is the thing every editor
+         * does here: take this empty line away and let what is under it come
+         * up. Only when the block is genuinely empty, so a Backspace that has
+         * text to eat still belongs entirely to the text.
+         */
+        const backspaceInEmptyBlock =
+          inContentEditable &&
+          event.key === 'Backspace' &&
+          inline.target?.kind === 'element-text' &&
+          inline.editor?.isEmpty === true;
+
+        if (backspaceInEmptyBlock && inline.target) {
+          event.preventDefault();
+          const id = inline.target.id;
+          inline.end();
+          apply(removeElementClosingGap(layout, id));
+          setSelection(null);
+          return;
+        }
+
         const allowed =
           shortcut.action === 'escape' ||
           (inContentEditable && (shortcut.action === 'undo' || shortcut.action === 'redo'));

@@ -716,6 +716,89 @@ export const applyBoxes = (
 
 export const isSyntheticSection = (section: FormSection): boolean => section.id === UNPLACED_SECTION_ID;
 
+/**
+ * Removes an element and pulls what sits below it up into the space it left.
+ *
+ * Free-placed text is written on a page whose layout is ABSOLUTE — every box
+ * carries its own coordinates and nothing pushes anything else. That is what
+ * makes a form a form rather than a word processor, but it is not what a
+ * person typing expects: with the caret in an empty line above a picture,
+ * Backspace should take the line away and let the picture come up, the way it
+ * does in Word or Docs. Deleting alone would leave a hole exactly the size of
+ * the line that was removed.
+ *
+ * The reflow is deliberately LOCAL — the removed element's own section, and
+ * only what is strictly below its box. Sections are the unit the owner places
+ * by hand, so a Backspace in one must not move things they positioned
+ * elsewhere on the page; and boxes sitting BESIDE the deleted one keep their
+ * line rather than sliding up past their neighbours.
+ *
+ * The gap closes onto the next thing down: everything below moves up by the
+ * distance between the deleted box's top and the nearest top beneath it, so
+ * that neighbour lands where the deleted line began and the space between the
+ * rest is preserved.
+ */
+export const removeElementClosingGap = (doc: FormDocument, elementId: string): ApplyResult => {
+  const section = sectionContaining(doc, elementId);
+  const element = section?.elements.find((e) => e.id === elementId);
+  if (!section || !element) return removeElement(doc, elementId);
+
+  /*
+   * Below means "starts lower down", not "clears the box". A block dropped
+   * into a gap smaller than itself overlaps what follows, and measuring
+   * against its bottom edge would decide nothing was below it and close no
+   * gap at all — the picture would sit exactly where it was.
+   */
+  const below = section.elements.filter(
+    (candidate) => candidate.id !== elementId && candidate.y > element.y
+  );
+  if (below.length === 0) return removeElement(doc, elementId);
+
+  const delta = Math.min(...below.map((candidate) => candidate.y)) - element.y;
+  if (delta <= 0) return removeElement(doc, elementId);
+
+  const moved = new Set(below.map((candidate) => candidate.id));
+  return ok({
+    ...doc,
+    pages: doc.pages.map((page) => ({
+      ...page,
+      sections: page.sections.map((candidate) =>
+        candidate.id !== section.id
+          ? candidate
+          : {
+              ...candidate,
+              elements: candidate.elements
+                .filter((e) => e.id !== elementId)
+                .map((e) => (moved.has(e.id) ? { ...e, y: Math.max(0, e.y - delta) } : e)),
+            }
+      ),
+    })),
+  });
+};
+
+/**
+ * Drops text-host sections that hold nothing.
+ *
+ * A host exists only to carry a block of free text. Once that block is gone
+ * the host renders nothing, draws no chrome and cannot be selected — so
+ * nobody can ever remove it, and the document carries it for ever. They
+ * accumulate a click at a time.
+ *
+ * Pruned when the document is adopted, which cleans up both the ones an
+ * earlier build left behind and any that escape the live cleanup. Sections the
+ * OWNER made are never touched, empty or not: an empty section they placed is
+ * a deliberate space on the page.
+ */
+export const pruneEmptyTextHosts = (doc: FormDocument): FormDocument => ({
+  ...doc,
+  pages: doc.pages.map((page) => ({
+    ...page,
+    sections: page.sections.filter(
+      (section) => !isTextHostSection(section) || section.elements.length > 0
+    ),
+  })),
+});
+
 /** Re-exported so canvas callers have one import for document helpers. */
 export { TEXT_HOST_PREFIX, isTextHostSection };
 
