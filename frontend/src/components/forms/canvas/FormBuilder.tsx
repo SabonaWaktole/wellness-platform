@@ -65,6 +65,7 @@ import {
 } from '../../../hooks/useClientForm';
 import { COMPONENT_REGISTRY } from '../registry/componentRegistry';
 import { nextFieldKey } from './fieldKeys';
+import { normaliseRichText, plainTextOf, wrapText } from '../registry/content';
 import {
   isDataBearing,
 } from '../../../types/form';
@@ -78,6 +79,9 @@ import styles from './FormCanvas.module.css';
 
 const NEW_SECTION_WIDTH = 420;
 const NEW_SECTION_HEIGHT = 220;
+/** A freshly typed block: wide enough for a line of prose, one line tall. */
+const NEW_TEXT_WIDTH = 320;
+const NEW_TEXT_HEIGHT = 40;
 
 /**
  * The full-page document builder: a minimal toolbar, the A4 sheet stack as
@@ -562,6 +566,128 @@ export const FormBuilder: React.FC = () => {
     setSelection(null);
   }, [sel, layout, apply, setSelection]);
 
+
+  /*
+   * WRITING ON THE PAGE, WITHOUT FIRST BUILDING SOMEWHERE TO WRITE.
+   *
+   * A document editor's contract is click -> caret -> type, and the owner
+   * should never have to reach for "Add -> Text" to put a sentence on a page.
+   * The document model still stores that sentence as a TEXT element inside a
+   * section, because that is what makes it render, print and lay out like
+   * everything else — but that is an implementation detail and it stays behind
+   * the interaction (spec §3).
+   *
+   * TWO THINGS KEEP THIS FROM BECOMING LITTER. The element is created QUIETLY:
+   * `history.commit` without marking the document dirty, so the stray clicks
+   * everyone makes to dismiss a selection do not schedule a save of a document
+   * that has not changed. And when the caret leaves a block that was never
+   * typed into, the block goes with it — see the effect below.
+   */
+  const autoCreated = useRef<string | null>(null);
+  // Read by that effect's cleanup, which must see the CURRENT document rather
+  // than the one captured when the caret was opened.
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+
+  const handleTypeAt = useCallback(
+    (pageId: string, x: number, y: number) => {
+      const page = layoutRef.current.pages.find((p) => p.id === pageId);
+      if (!page) return;
+
+      /*
+       * A click inside an existing section writes into that section, so the
+       * text belongs to the thing it looks like it is inside — and moves,
+       * paginates and reflows with it. Only a click on bare page needs a host,
+       * and that host is deliberately invisible: no title, no fill, no line,
+       * so what the owner sees is text on a page rather than a box they never
+       * asked for.
+       */
+      const host = page.sections.find(
+        (section) =>
+          x >= section.x && x <= section.x + section.width && y >= section.y && y <= section.y + section.height
+      );
+
+      let document = layoutRef.current;
+      let sectionId = host?.id;
+      let localX = x - (host?.x ?? 0);
+      let localY = y - (host?.y ?? 0);
+
+      if (!host) {
+        const before = new Set(document.pages.flatMap((p) => p.sections).map((sec) => sec.id));
+        const created = addSection(document, pageId, '', {
+          x: Math.max(layout.page.margin.left, Math.min(x, layout.page.width - layout.page.margin.right - NEW_TEXT_WIDTH)),
+          y,
+          width: NEW_TEXT_WIDTH,
+          height: NEW_TEXT_HEIGHT,
+        });
+        if (created.refusal) {
+          setRefusal(created.refusal);
+          return;
+        }
+        document = created.document;
+        const added = document.pages
+          .flatMap((p) => p.sections)
+          .find((sec) => !before.has(sec.id));
+        if (!added) return;
+        sectionId = added.id;
+        localX = 0;
+        localY = 0;
+        // Invisible: the page should read as a page, not as a box.
+        const plain = updateSection(document, added.id, {
+          styles: { background: 'transparent', borderColor: 'transparent' },
+        });
+        if (!plain.refusal) document = plain.document;
+      }
+
+      if (!sectionId) return;
+
+      const element: FormElement = {
+        id: newId(),
+        type: 'TEXT',
+        x: Math.max(0, Math.round(localX)),
+        y: Math.max(0, Math.round(localY)),
+        width: NEW_TEXT_WIDTH,
+        height: NEW_TEXT_HEIGHT,
+        content: wrapText(''),
+      };
+
+      const placed = addElement(document, sectionId, element);
+      if (placed.refusal) {
+        setRefusal(placed.refusal);
+        return;
+      }
+
+      // Quiet: no dirty flag, no autosave — nothing has been written yet.
+      history.commit(placed.document);
+      autoCreated.current = element.id;
+      setSelection({ type: 'element', id: element.id });
+      inline.begin({ kind: 'element-text', id: element.id });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout.page, history, setSelection, inline]
+  );
+
+  /*
+   * A block the owner clicked into but never wrote in is not content, and
+   * leaving it behind would turn every stray click into an empty box the
+   * document has to carry. Removed on the way out, as quietly as it arrived.
+   */
+  useEffect(() => {
+    const id = inline.target?.kind === 'element-text' ? inline.target.id : null;
+    if (!id || autoCreated.current !== id) return;
+    return () => {
+      const element = findElement(layoutRef.current, id);
+      if (!element || plainTextOf(element.content as never) !== '') {
+        autoCreated.current = null;
+        return;
+      }
+      const pruned = removeElement(layoutRef.current, id);
+      if (!pruned.refusal) history.commit(pruned.document);
+      autoCreated.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inline.target?.kind, inline.target?.id]);
+
   const handleAddSection = () => {
     const pageId = targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
@@ -592,9 +718,63 @@ export const FormBuilder: React.FC = () => {
   /** Commits a keystroke made inside a TEXT block's on-page editor. */
   const handleChangeElementContent = useCallback(
     (elementId: string, content: ElementContent) => {
-      apply(updateElement(layout, elementId, { content }));
+      // Normalised on the way in: an attribute the editor left as `''` would
+      // be refused by the stored schema and take the whole save down with it
+      // (see `normaliseRichText`).
+      apply(updateElement(layout, elementId, { content: normaliseRichText(content) }));
+      growToFitText(elementId);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [layout, apply]
+  );
+
+  /**
+   * A block grows to hold what has been typed into it.
+   *
+   * A text block is stored with a height, and that height is what the renderer,
+   * print and the page-overflow ladder all lay out against. Typing a second
+   * paragraph into a one-line block therefore spilled the words outside the box
+   * that was supposed to contain them: the canvas showed text the document did
+   * not think was there, and what the owner saw stopped matching what the
+   * client would get. Word grows a text frame for the same reason.
+   *
+   * Measured synchronously: the change being committed CAME from the editor,
+   * so its DOM already holds the new text — there is nothing to wait for, and
+   * waiting on a frame would mean the box quietly failed to grow whenever the
+   * tab was not the one in front.
+   *
+   * Grows only, never shrinks, so a box the owner deliberately made large is
+   * never yanked back to its content.
+   */
+  const growToFitText = useCallback(
+    (elementId: string) => {
+      const host = window.document.querySelector(`[data-element-id="${elementId}"]`);
+      if (!(host instanceof HTMLElement)) return;
+      const element = findElement(layoutRef.current, elementId);
+      if (!element) return;
+
+      /*
+       * The wrapper carries the stored height; the editor node inside it is
+       * what knows how tall the words actually are. Both are consulted so the
+       * measurement holds whichever one the browser reports the overflow on.
+       */
+      const editor = host.querySelector('.ProseMirror');
+      const needed = Math.ceil(
+        Math.max(host.scrollHeight, editor instanceof HTMLElement ? editor.scrollHeight : 0)
+      );
+      if (needed <= element.height + 1) return;
+
+      apply(
+        resizeElement(layoutRef.current, elementId, {
+          x: element.x,
+          y: element.y,
+          width: element.width,
+          height: needed,
+        })
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apply]
   );
 
   /** Commits a keystroke made inside a field's on-page label editor. */
@@ -1106,6 +1286,7 @@ export const FormBuilder: React.FC = () => {
                 apply(removeElement(layout, id));
                 setSelection(null);
               }}
+              onTypeAt={handleTypeAt}
             />
           )}
         </div>

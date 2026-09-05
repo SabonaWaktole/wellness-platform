@@ -15,18 +15,6 @@ export interface CanvasSectionProps {
   isTarget: boolean;
   /** True while the owner has a caret in this section's heading (spec §7). */
   isEditingTitle: boolean;
-  /**
-   * True while a caret is open in one of this section's ELEMENTS.
-   *
-   * The section's chrome is drawn over the whole section box, above the text
-   * the renderer drew underneath it. `CanvasElement` already turns itself
-   * pointer-transparent while it is being typed into — but a TEXT block's
-   * editor lives in the renderer's own DOM, BELOW this overlay too, so the
-   * section went on swallowing every click aimed at the text: clicking to
-   * place the caret selected the surrounding section instead and closed the
-   * editor. The owner could type, but could not click their own words.
-   */
-  hasCaretInside: boolean;
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
@@ -51,7 +39,6 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   isSelected,
   isTarget,
   isEditingTitle,
-  hasCaretInside,
   getScale,
   onSelect,
   onContextMenu,
@@ -76,9 +63,6 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
     isSelected ? styles.sectionSelected : '',
     !isSelected && isTarget ? styles.sectionActive : '',
     isEditingTitle ? styles.sectionEditing : '',
-    // Let the caret underneath have its own clicks; the section's own chrome
-    // stays live through `.sectionPassThrough > *`.
-    hasCaretInside ? styles.sectionPassThrough : '',
   ]
     .filter(Boolean)
     .join(' ');

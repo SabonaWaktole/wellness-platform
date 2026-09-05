@@ -231,3 +231,63 @@ describe('FormRenderer', () => {
     expect(sheets.length).toBe(2);
   });
 });
+
+/*
+ * THE LINE BETWEEN AUTHORING AND FILLING.
+ *
+ * The builder lets the owner put a caret anywhere the page is not already
+ * occupied and simply write. The client is doing something else entirely —
+ * filling a document in, not designing one — and the same rendering must not
+ * carry that capability across. The two modes render the same document and
+ * differ only in what answers a click.
+ */
+describe('FormRenderer — the client fills the form, it does not edit it', () => {
+  const textBlock = {
+    id: 'copy',
+    type: 'TEXT',
+    ...box,
+    content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Please read carefully.' }] }] },
+  };
+  const input = { id: 'e1', type: 'INPUT', ...box, y: 100, field: field() };
+
+  it('gives the client no editable surface anywhere on the page', () => {
+    const { container } = render(<Harness layout={doc([textBlock, input])} mode="fill" />);
+
+    expect(container.querySelectorAll('[contenteditable="true"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[contenteditable]')).toHaveLength(0);
+  });
+
+  it('leaves the static text of the document read-only', () => {
+    const { container } = render(<Harness layout={doc([textBlock, input])} mode="fill" />);
+
+    expect(screen.getByText(/please read carefully/i)).toBeInTheDocument();
+    expect(container.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  it('leaves the section title read-only', () => {
+    const { container } = render(<Harness layout={doc([input])} mode="fill" />);
+    const heading = screen.getByRole('heading', { name: 'Company Information' });
+
+    expect(heading.hasAttribute('contenteditable')).toBe(false);
+    expect(container.querySelector('input[class*="sectionTitleInput"]')).toBeNull();
+  });
+
+  /* The only editable regions are the interactive fields themselves (§8). */
+  it('accepts input only inside the form\'s own fields', () => {
+    const { container } = render(<Harness layout={doc([textBlock, input])} mode="fill" />);
+    const editable = [...container.querySelectorAll('input, select, textarea')];
+
+    expect(editable).toHaveLength(1);
+    expect(editable[0].tagName).toBe('INPUT');
+  });
+
+  /* None of the builder's authoring chrome may reach the client (§9). */
+  it('carries none of the builder\'s selection or drag chrome', () => {
+    const { container } = render(<Harness layout={doc([textBlock, input])} mode="fill" />);
+
+    expect(container.querySelector('[class*="elementOverlay"]')).toBeNull();
+    expect(container.querySelector('[class*="sectionOverlay"]')).toBeNull();
+    expect(container.querySelector('[class*="sectionDragHandle"]')).toBeNull();
+    expect(container.querySelector('[class*="handle-"]')).toBeNull();
+  });
+});

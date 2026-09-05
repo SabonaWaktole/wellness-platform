@@ -290,6 +290,25 @@
 .sectionOverlay {
   position: absolute;
   box-sizing: border-box;
+  /*
+   * THE BOX ITSELF ANSWERS NOTHING; ITS CHROME ANSWERS EVERYTHING.
+   *
+   * This overlay spans the whole section, and while it captured pointer events
+   * a click anywhere inside one could only ever mean "select this section".
+   * That is the invisible layer that made the page feel like a canvas of
+   * objects: the owner could not put a caret in the empty half of a section
+   * and simply write, because something they could not see answered first.
+   *
+   * Transparent here, live on the children, so the section's real affordances
+   * — the heading band that drags and selects it, the delete button, the
+   * resize handles — keep working exactly as before, while empty space inside
+   * the section belongs to the document and reaches the sheet underneath.
+   */
+  pointer-events: none;
+}
+
+.sectionOverlay > * {
+  pointer-events: auto;
 }
 
 .sectionSelected {
@@ -432,21 +451,6 @@
 
 .labelInput:focus {
   outline: none;
-}
-
-/*
- * A section that is letting a caret inside it be clicked.
- *
- * Same mechanism as `.elementEditing`: the box stops answering pointer events
- * so the text underneath receives them, while the section's OWN chrome — the
- * drag band, the delete button, the resize handles — stays live as children.
- */
-.sectionPassThrough {
-  pointer-events: none;
-}
-
-.sectionPassThrough > * {
-  pointer-events: auto;
 }
 
 /* A section whose heading is being typed into reads as active, not selected. */
