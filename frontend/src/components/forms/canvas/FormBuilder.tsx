@@ -23,6 +23,7 @@ import { useAutosave } from './useAutosave';
 import { useSelection } from './useSelection';
 import { useInlineEditing, type EditTarget } from './useInlineEditing';
 import { resolveShortcut, isTextEntryTarget } from './keyboard';
+import { alignBoxes, distributeBoxes } from './snapping';
 import {
   addSection,
   addElement,
@@ -42,6 +43,7 @@ import {
   updateElement,
   updateSection,
   removeElement,
+  applyBoxes,
   stripSyntheticPages,
   emptyDocument,
   findElement,
@@ -403,6 +405,36 @@ export const FormBuilder: React.FC = () => {
     [sel, setSelection, inline.target]
   );
 
+  /**
+   * Align/distribute the current multi-selection.
+   *
+   * The transform is passed in rather than a mode, so this knows only how to
+   * gather the boxes and write the result back through the ladder — the
+   * geometry itself stays in `snapping.ts` where it is already tested. Wrapped
+   * in one interaction so a six-element alignment is a single undo.
+   */
+  const handleArrange = useCallback(
+    (transform: (boxes: { id: string; x: number; y: number; width: number; height: number }[]) => {
+      id: string;
+      x: number;
+      y: number;
+    }[]) => {
+      if (!sel.kind || sel.kind === 'page') return;
+      const boxes = sel.ids
+        .map((id) =>
+          sel.kind === 'element' ? findElement(layout, id) : findSection(layout, id)?.section
+        )
+        .filter((b): b is NonNullable<typeof b> => !!b)
+        .map((b) => ({ id: b.id, x: b.x, y: b.y, width: b.width, height: b.height }));
+      if (boxes.length === 0) return;
+
+      history.beginInteraction();
+      apply(applyBoxes(layout, sel.kind, transform(boxes)));
+      history.endInteraction();
+    },
+    [layout, sel, apply, history]
+  );
+
   const handleAddSection = () => {
     const pageId = targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
@@ -745,6 +777,9 @@ export const FormBuilder: React.FC = () => {
                 : undefined
             }
             onOpenFormatPane={() => setShowFormatPane(true)}
+            selectionCount={sel.ids.length}
+            onAlign={(mode) => handleArrange((boxes) => alignBoxes(boxes, mode))}
+            onDistribute={(axis) => handleArrange((boxes) => distributeBoxes(boxes, axis))}
           />
         )}
 

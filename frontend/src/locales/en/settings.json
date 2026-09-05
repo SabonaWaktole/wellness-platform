@@ -414,7 +414,8 @@
       "textBox": "Text box",
       "shape": "Shape",
       "section": "Section",
-      "arrangeGroup": "Arrange"
+      "arrangeGroup": "Arrange",
+      "alignGroup": "Align"
     },
     "readViewBanner": "You are reading this form, not editing it.",
     "fillAndLine": "Fill & line",
@@ -433,6 +434,16 @@
     "editLabel": "Edit label",
     "insertPageBefore": "Insert page before",
     "moveToNextPage": "Move to next page",
-    "canvasMenu": "Document actions"
+    "canvasMenu": "Document actions",
+    "align": {
+      "left": "Align left",
+      "center-x": "Align centre",
+      "right": "Align right",
+      "top": "Align top",
+      "center-y": "Align middle",
+      "bottom": "Align bottom"
+    },
+    "distributeHorizontally": "Distribute horizontally",
+    "distributeVertically": "Distribute vertically"
   }
 }

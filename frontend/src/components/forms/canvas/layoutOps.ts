@@ -675,6 +675,39 @@ export const moveElementToSection = (
 // Read-model artefacts
 // ---------------------------------------------------------------------------
 
+/**
+ * Writes a batch of already-computed boxes back into the document.
+ *
+ * What align and distribute need: they produce geometry for several objects at
+ * once, and the result has to reach the same overflow ladder every other
+ * mutation goes through — otherwise an alignment could push a section past the
+ * bottom margin without repaginating. Folding the batch through `moveElement`
+ * / `moveSection` one at a time is what preserves that, and a refusal anywhere
+ * discards the whole batch rather than leaving a half-aligned row.
+ */
+export const applyBoxes = (
+  doc: FormDocument,
+  kind: 'element' | 'section',
+  boxes: { id: string; x: number; y: number }[]
+): ApplyResult => {
+  let working = doc;
+
+  for (const box of boxes) {
+    const exists =
+      kind === 'element' ? !!findElement(working, box.id) : !!findSection(working, box.id);
+    if (!exists) return ok(doc);
+
+    const step =
+      kind === 'element'
+        ? moveElement(working, box.id, box.x, box.y)
+        : moveSection(working, box.id, box.x, box.y);
+    if (step.refusal) return refuse(doc, step.refusal);
+    working = step.document;
+  }
+
+  return ok(working);
+};
+
 export const isSyntheticSection = (section: FormSection): boolean => section.id === UNPLACED_SECTION_ID;
 
 /**

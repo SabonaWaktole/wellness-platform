@@ -188,6 +188,31 @@ describe('Contextual ribbon tabs', () => {
     expect(screen.getByRole('tab', { name: /home/i })).toHaveAttribute('aria-selected', 'true');
   });
 
+  /*
+   * `alignBoxes`/`distributeBoxes` were written and tested when the canvas was
+   * built and never given a caller, so two fields could be nudged into rough
+   * alignment by eye but never actually aligned.
+   */
+  it('offers align only once two things are selected', () => {
+    render(<FormBuilder />);
+    selectField();
+    const panel = () => within(screen.getByRole('tabpanel'));
+    expect(panel().getByRole('button', { name: /align left/i })).toBeDisabled();
+
+    fireEvent.click(document.querySelector('[class*="elementOverlay"][style*="top: 90px"]'), { shiftKey: true });
+    expect(panel().getByRole('button', { name: /align left/i })).toBeEnabled();
+  });
+
+  it('aligns both selected elements to the same left edge', () => {
+    render(<FormBuilder />);
+    selectAt(90);
+    fireEvent.click(document.querySelector('[class*="elementOverlay"][style*="top: 190px"]'), { shiftKey: true });
+    fireEvent.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: /align left/i }));
+
+    const lefts = [...document.querySelectorAll('[class*="elementOverlay"]')].map((el) => el.style.left);
+    expect(lefts.filter((l) => l === '10px').length).toBeGreaterThanOrEqual(3);
+  });
+
   it('offers delete from the contextual tab', () => {
     render(<FormBuilder />);
     selectImage();
