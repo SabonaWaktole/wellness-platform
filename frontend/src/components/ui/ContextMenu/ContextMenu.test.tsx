@@ -78,6 +78,53 @@ describe('ContextMenu', () => {
     expect(cut).toHaveFocus();
   });
 
+  /*
+   * A disabled <button> refuses `.focus()`. Indexing every command, disabled
+   * ones included, therefore left the ring behind on the previous item while
+   * the menu's own index moved on: one press of Down did nothing, and from
+   * then on the highlight and the menu disagreed about which item was current.
+   */
+  it('arrows past a disabled command instead of stranding focus on the one before it', () => {
+    render(
+      <ContextMenu
+        x={10}
+        y={10}
+        items={[
+          { id: 'cut', label: 'Cut', onClick: vi.fn() },
+          { id: 'paste', label: 'Paste', onClick: vi.fn(), disabled: true },
+          { id: 'delete', label: 'Delete', onClick: vi.fn() },
+        ]}
+        onClose={vi.fn()}
+      />
+    );
+    const [cut, , del] = screen.getAllByRole('menuitem');
+
+    expect(cut).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    expect(del).toHaveFocus();
+  });
+
+  it('wraps around the focusable commands only', () => {
+    render(
+      <ContextMenu
+        x={10}
+        y={10}
+        items={[
+          { id: 'cut', label: 'Cut', onClick: vi.fn() },
+          { id: 'delete', label: 'Delete', onClick: vi.fn() },
+          { id: 'paste', label: 'Paste', onClick: vi.fn(), disabled: true },
+        ]}
+        onClose={vi.fn()}
+      />
+    );
+    const [cut, del] = screen.getAllByRole('menuitem');
+
+    fireEvent.keyDown(document, { key: 'End' });
+    expect(del).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    expect(cut).toHaveFocus();
+  });
+
   it('shows a shortcut hint beside the command it belongs to', () => {
     render(
       <ContextMenu

@@ -47,6 +47,26 @@ export const isTextEntryTarget = (target: EventTarget | null): boolean => {
   return target.closest('[contenteditable="true"], [contenteditable=""]') !== null;
 };
 
+/**
+ * Whether the event target is a CONTROL that navigates itself with the arrow
+ * keys.
+ *
+ * The ribbon's tab strip is a WAI-ARIA tablist: it moves between tabs with the
+ * arrow keys, as the pattern requires. The canvas nudges the selected object
+ * with the same keys. With focus on a tab both fired — picking a tab from the
+ * keyboard walked the selected field a pixel at a time and left the document
+ * dirty for it. The same applies to a menu's roving focus.
+ *
+ * Deliberately narrow: it gates the NUDGE only. `Escape` and the Ctrl-verbs
+ * are document commands wherever focus happens to be sitting, and taking
+ * Delete away from a user who just clicked a ribbon button would trade one
+ * surprise for another.
+ */
+export const isArrowNavigableControl = (target: EventTarget | null): boolean => {
+  if (!(target instanceof Element)) return false;
+  return target.closest('[role="tab"], [role="menuitem"], [role="menu"], [role="tablist"]') !== null;
+};
+
 const NUDGES: Record<string, { dx: number; dy: number }> = {
   ArrowLeft: { dx: -1, dy: 0 },
   ArrowRight: { dx: 1, dy: 0 },

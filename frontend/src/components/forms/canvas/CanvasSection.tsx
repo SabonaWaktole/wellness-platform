@@ -15,6 +15,18 @@ export interface CanvasSectionProps {
   isTarget: boolean;
   /** True while the owner has a caret in this section's heading (spec §7). */
   isEditingTitle: boolean;
+  /**
+   * True while a caret is open in one of this section's ELEMENTS.
+   *
+   * The section's chrome is drawn over the whole section box, above the text
+   * the renderer drew underneath it. `CanvasElement` already turns itself
+   * pointer-transparent while it is being typed into — but a TEXT block's
+   * editor lives in the renderer's own DOM, BELOW this overlay too, so the
+   * section went on swallowing every click aimed at the text: clicking to
+   * place the caret selected the surrounding section instead and closed the
+   * editor. The owner could type, but could not click their own words.
+   */
+  hasCaretInside: boolean;
   /** Live canvas zoom, so pointer deltas convert back to document space. */
   getScale: () => number;
   onSelect: (options?: { additive?: boolean }) => void;
@@ -39,6 +51,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
   isSelected,
   isTarget,
   isEditingTitle,
+  hasCaretInside,
   getScale,
   onSelect,
   onContextMenu,
@@ -63,6 +76,9 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
     isSelected ? styles.sectionSelected : '',
     !isSelected && isTarget ? styles.sectionActive : '',
     isEditingTitle ? styles.sectionEditing : '',
+    // Let the caret underneath have its own clicks; the section's own chrome
+    // stays live through `.sectionPassThrough > *`.
+    hasCaretInside ? styles.sectionPassThrough : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -99,9 +115,17 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
             the FIRST click anywhere near a section landed in a text field
             instead of selecting the section.
           */}
+          {/*
+            The band drags the section — except while the heading inside it is
+            being typed into. It stayed live through an edit, so a pointer-down
+            on the margin either side of the input dragged the section out from
+            under the caret: text editing moving the object, which is the one
+            thing the two-gesture split exists to prevent. `CanvasElement`
+            unbinds its gestures during an edit for the same reason.
+          */}
           <div
             className={styles.sectionDragHandle}
-            onPointerDown={drag.onPointerDown}
+            onPointerDown={isEditingTitle ? undefined : drag.onPointerDown}
             onDoubleClick={(e) => {
               e.stopPropagation();
               onBeginEditTitle();
@@ -112,6 +136,7 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
             <input
               className={styles.sectionTitleInput}
               autoFocus
+              data-editing-surface="true"
               value={section.title ?? ''}
               aria-label={t('formBuilder.sectionTitle')}
               onClick={(e) => e.stopPropagation()}

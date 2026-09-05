@@ -53,6 +53,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, 
   const [focused, setFocused] = useState(0);
 
   const commands = items.filter(isCommand);
+  /*
+   * ROVING FOCUS SKIPS WHAT CANNOT TAKE IT.
+   *
+   * `focused` used to index every command, disabled ones included — but a
+   * disabled <button> refuses `.focus()`, so arrowing onto one left the ring
+   * behind on the previous item while the menu's own index moved on. One press
+   * of Down did nothing at all, and from then on the highlight and the menu
+   * disagreed about which item was current. Navigating the focusABLE items is
+   * the only version of this that cannot drift.
+   */
+  const focusable = commands.filter((command) => !command.disabled);
 
   // Flip and clamp so the menu is always fully on screen, the same
   // measure-then-place approach `DropdownMenu` uses.
@@ -76,7 +87,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, 
   }, []);
 
   useEffect(() => {
-    const buttons = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+    const buttons = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)');
     buttons?.[focused]?.focus();
   }, [focused]);
 
@@ -87,20 +98,20 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, 
         onClose();
         return;
       }
-      if (commands.length === 0) return;
+      if (focusable.length === 0) return;
 
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        setFocused((i) => (i + 1) % commands.length);
+        setFocused((i) => (i + 1) % focusable.length);
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
-        setFocused((i) => (i - 1 + commands.length) % commands.length);
+        setFocused((i) => (i - 1 + focusable.length) % focusable.length);
       } else if (event.key === 'Home') {
         event.preventDefault();
         setFocused(0);
       } else if (event.key === 'End') {
         event.preventDefault();
-        setFocused(commands.length - 1);
+        setFocused(focusable.length - 1);
       } else if (event.key === 'Tab') {
         onClose();
       }
@@ -118,7 +129,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, 
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('pointerdown', onPointerDown, true);
     };
-  }, [commands.length, onClose]);
+  }, [focusable.length, onClose]);
 
   const menu = (
     <div

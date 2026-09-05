@@ -10,6 +10,8 @@ export interface StatusBarProps {
   autosave: AutosaveStatus;
   onRetrySave: () => void;
   zoomPercent: number;
+  canZoomIn: boolean;
+  canZoomOut: boolean;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitPage: () => void;
@@ -32,6 +34,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   autosave,
   onRetrySave,
   zoomPercent,
+  canZoomIn,
+  canZoomOut,
   onZoomIn,
   onZoomOut,
   onFitPage,
@@ -64,18 +68,38 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         )}
       </span>
 
+      {/* Icon-only, so every one of these carries `title` as well as an
+          `aria-label`: the label alone is invisible to the sighted user, who
+          otherwise has no way at all to find out what the icon does (§34). */}
       <div className={styles.zoomCluster}>
-        <button type="button" onClick={onZoomOut} aria-label={t('formBuilder.zoomOut')}>
+        <button
+          type="button"
+          onClick={onZoomOut}
+          disabled={!canZoomOut}
+          aria-label={t('formBuilder.zoomOut')}
+          title={t('formBuilder.zoomOut')}
+        >
           <ZoomOut size={14} />
         </button>
         <span className={styles.zoomPercent}>{zoomPercent}%</span>
-        <button type="button" onClick={onZoomIn} aria-label={t('formBuilder.zoomIn')}>
+        <button
+          type="button"
+          onClick={onZoomIn}
+          disabled={!canZoomIn}
+          aria-label={t('formBuilder.zoomIn')}
+          title={t('formBuilder.zoomIn')}
+        >
           <ZoomIn size={14} />
         </button>
-        <button type="button" onClick={onFitPage} aria-label={t('formBuilder.fitPage')}>
+        <button type="button" onClick={onFitPage} aria-label={t('formBuilder.fitPage')} title={t('formBuilder.fitPage')}>
           <Maximize2 size={14} />
         </button>
-        <button type="button" onClick={onFitWidth} aria-label={t('formBuilder.fitWidth')}>
+        <button
+          type="button"
+          onClick={onFitWidth}
+          aria-label={t('formBuilder.fitWidth')}
+          title={t('formBuilder.fitWidth')}
+        >
           <MoveHorizontal size={14} />
         </button>
       </div>
