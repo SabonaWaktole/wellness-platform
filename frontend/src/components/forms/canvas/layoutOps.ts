@@ -717,47 +717,58 @@ export const applyBoxes = (
 export const isSyntheticSection = (section: FormSection): boolean => section.id === UNPLACED_SECTION_ID;
 
 /**
- * Removes an element and pulls what sits below it up into the space it left.
+ * One press of Backspace in an empty line: what sits below comes up by ONE
+ * LINE, and the line the caret is in stays so the next press does it again.
  *
- * Free-placed text is written on a page whose layout is ABSOLUTE — every box
- * carries its own coordinates and nothing pushes anything else. That is what
- * makes a form a form rather than a word processor, but it is not what a
- * person typing expects: with the caret in an empty line above a picture,
- * Backspace should take the line away and let the picture come up, the way it
- * does in Word or Docs. Deleting alone would leave a hole exactly the size of
- * the line that was removed.
+ * Free-placed text sits on a page whose layout is ABSOLUTE — every box carries
+ * its own coordinates and nothing pushes anything else. That is what makes
+ * this a form builder rather than a word processor, and what lets a field be
+ * dragged anywhere on the paper. So this is a deliberate local operation
+ * rather than a change of model.
  *
- * The reflow is deliberately LOCAL — the removed element's own section, and
- * only what is strictly below its box. Sections are the unit the owner places
- * by hand, so a Backspace in one must not move things they positioned
- * elsewhere on the page; and boxes sitting BESIDE the deleted one keep their
- * line rather than sliding up past their neighbours.
+ * IT MOVES ONE LINE, NOT THE WHOLE GAP. Closing the entire space in a single
+ * keystroke is not what Backspace does anywhere else: in Word each press eats
+ * one empty line and the picture walks up a line at a time, under the owner's
+ * control and reversible one step at a time. Pulling it flush in one go takes
+ * that control away and is hard to undo by eye.
  *
- * The gap closes onto the next thing down: everything below moves up by the
- * distance between the deleted box's top and the nearest top beneath it, so
- * that neighbour lands where the deleted line began and the space between the
- * rest is preserved.
+ * The step never overshoots: when less than a line of space is left, only that
+ * much is taken, so the thing below lands exactly against the line above it
+ * rather than jumping past. Once there is no space left at all, the empty line
+ * itself goes — which is Backspace's other job, and the end of the sequence.
+ *
+ * The reflow stays inside the deleted line's own section, and moves only what
+ * starts BELOW it: boxes beside it keep their line rather than sliding up past
+ * their neighbours, and sections the owner placed elsewhere on the page are
+ * never moved by a keystroke aimed at one line.
  */
-export const removeElementClosingGap = (doc: FormDocument, elementId: string): ApplyResult => {
+export const pullUpOneLine = (
+  doc: FormDocument,
+  elementId: string,
+  /** How tall one empty line is — the caret's own block. */
+  step: number
+): ApplyResult => {
   const section = sectionContaining(doc, elementId);
   const element = section?.elements.find((e) => e.id === elementId);
   if (!section || !element) return removeElement(doc, elementId);
 
   /*
-   * Below means "starts lower down", not "clears the box". A block dropped
-   * into a gap smaller than itself overlaps what follows, and measuring
-   * against its bottom edge would decide nothing was below it and close no
-   * gap at all — the picture would sit exactly where it was.
+   * Below means "starts lower down", not "clears the box". A line dropped into
+   * a gap smaller than itself overlaps what follows, and measuring against its
+   * bottom edge would decide nothing was below it and move nothing at all.
    */
   const below = section.elements.filter(
     (candidate) => candidate.id !== elementId && candidate.y > element.y
   );
   if (below.length === 0) return removeElement(doc, elementId);
 
-  const delta = Math.min(...below.map((candidate) => candidate.y)) - element.y;
-  if (delta <= 0) return removeElement(doc, elementId);
+  const available = Math.min(...below.map((candidate) => candidate.y)) - element.y;
+  // Nothing left to close: the empty line has done its work and goes.
+  if (available <= 0) return removeElement(doc, elementId);
 
+  const delta = Math.min(Math.max(1, Math.round(step)), available);
   const moved = new Set(below.map((candidate) => candidate.id));
+
   return ok({
     ...doc,
     pages: doc.pages.map((page) => ({
@@ -767,9 +778,9 @@ export const removeElementClosingGap = (doc: FormDocument, elementId: string): A
           ? candidate
           : {
               ...candidate,
-              elements: candidate.elements
-                .filter((e) => e.id !== elementId)
-                .map((e) => (moved.has(e.id) ? { ...e, y: Math.max(0, e.y - delta) } : e)),
+              elements: candidate.elements.map((e) =>
+                moved.has(e.id) ? { ...e, y: Math.max(0, e.y - delta) } : e
+              ),
             }
       ),
     })),

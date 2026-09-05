@@ -48,7 +48,7 @@ import {
   updateElement,
   updateSection,
   removeElement,
-  removeElementClosingGap,
+  pullUpOneLine,
   applyBoxes,
   stripSyntheticPages,
   emptyDocument,
@@ -911,9 +911,20 @@ export const FormBuilder: React.FC = () => {
         if (backspaceInEmptyBlock && inline.target) {
           event.preventDefault();
           const id = inline.target.id;
-          inline.end();
-          apply(removeElementClosingGap(layout, id));
-          setSelection(null);
+          /*
+           * One line per press. The caret stays in the empty line so the next
+           * press moves the next line up — the picture walks up under the
+           * owner's control instead of snapping flush in one keystroke. The
+           * line only goes when there is no space left below it to take, and
+           * that is the press that ends the sequence.
+           */
+          const step = findElement(layout, id)?.height ?? NEW_TEXT_HEIGHT;
+          const next = pullUpOneLine(layout, id, step);
+          if (!findElement(next.document, id)) {
+            inline.end();
+            setSelection(null);
+          }
+          apply(next);
           return;
         }
 

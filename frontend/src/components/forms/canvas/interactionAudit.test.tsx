@@ -811,7 +811,7 @@ describe('Free placement — a caret, and nothing else', () => {
   });
 });
 
-describe('Free placement — Backspace in an empty line closes the gap', () => {
+describe('Free placement — Backspace steps up one line at a time', () => {
   beforeEach(mockHooks);
 
   const typeAt = (x, y) => {
@@ -823,23 +823,32 @@ describe('Free placement — Backspace in an empty line closes the gap', () => {
   /*
    * With the caret in an empty line there is no character left to delete, so
    * Backspace would do nothing at all — while what the person meant is what
-   * every editor does here: take the line away and let what is under it come
-   * up. The keystroke has to reach the document for that, which it only may
-   * because the block is empty; a Backspace with text to eat still belongs
-   * entirely to the text.
+   * every editor does here: eat the line and let what is under it come up. The
+   * keystroke only reaches the document because the block is empty; a
+   * Backspace with words to delete is still entirely the text's.
    */
-  it('removes the empty block the caret is in', () => {
+  it('keeps the caret in the empty line so the next press moves the next line', () => {
+    render(<FormBuilder />);
+    typeAt(300, 700);
+
+    const editor = document.querySelector('[contenteditable="true"]');
+    fireEvent.keyDown(editor, { key: 'Backspace' });
+
+    // Nothing sits below this line in the fixture, so it goes — but the point
+    // is that Backspace reached the document at all.
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  it('removes the empty line when there is nothing underneath to move', () => {
     render(<FormBuilder />);
     const before = document.querySelectorAll('[class*="elementOverlay"]').length;
 
     typeAt(300, 700);
     expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before + 1);
 
-    const editor = document.querySelector('[contenteditable="true"]');
-    fireEvent.keyDown(editor, { key: 'Backspace' });
+    fireEvent.keyDown(document.querySelector('[contenteditable="true"]'), { key: 'Backspace' });
 
     expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before);
-    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
   });
 
   /* A Backspace that has text to eat is the text's, not the document's. */
@@ -847,10 +856,8 @@ describe('Free placement — Backspace in an empty line closes the gap', () => {
     render(<FormBuilder />);
     const before = document.querySelectorAll('[class*="elementOverlay"]').length;
 
-    // overlays()[0] is a TEXT block with content in the fixture.
     fireEvent.doubleClick(overlays()[0]);
-    const editor = document.querySelector('[contenteditable="true"]');
-    fireEvent.keyDown(editor, { key: 'Backspace' });
+    fireEvent.keyDown(document.querySelector('[contenteditable="true"]'), { key: 'Backspace' });
 
     expect(document.querySelectorAll('[class*="elementOverlay"]').length).toBe(before);
     expect(document.querySelector('[contenteditable="true"]')).not.toBeNull();

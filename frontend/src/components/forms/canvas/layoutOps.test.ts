@@ -22,7 +22,7 @@ import {
   emptyDocument,
   applyBoxes,
   normaliseControls,
-  removeElementClosingGap,
+  pullUpOneLine,
   pruneEmptyTextHosts,
 } from './layoutOps';
 import {
@@ -565,67 +565,93 @@ describe('normaliseControls', () => {
  *
  * Free-placed text sits on a page whose layout is absolute — nothing pushes
  * anything else, which is what makes this a form builder rather than a word
- * processor. But with the caret in an empty line above an image, Backspace
- * has to do what it does in Word: take the line away and let the image come
- * up. Removing alone leaves a hole exactly the size of the line.
+ * processor. But with the caret in an empty line above an image, Backspace has
+ * to do what it does in Word: eat ONE line and let the image come up by one
+ * line, again on the next press. Closing the whole gap at once takes the
+ * owner's control away and is hard to undo by eye.
  */
-describe('removeElementClosingGap', () => {
+describe('pullUpOneLine', () => {
   const stacked = (elements: FormElement[]): FormDocument => ({
     version: 3,
     page: emptyPageGeometry(),
     pages: [{ id: 'p1', sections: [{ id: 's1', title: '', x: 48, y: 48, width: 400, height: 400, elements }] }],
   });
 
+  const LINE = 40;
   const gap = (over: Partial<FormElement> = {}) =>
-    ({ id: 'gap', type: 'TEXT', x: 0, y: 40, width: 320, height: 40, ...over }) as FormElement;
+    ({ id: 'gap', type: 'TEXT', x: 0, y: 40, width: 320, height: LINE, ...over }) as FormElement;
   const picture = (over: Partial<FormElement> = {}) =>
-    ({ id: 'img', type: 'IMAGE', x: 0, y: 120, width: 200, height: 200, ...over }) as FormElement;
+    ({ id: 'img', type: 'IMAGE', x: 0, y: 200, width: 200, height: 200, ...over }) as FormElement;
 
-  it('pulls the picture up to where the deleted line began', () => {
-    const result = removeElementClosingGap(stacked([gap(), picture()]), 'gap');
+  it('brings the picture up by one line, not by the whole gap', () => {
+    const result = pullUpOneLine(stacked([gap(), picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+  });
+
+  it('leaves the empty line in place so the next press moves the next line', () => {
+    const result = pullUpOneLine(stacked([gap(), picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'gap')).toBeDefined();
+  });
+
+  it('walks the picture up a line at a time', () => {
+    let doc = stacked([gap(), picture()]);
+    const seen: (number | undefined)[] = [];
+    for (let press = 0; press < 4; press += 1) {
+      doc = pullUpOneLine(doc, 'gap', LINE).document;
+      seen.push(findElement(doc, 'img')?.y);
+    }
+
+    // 200 -> 160 -> 120 -> 80 -> 40, landing flush against the line above it.
+    expect(seen).toEqual([160, 120, 80, 40]);
+  });
+
+  /* Less than a line left: take only what is there rather than jumping past. */
+  it('never overshoots the line above it', () => {
+    const result = pullUpOneLine(stacked([gap(), picture({ y: 55 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(40);
+  });
+
+  /* With the space used up, Backspace does its other job. */
+  it('deletes the empty line once there is no space left to take', () => {
+    const result = pullUpOneLine(stacked([gap(), picture({ y: 40 })]), 'gap', LINE);
 
     expect(findElement(result.document, 'gap')).toBeUndefined();
-    expect(findElement(result.document, 'img')?.y).toBe(40);
   });
 
-  it('keeps the spacing between everything that moves', () => {
-    const trailing = { id: 'after', type: 'TEXT', x: 0, y: 400, width: 320, height: 40 } as FormElement;
-    const result = removeElementClosingGap(stacked([gap(), picture(), trailing]), 'gap');
-
-    // The picture closed an 80px gap, so the block below it moves the same.
-    expect(findElement(result.document, 'img')?.y).toBe(40);
-    expect(findElement(result.document, 'after')?.y).toBe(320);
-  });
-
-  /* A line dropped into a gap smaller than itself overlaps what follows;
-   * measuring against its bottom edge would close no gap at all. */
-  it('closes the gap even when the deleted line overlapped the picture', () => {
-    const result = removeElementClosingGap(stacked([gap({ y: 100, height: 40 }), picture({ y: 120 })]), 'gap');
-
-    expect(findElement(result.document, 'img')?.y).toBe(100);
-  });
-
-  /* Boxes on the same line are neighbours, not things underneath. */
-  it('leaves a box beside the deleted one where it is', () => {
-    const beside = { id: 'beside', type: 'TEXT', x: 340, y: 40, width: 200, height: 40 } as FormElement;
-    const result = removeElementClosingGap(stacked([gap(), beside, picture()]), 'gap');
-
-    expect(findElement(result.document, 'beside')?.y).toBe(40);
-    expect(findElement(result.document, 'img')?.y).toBe(40);
-  });
-
-  it('is a plain delete when nothing is underneath', () => {
+  it('deletes the empty line when nothing is underneath', () => {
     const above = { id: 'above', type: 'TEXT', x: 0, y: 0, width: 320, height: 40 } as FormElement;
-    const result = removeElementClosingGap(stacked([above, gap()]), 'gap');
+    const result = pullUpOneLine(stacked([above, gap()]), 'gap', LINE);
 
     expect(findElement(result.document, 'gap')).toBeUndefined();
     expect(findElement(result.document, 'above')?.y).toBe(0);
   });
 
-  it('never lifts anything above the top of its section', () => {
-    const result = removeElementClosingGap(stacked([gap({ y: 0 }), picture({ y: 10 })]), 'gap');
+  it('keeps the spacing between everything that moves', () => {
+    const trailing = { id: 'after', type: 'TEXT', x: 0, y: 300, width: 320, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([gap(), picture(), trailing]), 'gap', LINE);
 
-    expect(findElement(result.document, 'img')?.y).toBe(0);
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+    expect(findElement(result.document, 'after')?.y).toBe(260);
+  });
+
+  /* Boxes on the same line are neighbours, not things underneath. */
+  it('leaves a box beside the empty line where it is', () => {
+    const beside = { id: 'beside', type: 'TEXT', x: 340, y: 40, width: 200, height: 40 } as FormElement;
+    const result = pullUpOneLine(stacked([gap(), beside, picture()]), 'gap', LINE);
+
+    expect(findElement(result.document, 'beside')?.y).toBe(40);
+    expect(findElement(result.document, 'img')?.y).toBe(160);
+  });
+
+  /* A line dropped into a gap smaller than itself overlaps what follows;
+   * measuring from its bottom edge would move nothing at all. */
+  it('still moves what it overlaps', () => {
+    const result = pullUpOneLine(stacked([gap({ y: 100 }), picture({ y: 120 })]), 'gap', LINE);
+
+    expect(findElement(result.document, 'img')?.y).toBe(100);
   });
 });
 
