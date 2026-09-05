@@ -72,6 +72,7 @@ export const AddMenu: React.FC<AddMenuProps> = ({
         className={styles.primaryItem}
         onClick={onAddSection}
         aria-label={t('addMenu.addItem', { item: t('addMenu.section') })}
+        title={t('addMenu.addItem', { item: t('addMenu.section') })}
       >
         <LayoutTemplate size={16} />
         <span>{t('addMenu.section')}</span>
@@ -95,6 +96,20 @@ export const AddMenu: React.FC<AddMenuProps> = ({
               className={styles.item}
               disabled={disabled || (isImage && isUploadingImage)}
               aria-label={t('addMenu.addItem', { item: label })}
+              /*
+               * The sidebar explains a disabled state with the hint line below;
+               * the ribbon has no room for it, so the reason travels on the
+               * control itself. A row of grey buttons with nothing saying why
+               * is the exact failure §44 names — the UI has to communicate why
+               * a control is unavailable, wherever it is hosted.
+               */
+              title={
+                disabled
+                  ? t('addMenu.selectSectionFirst')
+                  : isImage && isUploadingImage
+                    ? t('addMenu.uploading')
+                    : t('addMenu.addItem', { item: label })
+              }
               onClick={() => (isImage ? fileInputRef.current?.click() : onAddComponent(component.type))}
             >
               <Icon size={16} />

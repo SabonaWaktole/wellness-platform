@@ -16,6 +16,29 @@ import styles from './FormCanvas.module.css';
 
 const EMPTY_GUIDES: Guide[] = [];
 
+/**
+ * Whether a pointer/click event started inside whatever currently holds the
+ * caret.
+ *
+ * The sheet answers a click by selecting its page. While a caret is open the
+ * element's overlay is deliberately pointer-transparent (see `CanvasElement`),
+ * so every click INSIDE the editor — placing the caret, selecting a word —
+ * reached the sheet underneath and deselected the object being typed into: the
+ * contextual tab vanished, the format pane collapsed, and the page jumped, all
+ * from putting the cursor where the user wanted it.
+ *
+ * Two markers are needed because the two kinds of editor live in different
+ * trees: the label/title inputs are inside this component's own overlay
+ * chrome (`data-editing-surface`), while a TEXT block's rich editor is drawn by
+ * `FormPageRenderer` inside the element's own box (`data-element-id`).
+ */
+const isInsideCaret = (event: React.SyntheticEvent, editing: EditTarget | null | undefined): boolean => {
+  if (!editing) return false;
+  const target = event.target as Element | null;
+  if (!target?.closest) return false;
+  return !!target.closest(`[data-editing-surface="true"], [data-element-id="${editing.id}"]`);
+};
+
 export type CanvasSelection =
   | { type: 'page'; id: string }
   | { type: 'section'; id: string }
@@ -229,7 +252,10 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
     <div
       className={styles.stack}
       style={{ padding: CANVAS_GUTTER }}
-      onClick={() => onSelect(null)}
+      onClick={(e) => {
+        if (isInsideCaret(e, editing)) return;
+        onSelect(null);
+      }}
       /*
        * Two jobs, both keyed to "a gesture is starting somewhere on the sheet
        * stack".
@@ -347,9 +373,17 @@ const Sheet: React.FC<SheetProps> = ({
       style={{ width: layout.page.width, height: layout.page.height }}
       onClick={(e) => {
         e.stopPropagation();
+        // A click that belongs to the open caret is not a click on the page.
+        // Anywhere else IS, and closing the caret is what the selection change
+        // does on its way through (see FormBuilder's `handleSelect`) — clicking
+        // the page beside the text is how every document editor leaves it.
+        if (isInsideCaret(e, editing)) return;
         onSelect({ type: 'page', id: page.id });
       }}
       onContextMenu={(e) => {
+        // The browser's own menu wins inside a caret (spell-check, plain-text
+        // paste). It must not cost the user their selection on the way past.
+        if (isInsideCaret(e, editing)) return;
         onSelect({ type: 'page', id: page.id });
         onContextMenu(e, { type: 'page', id: page.id });
       }}
@@ -388,6 +422,11 @@ const Sheet: React.FC<SheetProps> = ({
                 isSelected={isChosen(selection, selectedIds, 'section', section.id)}
                 isTarget={targetSectionId === section.id}
                 isEditingTitle={editing?.kind === 'section-title' && editing.id === section.id}
+                hasCaretInside={
+                  !!editing &&
+                  editing.kind !== 'section-title' &&
+                  section.elements.some((el) => el.id === editing.id)
+                }
                 getScale={getScale}
                 onSelect={(options) => onSelect({ type: 'section', id: section.id }, options)}
                 onBeginEditTitle={() => onBeginEdit({ kind: 'section-title', id: section.id })}

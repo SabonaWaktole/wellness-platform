@@ -138,6 +138,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
         <input
           className={styles.labelInput}
           autoFocus
+          /* Marks this as the caret's own surface, so the sheet underneath
+             does not answer a click meant for the text (see FormCanvas's
+             `isInsideCaret`). */
+          data-editing-surface="true"
           value={element.field?.label ?? ''}
           aria-label={t('formBuilder.label')}
           onChange={(e) => onRenameField(e.target.value)}

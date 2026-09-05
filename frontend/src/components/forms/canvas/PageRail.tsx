@@ -57,6 +57,7 @@ export const PageRail: React.FC<PageRailProps> = ({
               onClick={() => onJumpToPage(page.id)}
               aria-current={activePageId === page.id ? 'true' : undefined}
               aria-label={t('pageRail.goToPage', { number: index + 1 })}
+              title={t('pageRail.goToPage', { number: index + 1 })}
             >
               <span className={styles.mini} aria-hidden="true">
                 {page.sections.map((s) => (
@@ -81,6 +82,7 @@ export const PageRail: React.FC<PageRailProps> = ({
                 onClick={() => onReorderPage(page.id, index - 1)}
                 disabled={index === 0}
                 aria-label={t('pageRail.movePageUp', { number: index + 1 })}
+                title={t('pageRail.movePageUp', { number: index + 1 })}
               >
                 <ChevronUp size={12} />
               </button>
@@ -89,6 +91,7 @@ export const PageRail: React.FC<PageRailProps> = ({
                 onClick={() => onReorderPage(page.id, index + 1)}
                 disabled={index === layout.pages.length - 1}
                 aria-label={t('pageRail.movePageDown', { number: index + 1 })}
+                title={t('pageRail.movePageDown', { number: index + 1 })}
               >
                 <ChevronDown size={12} />
               </button>
@@ -96,6 +99,7 @@ export const PageRail: React.FC<PageRailProps> = ({
                 type="button"
                 onClick={() => onDuplicatePage(page.id)}
                 aria-label={t('pageRail.duplicatePage', { number: index + 1 })}
+                title={t('pageRail.duplicatePage', { number: index + 1 })}
               >
                 <Copy size={12} />
               </button>
@@ -104,6 +108,7 @@ export const PageRail: React.FC<PageRailProps> = ({
                 onClick={() => onDeletePage(page.id)}
                 disabled={layout.pages.length <= 1}
                 aria-label={t('pageRail.deletePage', { number: index + 1 })}
+                title={t('pageRail.deletePage', { number: index + 1 })}
               >
                 <Trash2 size={12} />
               </button>

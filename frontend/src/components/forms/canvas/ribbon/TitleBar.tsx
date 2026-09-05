@@ -137,10 +137,22 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         change tabs to reach is an undo you will not use.
       */}
       <div className={styles.quickAccess} role="group" aria-label={t('formBuilder.ribbon.undoGroup')}>
-        <button type="button" onClick={onUndo} disabled={!canUndo} aria-label={t('formBuilder.undo')}>
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          aria-label={t('formBuilder.undo')}
+          title={t('formBuilder.undo')}
+        >
           <Undo2 size={15} />
         </button>
-        <button type="button" onClick={onRedo} disabled={!canRedo} aria-label={t('formBuilder.redo')}>
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          aria-label={t('formBuilder.redo')}
+          title={t('formBuilder.redo')}
+        >
           <Redo2 size={15} />
         </button>
       </div>

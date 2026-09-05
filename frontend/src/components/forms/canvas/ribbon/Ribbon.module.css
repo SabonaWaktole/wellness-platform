@@ -265,9 +265,17 @@
   cursor: pointer;
 }
 
-.zoomCluster button:hover {
+.zoomCluster button:hover:not(:disabled) {
   background: var(--color-surface-variant);
   color: var(--text-primary);
+}
+
+/* The ladder has ends. Without this a button at 25% (or 300%) looked and
+ * hovered exactly like a live one while doing nothing — the same lie the
+ * quick-access cluster above already avoids. */
+.zoomCluster button:disabled {
+  color: var(--text-quaternary, var(--text-tertiary));
+  cursor: not-allowed;
 }
 
 .zoomPercent {

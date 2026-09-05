@@ -1,7 +1,22 @@
 .shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /*
+   * NOT `height: 100%`. The builder's route wrapper is auto-height, so a
+   * percentage resolved to `auto` and nothing in the chain ever capped the
+   * shell: `.canvasArea`'s `overflow: auto` had no height to scroll within, so
+   * it grew to the full height of the page stack instead. On a two-page form
+   * the shell came out 2685px tall in a 775px window — the whole WINDOW
+   * scrolled rather than the document, and the status bar (page number,
+   * autosave state, zoom) sat 2600px below the fold where it was never seen.
+   *
+   * Pinning the shell to the viewport is what makes the canvas the thing that
+   * scrolls, and the ribbon and status bar the fixed edges of a document
+   * editor.
+   */
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
 
 .toolbar {
@@ -417,6 +432,21 @@
 
 .labelInput:focus {
   outline: none;
+}
+
+/*
+ * A section that is letting a caret inside it be clicked.
+ *
+ * Same mechanism as `.elementEditing`: the box stops answering pointer events
+ * so the text underneath receives them, while the section's OWN chrome — the
+ * drag band, the delete button, the resize handles — stays live as children.
+ */
+.sectionPassThrough {
+  pointer-events: none;
+}
+
+.sectionPassThrough > * {
+  pointer-events: auto;
 }
 
 /* A section whose heading is being typed into reads as active, not selected. */

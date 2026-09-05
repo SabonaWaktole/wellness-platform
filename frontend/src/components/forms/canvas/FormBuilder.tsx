@@ -22,7 +22,7 @@ import { useClipboard } from './useClipboard';
 import { useAutosave } from './useAutosave';
 import { useSelection } from './useSelection';
 import { useInlineEditing, type EditTarget } from './useInlineEditing';
-import { resolveShortcut, isTextEntryTarget } from './keyboard';
+import { resolveShortcut, isTextEntryTarget, isArrowNavigableControl } from './keyboard';
 import { alignBoxes, distributeBoxes } from './snapping';
 import {
   addSection,
@@ -127,6 +127,26 @@ export const FormBuilder: React.FC = () => {
 
   /** Which piece of text has the caret, if any (spec §7). */
   const inline = useInlineEditing();
+
+  /**
+   * Selection made FROM THE CANVAS, which closes any open caret on its way.
+   *
+   * Clicking the page beside the text is how a document editor is left — Word,
+   * Docs, Pages all do it. Only Escape used to, so a click on the page moved
+   * the selection while the caret stayed open behind it, and the ribbon showed
+   * the formatting controls for an editor the user believed they had left.
+   *
+   * `handleBeginEdit` selects and THEN begins, so this never closes the
+   * session it is opening.
+   */
+  const handleSelect = useCallback(
+    (next: CanvasSelection, options?: { additive?: boolean }) => {
+      if (inline.target && next?.id !== inline.target.id) inline.end();
+      setSelection(next, options);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [inline, setSelection]
+  );
   const [isDirty, setIsDirty] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -159,6 +179,23 @@ export const FormBuilder: React.FC = () => {
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const viewport = useCanvasViewport(layout.page);
 
+  /**
+   * The `<form id>@<version>` this session last produced BY SAVING.
+   *
+   * A save answers with the stored form, version bumped — which is the same
+   * shape as a fresh load, and the reset effect below could not tell the two
+   * apart. So every autosave was read as "the document was replaced from the
+   * server" and threw away the local state: the caret closed mid-word about a
+   * second after the owner started typing a section title, the selection
+   * cleared under them, and `history.reset` wiped the undo stack, so Undo went
+   * dead after every single save. On a builder that autosaves continuously,
+   * that made undo unusable and typing hostile.
+   *
+   * Keyed by id as well as number so that opening a DIFFERENT form which
+   * happens to be at the same version number is still a real load.
+   */
+  const selfSavedVersion = useRef<string | null>(null);
+
   useEffect(() => {
     fetchForm();
   }, [fetchForm]);
@@ -166,6 +203,10 @@ export const FormBuilder: React.FC = () => {
   // A fresh load (or a reload after a conflict) replaces local state wholesale.
   useEffect(() => {
     if (!form) return;
+    // Our own save coming back is an acknowledgement, not new content: the
+    // document on screen already IS this version. Resetting to it would only
+    // destroy the caret, the selection and the undo history (see the ref).
+    if (selfSavedVersion.current === `${form.id}@${form.version}`) return;
     history.reset(form.layout);
     setIsDirty(false);
     setSelection(null);
@@ -207,6 +248,7 @@ export const FormBuilder: React.FC = () => {
     const toSave = stripSyntheticPages(history.present);
     const updated = await updateLayout(form.id, toSave, form.version);
     if (updated) {
+      selfSavedVersion.current = `${updated.id}@${updated.version}`;
       setForm(updated);
       setIsDirty(false);
     }
@@ -268,6 +310,7 @@ export const FormBuilder: React.FC = () => {
       const toSave = stripSyntheticPages(history.present);
       const saved = await updateLayout(form.id, toSave, form.version).catch(() => null);
       if (!saved) return; // save failed/conflicted — its own banner already explains why
+      selfSavedVersion.current = `${saved.id}@${saved.version}`;
       setForm(saved);
       setIsDirty(false);
       expectedVersion = saved.version;
@@ -435,6 +478,78 @@ export const FormBuilder: React.FC = () => {
     [layout, sel, apply, history]
   );
 
+  /*
+   * THE DOCUMENT COMMANDS, DEFINED ONCE.
+   *
+   * Cut, Copy, Paste, Duplicate and Delete each have three entry points — the
+   * Home tab, the right-click menu and a keystroke — and each of the three
+   * used to carry its own copy of the rules. They drifted, in every direction
+   * a copy can: the ribbon greyed out Copy for a section that Ctrl+C had
+   * handled for months; its Paste forgot to say which page it was pasting
+   * onto and always landed on page one; the menu's Delete removed the first of
+   * five selected objects while the ribbon beside it said five were selected.
+   *
+   * One definition per verb is the fix, and the only one that stays fixed:
+   * there is no longer a second place for the rule to be written differently.
+   */
+  const canCut = (sel.kind === 'element' || sel.kind === 'section') && sel.ids.length > 0;
+
+  /**
+   * Elements need a section to land in; sections need a page, which the
+   * document always has. Asking `hasContent` alone made Paste lie in both
+   * directions (see `Clipboard.kind`).
+   */
+  const canPaste =
+    clipboard.kind === 'sections'
+      ? layout.pages.length > 0
+      : clipboard.kind === 'elements' && !!selectedSectionId;
+
+  const doCopy = useCallback(() => {
+    if (sel.kind === 'section') clipboard.copySections(layout, sel.ids);
+    else if (sel.kind === 'element') clipboard.copy(layout, sel.ids);
+  }, [sel, clipboard, layout]);
+
+  const doCut = useCallback(() => {
+    if (sel.kind === 'section') apply(clipboard.cutSections(layout, sel.ids));
+    else if (sel.kind === 'element') apply(clipboard.cut(layout, sel.ids));
+    else return;
+    setSelection(null);
+  }, [sel, clipboard, layout, apply, setSelection]);
+
+  const doPaste = useCallback(() => {
+    if (clipboard.kind === 'none') return;
+    apply(clipboard.paste(layout, selectedSectionId, targetPageId));
+  }, [clipboard, layout, selectedSectionId, targetPageId, apply]);
+
+  const doDuplicate = useCallback(() => {
+    if (sel.kind === 'element') apply(clipboard.duplicate(layout, sel.ids));
+    else if (sel.kind === 'section') apply(clipboard.duplicateSections(layout, sel.ids));
+    else if (selection?.type === 'page') apply(duplicatePage(layout, selection.id));
+  }, [sel, selection, clipboard, layout, apply]);
+
+  /**
+   * Removes EVERY selected object, not the primary one.
+   *
+   * Both other callers promised this and neither delivered it: right-click
+   * deliberately preserves a multi-selection so "delete these five" works from
+   * any one of them, and then deleted `ids[0]`. A refusal from the overflow
+   * ladder aborts the whole batch rather than leaving it half done.
+   */
+  const doDelete = useCallback(() => {
+    if (!sel.kind || sel.kind === 'page' || sel.ids.length === 0) return;
+    let next = layout;
+    for (const id of sel.ids) {
+      const step = sel.kind === 'element' ? removeElement(next, id) : removeSection(next, id);
+      if (step.refusal) {
+        setRefusal(step.refusal);
+        return;
+      }
+      next = step.document;
+    }
+    apply({ document: next, refusal: null });
+    setSelection(null);
+  }, [sel, layout, apply, setSelection]);
+
   const handleAddSection = () => {
     const pageId = targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
@@ -589,24 +704,15 @@ export const FormBuilder: React.FC = () => {
           if (inline.target) inline.end();
           else setSelection(null);
           break;
-        case 'delete': {
-          // Every selected object, not just the primary — a Delete that
-          // removed one of five highlighted fields would be indefensible.
-          if (!sel.kind || sel.ids.length === 0) break;
-          let next = layout;
-          for (const id of sel.ids) {
-            const step = sel.kind === 'element' ? removeElement(next, id) : removeSection(next, id);
-            if (step.refusal) {
-              setRefusal(step.refusal);
-              return;
-            }
-            next = step.document;
-          }
-          apply({ document: next, refusal: null });
-          setSelection(null);
+        // Every selected object, not just the primary — a Delete that removed
+        // one of five highlighted fields would be indefensible.
+        case 'delete':
+          doDelete();
           break;
-        }
         case 'nudge': {
+          // The arrow keys belong to whichever control has focus when that
+          // control navigates with them — the ribbon's tab strip, a menu.
+          if (isArrowNavigableControl(event.target)) break;
           if (selection?.type === 'element') {
             const el = findElement(layout, selection.id);
             if (el) apply(moveElement(layout, selection.id, el.x + shortcut.dx, el.y + shortcut.dy));
@@ -616,25 +722,16 @@ export const FormBuilder: React.FC = () => {
           }
           break;
         }
-        // The clipboard verbs work on whichever KIND is selected. They used
-        // to silently do nothing for a section, so Ctrl+C worked on a field
-        // and not on the thing containing it — the sort of inconsistency that
-        // teaches a user to stop trusting the shortcut everywhere.
+        // The clipboard verbs work on whichever KIND is selected, and are the
+        // same three functions the ribbon and the right-click menu call.
         case 'copy':
-          if (sel.kind === 'section') clipboard.copySections(layout, sel.ids);
-          else if (sel.kind === 'element') clipboard.copy(layout, sel.ids);
+          doCopy();
           break;
         case 'cut':
-          if (sel.kind === 'section') {
-            apply(clipboard.cutSections(layout, sel.ids));
-            setSelection(null);
-          } else if (sel.kind === 'element') {
-            apply(clipboard.cut(layout, sel.ids));
-            setSelection(null);
-          }
+          doCut();
           break;
         case 'paste':
-          if (clipboard.hasContent) apply(clipboard.paste(layout, selectedSectionId, targetPageId));
+          doPaste();
           break;
         case 'save':
           // Otherwise this reaches the browser's "save this web page", which
@@ -659,13 +756,7 @@ export const FormBuilder: React.FC = () => {
           break;
         case 'duplicate':
           event.preventDefault();
-          if (sel.kind === 'element') {
-            apply(clipboard.duplicate(layout, sel.ids));
-          } else if (sel.kind === 'section') {
-            apply(clipboard.duplicateSections(layout, sel.ids));
-          } else if (selection?.type === 'page') {
-            apply(duplicatePage(layout, selection.id));
-          }
+          doDuplicate();
           break;
         default:
           break;
@@ -680,15 +771,17 @@ export const FormBuilder: React.FC = () => {
     sel,
     setSelection,
     inline,
-    targetPageId,
     tenantSlug,
     formId,
     handleSave,
     selectAllOnPage,
-    selectedSectionId,
     apply,
-    clipboard,
     history,
+    doCopy,
+    doCut,
+    doPaste,
+    doDuplicate,
+    doDelete,
   ]);
 
   if (isLoading && !form) return <p>{t('formBuilder.loading')}</p>;
@@ -728,15 +821,12 @@ export const FormBuilder: React.FC = () => {
       <Ribbon activeTab={activeTab} onChangeTab={setActiveTab} contextualTab={contextualTab}>
         {activeTab === 'home' && (
           <HomeTab
-            canCut={sel.kind === 'element' && sel.ids.length > 0}
-            canPaste={clipboard.hasContent && !!selectedSectionId}
-            onCut={() => {
-              apply(clipboard.cut(layout, sel.ids));
-              setSelection(null);
-            }}
-            onCopy={() => clipboard.copy(layout, sel.ids)}
-            onPaste={() => apply(clipboard.paste(layout, selectedSectionId))}
-            onDuplicate={() => apply(clipboard.duplicate(layout, sel.ids))}
+            canCut={canCut}
+            canPaste={canPaste}
+            onCut={doCut}
+            onCopy={doCopy}
+            onPaste={doPaste}
+            onDuplicate={doDuplicate}
             onSelectAll={selectAllOnPage}
             editor={inline.editor}
           />
@@ -759,14 +849,8 @@ export const FormBuilder: React.FC = () => {
             kind={contextualTab}
             element={selectedElement}
             section={selectedSection}
-            onDelete={() => {
-              if (selection?.type === 'section') apply(removeSection(layout, selection.id));
-              else if (selection?.type === 'element') apply(removeElement(layout, selection.id));
-              setSelection(null);
-            }}
-            onDuplicate={() => {
-              if (selection?.type === 'element') apply(clipboard.duplicate(layout, sel.ids));
-            }}
+            onDelete={doDelete}
+            onDuplicate={doDuplicate}
             onEditText={
               selectedElement
                 ? () => handleBeginEdit(
@@ -900,9 +984,21 @@ export const FormBuilder: React.FC = () => {
               activePageId={targetPageId}
               onJumpToPage={(pageId) => {
                 setActivePageId(pageId);
+                /*
+                 * The page being worked on is derived from the SELECTION when
+                 * there is one, so setting `activePageId` alone was invisible:
+                 * with a field on page 1 selected, clicking page 3 in the rail
+                 * moved the scroll, then the highlight snapped straight back,
+                 * the status bar still read "Page 1", and Layout's page
+                 * commands kept acting on page 1. Selecting the page is what
+                 * actually moves the insertion point there.
+                 */
+                handleSelect({ type: 'page', id: pageId });
+                // Guarded: not every environment implements it, and a jump to
+                // a page must never be able to throw into the click handler.
                 document
                   .querySelector(`[data-page-id="${pageId}"]`)
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
               }}
               onAddPage={() => apply(addPage(layout))}
               onDeletePage={(pageId) => apply(deletePage(layout, pageId))}
@@ -954,7 +1050,7 @@ export const FormBuilder: React.FC = () => {
               viewport={viewport}
               selection={selection}
               selectedIds={selectedIds}
-              onSelect={setSelection}
+              onSelect={handleSelect}
               editing={inline.target}
               onBeginEdit={handleBeginEdit}
               onChangeElementContent={handleChangeElementContent}
@@ -982,7 +1078,10 @@ export const FormBuilder: React.FC = () => {
 
         {/* The Add menu moved into the ribbon's Insert tab; the sidebar is
             now just the format surface for whatever is selected. */}
-        {!showHistory && showFormatPane && (
+        {/* Gated on exactly what the grid template above reserves a track for:
+            an empty shell here became a third child of a two-column grid, wrapped
+            onto a row of its own and took half the canvas height with it. */}
+        {!showHistory && showFormatPane && (selectedElement || selectedSection) && (
           <div className={styles.sidebar}>
             <PropertiesPanel
               selection={selection ? { section: selectedSection, element: selectedElement } : null}
@@ -1007,31 +1106,17 @@ export const FormBuilder: React.FC = () => {
               canEditText:
                 !!selectedElement &&
                 (selectedElement.type === 'TEXT' || isDataBearing(selectedElement.type)),
-              canPaste: clipboard.hasContent,
+              canPaste,
               canDeletePage: layout.pages.length > 1,
               hasEmptyPages: layout.pages.some((p) => p.sections.length === 0),
               canMoveToNextPage: activePageIndex < layout.pages.length - 1,
             },
             {
-              cut: () => {
-                if (sel.kind === 'section') apply(clipboard.cutSections(layout, sel.ids));
-                else apply(clipboard.cut(layout, sel.ids));
-                setSelection(null);
-              },
-              copy: () => {
-                if (sel.kind === 'section') clipboard.copySections(layout, sel.ids);
-                else clipboard.copy(layout, sel.ids);
-              },
-              paste: () => apply(clipboard.paste(layout, selectedSectionId, targetPageId)),
-              duplicate: () => {
-                if (sel.kind === 'section') apply(clipboard.duplicateSections(layout, sel.ids));
-                else apply(clipboard.duplicate(layout, sel.ids));
-              },
-              remove: () => {
-                if (sel.kind === 'section') apply(removeSection(layout, sel.ids[0]));
-                else if (sel.kind === 'element') apply(removeElement(layout, sel.ids[0]));
-                setSelection(null);
-              },
+              cut: doCut,
+              copy: doCopy,
+              paste: doPaste,
+              duplicate: doDuplicate,
+              remove: doDelete,
               editText: () => {
                 if (!selectedElement) return;
                 handleBeginEdit(
@@ -1068,6 +1153,8 @@ export const FormBuilder: React.FC = () => {
         autosave={autosave.status}
         onRetrySave={() => void autosave.retry()}
         zoomPercent={viewport.zoomPercent}
+        canZoomIn={viewport.canZoomIn}
+        canZoomOut={viewport.canZoomOut}
         onZoomIn={viewport.zoomIn}
         onZoomOut={viewport.zoomOut}
         onFitPage={() => {

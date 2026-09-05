@@ -31,8 +31,18 @@ import type { FormDocument, FormElement, FormSection } from '../../../types/form
 /** Offset applied to a paste so it never lands exactly on the original. */
 export const PASTE_OFFSET = 16;
 
+/** What the clipboard is holding, so a caller can tell what a paste NEEDS. */
+export type ClipboardKind = 'none' | 'elements' | 'sections';
+
 export interface Clipboard {
   hasContent: boolean;
+  /**
+   * Elements land in a SECTION; sections land on a PAGE. A Paste control that
+   * only asks `hasContent` is wrong in both directions — it offers a paste
+   * that will silently do nothing when elements are held and no section is
+   * selected, and withholds one that would have worked when sections are.
+   */
+  kind: ClipboardKind;
   copy: (doc: FormDocument, elementIds: string[]) => void;
   cut: (doc: FormDocument, elementIds: string[]) => ApplyResult;
   /**
@@ -236,6 +246,7 @@ export const useClipboard = (): Clipboard => {
 
   return {
     hasContent: buffer.kind !== 'none',
+    kind: buffer.kind,
     copy,
     cut,
     paste,
