@@ -75,6 +75,45 @@ describe('useClipboard', () => {
     expect(new Set(elementsOf(next).map((e) => e.field!.key)).size).toBe(2);
   });
 
+  /*
+   * A COPY IS A NEW FIELD, NOT A SECOND CLAIM ON THE SAME COLUMN.
+   *
+   * `clientFieldId` ties a field to a column on the client record, and the
+   * server refuses a document that binds one column twice — rightly, since a
+   * submission could not say which of the two won. The copy carried the
+   * binding over, so duplicating any bound field produced a document that
+   * could never be saved again: every autosave from that moment returned 400
+   * ("... is bound to more than one field on this form") and the owner had to
+   * find and unbind the copy themselves. Caught by driving a real form.
+   */
+  it('does not carry the client-record binding onto the copy', () => {
+    const bound = { ...el(), field: { ...el().field!, clientFieldId: 'client-phone' } };
+    const d = doc([bound]);
+    const { result } = renderHook(() => useClipboard());
+
+    act(() => result.current.copy(d, ['e1']));
+    let next: FormDocument = d;
+    act(() => { next = result.current.paste(d, 's1').document; });
+
+    const original = elementsOf(next).find((e) => e.id === 'e1')!;
+    const copy = elementsOf(next).find((e) => e.id !== 'e1')!;
+    expect(original.field!.clientFieldId).toBe('client-phone');
+    expect(copy.field!.clientFieldId).toBeUndefined();
+  });
+
+  it('does not carry the binding through a section copy either', () => {
+    const bound = { ...el(), field: { ...el().field!, clientFieldId: 'client-phone' } };
+    const d = doc([bound]);
+    const { result } = renderHook(() => useClipboard());
+
+    act(() => result.current.copySections(d, ['s1']));
+    let next: FormDocument = d;
+    act(() => { next = result.current.paste(d, null, 'p1').document; });
+
+    const bindings = elementsOf(next).map((e) => e.field!.clientFieldId);
+    expect(bindings.filter((b) => b === 'client-phone')).toHaveLength(1);
+  });
+
   it('offsets the paste so it does not land exactly on the original', () => {
     const d = doc([el()]);
     const { result } = renderHook(() => useClipboard());
