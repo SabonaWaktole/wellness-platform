@@ -89,7 +89,8 @@
       "SINGLE_SELECT": "Selezione singola",
       "ALPHANUMERIC": "Alfanumerico",
       "MULTI_SELECT": "Selezione multipla",
-      "LONG_TEXT": "Testo lungo"
+      "LONG_TEXT": "Testo lungo",
+      "SIGNATURE": "Firma"
     },
     "breadcrumb": "Gestione clienti",
     "tabCustomFields": "Campi personalizzati",
@@ -297,7 +298,11 @@
       "RADIO": "Pulsanti di scelta",
       "CHECKBOX_GROUP": "Caselle di controllo",
       "INPUT": "Riga singola",
-      "TEXTAREA": "Più righe"
+      "TEXTAREA": "Più righe",
+      "RADIO_GROUP": "Pulsanti di scelta",
+      "DATE": "Selettore data",
+      "SIGNATURE": "Firma",
+      "USER_SELECT": "Selettore utente"
     },
     "addField": "Aggiungi campo",
     "addFieldFailed": "Impossibile aggiungere il campo. Riprova.",

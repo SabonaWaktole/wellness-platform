@@ -89,7 +89,8 @@
       "SINGLE_SELECT": "Zgjedhje e vetme",
       "ALPHANUMERIC": "Alfanumerik",
       "MULTI_SELECT": "Zgjedhje e shumëfishtë",
-      "LONG_TEXT": "Tekst i gjatë"
+      "LONG_TEXT": "Tekst i gjatë",
+      "SIGNATURE": "Nënshkrim"
     },
     "breadcrumb": "Menaxhimi i klientëve",
     "tabCustomFields": "Fusha të personalizuara",
@@ -298,7 +299,11 @@
       "RADIO": "Butona radio",
       "CHECKBOX_GROUP": "Kutiza zgjedhjeje",
       "INPUT": "Një rresht",
-      "TEXTAREA": "Disa rreshta"
+      "TEXTAREA": "Disa rreshta",
+      "RADIO_GROUP": "Butona radio",
+      "DATE": "Zgjedhës date",
+      "SIGNATURE": "Nënshkrim",
+      "USER_SELECT": "Zgjedhës përdoruesi"
     },
     "addField": "Shto fushën",
     "addFieldFailed": "Fusha nuk u shtua dot. Provo përsëri.",

@@ -442,6 +442,27 @@ const Sheet: React.FC<SheetProps> = ({
         if (isInsideCaret(e, editing)) return;
 
         /*
+         * A CLICK THAT PUTS SOMETHING DOWN DOES NOT ALSO PICK UP A PEN.
+         *
+         * This handler stops propagation, so the stack's "click away to
+         * deselect" never ran for a click on the sheet — and since the section
+         * overlay is pointer-transparent, the empty half of a section reaches
+         * here too. The result was that dismissing a selection, the most
+         * ordinary gesture there is, CREATED CONTENT: an empty block, and a
+         * section silently grown to fit it.
+         *
+         * A selected object is dismissed instead, and the next click writes.
+         * A LIVE CARET is deliberately not treated this way: moving from one
+         * empty spot to another mid-thought is one gesture, not two, and the
+         * selection during an edit session points at the block being typed in
+         * rather than at something the owner picked up.
+         */
+        if (!editing && selection) {
+          onSelect(null);
+          return;
+        }
+
+        /*
          * CLICK -> CARET -> TYPE.
          *
          * Reaching this handler already means the click hit nothing else: every

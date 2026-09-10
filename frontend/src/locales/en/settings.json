@@ -93,7 +93,8 @@
       "EMAIL": "Email",
       "USER_REFERENCE": "Assigned User",
       "MULTI_SELECT": "Multi Select",
-      "LONG_TEXT": "Long Text"
+      "LONG_TEXT": "Long Text",
+      "SIGNATURE": "Signature"
     },
     "breadcrumb": "Client Management",
     "tabCustomFields": "Custom Fields",
@@ -322,7 +323,11 @@
       "RADIO": "Radio buttons",
       "CHECKBOX_GROUP": "Checkboxes",
       "INPUT": "Single line",
-      "TEXTAREA": "Multiple lines"
+      "TEXTAREA": "Multiple lines",
+      "RADIO_GROUP": "Radio buttons",
+      "DATE": "Date picker",
+      "SIGNATURE": "Signature",
+      "USER_SELECT": "User picker"
     },
     "addField": "Add field",
     "addFieldFailed": "Couldn't add that field. Try again.",

@@ -48,6 +48,14 @@ export interface PropertiesPanelProps {
  * Appearance and Layout are collapsed until asked for, so the ordinary
  * workflow stays simple.
  */
+/*
+ * A NOTE ON LABELS. `SelectInput` and `TagInput` both render a real
+ * <label htmlFor> when given a `label` prop; this panel used to bypass that
+ * every time and emit a sibling <span> beside the control instead. It looked
+ * identical and named nothing: five controls in the format pane — Field type,
+ * Shown as, Options, Orientation — had no accessible name at all, and clicking
+ * the word above them did not focus them either. Use the prop.
+ */
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selection,
   onChangeElement,
@@ -138,8 +146,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           />
 
           <div className={styles.field}>
-            <span className={styles.label}>{t('formBuilder.fieldType')}</span>
             <SelectInput
+              label={t('formBuilder.fieldType')}
               value={field.dataType}
               onChange={(e) => {
                 const dataType = e.target.value as FormFieldType;
@@ -164,8 +172,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
           {componentOptionsFor(field.dataType).length > 1 && (
             <div className={styles.field}>
-              <span className={styles.label}>{t('formBuilder.control')}</span>
               <SelectInput
+                label={t('formBuilder.control')}
                 value={element.type}
                 onChange={(e) => onChangeElement(element.id, { type: e.target.value as FormElement['type'] })}
               >
@@ -180,8 +188,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
           {(field.dataType === 'SINGLE_SELECT' || field.dataType === 'MULTI_SELECT') && (
             <div className={styles.field}>
-              <span className={styles.label}>{t('formBuilder.options')}</span>
               <TagInput
+                label={t('formBuilder.options')}
                 helperText={t('formBuilder.optionsHelp')}
                 value={(field.options ?? []).map((o) => o.label)}
                 onChange={(labels) =>
@@ -248,7 +256,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       */}
       {element.type === 'TEXT' && (
         <div className={styles.field}>
-          <span className={styles.label}>{t('formBuilder.text')}</span>
+          {/* A group heading rather than a control label: what follows is a
+              sentence and a button, neither of which a <label> can name. */}
+          <h4 className={styles.label}>{t('formBuilder.text')}</h4>
           <p className={styles.hint}>{t('formBuilder.textEditsOnPage')}</p>
           {onEditText && (
             <button type="button" className={styles.inlineAction} onClick={() => onEditText(element.id)}>
@@ -276,8 +286,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
       {element.type === 'DIVIDER' && (
         <div className={styles.field}>
-          <span className={styles.label}>{t('formBuilder.dividerOrientation')}</span>
           <SelectInput
+            label={t('formBuilder.dividerOrientation')}
             value={(element.content as DividerContent | undefined)?.orientation ?? 'horizontal'}
             onChange={(e) =>
               onChangeElement(element.id, {

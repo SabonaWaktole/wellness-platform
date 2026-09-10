@@ -307,19 +307,39 @@ export const FormBuilder: React.FC = () => {
     if (!form) return;
     const toSave = stripSyntheticPages(history.present);
     const updated = await updateLayout(form.id, toSave, form.version);
-    if (updated) {
-      selfSavedVersion.current = `${updated.id}@${updated.version}`;
-      setForm(updated);
-      setIsDirty(false);
-    }
-    // A version conflict resolves to `null` rather than throwing (see
-    // useUpdateFormLayout) — autosave has nothing further to retry until the
-    // owner reloads, so this is treated as success from ITS perspective; the
-    // conflict banner is what actually tells the owner.
+    /*
+     * A SAVE THAT SENT NOTHING IS NOT A SAVE.
+     *
+     * The comment that stood here said a version conflict "resolves to `null`
+     * rather than throwing" and that this therefore counted as success.
+     * `useUpdateFormLayout` does no such thing — it sets `hasConflict` and
+     * RETHROWS, so a 409 has always reached `useAutosave`'s catch and shown
+     * the error state, and the reasoning built on top of it was describing
+     * behaviour that does not exist.
+     *
+     * What `null` actually means is the one case that returns early: no
+     * tenant slug, so no request was ever made. That fell through to here,
+     * skipped the block below, and let `useAutosave` report `saved` — the
+     * status bar saying the work was safe when nothing had left the browser.
+     * Refusing it loudly is the only honest answer.
+     */
+    if (!updated) throw new Error('The form could not be saved.');
+    selfSavedVersion.current = `${updated.id}@${updated.version}`;
+    setForm(updated);
+    setIsDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, history.present, updateLayout, setForm]);
 
-  const autosave = useAutosave({ save: doSave, enabled: true });
+  /*
+   * A CONFLICT STOPS THE CLOCK. `enabled` was hardcoded true, against this
+   * hook's own contract ("false while ... a version conflict awaits reload").
+   * After a 409 the document is provably out of date, every retry carries the
+   * same stale `expectedVersion`, and every one is guaranteed to 409 again —
+   * so each keystroke armed another doomed request and the server was
+   * hammered until the owner happened to reload. The conflict banner already
+   * tells them what to do; until they do it there is nothing worth sending.
+   */
+  const autosave = useAutosave({ save: doSave, enabled: !hasConflict });
   // A ref so `apply` (defined above `autosave`) can reach the latest
   // `schedule` without widening its own dependency list every render.
   const autosaveRef = useRef(autosave);
@@ -622,12 +642,16 @@ export const FormBuilder: React.FC = () => {
    * the interaction (spec §3).
    *
    * TWO THINGS KEEP THIS FROM BECOMING LITTER. The element is created QUIETLY:
-   * `history.commit` without marking the document dirty, so the stray clicks
-   * everyone makes to dismiss a selection do not schedule a save of a document
-   * that has not changed. And when the caret leaves a block that was never
-   * typed into, the block goes with it — see the effect below.
+   * `history.replacePresent`, so it marks nothing dirty, schedules no save and
+   * leaves no undo entry — the stray clicks everyone makes to dismiss a
+   * selection cost the document nothing at all. And when the caret leaves a
+   * block that was never typed into, the block goes with it — see the effect
+   * below.
    */
   const autoCreated = useRef<string | null>(null);
+  /** The section the provisional block landed in, and how tall it was before
+   *  `growSectionToFit` made room for it. Restored if nothing is written. */
+  const autoCreatedHost = useRef<{ sectionId: string; height: number } | null>(null);
   // Read by that effect's cleanup, which must see the CURRENT document rather
   // than the one captured when the caret was opened.
   const layoutRef = useRef(layout);
@@ -733,7 +757,18 @@ export const FormBuilder: React.FC = () => {
           '',
           {
             x: Math.max(layout.page.margin.left, Math.min(x, layout.page.width - layout.page.margin.right - NEW_TEXT_WIDTH)),
-            y,
+            /*
+             * CLAMPED THE SAME WAY x IS. `y` was passed through raw, so a
+             * click low on the page put the host past the bottom margin — and
+             * the overflow ladder answered by relocating it to the NEXT page.
+             * The caret then opened on a page the owner had not clicked, off
+             * screen, with their first keystroke going somewhere they could
+             * not see.
+             */
+            y: Math.max(
+              layout.page.margin.top,
+              Math.min(y, layout.page.height - layout.page.margin.bottom - NEW_TEXT_HEIGHT)
+            ),
             width: NEW_TEXT_WIDTH,
             height: NEW_TEXT_HEIGHT,
           },
@@ -771,14 +806,32 @@ export const FormBuilder: React.FC = () => {
         content: wrapText(''),
       };
 
+      /*
+       * The height the section had BEFORE the block went in. `addElement` runs
+       * `growSectionToFit`, and growth is one-way by design — so a block
+       * reclaimed for never being written in still left the section it landed
+       * in permanently taller, and a stray click on an existing section grew
+       * it by 38px that nothing ever gave back.
+       */
+      const hostBefore = findSection(document, sectionId)?.section;
       const placed = addElement(document, sectionId, element);
       if (placed.refusal) {
         setRefusal(placed.refusal);
         return;
       }
+      autoCreatedHost.current = hostBefore
+        ? { sectionId, height: hostBefore.height }
+        : null;
 
-      // Quiet: no dirty flag, no autosave — nothing has been written yet.
-      history.commit(placed.document);
+      /*
+       * Quiet in every sense: no dirty flag, no autosave, and NO HISTORY
+       * ENTRY. An empty block the editor put there on the owner's behalf is
+       * not an edit — recording it made every stray click cost an undo step
+       * that did nothing visible when pressed, and reclaiming the block cost
+       * a second. Three clicks on blank paper left five entries describing a
+       * document that had not changed.
+       */
+      history.replacePresent(placed.document);
       autoCreated.current = element.id;
       setSelection({ type: 'element', id: element.id });
       inline.begin({ kind: 'element-text', id: element.id });
@@ -799,11 +852,24 @@ export const FormBuilder: React.FC = () => {
       const element = findElement(layoutRef.current, id);
       if (!element || plainTextOf(element.content as never) !== '') {
         autoCreated.current = null;
+        autoCreatedHost.current = null;
         return;
       }
       const host = sectionContaining(layoutRef.current, id);
       const pruned = removeElement(layoutRef.current, id);
       if (!pruned.refusal) {
+        /*
+         * Give back the height the block cost. Only when the section is still
+         * exactly as tall as the block made it — if it has been resized or
+         * grown by something else since, that is the owner's size and not ours
+         * to take back.
+         */
+        const grown = autoCreatedHost.current;
+        const current = grown ? findSection(pruned.document, grown.sectionId)?.section : undefined;
+        if (grown && current && current.height > grown.height) {
+          const restored = updateSection(pruned.document, grown.sectionId, { height: grown.height });
+          if (!restored.refusal) pruned.document = restored.document;
+        }
         /*
          * The host was created FOR this block. With the block gone it holds
          * nothing, renders nothing and can never be selected — an invisible
@@ -816,9 +882,11 @@ export const FormBuilder: React.FC = () => {
             .flatMap((page) => page.sections)
             .find((section) => section.id === host.id)?.elements.length;
         const next = emptied ? removeSection(pruned.document, host.id) : pruned;
-        history.commit(next.refusal ? pruned.document : next.document);
+        // As quietly as it arrived — see `handleTypeAt`.
+        history.replacePresent(next.refusal ? pruned.document : next.document);
       }
       autoCreated.current = null;
+      autoCreatedHost.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inline.target?.kind, inline.target?.id]);
