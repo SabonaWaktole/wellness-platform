@@ -421,6 +421,7 @@
       "bottom": "Rreshto poshtë"
     },
     "distributeHorizontally": "Shpërnda horizontalisht",
-    "distributeVertically": "Shpërnda vertikalisht"
+    "distributeVertically": "Shpërnda vertikalisht",
+    "formattingOneOf": "Po formatohet një nga {{count}} objektet e zgjedhura."
   }
 }

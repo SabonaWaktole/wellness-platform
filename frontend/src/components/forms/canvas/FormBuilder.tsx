@@ -139,6 +139,11 @@ export const FormBuilder: React.FC = () => {
 
   /** Which piece of text has the caret, if any (spec §7). */
   const inline = useInlineEditing();
+  /* `apply` is memoised on [history, sel] so that a mutation does not rebuild
+   * every canvas handler; reading the edit session through a ref keeps it out
+   * of that dependency list without letting it go stale. */
+  const inlineRef = useRef(inline);
+  inlineRef.current = inline;
 
   /**
    * Selection made FROM THE CANVAS, which closes any open caret on its way.
@@ -262,7 +267,36 @@ export const FormBuilder: React.FC = () => {
       // is still selected. Dropping dead ids here — rather than letting the
       // panel read a ghost — is what keeps the selection honest after every
       // mutation, including the ones the owner did not initiate.
-      sel.retain(aliveIds(result.document));
+      const alive = aliveIds(result.document);
+      sel.retain(alive);
+      /*
+       * AND THE CARET DIES WITH THE THING IT WAS IN.
+       *
+       * `inline.target` was left pointing at deleted objects, and a stale one
+       * is not a cosmetic problem — three separate features read it as "the
+       * user is typing" and quietly stop working, permanently, until
+       * something else happens to close the session:
+       *
+       *   the drag/undo bracket   `FormCanvas` deliberately keeps the history
+       *                           window shut while a caret is live, because
+       *                           the edit session owns it. With a dead target
+       *                           the window never opens again, so every later
+       *                           drag pushes one undo entry PER POINTERMOVE.
+       *   the right-click menu    declines to open while editing, so it goes
+       *                           dead for the rest of the session.
+       *   contextual tabs         stop raising, because a live caret pins the
+       *                           ribbon to Home.
+       *
+       * Reachable in one gesture: open a caret, click a ribbon button (which
+       * blurs the editor but leaves the target set), press Delete. It belongs
+       * here beside the selection rather than in `doDelete`, because every
+       * path that can remove an object runs through `apply` — cut, undo, a
+       * paste that replaces, and the overflow ladder relocating a section off
+       * a page the caret was on.
+       */
+      if (inlineRef.current.target && !alive.has(inlineRef.current.target.id)) {
+        inlineRef.current.end();
+      }
       setIsDirty(true);
       autosaveRef.current?.schedule();
     },
@@ -1190,28 +1224,73 @@ export const FormBuilder: React.FC = () => {
         case 'delete':
           doDelete();
           break;
+        /*
+         * EVERY SELECTED OBJECT, exactly as Delete does a dozen lines above.
+         * Nudging moved only the primary, so a row of five fields lined up and
+         * shifted together came apart the moment the owner tried to move it
+         * one pixel — the one operation where keeping the arrangement is the
+         * whole point.
+         *
+         * Folded one at a time and abandoned whole on a refusal, so a batch
+         * that would push a section off the page leaves the document alone
+         * rather than moving three of five.
+         */
         case 'nudge': {
           // The arrow keys belong to whichever control has focus when that
           // control navigates with them — the ribbon's tab strip, a menu.
           if (isArrowNavigableControl(event.target)) break;
-          if (selection?.type === 'element') {
-            const el = findElement(layout, selection.id);
-            if (el) apply(moveElement(layout, selection.id, el.x + shortcut.dx, el.y + shortcut.dy));
-          } else if (selection?.type === 'section') {
-            const found = findSection(layout, selection.id);
-            if (found) apply(moveSection(layout, selection.id, found.section.x + shortcut.dx, found.section.y + shortcut.dy));
+          if (!sel.kind || sel.kind === 'page' || sel.ids.length === 0) break;
+          // Otherwise the canvas scrolls under the object being moved.
+          event.preventDefault();
+
+          let moved = layout;
+          for (const id of sel.ids) {
+            if (sel.kind === 'element') {
+              const el = findElement(moved, id);
+              if (!el) continue;
+              const step = moveElement(moved, id, el.x + shortcut.dx, el.y + shortcut.dy);
+              if (step.refusal) {
+                setRefusal(step.refusal);
+                return;
+              }
+              moved = step.document;
+            } else {
+              const found = findSection(moved, id);
+              if (!found) continue;
+              const step = moveSection(
+                moved,
+                id,
+                found.section.x + shortcut.dx,
+                found.section.y + shortcut.dy
+              );
+              if (step.refusal) {
+                setRefusal(step.refusal);
+                return;
+              }
+              moved = step.document;
+            }
           }
+          apply({ document: moved, refusal: null });
           break;
         }
         // The clipboard verbs work on whichever KIND is selected, and are the
         // same three functions the ribbon and the right-click menu call.
+        /*
+         * `preventDefault` on all three: the browser's own clipboard would
+         * otherwise act as well. With no DOM selection that is usually inert,
+         * but a stray text selection left on the page turned one Ctrl+X into
+         * two cuts — the object's and the browser's.
+         */
         case 'copy':
+          event.preventDefault();
           doCopy();
           break;
         case 'cut':
+          event.preventDefault();
           doCut();
           break;
         case 'paste':
+          event.preventDefault();
           doPaste();
           break;
         case 'save':
@@ -1650,6 +1729,7 @@ export const FormBuilder: React.FC = () => {
               onChangeSection={(id, changes) => apply(updateSection(layout, id, changes))}
               onEditText={(id) => handleBeginEdit({ kind: 'element-text', id })}
               onClose={() => setShowFormatPane(false)}
+              selectionCount={sel.ids.length}
             />
           </div>
         )}
@@ -1695,11 +1775,35 @@ export const FormBuilder: React.FC = () => {
                 // Keep the horizontal placement, and land at the top margin —
                 // the section is arriving at the start of the next page, which
                 // is where the reader's eye goes.
-                apply(
-                  moveSectionToPage(layout, section.id, next.id, section.x, layout.page.margin.top, {
-                    useFreeSpace: true,
-                  })
+                const moved = moveSectionToPage(
+                  layout,
+                  section.id,
+                  next.id,
+                  section.x,
+                  layout.page.margin.top,
+                  { useFreeSpace: true }
                 );
+                apply(moved);
+                /*
+                 * AND GO WITH IT. The section leaves the page being looked at
+                 * and arrives on one that may be entirely off-screen, so the
+                 * command read as a delete: the thing was there, the user
+                 * asked for something, and now it is gone. Following it is
+                 * what makes "move to next page" a move rather than a
+                 * disappearance.
+                 *
+                 * Only from this command, never from the drag that relocates a
+                 * section at the page boundary — the pointer is already at the
+                 * edge of the page there, the next sheet is right below it, and
+                 * scrolling under a live gesture is exactly the lurch §12 rules
+                 * out.
+                 */
+                if (!moved.refusal) {
+                  setActivePageId(next.id);
+                  document
+                    .querySelector(`[data-page-id="${next.id}"]`)
+                    ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+                }
               },
               duplicatePage: () => targetPageId && apply(duplicatePage(layout, targetPageId)),
               deletePage: () => targetPageId && apply(deletePage(layout, targetPageId)),

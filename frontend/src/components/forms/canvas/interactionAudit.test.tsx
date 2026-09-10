@@ -1162,3 +1162,113 @@ describe('Audit — a section resizes from its edges, not just its corners', () 
     expect(Number.parseInt(after.height, 10)).toBeGreaterThan(Number.parseInt(before.height, 10));
   });
 });
+
+/*
+ * THE CARET AND THE THING IT IS IN DIE TOGETHER.
+ *
+ * `inline.target` was never cleared when the object it pointed at was
+ * removed, and a stale one is not cosmetic: three features read it as "the
+ * user is typing" and quietly stop working for the rest of the session. The
+ * gesture that reaches it is ordinary — open a caret, click a ribbon button,
+ * press Delete.
+ */
+describe('Audit — deleting what is being typed into closes the caret', () => {
+  beforeEach(mockHooks);
+
+  const openCaret = () => {
+    fireEvent.doubleClick(overlays()[0]);
+    expect(document.querySelector('[contenteditable="true"]')).toBeTruthy();
+  };
+
+  it('leaves no editing session behind when the element is deleted', () => {
+    render(<FormBuilder />);
+    openCaret();
+
+    // Blurs the editor but leaves the session open, exactly as clicking any
+    // ribbon control does. Deliberately one that changes neither the document
+    // nor the selection, so the only thing under test is the dangling caret.
+    fireEvent.click(button(/zoom in/i));
+    fireEvent.keyDown(window, { key: 'Delete' });
+
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  /*
+   * The consequence that mattered most. `FormCanvas` keeps the history window
+   * shut while a caret is live because the edit session owns it — so a dangling
+   * target meant the window never opened again and a drag pushed one undo entry
+   * per pointermove. One drag, one undo, still.
+   */
+  it('still coalesces a whole drag into one undo afterwards', () => {
+    render(<FormBuilder />);
+    openCaret();
+    fireEvent.click(button(/zoom in/i));
+    fireEvent.keyDown(window, { key: 'Delete' });
+
+    selectElement(0);
+    const startedAt = overlays()[0].style.top;
+
+    const box = overlays()[0];
+    fireEvent.pointerDown(box, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(box, { pointerId: 1, clientX: 0, clientY: 40 });
+    fireEvent.pointerMove(box, { pointerId: 1, clientX: 0, clientY: 80 });
+    fireEvent.pointerMove(box, { pointerId: 1, clientX: 0, clientY: 120 });
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    expect(overlays()[0].style.top).not.toEqual(startedAt);
+
+    /*
+     * ONE press, all the way back. Three pointer moves reached the document; if
+     * the gesture window had stayed shut they would be three history entries
+     * and this would land on an intermediate position instead of the start.
+     */
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+    expect(overlays()[0].style.top).toEqual(startedAt);
+  });
+});
+
+/*
+ * ONE ARRANGEMENT, MOVED TOGETHER. Delete has always acted on every selected
+ * object; the arrow keys moved only the primary, so a row of fields lined up
+ * and selected together came apart the moment the owner nudged it — the one
+ * operation where holding the arrangement is the entire point.
+ */
+describe('Audit — the arrow keys move everything that is selected', () => {
+  beforeEach(mockHooks);
+
+  it('nudges every selected element, not just the primary', () => {
+    render(<FormBuilder />);
+    selectElement(1);
+    selectElement(2, { shiftKey: true });
+
+    const before = [overlays()[1].style.top, overlays()[2].style.top];
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    const after = [overlays()[1].style.top, overlays()[2].style.top];
+
+    expect(after[0]).not.toEqual(before[0]);
+    expect(after[1]).not.toEqual(before[1]);
+  });
+
+  /* And a modifier makes them mean something else entirely — Ctrl+arrow is
+   * word-wise movement in text, never a one-pixel nudge. */
+  it('leaves a modified arrow alone', () => {
+    render(<FormBuilder />);
+    selectElement(1);
+
+    const before = overlays()[1].style.top;
+    fireEvent.keyDown(window, { key: 'ArrowDown', ctrlKey: true });
+
+    expect(overlays()[1].style.top).toEqual(before);
+  });
+
+  /* Ctrl+Backspace deletes a word, not an object. */
+  it('leaves a modified Backspace alone', () => {
+    render(<FormBuilder />);
+    selectElement(1);
+    const count = overlays().length;
+
+    fireEvent.keyDown(window, { key: 'Backspace', ctrlKey: true });
+
+    expect(overlays()).toHaveLength(count);
+  });
+});

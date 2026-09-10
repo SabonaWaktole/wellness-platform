@@ -382,7 +382,9 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  z-index: 1;
+  /* Above the edge strips, which otherwise clip a couple of pixels off this
+     button's top and right sides and answer the clicks that land there. */
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -569,11 +571,25 @@
 .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
 .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
 
+/*
+ * ABOVE THE CORNER, NOT ON IT.
+ *
+ * At `top: -12px; right: -12px` this 22px circle was centred on (W+1, -1) —
+ * a point that sits INSIDE the 9px north-east resize handle at (W-4..W+5,
+ * -5..4). The handles render after it with the same z-index, so the handle
+ * won: clicking the middle of the trash icon started a diagonal resize, and
+ * the only part of the button that actually deleted anything was its rim.
+ *
+ * Lifted clear of the handle's row entirely rather than nudged sideways —
+ * anything short of `right: -27px` still overlaps it vertically, and a delete
+ * button hanging that far off the object's edge reads as belonging to
+ * whatever is beside it.
+ */
 .elementDelete {
   position: absolute;
-  top: -12px;
-  right: -12px;
-  z-index: 2;
+  top: -30px;
+  right: -6px;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;

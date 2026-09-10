@@ -81,6 +81,10 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
       style={{ left: section.x, top: section.y, width: section.width, height: section.height }}
       onClick={(e) => {
         e.stopPropagation();
+        // The release that ends a drag is followed by a click. Selecting on it
+        // would collapse a multi-selection to whichever member was being
+        // dragged — the arrangement the user had just finished making.
+        if (drag.didDrag()) return;
         onSelect({ additive: e.shiftKey || e.ctrlKey || e.metaKey });
       }}
       onContextMenu={onContextMenu}

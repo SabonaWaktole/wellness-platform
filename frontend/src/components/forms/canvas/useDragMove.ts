@@ -6,6 +6,11 @@ interface DragState {
   startClientY: number;
   startX: number;
   startY: number;
+  /**
+   * False until the pointer has travelled far enough to mean a drag. See
+   * `DRAG_THRESHOLD`.
+   */
+  moved: boolean;
 }
 
 /**
@@ -32,12 +37,38 @@ interface DragState {
  * happen in screen pixels, but the layout stores page pixels, so every delta
  * is divided by scale before it reaches `onMove`.
  */
+/**
+ * How far the pointer must travel before a press becomes a drag, in screen
+ * pixels.
+ *
+ * There was no threshold at all: the first `pointermove` reported a new
+ * position however small, so a click with any hand tremor in it ran the whole
+ * overflow ladder, marked the document dirty and scheduled a save. A form
+ * could be "modified" by being looked at. Three pixels is below the level a
+ * deliberate drag ever starts at and above the level a click ever reaches.
+ *
+ * Measured in SCREEN pixels deliberately — it is a fact about hands, not about
+ * the document, so it must not shrink as the page is zoomed in.
+ */
+export const DRAG_THRESHOLD = 3;
+
 export const useDragMove = (
   getStartPosition: () => { x: number; y: number },
   onMove: (x: number, y: number) => void,
   getScale: () => number
 ) => {
   const drag = useRef<DragState | null>(null);
+  /*
+   * Whether the LAST gesture was a real drag, readable after it has ended.
+   *
+   * A pointer release is followed by a `click`, and both canvas overlays
+   * select on click — so finishing a drag re-selected the object that was
+   * dragged, with `additive: false`, silently collapsing a multi-selection to
+   * the one member the user happened to have hold of. Kept outside
+   * `drag.current` because that is cleared on pointer up, which is before the
+   * click this has to answer; reset on the next press.
+   */
+  const draggedRef = useRef(false);
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent) => {
@@ -46,6 +77,7 @@ export const useDragMove = (
       if (event.button !== 0) return;
       event.stopPropagation();
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+      draggedRef.current = false;
       const start = getStartPosition();
       drag.current = {
         pointerId: event.pointerId,
@@ -53,6 +85,7 @@ export const useDragMove = (
         startClientY: event.clientY,
         startX: start.x,
         startY: start.y,
+        moved: false,
       };
     },
     [getStartPosition]
@@ -62,6 +95,16 @@ export const useDragMove = (
     (event: React.PointerEvent) => {
       const state = drag.current;
       if (!state || event.pointerId !== state.pointerId) return;
+
+      if (!state.moved) {
+        const travelled =
+          Math.abs(event.clientX - state.startClientX) >= DRAG_THRESHOLD ||
+          Math.abs(event.clientY - state.startClientY) >= DRAG_THRESHOLD;
+        if (!travelled) return;
+        state.moved = true;
+        draggedRef.current = true;
+      }
+
       const scale = getScale() || 1;
       const dx = (event.clientX - state.startClientX) / scale;
       const dy = (event.clientY - state.startClientY) / scale;
@@ -77,5 +120,8 @@ export const useDragMove = (
     drag.current = null;
   }, []);
 
-  return { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag };
+  /** True when the click now arriving is the tail of a drag, not a selection. */
+  const didDrag = useCallback(() => draggedRef.current, []);
+
+  return { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, didDrag };
 };

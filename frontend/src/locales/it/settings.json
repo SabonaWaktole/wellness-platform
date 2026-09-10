@@ -420,6 +420,7 @@
       "bottom": "Allinea in basso"
     },
     "distributeHorizontally": "Distribuisci orizzontalmente",
-    "distributeVertically": "Distribuisci verticalmente"
+    "distributeVertically": "Distribuisci verticalmente",
+    "formattingOneOf": "Formattazione di uno degli {{count}} oggetti selezionati."
   }
 }

@@ -445,6 +445,7 @@
       "bottom": "Align bottom"
     },
     "distributeHorizontally": "Distribute horizontally",
-    "distributeVertically": "Distribute vertically"
+    "distributeVertically": "Distribute vertically",
+    "formattingOneOf": "Formatting one of {{count}} selected objects."
   }
 }

@@ -794,6 +794,44 @@ describe('a moved section uses the empty space that is already there', () => {
     expect(at(result.document, 'a').y).toBe(48);
   });
 
+  /*
+   * A SECTION CANNOT BE PUT SOMEWHERE IT CANNOT BE PICKED UP AGAIN.
+   *
+   * There was no horizontal bound at all — only a rounding — so a section
+   * could be dragged to a negative x or out past the right edge, and `.sheet`
+   * has `overflow: hidden`, so it then had no visible surface left to grab.
+   * Nothing in the builder could bring it back: the rail shows thumbnails, the
+   * format pane needs a selection, and the selection is made by clicking the
+   * thing. It was still in the document and still printed; it had simply
+   * vanished from the editor.
+   */
+  it('keeps a section between the page margins however far it is dragged', () => {
+    const before = onePage([sec('a', 48, 100)]);
+    // `sec` is 500 wide, so its right-hand limit is the right margin less its
+    // own width — the section stops with its far edge on the margin, not with
+    // its origin there.
+    const rightLimit = A4_PORTRAIT.width - DEFAULT_MARGIN.right - 500;
+
+    expect(at(moveSection(before, 'a', -400, 48).document, 'a').x).toBe(DEFAULT_MARGIN.left);
+    expect(at(moveSection(before, 'a', 5000, 48).document, 'a').x).toBe(rightLimit);
+  });
+
+  /* The first page has nothing above it, so up is a wall rather than a door. */
+  it('pins a section to the top margin on the first page', () => {
+    const before = onePage([sec('a', 300, 100)]);
+
+    expect(at(moveSection(before, 'a', 48, -200).document, 'a').y).toBe(DEFAULT_MARGIN.top);
+  });
+
+  /* A west or corner handle moves the origin as well as the size. */
+  it('keeps a section on the paper when a resize drags its left edge out', () => {
+    const before = onePage([sec('a', 48, 100)]);
+
+    const result = resizeSection(before, 'a', { x: -300, y: 48, width: 400, height: 100 });
+
+    expect(at(result.document, 'a').x).toBe(48);
+  });
+
   /* CASE 3: with no gap to fall into, a real collision still reflows — and
    * still reflows ONLY what it has to (spec §6). */
   it('still pushes a neighbour when the space genuinely is not there', () => {

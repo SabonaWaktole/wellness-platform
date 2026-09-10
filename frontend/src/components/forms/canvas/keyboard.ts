@@ -82,15 +82,31 @@ export const resolveShortcut = (event: KeyboardEvent): ShortcutAction | null => 
   const key = event.key;
 
   if (key === 'Escape') return { action: 'escape' };
-  if (key === 'Delete' || key === 'Backspace') return { action: 'delete' };
 
-  const nudge = NUDGES[key];
-  if (nudge) {
-    const step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
-    return { action: 'nudge', dx: nudge.dx * step, dy: nudge.dy * step };
+  /*
+   * THE UNMODIFIED KEYS FIRST, AND ONLY WHILE UNMODIFIED.
+   *
+   * These three used to be resolved above the `mod` check, which made
+   * Ctrl+Backspace and Ctrl+Delete mean "delete the selected object" — where
+   * every editor means "delete the previous word" — and Ctrl+arrow a one-pixel
+   * nudge rather than the word-wise movement the same keys have in text.
+   * Reading them only when no modifier is held is what keeps a modified
+   * chord from arriving as its unmodified self.
+   *
+   * Shift is deliberately not part of `mod`: Shift+arrow is the coarse nudge,
+   * and it has to keep resolving here.
+   */
+  if (!mod) {
+    if (key === 'Delete' || key === 'Backspace') return { action: 'delete' };
+
+    const nudge = NUDGES[key];
+    if (nudge) {
+      const step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+      return { action: 'nudge', dx: nudge.dx * step, dy: nudge.dy * step };
+    }
+
+    return null;
   }
-
-  if (!mod) return null;
 
   switch (key.toLowerCase()) {
     case 'z':

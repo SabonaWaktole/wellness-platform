@@ -111,6 +111,28 @@ export const usableWidth = (page: FormPage): number => usablePageWidth(page);
 const clampSize = (n: number): number => Math.min(MAX_SIZE_PX, Math.max(MIN_SIZE_PX, Math.round(n)));
 const clampCoord = (n: number): number => Math.round(n);
 
+/**
+ * Keeps a section on the paper HORIZONTALLY.
+ *
+ * There was no horizontal bound at all — `clampCoord` is only a rounding — so
+ * a section could be dragged to a negative x or out past the right edge, and
+ * `.sheet` has `overflow: hidden`, which means it then had no visible surface
+ * left to grab. Nothing in the builder could bring it back: the page rail
+ * shows thumbnails, the format pane needs a selection, and the selection is
+ * made by clicking the thing. The document still held it, and it still
+ * printed, so the only symptom was a section that had silently vanished.
+ *
+ * Clamped to the margins rather than to the paper edge, because that is where
+ * a section belongs — the same bound `addSection` and the width clamp already
+ * use. A section wider than the usable width (possible on a document authored
+ * elsewhere) is pinned to the left margin rather than given a negative range.
+ */
+const clampSectionX = (x: number, width: number, page: FormPage): number => {
+  const left = page.margin.left;
+  const right = Math.max(left, page.width - page.margin.right - width);
+  return Math.min(Math.max(clampCoord(x), left), right);
+};
+
 const boxesOverlap = (
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number }
@@ -675,7 +697,14 @@ export const moveSection = (
   if (!found) return ok(doc);
 
   const { pageIndex, page, section } = found;
-  const nextY = clampCoord(y);
+  /*
+   * The first page has nothing above it, so a section dragged past its top
+   * margin pins there rather than going to a page that does not exist. Left
+   * unclamped it kept the negative y and disappeared under the top of the
+   * sheet, which `overflow: hidden` then made unrecoverable — the horizontal
+   * version of the same trap `clampSectionX` closes.
+   */
+  const nextY = pageIndex === 0 ? Math.max(clampCoord(y), doc.page.margin.top) : clampCoord(y);
 
   if (nextY < 0 && pageIndex > 0) {
     return moveSectionToPage(doc, sectionId, doc.pages[pageIndex - 1].id, x, doc.page.margin.top, options);
@@ -694,7 +723,9 @@ export const moveSection = (
   const pages = [...doc.pages];
   pages[pageIndex] = {
     ...page,
-    sections: page.sections.map((s) => (s.id === sectionId ? { ...s, x: clampCoord(x), y: nextY } : s)),
+    sections: page.sections.map((s) =>
+      s.id === sectionId ? { ...s, x: clampSectionX(x, s.width, doc.page), y: nextY } : s
+    ),
   };
   return settleOrRevert(doc, { ...doc, pages }, pageIndex, sectionId, options);
 };
@@ -704,13 +735,18 @@ export const resizeSection = (
   sectionId: string,
   box: { x: number; y: number; width: number; height: number }
 ): ApplyResult =>
-  withSection(doc, sectionId, (section) => ({
-    ...section,
-    x: clampCoord(box.x),
-    y: clampCoord(box.y),
-    width: Math.min(clampSize(box.width), usableWidth(doc.page)),
-    height: clampSize(box.height),
-  }));
+  withSection(doc, sectionId, (section) => {
+    // A west or corner handle moves the origin as well as the size, so a
+    // resize can walk a section off the paper exactly as a move can.
+    const width = Math.min(clampSize(box.width), usableWidth(doc.page));
+    return {
+      ...section,
+      x: clampSectionX(box.x, width, doc.page),
+      y: clampCoord(box.y),
+      width,
+      height: clampSize(box.height),
+    };
+  });
 
 export const renameSection = (doc: FormDocument, sectionId: string, title: string): ApplyResult =>
   withSection(doc, sectionId, (section) => ({ ...section, title }));
@@ -744,7 +780,11 @@ export const moveSectionToPage = (
   if (!found || targetIndex < 0 || found.page.id === targetPageId) return ok(doc);
   if (!fitsOnPage(found.section, doc.page)) return refuse(doc, SECTION_TOO_TALL);
 
-  const moved: FormSection = { ...found.section, x: clampCoord(x), y: clampCoord(y) };
+  const moved: FormSection = {
+    ...found.section,
+    x: clampSectionX(x, found.section.width, doc.page),
+    y: clampCoord(y),
+  };
 
   const pages = doc.pages.map((p) => {
     if (p.id === found.page.id) return { ...p, sections: p.sections.filter((s) => s.id !== sectionId) };

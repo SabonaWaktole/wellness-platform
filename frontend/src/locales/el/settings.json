@@ -420,6 +420,7 @@
       "bottom": "Στοίχιση κάτω"
     },
     "distributeHorizontally": "Οριζόντια κατανομή",
-    "distributeVertically": "Κατακόρυφη κατανομή"
+    "distributeVertically": "Κατακόρυφη κατανομή",
+    "formattingOneOf": "Μορφοποίηση ενός από {{count}} επιλεγμένα αντικείμενα."
   }
 }

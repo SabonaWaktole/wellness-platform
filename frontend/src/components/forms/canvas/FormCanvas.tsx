@@ -248,14 +248,31 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   // editor mid-word loses both the focus and the keystrokes in flight.
   const pageIds = layout.pages.map((p) => p.id);
   const { isVisible, setPageRef } = useVisiblePages(pageIds);
-  const selectedPageId =
-    selection?.type === 'page'
-      ? selection.id
-      : selection?.type === 'section'
-        ? pageContainingSection(layout, selection.id)?.id ?? null
-        : selection?.type === 'element'
-          ? pageContainingSection(layout, sectionContaining(layout, selection.id)?.id ?? '')?.id ?? null
-          : null;
+  /*
+   * EVERY page holding a selected object, not just the primary's.
+   *
+   * This used to resolve `selection` alone — the primary — so a shift-click
+   * selection spanning two pages force-rendered one of them and left the other
+   * to virtualisation. On the unrendered page the outlines, handles and delete
+   * buttons simply did not exist, while Delete, Ctrl+D and the arrow keys went
+   * on acting for all of it: objects the user could not see being changed by
+   * commands aimed at the ones they could.
+   */
+  const pageOfObject = (id: string): string | null =>
+    pageContainingSection(layout, id)?.id ??
+    pageContainingSection(layout, sectionContaining(layout, id)?.id ?? '')?.id ??
+    null;
+
+  const forcedPageIds = new Set<string>();
+  if (selection?.type === 'page') forcedPageIds.add(selection.id);
+  else if (selection) {
+    const own = pageOfObject(selection.id);
+    if (own) forcedPageIds.add(own);
+  }
+  for (const id of selectedIds ?? []) {
+    const page = pageOfObject(id);
+    if (page) forcedPageIds.add(page);
+  }
 
   const editingPageId = editing
     ? editing.kind === 'section-title'
@@ -356,7 +373,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onTypeAt={onTypeAt}
             getScale={viewport.getScale}
             shouldRender={
-              isVisible(page.id) || page.id === selectedPageId || page.id === editingPageId
+              isVisible(page.id) || forcedPageIds.has(page.id) || page.id === editingPageId
             }
             wrapRef={setPageRef(page.id)}
           />

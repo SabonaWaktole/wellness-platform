@@ -73,7 +73,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
   const resize = useResize(
     () => ({ x: element.x, y: element.y, width: element.width, height: element.height }),
     onResize,
-    getScale
+    getScale,
+    // A picture's corners keep its proportions unless Shift says otherwise —
+    // a stretched image cannot be un-stretched by eye afterwards.
+    { lockAspect: element.type === 'IMAGE' }
   );
 
   const editTarget = defaultTargetFor(element);
@@ -99,6 +102,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
     : {
         onClick: (e: React.MouseEvent) => {
           e.stopPropagation();
+          // The release that ends a drag is followed by a click. Selecting on
+          // it would collapse a multi-selection to whichever member was being
+          // dragged — the arrangement the user had just finished making.
+          if (drag.didDrag()) return;
           onSelect({ additive: e.shiftKey || e.ctrlKey || e.metaKey });
         },
         onDoubleClick: (e: React.MouseEvent) => {

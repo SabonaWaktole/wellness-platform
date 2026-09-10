@@ -26,6 +26,12 @@ export interface PropertiesPanelProps {
   onEditText?: (elementId: string) => void;
   /** Dismisses the pane. Reopened from the contextual tab's launcher. */
   onClose?: () => void;
+  /**
+   * How many objects the selection holds. The pane formats ONE of them — the
+   * primary — so with several selected it has to say so rather than let the
+   * user believe a change here reached all of them.
+   */
+  selectionCount?: number;
 }
 
 /**
@@ -48,6 +54,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   onChangeSection,
   onEditText,
   onClose,
+  selectionCount = 1,
 }) => {
   const { t } = useTranslation('settings');
   // Component type names live beside the registry that defines them.
@@ -64,7 +71,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     const section = selection.section;
     return (
       <aside className={styles.panel} data-format-pane>
-        <PaneHeader title={t('formBuilder.sectionSettings')} onClose={onClose} />
+        <PaneHeader
+          title={t('formBuilder.sectionSettings')}
+          onClose={onClose}
+          selectionCount={selectionCount}
+        />
         <TextInput
           label={t('formBuilder.sectionTitle')}
           value={section.title ?? ''}
@@ -116,7 +127,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
   return (
     <aside className={styles.panel} data-format-pane>
-      <PaneHeader title={objectName} onClose={onClose} />
+      <PaneHeader title={objectName} onClose={onClose} selectionCount={selectionCount} />
 
       {isDataBearing(element.type) && field && (
         <>
@@ -338,17 +349,35 @@ const slugifyOption = (label: string): string =>
  * Word's format pane closes, and a panel that cannot be put away is a panel
  * permanently competing with the page for width.
  */
-const PaneHeader: React.FC<{ title: string; onClose?: () => void }> = ({ title, onClose }) => {
+const PaneHeader: React.FC<{ title: string; onClose?: () => void; selectionCount?: number }> = ({
+  title,
+  onClose,
+  selectionCount = 1,
+}) => {
   const { t } = useTranslation('settings');
   return (
-    <div className={styles.paneHeader}>
-      <h3 className={styles.title}>{title}</h3>
-      {onClose && (
-        <button type="button" className={styles.paneClose} onClick={onClose} aria-label={t('formBuilder.closePane')}>
-          <X size={14} />
-        </button>
+    <>
+      <div className={styles.paneHeader}>
+        <h3 className={styles.title}>{title}</h3>
+        {onClose && (
+          <button type="button" className={styles.paneClose} onClick={onClose} aria-label={t('formBuilder.closePane')}>
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {/*
+        WHICH OF THEM THIS IS. Every control below edits the primary object,
+        so with several selected the pane was quietly formatting one of them
+        and looking exactly as it does when that one is all there is. The
+        commands that DO act on the whole selection — align, distribute,
+        duplicate, delete — are on the contextual tab, and saying the count
+        here is what sends the user there instead of leaving them to discover
+        that four of their five fields did not change.
+      */}
+      {selectionCount > 1 && (
+        <p className={styles.hint}>{t('formBuilder.formattingOneOf', { count: selectionCount })}</p>
       )}
-    </div>
+    </>
   );
 };
 
