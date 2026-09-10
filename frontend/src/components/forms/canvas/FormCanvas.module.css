@@ -404,6 +404,21 @@
    */
   cursor: default;
   touch-action: none;
+  /*
+   * ABOVE THE SECTION'S OWN CHROME.
+   *
+   * A section's edge handles are strips spanning a whole side (see `.handle`
+   * below), so a field sitting flush against that side is underneath one. The
+   * strips carry `z-index: 2` and an element overlay carried none, which meant
+   * the strip painted over the field and took its clicks: clicking a field to
+   * select it started resizing the section around it instead.
+   *
+   * The object nearest the surface wins, which is both what the page looks
+   * like and what every editor does — you click a picture, you get the
+   * picture, not the frame it happens to sit in. The section keeps its whole
+   * edge everywhere an element is not actually in the way.
+   */
+  z-index: 3;
 }
 
 .elementSelected {
@@ -476,25 +491,70 @@
 }
 
 /*
+ * THE GRIP IS NOT THE HANDLE.
+ *
+ * All eight handles have always existed, but an edge handle was a 9px square
+ * sitting at the midpoint of its side — so "drag the edge to resize" only
+ * worked if you found that one dot. Everywhere else along the border, the
+ * pointer fell through to the section's own drag band and MOVED the section
+ * instead. Word and Docs let you grab anywhere along a side, and that is what
+ * a border looks like it affords.
+ *
+ * So an edge handle is now a STRIP that spans its whole side, and the visible
+ * 9px square is drawn by its `::after` at the midpoint — the affordance stays
+ * exactly where it was, the target grew to the entire edge. The strip stops
+ * 6px short of each corner so the corner handles, which resize two axes at
+ * once, keep their own hit area.
+ *
+ * Each strip straddles the border rather than sitting inside it (`-5px` with a
+ * 9px cross-axis), so only ~4px of it reaches into the box and it cannot eat
+ * clicks meant for content near the edge.
+ */
+.handle {
+  position: absolute;
+  touch-action: none;
+  z-index: 2;
+}
+
+/*
  * White fill, accent border — the office-suite convention, and legible over
  * dark and light content alike, where a solid accent square disappears into
  * anything of a similar colour underneath it.
  */
-.handle {
-  position: absolute;
+.handle-ne,
+.handle-nw,
+.handle-se,
+.handle-sw,
+.handle-n::after,
+.handle-s::after,
+.handle-e::after,
+.handle-w::after {
+  box-sizing: border-box;
   width: 9px;
   height: 9px;
   background: var(--canvas-paper);
   border: 1.5px solid var(--color-primary);
   border-radius: 1px;
-  touch-action: none;
-  z-index: 2;
 }
 
-.handle-n { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
-.handle-s { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
-.handle-e { right: -5px; top: calc(50% - 5px); cursor: ew-resize; }
-.handle-w { left: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+.handle-n::after,
+.handle-s::after,
+.handle-e::after,
+.handle-w::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.handle-n, .handle-s { left: 6px; right: 6px; height: 9px; cursor: ns-resize; }
+.handle-e, .handle-w { top: 6px; bottom: 6px; width: 9px; cursor: ew-resize; }
+
+.handle-n { top: -5px; }
+.handle-s { bottom: -5px; }
+.handle-e { right: -5px; }
+.handle-w { left: -5px; }
 .handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
 .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
 .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }

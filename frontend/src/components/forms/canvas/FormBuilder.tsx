@@ -595,6 +595,75 @@ export const FormBuilder: React.FC = () => {
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
 
+  /*
+   * THE DRAG BASELINE.
+   *
+   * A pointer drag fires a geometry op per `pointermove`, and each one used to
+   * run the overflow ladder against the document the PREVIOUS move had already
+   * reflowed. That compounds: drag a section down past its neighbour and the
+   * neighbour is pushed once per frame the two overlap, and it stays pushed —
+   * even when the drop point turns out to sit in empty space and nothing
+   * needed to move at all. A long drag could therefore shove a whole column of
+   * sections onto a new page for a position it merely passed THROUGH (spec §7:
+   * no cascading movement, §9: no jitter, no push-and-pull).
+   *
+   * So a gesture reflows against the document as it was when the gesture
+   * started, not against its own intermediate results. `useDragMove` and
+   * `useResize` already report ABSOLUTE geometry measured from their own
+   * pointer-down origin, so replaying the op against that baseline is exact —
+   * the layout depends only on where the pointer is NOW, and passing over a
+   * neighbour leaves no trace once the pointer has moved on.
+   *
+   * Captured lazily on the first move of a gesture and keyed by object id, so
+   * it is right even when no history window opened (an edit session owns the
+   * window while a caret is live); `resetGesture` drops it on every pointer
+   * down and release.
+   */
+  const gesture = useRef<{
+    id: string;
+    document: FormDocument;
+    /** The last position a section drag asked for, replayed on release. */
+    pendingSectionMove?: { x: number; y: number };
+  } | null>(null);
+
+  const gestureBase = useCallback((id: string): FormDocument => {
+    if (gesture.current?.id !== id) gesture.current = { id, document: layoutRef.current };
+    return gesture.current.document;
+  }, []);
+
+  /*
+   * AND THE SETTLE HAPPENS ONCE, WHEN THE SECTION IS PUT DOWN.
+   *
+   * Rung 0 — "use the empty space that is already there" — repositions the
+   * section itself, so running it per `pointermove` clamps the section to a
+   * gap's edge and holds it there while the pointer keeps travelling, then
+   * releases it in one leap (see `GAP_SNAP_TOLERANCE`). Both halves of that
+   * are wrong: §12 asks that a dragged object not jump unexpectedly, and a
+   * control that stops answering the pointer for seventy pixels has stopped
+   * being a drag at all.
+   *
+   * The two requirements are only in tension while the pointer is down. §13's
+   * "empty space at the destination" is about where the section ENDS UP, and
+   * that is not known until the button comes up. So the drag runs the ladder
+   * plainly — the section tracks the pointer, and a neighbour it is genuinely
+   * overlapping gets pushed, which is honest about what dropping here would
+   * do — and the release replays the same move once WITH free space, from the
+   * same baseline. One settle, at the moment the user commits, which is when
+   * every editor resolves a snap.
+   */
+  const settleGesture = useCallback(() => {
+    const pending = gesture.current?.pendingSectionMove;
+    const base = gesture.current?.document;
+    const id = gesture.current?.id;
+    if (!pending || !base || !id) return;
+    apply(moveSection(base, id, pending.x, pending.y, { useFreeSpace: true }));
+  }, [apply]);
+
+  const resetGesture = useCallback(() => {
+    settleGesture();
+    gesture.current = null;
+  }, [settleGesture]);
+
   const handleTypeAt = useCallback(
     (pageId: string, x: number, y: number) => {
       const page = layoutRef.current.pages.find((p) => p.id === pageId);
@@ -1475,15 +1544,22 @@ export const FormBuilder: React.FC = () => {
               onEditorReady={inline.setEditor}
               onGestureStart={history.beginInteraction}
               onGestureEnd={history.endInteraction}
-              onMoveSection={(id, x, y) => apply(moveSection(layout, id, x, y))}
-              onResizeSection={(id, box) => apply(resizeSection(layout, id, box))}
+              onGestureReset={resetGesture}
+              onMoveSection={(id, x, y) => {
+                // Plain ladder while the pointer is down; `settleGesture`
+                // replays this position with free space on release.
+                const base = gestureBase(id);
+                if (gesture.current) gesture.current.pendingSectionMove = { x, y };
+                apply(moveSection(base, id, x, y));
+              }}
+              onResizeSection={(id, box) => apply(resizeSection(gestureBase(id), id, box))}
               onRenameSection={(id, title) => apply(renameSection(layout, id, title))}
               onDeleteSection={(id) => {
                 apply(removeSection(layout, id));
                 setSelection(null);
               }}
-              onMoveElement={(id, x, y) => apply(moveElement(layout, id, x, y))}
-              onResizeElement={(id, box) => apply(resizeElement(layout, id, box))}
+              onMoveElement={(id, x, y) => apply(moveElement(gestureBase(id), id, x, y))}
+              onResizeElement={(id, box) => apply(resizeElement(gestureBase(id), id, box))}
               onContextMenu={handleContextMenu}
               onDeleteElement={(id) => {
                 apply(removeElement(layout, id));
@@ -1553,7 +1629,9 @@ export const FormBuilder: React.FC = () => {
                 // the section is arriving at the start of the next page, which
                 // is where the reader's eye goes.
                 apply(
-                  moveSectionToPage(layout, section.id, next.id, section.x, layout.page.margin.top)
+                  moveSectionToPage(layout, section.id, next.id, section.x, layout.page.margin.top, {
+                    useFreeSpace: true,
+                  })
                 );
               },
               duplicatePage: () => targetPageId && apply(duplicatePage(layout, targetPageId)),

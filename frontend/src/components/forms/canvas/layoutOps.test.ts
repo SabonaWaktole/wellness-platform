@@ -8,6 +8,7 @@ import {
   removeEmptyPages,
   addSection,
   moveSection,
+  moveSectionToPage,
   resizeSection,
   addElement,
   moveElement,
@@ -683,5 +684,187 @@ describe('pruneEmptyTextHosts', () => {
   it('leaves a document with nothing to prune untouched', () => {
     const original = doc([section('s1', [text])]);
     expect(pruneEmptyTextHosts(original)).toEqual(original);
+  });
+});
+
+/*
+ * SPACE-AWARE REPOSITIONING.
+ *
+ * The ladder's rung 2 answers "who do I push?". These cases are about the
+ * question that now runs BEFORE it: "does anybody have to move at all?" A
+ * section dropped where the page is already empty must land there and leave
+ * the document alone — no push, no cascade, no new page (spec §1, §10).
+ */
+describe('a moved section uses the empty space that is already there', () => {
+  const sec = (id: string, y: number, height: number): FormSection =>
+    section({ id, y, height, x: 48, width: 500 });
+  const onePage = (sections: FormSection[]) => doc([{ id: 'p1', sections }]);
+  const at = (d: FormDocument, id: string) => findSection(d, id)!.section;
+  const order = (d: FormDocument, index = 0) => d.pages[index].sections.map((s) => s.id);
+
+  /* CASE 1: a big gap above, and a section dragged up into it. Nothing else
+   * has any reason to move, so nothing else does. */
+  it('drops a section into a gap above without pushing what is below it', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 600, 100), sec('c', 750, 100)]);
+
+    const result = moveSection(before, 'c', 48, 300);
+
+    expect(result.refusal).toBeNull();
+    expect(at(result.document, 'c').y).toBe(300);
+    expect(at(result.document, 'a').y).toBe(48);
+    expect(at(result.document, 'b').y).toBe(600);
+    expect(result.document.pages).toHaveLength(1);
+  });
+
+  /* CASE 2: the same thing downward. Empty space below is space, not a void
+   * to be pushed into existence (spec §12). */
+  it('drops a section into a gap below without dragging its neighbours along', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 200, 100)]);
+
+    const result = moveSection(before, 'a', 48, 700);
+
+    expect(at(result.document, 'a').y).toBe(700);
+    expect(at(result.document, 'b').y).toBe(200);
+    expect(result.document.pages).toHaveLength(1);
+  });
+
+  /* A drop that clips a neighbour but plainly AIMED at the gap beside it
+   * settles into the gap. This is the whole difference between "I am moving
+   * into space" and "I am colliding with you" — the two used to be the same
+   * event.
+   *
+   * `useFreeSpace` is what a DROP passes. It is opt-in because the same
+   * function carries the arrow nudge and align/distribute, which must land on
+   * the exact coordinate they were given — and because a clamp this generous
+   * applied to every frame of a drag freezes the section and then leaps. */
+  it('slides a section that clips a neighbour into the free gap instead of shoving it', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 400, 100), sec('c', 700, 100)]);
+
+    // 350 overlaps b (400-500); the gap between a and b runs 156-392.
+    const result = moveSection(before, 'c', 48, 350, { useFreeSpace: true });
+
+    expect(at(result.document, 'c').y).toBe(292);
+    expect(at(result.document, 'b').y).toBe(400);
+    expect(at(result.document, 'a').y).toBe(48);
+    expect(result.document.pages).toHaveLength(1);
+  });
+
+  /*
+   * THE SAME MOVE, WITHOUT THE OPT-IN, LANDS WHERE IT WAS TOLD.
+   *
+   * Align, distribute and the arrow keys all route through `moveSection`, and
+   * all three compute an exact coordinate before calling it. A settle that
+   * slid one of them into a nearby gap would mean align did not align and one
+   * press of an arrow key moved a section seventy pixels. The default is
+   * therefore "put it exactly there, and push whatever is in the way".
+   */
+  it('lands on the exact coordinate when the caller has not asked for free space', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 400, 100), sec('c', 700, 100)]);
+
+    const result = moveSection(before, 'c', 48, 350);
+
+    expect(at(result.document, 'c').y).toBe(350);
+    expect(at(result.document, 'b').y).toBe(458);
+  });
+
+  /*
+   * A GAP THE SECTION IS NOWHERE NEAR IS NOT ITS GAP.
+   *
+   * The band has to be one the dropped section actually overlaps. Without
+   * that rule the settle picks purely by distance, so a section dropped on a
+   * crowded stretch of page can be answered with the nearest gap even when
+   * that gap is somewhere it never went — a teleport wearing a snap's
+   * clothing. It also makes `freeBands`' side-by-side guarantee explicit:
+   * a band that exists only because nothing spans that height can no longer
+   * be handed a section that is not there.
+   */
+  it('ignores a free band the dropped section does not reach', () => {
+    // a ends at 68 and b starts at 150, so there is a band at 48-142. c is
+    // only 40 tall, which is what makes this reachable at all: the band's
+    // bottom edge sits 48px above where c was dropped, inside the tolerance,
+    // while c's own span (150-190) never touches the band.
+    const before = onePage([sec('a', 48, 20), sec('b', 150, 200), sec('c', 800, 40)]);
+
+    const result = moveSection(before, 'c', 48, 150, { useFreeSpace: true });
+
+    // Without the overlap rule c would be answered with y=102 — a gap it was
+    // never in. It stays where it was put, and b takes the push.
+    expect(at(result.document, 'c').y).toBe(150);
+    expect(at(result.document, 'b').y).toBe(198);
+    expect(at(result.document, 'a').y).toBe(48);
+  });
+
+  /* CASE 3: with no gap to fall into, a real collision still reflows — and
+   * still reflows ONLY what it has to (spec §6). */
+  it('still pushes a neighbour when the space genuinely is not there', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 200, 100), sec('d', 320, 100)]);
+
+    const result = moveSection(before, 'd', 48, 210);
+
+    expect(at(result.document, 'd').y).toBe(210);
+    expect(at(result.document, 'b').y).toBe(318);
+    expect(at(result.document, 'a').y).toBe(48);
+    expect(result.document.pages).toHaveLength(1);
+  });
+
+  /* CASE 5: a page with little room left still uses the room it HAS rather
+   * than spilling onto the next page (spec §8). */
+  it('lands a section from another page in the current page\'s free space', () => {
+    const before = doc([
+      { id: 'p1', sections: [sec('a', 48, 400), sec('b', 700, 300)] },
+      { id: 'p2', sections: [sec('c', 48, 200)] },
+    ]);
+
+    const result = moveSectionToPage(before, 'c', 'p1', 48, 550, { useFreeSpace: true });
+
+    expect(at(result.document, 'c').y).toBe(492);
+    expect(at(result.document, 'b').y).toBe(700);
+    expect(result.document.pages).toHaveLength(2);
+    expect(result.document.pages[1].sections).toEqual([]);
+  });
+
+  /* CASE 6: the overflow ladder is untouched underneath all of this. */
+  it('falls back to relocating a displaced section when the page really is full', () => {
+    const before = doc([{ id: 'p1', sections: [sec('a', 48, 500), sec('b', 560, 500)] }]);
+
+    const result = moveSection(before, 'b', 48, 100);
+
+    expect(order(result.document, 0)).toEqual(['b']);
+    expect(order(result.document, 1)).toEqual(['a']);
+    expect(at(result.document, 'a').y).toBe(DEFAULT_MARGIN.top);
+  });
+
+  /* Spec §14: the array IS the document order — what the renderer emits and
+   * what a screen reader reads. A section dragged above another must become
+   * earlier in it, not merely look earlier. */
+  it('keeps the document order in step with the visual order', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 300, 100), sec('c', 600, 100)]);
+
+    const result = moveSection(before, 'c', 48, 180);
+
+    expect(order(result.document)).toEqual(['a', 'c', 'b']);
+  });
+
+  /* The nudge belongs to MOVES only. A section being resized is not asking to
+   * relocate, so growth that reaches a neighbour pushes it, exactly as before. */
+  it('never relocates a section that is only being resized', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 400, 100)]);
+
+    const result = resizeSection(before, 'a', { x: 48, y: 48, width: 500, height: 400 });
+
+    expect(at(result.document, 'a').y).toBe(48);
+    expect(at(result.document, 'b').y).toBe(456);
+  });
+
+  /* CASES 7 and 8: undo and redo are whole-document snapshots, so the one
+   * thing they need from a move is that it never touches the document it was
+   * given. */
+  it('leaves the document it was handed untouched, so one undo restores it', () => {
+    const before = onePage([sec('a', 48, 100), sec('b', 600, 100)]);
+    const snapshot = JSON.parse(JSON.stringify(before));
+
+    moveSection(before, 'b', 48, 200);
+
+    expect(before).toEqual(snapshot);
   });
 });

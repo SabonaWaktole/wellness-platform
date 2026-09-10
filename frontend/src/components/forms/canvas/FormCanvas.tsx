@@ -83,6 +83,13 @@ export interface FormCanvasProps {
    *  intermediate commit into one undo entry (spec §21). */
   onGestureStart?: () => void;
   onGestureEnd?: () => void;
+  /**
+   * Fired on every pointer down and every pointer release, WHETHER OR NOT a
+   * history window opens. `onGestureStart`/`onGestureEnd` deliberately stay
+   * shut while a caret is live; the builder's drag baseline must not, or a
+   * drag begun during an edit session would reflow against a stale document.
+   */
+  onGestureReset?: () => void;
 }
 
 /**
@@ -121,6 +128,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onTypeAt,
   onGestureStart,
   onGestureEnd,
+  onGestureReset,
 }) => {
   const [guides, setGuides] = useState<Guide[]>([]);
   // Which page's overlay the current guides belong to — a drag on page 2
@@ -150,6 +158,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
     const clear = () => {
       setGuides([]);
       setGuidePageId(null);
+      onGestureReset?.();
       // Same rule as `onPointerDownCapture` above: an edit session brackets
       // its own history entry, so a stray release must not close it early.
       if (!editing) onGestureEnd?.();
@@ -160,7 +169,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
       window.removeEventListener('pointerup', clear);
       window.removeEventListener('pointercancel', clear);
     };
-  }, [onGestureEnd, editing]);
+  }, [onGestureEnd, onGestureReset, editing]);
 
   /**
    * Snaps a section move against its page siblings and the page edges/centre,
@@ -274,6 +283,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
        * the edit session owns the window instead (see `FormBuilder`).
        */
       onPointerDownCapture={() => {
+        onGestureReset?.();
         if (!editing) onGestureStart?.();
       }}
     >
@@ -328,7 +338,8 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   );
 };
 
-interface SheetProps extends Omit<FormCanvasProps, 'viewport' | 'onGestureStart' | 'onGestureEnd'> {
+interface SheetProps
+  extends Omit<FormCanvasProps, 'viewport' | 'onGestureStart' | 'onGestureEnd' | 'onGestureReset'> {
   page: DocumentPage;
   index: number;
   control: ReturnType<typeof useForm<{ data: object }>>['control'];

@@ -167,6 +167,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
             <div
               key={handle}
               className={`${styles.handle} ${styles[`handle-${handle}`]}`}
+              data-handle={handle}
               onPointerDown={resize.beginResize(handle)}
             />
           ))}
