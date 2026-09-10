@@ -204,6 +204,15 @@
   background: var(--color-surface-variant);
 }
 
+/* A toggle that is currently ON. Same treatment the formatting toggles use, so
+   "this is switched on" reads identically wherever it appears in the ribbon. */
+.buttonPressed,
+.buttonPressed:hover:not(:disabled) {
+  background: var(--color-primary-container);
+  border-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
 .button:disabled {
   color: var(--text-quaternary);
   cursor: not-allowed;

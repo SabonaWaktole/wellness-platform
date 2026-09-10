@@ -250,16 +250,16 @@ describe('Ribbon — File menu', () => {
     render(<FormBuilder />);
     openFileMenu();
 
-    expect(screen.getByRole('button', { name: /print/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /read view/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /version history/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy link/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /print/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /read view/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /version history/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /copy link/i })).toBeInTheDocument();
   });
 
   it('opens the read-only view, which no longer renders editable fields', () => {
     render(<FormBuilder />);
     openFileMenu();
-    fireEvent.click(screen.getByRole('button', { name: /read view/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /read view/i }));
 
     expect(document.querySelector('[class*="elementOverlay"]')).toBeNull();
   });
@@ -311,12 +311,12 @@ describe('Ribbon — title bar and status bar', () => {
 
     fireEvent.click(within(statusBar).getByRole('button', { name: /zoom level/i }));
 
-    expect(screen.getByRole('button', { name: '50%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '100%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '150%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '200%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /fit page/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /fit width/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '50%' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '100%' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '150%' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '200%' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /fit page/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /fit width/i })).toBeInTheDocument();
   });
 
   it('jumps straight to a level chosen from the menu', () => {
@@ -324,7 +324,7 @@ describe('Ribbon — title bar and status bar', () => {
     const statusBar = document.querySelector('[class*="statusBar"]');
 
     fireEvent.click(within(statusBar).getByRole('button', { name: /zoom level/i }));
-    fireEvent.click(screen.getByRole('button', { name: '150%' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '150%' }));
 
     expect(within(statusBar).getByRole('button', { name: /zoom level/i })).toHaveTextContent('150%');
   });

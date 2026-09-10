@@ -1470,7 +1470,8 @@ export const FormBuilder: React.FC = () => {
                   )
                 : undefined
             }
-            onOpenFormatPane={() => setShowFormatPane(true)}
+            onToggleFormatPane={() => setShowFormatPane((v) => !v)}
+            isFormatPaneOpen={showFormatPane}
             selectionCount={sel.ids.length}
             onAlign={(mode) => handleArrange((boxes) => alignBoxes(boxes, mode))}
             onDistribute={(axis) => handleArrange((boxes) => distributeBoxes(boxes, axis))}
@@ -1479,6 +1480,7 @@ export const FormBuilder: React.FC = () => {
 
         {activeTab === 'layout' && (
           <LayoutTab
+            hasTargetPage={!!targetPageId}
             canDeletePage={layout.pages.length > 1}
             canMovePageUp={activePageIndex > 0}
             canMovePageDown={activePageIndex < layout.pages.length - 1}

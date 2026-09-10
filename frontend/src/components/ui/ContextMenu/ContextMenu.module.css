@@ -4,13 +4,16 @@
  * another card in the application.
  */
 .menu {
+  /* Paired with the measured `maxHeight`: a menu too tall for the window
+     scrolls inside itself rather than running off the bottom edge. */
+  overflow-y: auto;
   position: fixed;
-  z-index: var(--z-dropdown, 60);
+  z-index: var(--z-dropdown);
   min-width: 180px;
   padding: 4px;
-  border: 1px solid var(--color-outline-variant, var(--border-hairline));
-  border-radius: var(--radius-default, 6px);
-  background: var(--color-surface-container-lowest, var(--color-surface));
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-default);
+  background: var(--color-surface-container-lowest);
   box-shadow: var(--shadow-lg);
 }
 
@@ -37,7 +40,7 @@
 }
 
 .item:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: default;
 }
 
@@ -60,8 +63,8 @@
 
 /* Right-aligned and quiet: a reminder for next time, not a second label. */
 .itemShortcut {
-  color: var(--text-tertiary, var(--text-secondary));
-  font-size: var(--font-size-label-md, 0.75rem);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label-md);
   font-variant-numeric: tabular-nums;
   padding-left: var(--spacing-base);
 }
@@ -69,5 +72,5 @@
 .separator {
   height: 1px;
   margin: 4px 6px;
-  background: var(--color-outline-variant, var(--border-hairline));
+  background: var(--border-hairline);
 }

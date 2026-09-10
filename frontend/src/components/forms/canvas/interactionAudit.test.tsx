@@ -635,7 +635,7 @@ describe('Audit — the read view shows the form, not a printout of it', () => {
    */
   const openReadView = () => {
     fireEvent.click(screen.getByRole('button', { name: /^file$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /read view/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /read view/i }));
   };
 
   it('gives every field a working control, not a dash', () => {

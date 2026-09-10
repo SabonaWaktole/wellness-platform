@@ -28,7 +28,8 @@ export interface ContextualTabProps {
   onDuplicate: () => void;
   /** Puts the caret into the object's own text, where it has any. */
   onEditText?: () => void;
-  onOpenFormatPane: () => void;
+  onToggleFormatPane: () => void;
+  isFormatPaneOpen: boolean;
   /** How many objects are selected — align needs two, distribute three. */
   selectionCount: number;
   onAlign: (mode: AlignMode) => void;
@@ -52,7 +53,8 @@ export const ContextualTab: React.FC<ContextualTabProps> = ({
   onDelete,
   onDuplicate,
   onEditText,
-  onOpenFormatPane,
+  onToggleFormatPane,
+  isFormatPaneOpen,
   selectionCount,
   onAlign,
   onDistribute,
@@ -72,10 +74,17 @@ export const ContextualTab: React.FC<ContextualTabProps> = ({
             onClick={onEditText!}
           />
         )}
+        {/*
+          A TOGGLE, NOT A ONE-WAY DOOR. This fired `setShowFormatPane(true)`
+          and nothing ever fired false but the pane's own X, so pressing it
+          while the pane was open did nothing at all and said nothing about
+          why — and the Navigation pane button one tab away toggles properly.
+        */}
         <RibbonButton
           icon={<SlidersHorizontal size={16} />}
           label={t('formBuilder.formatPane')}
-          onClick={onOpenFormatPane}
+          onClick={onToggleFormatPane}
+          pressed={isFormatPaneOpen}
         />
       </RibbonGroup>
 

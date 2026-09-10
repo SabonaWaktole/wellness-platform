@@ -94,7 +94,15 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {t('formBuilder.pageOf', { number: pageNumber, count: pageCount })}
       </span>
 
-      <span className={styles.statusItem}>
+      {/*
+        THE ONE THING HERE THAT CHANGES ON ITS OWN.
+        Saving, Saved and "Autosave failed" appear without anyone pressing
+        anything, and a status that only exists as pixels is no status at all
+        for someone who is not looking at that corner of the window. `polite`
+        rather than `assertive`: it should be heard between sentences, not cut
+        across the one being typed.
+      */}
+      <span className={styles.statusItem} aria-live="polite">
         {autosave === 'error' ? (
           <>
             {t('formBuilder.autosaveFailed')}{' '}
