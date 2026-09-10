@@ -38,16 +38,6 @@
   gap: var(--spacing-sm);
 }
 
-.textEditorHost {
-  min-height: 100px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-}
-
 /* A pointer back to where the work actually happens — the page itself. */
 .inlineAction {
   align-self: flex-start;

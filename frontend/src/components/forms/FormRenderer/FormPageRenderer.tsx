@@ -96,7 +96,10 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
           </div>
         ) : null}
 
-        <div className={styles.sectionCanvas}>
+        {/* `styles.sectionCanvas` — the stylesheet has always called this
+            `.canvas`, so this resolved to `undefined` and the div went out as
+            class="undefined" with none of the positioning it names. */}
+        <div className={styles.canvas}>
           {section.elements.map((element) => (
             <div
               key={element.id}

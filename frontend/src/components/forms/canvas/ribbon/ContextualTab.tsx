@@ -17,13 +17,12 @@ import {
 import type { AlignMode } from '../snapping';
 import { RibbonGroup } from './RibbonGroup';
 import { RibbonButton } from './RibbonButton';
-import { isDataBearing, type FormElement, type FormSection } from '../../../../types/form';
+import { isDataBearing, type FormElement } from '../../../../types/form';
 import type { ContextualTabId } from './ribbonTypes';
 
 export interface ContextualTabProps {
   kind: ContextualTabId;
   element?: FormElement;
-  section?: FormSection;
   onDelete: () => void;
   onDuplicate: () => void;
   /** Puts the caret into the object's own text, where it has any. */

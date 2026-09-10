@@ -62,71 +62,6 @@
   box-sizing: border-box;
 }
 
-.text {
-  margin: 0;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-sm);
-  line-height: var(--font-line-height-body-md);
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-}
-
-/*
- * A field's colour/size overrides land here as CSS custom properties (see
- * fieldColorVars in FormRenderer.tsx) and cascade onto the native form
- * controls the shared UI-kit inputs render — those components have no colour
- * props of their own, and giving every input in the app a "form builder"
- * concept it doesn't need was the wrong trade against a CSS cascade.
- */
-.fieldColorWrapper {
-  height: 100%;
-}
-
-.fieldColorWrapper :global(input),
-.fieldColorWrapper :global(select),
-.fieldColorWrapper :global(textarea) {
-  color: var(--field-text-color, inherit);
-  background: var(--field-background, inherit);
-  border-color: var(--field-border-color, inherit);
-  font-size: var(--field-font-size, inherit);
-}
-
-.fieldColorWrapper :global(label) {
-  color: var(--field-label-color, inherit);
-}
-
-/* Read-only rendering, used by the client detail view and print mode. */
-.readOnlyLabel {
-  margin: 0 0 2px;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-sm);
-  color: var(--text-secondary);
-}
-
-.readOnlyValue {
-  margin: 0;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-md);
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-
-.emptyState {
-  margin: 0;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-sm);
-  color: var(--text-secondary);
-}
-
 /* ---------------------------------------------------------------------------
  * v3: a document is a STACK of fixed A4 sheets (spec §5, §6).
  * ------------------------------------------------------------------------ */
@@ -135,41 +70,4 @@
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-lg);
-}
-
-.textElement {
-  font-family: var(--font-family-base);
-  color: var(--text-primary);
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-
-.imageElement {
-  display: block;
-}
-
-.divider {
-  border-radius: 1px;
-  color: var(--border-hairline);
-}
-
-/* A signature area reads as a signature area on paper: a ruled line with its
- * caption beneath (spec §18), not an empty labelled box. */
-.signatureBlock {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: 100%;
-}
-
-.signatureLine {
-  border-bottom: 1.5px solid var(--text-primary);
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.signatureCaption {
-  margin-top: var(--spacing-xs);
-  font-size: var(--font-size-caption);
-  color: var(--text-secondary);
 }

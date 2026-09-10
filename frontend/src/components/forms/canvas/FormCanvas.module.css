@@ -19,82 +19,6 @@
   min-height: 0;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-base);
-  border-bottom: 1px solid var(--border-hairline);
-  background: var(--color-surface);
-  flex-wrap: wrap;
-}
-
-.formName {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-md);
-  font-weight: 600;
-  color: var(--text-primary);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 4px 6px;
-  min-width: 120px;
-}
-
-.formName:hover,
-.formName:focus {
-  border-color: var(--border-hairline);
-  background: var(--surface-raised);
-}
-
-.toolbarSpacer {
-  margin-left: auto;
-}
-
-.statusBadge {
-  font-size: var(--font-size-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-}
-
-.statusBadgeDraft {
-  color: var(--text-secondary);
-  background: var(--surface-raised);
-}
-
-.statusBadgePublished {
-  color: var(--color-success-dark);
-  background: var(--color-success-bg);
-}
-
-.shareLinkButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--font-size-caption);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.shareLinkButton:hover {
-  background: var(--surface-raised);
-  color: var(--text-primary);
-}
-
-.unpublishedHint {
-  font-size: var(--font-size-caption);
-  color: var(--color-warning);
-  white-space: nowrap;
-}
-
 .hint {
   padding: var(--spacing-sm);
   color: var(--text-secondary);
@@ -160,51 +84,6 @@
   color: var(--text-secondary);
 }
 
-.zoomGroup {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm);
-}
-
-.zoomGroup button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.zoomGroup button:hover:not(:disabled) {
-  background: var(--surface-raised);
-}
-
-.zoomGroup button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.zoomPercent {
-  min-width: 40px;
-  text-align: center;
-  font-size: var(--font-size-caption);
-  color: var(--text-secondary);
-}
-
-.zoomDivider {
-  width: 1px;
-  align-self: stretch;
-  background: var(--border-hairline);
-  margin: 2px 2px;
-}
-
 .banner {
   border-left: 3px solid var(--color-warning);
   border: 1px solid var(--border-hairline);
@@ -253,14 +132,6 @@
   min-height: 0;
 }
 
-/* History mode swaps the 132px page rail for a wider version list and drops
- * the properties sidebar entirely (there is nothing to edit while viewing a
- * frozen version) — a dedicated template rather than trying to squeeze dates
- * and version labels into the rail's 132px track. */
-.bodyHistory {
-  grid-template-columns: 280px minmax(0, 1fr);
-}
-
 .canvasArea {
   overflow: auto;
   /* One continuous workspace behind the whole page stack, so scrolling between
@@ -278,12 +149,6 @@
    * never puts part of the document out of reach.
    */
   justify-content: safe center;
-}
-
-/* The page itself, positioned so absolute-positioned sections have a frame
- * to sit inside. Rendered by FormRenderer inside this wrapper in edit mode. */
-.pageFrame {
-  position: relative;
 }
 
 .sidebar {

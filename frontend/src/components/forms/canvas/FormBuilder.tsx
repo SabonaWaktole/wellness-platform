@@ -1526,7 +1526,6 @@ export const FormBuilder: React.FC = () => {
           <ContextualTab
             kind={contextualTab}
             element={selectedElement}
-            section={selectedSection}
             onDelete={doDelete}
             onDuplicate={doDuplicate}
             onEditText={

@@ -1,18 +1,4 @@
-.menu {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-base);
-  border-bottom: 1px solid var(--border-hairline);
-}
 
-.title {
-  margin: 0;
-  font-size: var(--font-size-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
 
 /*
  * THE INSERT TAB'S COMMANDS, IN THE RIBBON'S LANGUAGE.
@@ -58,13 +44,6 @@
 .item:disabled {
   color: var(--text-quaternary);
   cursor: not-allowed;
-}
-
-/* Two columns: the menu must stay scannable as the registry grows (§8). */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xs);
 }
 
 .hint {

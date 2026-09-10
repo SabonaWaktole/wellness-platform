@@ -65,6 +65,19 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selectionCount = 1,
 }) => {
   const { t } = useTranslation('settings');
+
+  /*
+   * `ColorPicker` has always measured the chosen colour against BOTH page
+   * grounds and offered to report a failure — and no caller ever supplied the
+   * message, so the check ran on every render of all five pickers and could
+   * never say anything. The tenant picks one colour for both themes and only
+   * ever sees the one they are in, so without this a form looks fine to its
+   * author and washes out for half its readers.
+   */
+  const contrastWarning = (theme: 'light' | 'dark', ratio: number) =>
+    t(theme === 'light' ? 'formBuilder.contrastWarningLight' : 'formBuilder.contrastWarningDark', {
+      ratio: ratio.toFixed(1),
+    });
   // Component type names live beside the registry that defines them.
   const { t: tForms } = useTranslation('forms');
 
@@ -96,6 +109,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             label={t('formBuilder.backgroundColour')}
             value={section.styles?.background}
             clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
             onChange={(background) =>
               onChangeSection(section.id, { styles: { ...section.styles, background } })
             }
@@ -104,6 +118,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             label={t('formBuilder.borderColour')}
             value={section.styles?.borderColor}
             clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
             onChange={(borderColor) =>
               onChangeSection(section.id, { styles: { ...section.styles, borderColor } })
             }
@@ -310,18 +325,21 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           label={t('formBuilder.textColour')}
           value={element.styles?.textColor}
           clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
           onChange={(textColor) => onChangeElement(element.id, { styles: { ...element.styles, textColor } })}
         />
         <ColorPicker
           label={t('formBuilder.backgroundColour')}
           value={element.styles?.background}
           clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
           onChange={(background) => onChangeElement(element.id, { styles: { ...element.styles, background } })}
         />
         <ColorPicker
           label={t('formBuilder.borderColour')}
           value={element.styles?.borderColor}
           clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
           onChange={(borderColor) => onChangeElement(element.id, { styles: { ...element.styles, borderColor } })}
         />
       </details>
