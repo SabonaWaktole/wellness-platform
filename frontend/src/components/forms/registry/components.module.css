@@ -20,7 +20,7 @@
 
 .readOnlyLabel {
   margin: 0;
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
 }
 

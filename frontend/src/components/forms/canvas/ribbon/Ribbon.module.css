@@ -15,7 +15,7 @@
   gap: var(--spacing-sm);
   padding: var(--spacing-xs) var(--spacing-base);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .backButton,
@@ -63,7 +63,7 @@
 }
 
 .quickAccess button:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 
@@ -86,12 +86,12 @@
 }
 
 .statusBadge {
-  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-size: var(--font-size-label-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 2px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -102,11 +102,11 @@
 
 .statusBadgePublished {
   color: var(--color-success);
-  background: var(--color-success-container, var(--color-surface-variant));
+  background: var(--color-success-container);
 }
 
 .unpublishedHint {
-  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-size: var(--font-size-label-sm);
   color: var(--color-warning);
   white-space: nowrap;
 }
@@ -115,9 +115,16 @@
    Ribbon
    ------------------------------------------------------------------------- */
 
+/*
+ * ONE HAIRLINE. The chrome drew its frame lines with `--color-outline-variant`
+ * (9% black) while the format pane, the add menu and the canvas beside it used
+ * `--border-hairline` (7%) — the same kind of line, a third darker on one side
+ * of the window than the other. Every divider in the builder is the hairline
+ * now.
+ */
 .ribbon {
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .tabs {
@@ -143,7 +150,7 @@
   justify-content: space-between;
   gap: 2px;
   padding: 0 var(--spacing-sm);
-  border-right: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-right: 1px solid var(--border-hairline);
 }
 
 .group:last-child {
@@ -160,8 +167,8 @@
 
 .groupLabel {
   text-align: center;
-  font-size: var(--font-size-label-sm, 0.6875rem);
-  color: var(--text-tertiary, var(--text-secondary));
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
   user-select: none;
 }
 
@@ -198,7 +205,7 @@
 }
 
 .button:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 
@@ -227,9 +234,9 @@
   align-items: center;
   gap: var(--spacing-base);
   padding: 2px var(--spacing-base);
-  border-top: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-top: 1px solid var(--border-hairline);
   background: var(--color-surface);
-  font-size: var(--font-size-label-md, 0.75rem);
+  font-size: var(--font-size-label-md);
   color: var(--text-secondary);
 }
 
@@ -274,7 +281,7 @@
  * hovered exactly like a live one while doing nothing — the same lie the
  * quick-access cluster above already avoids. */
 .zoomCluster button:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 

@@ -1,32 +1,47 @@
 .menu {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm, 8px);
-  padding: var(--spacing-base, 12px);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-base);
   border-bottom: 1px solid var(--border-hairline);
 }
 
 .title {
   margin: 0;
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
 }
 
+/*
+ * THE INSERT TAB'S COMMANDS, IN THE RIBBON'S LANGUAGE.
+ *
+ * These were filled, bordered, left-aligned rows — the shape they had as a
+ * sidebar menu, carried unchanged into a ribbon group full of borderless
+ * `RibbonButton`s. Eleven boxed buttons beside the Clipboard group's flat ones
+ * read as two different toolbars sharing a strip.
+ *
+ * Deliberately identical to `.button` in Ribbon.module.css rather than
+ * approximately so: same padding, radius, type size, hover fill and disabled
+ * colour. Insert is still generated from the registry, so a new component type
+ * still arrives here without anyone drawing it.
+ */
 .primaryItem,
 .item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs, 6px);
-  padding: var(--spacing-sm, 8px);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-surface);
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
   color: var(--text-primary);
-  font-size: var(--font-size-body-sm, 0.8125rem);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
   cursor: pointer;
   text-align: left;
+  white-space: nowrap;
 }
 
 .primaryItem {
@@ -35,12 +50,13 @@
 
 .primaryItem:hover,
 .item:hover:not(:disabled) {
-  border-color: var(--color-primary, #1d4ed8);
-  background: var(--surface-raised, #f8fafc);
+  background: var(--color-surface-variant);
 }
 
+/* Matches `.button:disabled` — a greyed label rather than a faded box, so a
+   command that cannot run reads the same wherever it sits in the ribbon. */
 .item:disabled {
-  opacity: 0.45;
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 
@@ -48,19 +64,19 @@
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xs, 6px);
+  gap: var(--spacing-xs);
 }
 
 .hint {
   margin: 0;
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
 }
 
 .error {
   margin: 0;
-  font-size: var(--font-size-caption, 0.75rem);
-  color: var(--color-danger, #dc2626);
+  font-size: var(--font-size-caption);
+  color: var(--color-danger);
 }
 
 .fileInput {
@@ -74,14 +90,17 @@
 .ribbonMenu {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   min-height: 46px;
 }
 
 .ribbonGrid {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--spacing-2xs);
   flex-wrap: wrap;
-  max-width: 420px;
+  /* Two rows of borderless buttons rather than three of boxed ones. The group
+     around this has a min-height, not a fixed one, so it grows to fit however
+     many component types the registry ends up holding. */
+  max-width: 520px;
 }

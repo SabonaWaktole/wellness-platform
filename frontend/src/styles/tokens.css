@@ -317,6 +317,35 @@
   --chart-grid: rgba(17, 17, 22, 0.07);
   --chart-axis: #8a8a94;
 
+  /* ===================================================================
+   * COMPATIBILITY ALIASES
+   * -------------------------------------------------------------------
+   * Names that were in use across the app before this file existed, and
+   * which nothing ever defined. Every one of them was being read as
+   * `var(--name, <literal>)`, so they always resolved to the inline
+   * fallback — which meant those surfaces never followed the theme, and
+   * the same idea was spelled three different ways in three files
+   * (`--surface-raised` alone appeared as #f1f5f9, #f8fafc and twice as a
+   * real token). Worse, two sites used `--radius-md` with NO fallback, so
+   * the declaration was invalid and dropped: section corners in the
+   * client's form and the buttons above a print preview came out square
+   * where the stylesheet plainly meant them to be rounded.
+   *
+   * Defined as aliases rather than as values, so they inherit dark mode
+   * from their targets and there is still exactly one definition of each
+   * idea. Prefer the semantic name on the right in new code.
+   * ================================================================ */
+  --surface-raised: var(--color-surface-container-low);
+  --surface-muted: var(--color-surface-container);
+  --font-size-caption: var(--font-size-body-sm);
+  --font-size-title-sm: var(--font-size-headline-sm);
+  --radius-md: var(--radius-default);
+  --radius-pill: var(--radius-full);
+  --color-danger: var(--color-error);
+  --color-error-bg: var(--color-error-container);
+  --color-success-bg: var(--color-success-container);
+  --color-success-dark: var(--color-on-success-container);
+
   /* --- Document canvas -------------------------------------------------
    * The workspace a page of paper sits on. Deliberately a shade darker than
    * any surface token: the sheet has to read as an object resting ON

@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f2f2f2);
+  background: var(--surface-muted);
 }
 
 .actionBar {
@@ -35,7 +35,7 @@
 
 .printButton {
   margin-left: auto;
-  background: var(--color-primary, #1d4ed8);
+  background: var(--color-primary);
   border: none;
   color: #fff;
 }
@@ -50,5 +50,5 @@
 .sheetArea {
   display: flex;
   justify-content: center;
-  padding: var(--spacing-xl, 32px) 0;
+  padding: var(--spacing-xl) 0;
 }

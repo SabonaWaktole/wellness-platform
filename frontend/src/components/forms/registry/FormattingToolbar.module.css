@@ -1,69 +1,122 @@
+/*
+ * THE FONT AND PARAGRAPH GROUPS OF THE RIBBON.
+ *
+ * This bar predates the ribbon — it was a floating toolbar in a sidebar, and
+ * it kept that sidebar's clothes when it was moved: a bordered, filled box
+ * with its own inner bordered groups, 22-26px controls, and a 3px radius,
+ * dropped inside a 46px borderless ribbon group. Two visual languages in one
+ * row, which is most of what made the Home tab read as assembled rather than
+ * designed.
+ *
+ * It now speaks `RibbonButton`'s language — transparent, borderless, the
+ * shared radius, `--color-surface-variant` on hover — so the Font group and
+ * the Clipboard group beside it look like the same product.
+ */
 .bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-xs, 4px);
-  padding: var(--spacing-xs, 4px);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm, 4px);
-  background: var(--surface-raised, #f8fafc);
+  gap: var(--spacing-2xs);
+  /* No border, no fill: the ribbon group around it already provides both the
+     grouping and the label. */
+  background: none;
 }
 
 .select {
   height: 26px;
   border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
-  font-size: var(--font-size-caption, 0.75rem);
-  padding: 0 4px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  padding: 0 var(--spacing-xs);
 }
 
+/* A run of related toggles. Spacing carries the grouping; the box that used to
+   draw around them competed with the ribbon group's own. */
 .group {
   display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm, 4px);
+  gap: var(--spacing-2xs);
+  margin: 0 var(--spacing-2xs);
 }
 
 .toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
   color: var(--text-primary);
   cursor: pointer;
 }
 
 .toggle:hover {
-  background: var(--color-surface);
+  background: var(--color-surface-variant);
 }
 
 .toggleActive {
-  background: var(--color-primary, #1d4ed8);
-  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .colorField {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: var(--font-size-caption, 0.75rem);
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-body-sm);
   color: var(--text-secondary);
 }
 
 .colorField input[type='color'] {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 1px solid var(--border-hairline);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: none;
   cursor: pointer;
+}
+
+/*
+ * AND IT HAS TO LOOK DISABLED WHEN IT IS.
+ *
+ * `<fieldset disabled>` switches every control inside off whenever no caret is
+ * open — which is the builder's DEFAULT state — but this file had no disabled
+ * rules at all, and there is no global one. An author rule outranks the user
+ * agent's greying, so `.toggle { color: var(--text-primary) }` and
+ * `.select { background: var(--color-surface) }` kept the whole group at full
+ * strength: measured in the running builder, a disabled Bold rendered
+ * rgb(29,29,32) — pixel-identical to a live one — while a correctly disabled
+ * Cut two groups to its left rendered rgb(176,176,186).
+ *
+ * So the most prominent group on the tab that opens first lied about its own
+ * state: the user pressed Bold, nothing happened, and nothing said why. These
+ * rules match `.button:disabled` in Ribbon.module.css, which is what the rest
+ * of the ribbon has always done.
+ */
+.fieldset:disabled .toggle,
+.fieldset:disabled .select,
+.fieldset:disabled .colorField {
+  color: var(--text-quaternary);
+  cursor: not-allowed;
+}
+
+.fieldset:disabled .select,
+.fieldset:disabled .colorField input[type='color'] {
+  background: none;
+  border-color: var(--border-hairline);
+  opacity: 0.6;
+}
+
+/* No hover response either — a control that lights up under the pointer is
+   claiming it can be pressed. */
+.fieldset:disabled .toggle:hover {
+  background: none;
 }
 
 /* Layout carrier only — the <fieldset> exists so one attribute can disable

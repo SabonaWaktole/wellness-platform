@@ -43,7 +43,7 @@
 .formName:hover,
 .formName:focus {
   border-color: var(--border-hairline);
-  background: var(--surface-raised, var(--color-surface-variant));
+  background: var(--surface-raised);
 }
 
 .toolbarSpacer {
@@ -51,23 +51,23 @@
 }
 
 .statusBadge {
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 2px 8px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
 
 .statusBadgeDraft {
   color: var(--text-secondary);
-  background: var(--surface-raised, #f1f5f9);
+  background: var(--surface-raised);
 }
 
 .statusBadgePublished {
-  color: var(--color-success-dark, #15803d);
-  background: var(--color-success-bg, #dcfce7);
+  color: var(--color-success-dark);
+  background: var(--color-success-bg);
 }
 
 .shareLinkButton {
@@ -76,22 +76,22 @@
   gap: 4px;
   padding: 2px 8px;
   border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .shareLinkButton:hover {
-  background: var(--surface-raised, #f1f5f9);
+  background: var(--surface-raised);
   color: var(--text-primary);
 }
 
 .unpublishedHint {
-  font-size: var(--font-size-caption, 0.75rem);
-  color: var(--color-warning, #b45309);
+  font-size: var(--font-size-caption);
+  color: var(--color-warning);
   white-space: nowrap;
 }
 
@@ -142,12 +142,12 @@
 }
 
 .historyItem:hover {
-  background: var(--surface-raised, #f1f5f9);
+  background: var(--surface-raised);
 }
 
 .historyItemActive {
-  border-color: var(--color-primary, #1d4ed8);
-  background: var(--surface-raised, #f1f5f9);
+  border-color: var(--color-primary);
+  background: var(--surface-raised);
 }
 
 .historyItemNumber {
@@ -156,7 +156,7 @@
 }
 
 .historyItemDate {
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
 }
 
@@ -183,7 +183,7 @@
 }
 
 .zoomGroup button:hover:not(:disabled) {
-  background: var(--surface-raised, #f1f5f9);
+  background: var(--surface-raised);
 }
 
 .zoomGroup button:disabled {
@@ -194,7 +194,7 @@
 .zoomPercent {
   min-width: 40px;
   text-align: center;
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
 }
 
@@ -206,7 +206,7 @@
 }
 
 .banner {
-  border-left: 3px solid var(--color-warning, #b45309);
+  border-left: 3px solid var(--color-warning);
   border: 1px solid var(--border-hairline);
   border-left-width: 3px;
   border-radius: var(--radius-sm);
@@ -321,7 +321,7 @@
 }
 
 .sectionSelected {
-  outline: 2px solid var(--color-primary, #2563eb);
+  outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
 
@@ -329,9 +329,9 @@
  * direct selection itself (e.g. a field inside it is selected instead) — a
  * softer cue than .sectionSelected so the two states stay visually distinct. */
 .sectionActive {
-  outline: 2px dashed var(--color-primary, #2563eb);
+  outline: 2px dashed var(--color-primary);
   outline-offset: 1px;
-  background: color-mix(in srgb, var(--color-primary, #2563eb) 4%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
 .sectionDragHandle {
@@ -363,7 +363,7 @@
   right: 32px;
   height: 24px;
   z-index: 1;
-  background: var(--surface-raised, var(--color-surface));
+  background: var(--surface-raised);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-family: var(--font-family-base);
@@ -476,7 +476,7 @@
   background: var(--color-surface);
   color: var(--text-primary);
   font-family: var(--font-family-base);
-  font-size: var(--font-size-label-md, 0.8125rem);
+  font-size: var(--font-size-label-md);
   font-weight: 540;
 }
 
@@ -692,7 +692,7 @@
   right: 0;
   bottom: -34px;
   text-align: center;
-  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-size: var(--font-size-label-sm);
   letter-spacing: 0.04em;
   color: var(--canvas-page-label);
   user-select: none;

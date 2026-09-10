@@ -32,12 +32,12 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--spacing-xs, 4px);
+  gap: var(--spacing-xs);
 }
 
 .caption {
-  margin-top: var(--spacing-xs, 4px);
-  font-size: var(--font-size-caption, 0.75rem);
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
 }
 
@@ -45,7 +45,7 @@
   border: none;
   background: transparent;
   padding: 0;
-  font-size: var(--font-size-caption, 0.75rem);
-  color: var(--color-primary, #1d4ed8);
+  font-size: var(--font-size-caption);
+  color: var(--color-primary);
   cursor: pointer;
 }
