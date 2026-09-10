@@ -268,7 +268,16 @@
   background: var(--canvas-backdrop);
   padding: var(--spacing-xl);
   display: flex;
-  justify-content: center;
+  /*
+   * `safe` IS THE WHOLE POINT. A plain `center` splits any overflow evenly
+   * between the two sides, and the half that goes off the START edge cannot be
+   * scrolled to — a scroll container has no negative scroll position. So a page
+   * wider than the window loses its left edge outright, however much the user
+   * scrolls. `safe center` centres while the content fits and falls back to
+   * `start` the moment it does not, which is the only version where zooming in
+   * never puts part of the document out of reach.
+   */
+  justify-content: safe center;
 }
 
 /* The page itself, positioned so absolute-positioned sections have a frame
@@ -587,13 +596,27 @@
 .stack {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Same reasoning as `.canvasArea`'s justify-content — this is the axis the
+     zoomed page overflows on. */
+  align-items: safe center;
+  /* Never narrower than the page it holds, or centring has overflow to strand
+     in the first place. */
+  flex: none;
   min-height: 100%;
   /* Whitespace around the sheets so a page reads as paper on a desk (§5). */
   background: var(--canvas-backdrop);
 }
 
+/* Stands for the space the scaled stack draws into — see FormCanvas.tsx. */
+.scalerFrame {
+  position: relative;
+  flex: none;
+}
+
 .scaler {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   align-items: center;

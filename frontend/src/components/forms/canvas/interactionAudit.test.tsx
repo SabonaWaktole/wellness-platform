@@ -441,8 +441,10 @@ describe('Audit — icon-only controls carry a tooltip', () => {
     [/^redo$/i],
     [/zoom in/i],
     [/zoom out/i],
-    [/fit page/i],
-    [/fit width/i],
+    // Fit page and Fit width are no longer icon-only buttons in the strip:
+    // they carry their own text inside the zoom menu, which is where the
+    // levels are. `ribbon.test.tsx` asserts they are still reachable there.
+    [/zoom level/i],
     [/go to page 2/i],
     [/duplicate page 2/i],
     [/delete page 2/i],

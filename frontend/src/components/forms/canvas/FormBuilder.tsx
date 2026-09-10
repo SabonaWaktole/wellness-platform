@@ -190,6 +190,10 @@ export const FormBuilder: React.FC = () => {
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const viewport = useCanvasViewport(layout.page);
+  // Pulled out because `viewport` is a fresh object every render while these
+  // three are `useCallback`-stable — effects that only need the commands should
+  // depend on the commands, not on the wrapper.
+  const { zoomIn, zoomOut, setZoom } = viewport;
 
   /*
    * A throwaway form instance so the PREVIEW's controls are real ones. Nothing
@@ -1137,8 +1141,22 @@ export const FormBuilder: React.FC = () => {
           return;
         }
 
+        /*
+         * ZOOM IS NOT A DOCUMENT COMMAND, so it has nothing to compete with
+         * here: Ctrl+plus while writing means "make the page bigger" in Word
+         * and in Docs exactly as it does with nothing selected. Left out of
+         * this list it would not merely do nothing — the keystroke would fall
+         * through to the BROWSER and zoom the whole application, ribbon and
+         * all, which is the thing binding it was meant to stop.
+         */
+        const isViewportCommand =
+          shortcut.action === 'zoomIn' ||
+          shortcut.action === 'zoomOut' ||
+          shortcut.action === 'zoomReset';
+
         const allowed =
           shortcut.action === 'escape' ||
+          isViewportCommand ||
           (inContentEditable && (shortcut.action === 'undo' || shortcut.action === 'redo'));
         if (!allowed) return;
       }
@@ -1221,6 +1239,24 @@ export const FormBuilder: React.FC = () => {
           event.preventDefault();
           doDuplicate();
           break;
+        /*
+         * Zoom belongs to the DOCUMENT, not to the browser. Left unbound these
+         * reached Chrome's own page zoom, which scales the ribbon and the rail
+         * along with the sheet and leaves the pointer maths measuring a page
+         * that is no longer the size the document says it is.
+         */
+        case 'zoomIn':
+          event.preventDefault();
+          zoomIn();
+          break;
+        case 'zoomOut':
+          event.preventDefault();
+          zoomOut();
+          break;
+        case 'zoomReset':
+          event.preventDefault();
+          setZoom(1);
+          break;
         default:
           break;
       }
@@ -1246,7 +1282,38 @@ export const FormBuilder: React.FC = () => {
     doPaste,
     doDuplicate,
     doDelete,
+    zoomIn,
+    zoomOut,
+    setZoom,
   ]);
+
+  /*
+   * CTRL + WHEEL ZOOMS THE PAGE.
+   *
+   * The reflex every user of a document editor already has, and the one
+   * gesture that makes a zoom ladder feel like a continuous control rather
+   * than two buttons. Unbound, the browser answers it by zooming the whole
+   * application — ribbon, rail and sheet together — which is not what the
+   * gesture means over a document.
+   *
+   * Bound natively rather than through React's `onWheel` because the listener
+   * has to be non-passive to call `preventDefault`, and React attaches wheel
+   * listeners as passive: a passive handler cannot stop the browser zoom, so
+   * both would happen at once.
+   */
+  useEffect(() => {
+    const el = canvasAreaRef.current;
+    if (!el) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      if (event.deltaY < 0) zoomIn();
+      else if (event.deltaY > 0) zoomOut();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+    // `viewport` itself is a fresh object every render; its commands are not.
+  }, [zoomIn, zoomOut]);
 
   if (isLoading && !form) return <p>{t('formBuilder.loading')}</p>;
   if (error && !form) return <p role="alert">{error}</p>;
@@ -1653,6 +1720,7 @@ export const FormBuilder: React.FC = () => {
         canZoomOut={viewport.canZoomOut}
         onZoomIn={viewport.zoomIn}
         onZoomOut={viewport.zoomOut}
+        onSetZoom={viewport.setZoom}
         onFitPage={() => {
           const el = canvasAreaRef.current;
           if (el) viewport.fitPage(el.clientWidth, el.clientHeight);

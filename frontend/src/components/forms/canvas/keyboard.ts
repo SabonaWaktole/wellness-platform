@@ -22,6 +22,9 @@ export type ShortcutAction =
   | { action: 'escape' }
   | { action: 'save' }
   | { action: 'print' }
+  | { action: 'zoomIn' }
+  | { action: 'zoomOut' }
+  | { action: 'zoomReset' }
   | { action: 'nudge'; dx: number; dy: number };
 
 /**
@@ -113,6 +116,27 @@ export const resolveShortcut = (event: KeyboardEvent): ShortcutAction | null => 
       return { action: 'save' };
     case 'p':
       return { action: 'print' };
+    /*
+     * ZOOM. Ctrl+0 / Ctrl+plus / Ctrl+minus are the bindings a document editor
+     * is expected to answer, and they were falling through to the BROWSER —
+     * which zooms the whole application, chrome and all, rather than the page
+     * being edited. That leaves the ribbon and the sheet at different scales
+     * and the pointer maths measuring a page that is no longer the size the
+     * document says it is.
+     *
+     * Both spellings of each key: `=` and `-` are what the unshifted keys
+     * report, `+` and `_` what they report with Shift, and a user pressing
+     * Ctrl+Shift+= means "bigger" just as much as one who did not reach for
+     * Shift.
+     */
+    case '0':
+      return { action: 'zoomReset' };
+    case '=':
+    case '+':
+      return { action: 'zoomIn' };
+    case '-':
+    case '_':
+      return { action: 'zoomOut' };
     default:
       return null;
   }

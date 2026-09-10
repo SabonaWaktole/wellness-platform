@@ -293,8 +293,40 @@ describe('Ribbon — title bar and status bar', () => {
     expect(within(statusBar).getByText(/page 1 of 2/i)).toBeInTheDocument();
     expect(within(statusBar).getByRole('button', { name: /zoom in/i })).toBeInTheDocument();
     expect(within(statusBar).getByRole('button', { name: /zoom out/i })).toBeInTheDocument();
-    expect(within(statusBar).getByRole('button', { name: /fit page/i })).toBeInTheDocument();
-    expect(within(statusBar).getByRole('button', { name: /fit width/i })).toBeInTheDocument();
+    expect(within(statusBar).getByRole('button', { name: /zoom level/i })).toBeInTheDocument();
+  });
+
+  /*
+   * The percentage is the way in to the levels — the gesture a Word or Docs
+   * user already has. `ZOOM_STEPS` and `setZoom` existed from the start with
+   * no caller at all; the number was inert text between two steppers, so the
+   * only way to reach 150% was to press `+` until you arrived.
+   *
+   * Fit page and Fit width live here too, rather than as two more icon
+   * buttons in the strip: they answer the same question the levels do.
+   */
+  it('opens the zoom levels, and the fit commands, from the percentage', () => {
+    render(<FormBuilder />);
+    const statusBar = document.querySelector('[class*="statusBar"]');
+
+    fireEvent.click(within(statusBar).getByRole('button', { name: /zoom level/i }));
+
+    expect(screen.getByRole('button', { name: '50%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '100%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '150%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '200%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /fit page/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /fit width/i })).toBeInTheDocument();
+  });
+
+  it('jumps straight to a level chosen from the menu', () => {
+    render(<FormBuilder />);
+    const statusBar = document.querySelector('[class*="statusBar"]');
+
+    fireEvent.click(within(statusBar).getByRole('button', { name: /zoom level/i }));
+    fireEvent.click(screen.getByRole('button', { name: '150%' }));
+
+    expect(within(statusBar).getByRole('button', { name: /zoom level/i })).toHaveTextContent('150%');
   });
 
   it('still zooms from the status bar', () => {

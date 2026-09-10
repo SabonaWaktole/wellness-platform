@@ -278,8 +278,23 @@
   cursor: not-allowed;
 }
 
+/* The percentage is a button now (it opens the zoom menu), so it takes the
+   same borderless treatment as the steppers beside it — `.zoomCluster button`
+   above already supplies hover and padding. Tabular figures keep the strip
+   from twitching as the number changes width. */
 .zoomPercent {
-  min-width: 40px;
+  min-width: 44px;
+  justify-content: center;
   text-align: center;
+  font: inherit;
   font-variant-numeric: tabular-nums;
+}
+
+/* Keeps every level in the zoom menu on one left edge, whether or not it is
+   the one currently in force — a list that shuffles sideways as the tick moves
+   is harder to read down than one that does not. */
+.zoomTickSpacer {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
 }

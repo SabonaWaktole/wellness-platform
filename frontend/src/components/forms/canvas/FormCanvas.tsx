@@ -287,13 +287,41 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
         if (!editing) onGestureStart?.();
       }}
     >
+      {/*
+        * THE FRAME RESERVES THE SPACE; THE SCALER DRAWS IN IT.
+        *
+        * A CSS transform does not affect layout, so the scaled stack used to
+        * take up its UNSCALED size in the scroll container. `.canvasArea` can
+        * only scroll over the layout it was given, and with the surplus
+        * spilling equally to both sides of a centred origin, the left half of
+        * it was unreachable — an LTR scroll container cannot scroll into
+        * negative space. Measured at 300%: 403px of the page, its whole left
+        * margin and the left third of every field on it, could not be brought
+        * into view by any amount of scrolling.
+        *
+        * It takes two elements, because one cannot both be scaled and stand
+        * for the space the scaling needs: giving the scaler itself the larger
+        * size only scales that larger size again. So the frame is a plain box
+        * of the drawn dimensions — that is what the scroll container measures
+        * — and the scaler is taken out of the flow inside it, anchored at the
+        * top left so the scale runs from the frame's own corner and lands
+        * exactly on its far edge.
+        */}
+      <div
+        className={styles.scalerFrame}
+        style={{
+          width: layout.page.width * viewport.zoom,
+          height:
+            (layout.pages.length * layout.page.height +
+              (layout.pages.length - 1) * CANVAS_GUTTER) *
+            viewport.zoom,
+        }}
+      >
       <div
         className={styles.scaler}
         style={{
           transform: `scale(${viewport.zoom})`,
-          transformOrigin: 'top center',
-          // Reserve the SCALED footprint so the scroll container sizes
-          // correctly — a CSS transform does not affect layout on its own.
+          transformOrigin: 'top left',
           width: layout.page.width,
           height:
             layout.pages.length * layout.page.height +
@@ -333,6 +361,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             wrapRef={setPageRef(page.id)}
           />
         ))}
+      </div>
       </div>
     </div>
   );
