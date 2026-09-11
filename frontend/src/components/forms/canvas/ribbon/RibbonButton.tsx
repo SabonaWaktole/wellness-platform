@@ -15,6 +15,14 @@ export interface RibbonButtonProps {
   size?: 'large' | 'small';
   /** Longer explanation, shown on hover and read by assistive tech. */
   title?: string;
+  /**
+   * Set for a command that turns something on and off, so the control can say
+   * which it currently is. A toggle whose label never changes and which
+   * carries no pressed state is indistinguishable from a plain command —
+   * the user presses it, something appears or disappears, and the button looks
+   * exactly as it did.
+   */
+  pressed?: boolean;
 }
 
 /**
@@ -32,12 +40,20 @@ export const RibbonButton: React.FC<RibbonButtonProps> = ({
   disabled,
   size = 'small',
   title,
+  pressed,
 }) => (
   <button
     type="button"
-    className={`${styles.button} ${size === 'large' ? styles.buttonLarge : ''}`}
+    className={[
+      styles.button,
+      size === 'large' ? styles.buttonLarge : '',
+      pressed ? styles.buttonPressed : '',
+    ]
+      .filter(Boolean)
+      .join(' ')}
     onClick={onClick}
     disabled={disabled}
+    aria-pressed={pressed}
     title={title ?? label}
   >
     <span className={styles.buttonIcon} aria-hidden="true">

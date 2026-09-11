@@ -1,9 +1,7 @@
 {
   "addMenu": {
-    "title": "Aggiungi",
     "section": "Sezione",
     "selectSectionFirst": "Seleziona una sezione per aggiungere componenti.",
-    "addingTo": "Aggiunta alla sezione selezionata.",
     "uploadImage": "Carica un'immagine",
     "uploading": "Caricamento…",
     "addItem": "Aggiungi {{item}}"

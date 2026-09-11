@@ -27,6 +27,8 @@ export interface ContextMenuProps {
 
 /** Breathing room kept between the menu and the viewport edge. */
 const MARGIN = 8;
+/** Never cap the menu so short that it cannot show a command and scroll. */
+const MIN_MENU_HEIGHT = 120;
 
 const isCommand = (item: ContextMenuItem): item is Extract<ContextMenuItem, { kind?: 'item' }> =>
   item.kind !== 'separator';
@@ -49,7 +51,10 @@ const isCommand = (item: ContextMenuItem): item is Extract<ContextMenuItem, { ki
  */
 export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, label }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: x, top: y });
+  const [position, setPosition] = useState<{ left: number; top: number; maxHeight?: number }>({
+    left: x,
+    top: y,
+  });
   const [focused, setFocused] = useState(0);
 
   const commands = items.filter(isCommand);
@@ -72,8 +77,18 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, 
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
     const left = x + width + MARGIN > window.innerWidth ? Math.max(MARGIN, x - width) : x;
-    const top = y + height + MARGIN > window.innerHeight ? Math.max(MARGIN, y - height) : y;
-    setPosition({ left, top });
+    const flipped = y + height + MARGIN > window.innerHeight;
+    const top = flipped ? Math.max(MARGIN, y - height) : y;
+    /*
+     * AND A CEILING, because flipping only helps while the menu FITS. A
+     * section's menu carries nine commands; on a short window there is no
+     * position for it that is fully on screen, and without a maximum it simply
+     * ran off the bottom with the last items — Delete among them —
+     * unreachable. `DropdownMenu` has always capped itself this way; this one
+     * had no cap at all.
+     */
+    const room = flipped ? y - MARGIN : window.innerHeight - y - MARGIN;
+    setPosition({ left, top, maxHeight: Math.max(MIN_MENU_HEIGHT, room) });
   }, [x, y]);
 
   /*
@@ -137,7 +152,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, 
       className={styles.menu}
       role="menu"
       aria-label={label}
-      style={{ left: position.left, top: position.top }}
+      style={{ left: position.left, top: position.top, maxHeight: position.maxHeight }}
     >
       {items.map((item) =>
         isCommand(item) ? (

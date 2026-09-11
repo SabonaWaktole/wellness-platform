@@ -15,7 +15,7 @@
   gap: var(--spacing-sm);
   padding: var(--spacing-xs) var(--spacing-base);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .backButton,
@@ -63,7 +63,7 @@
 }
 
 .quickAccess button:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 
@@ -86,12 +86,12 @@
 }
 
 .statusBadge {
-  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-size: var(--font-size-label-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 2px 8px;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -102,11 +102,11 @@
 
 .statusBadgePublished {
   color: var(--color-success);
-  background: var(--color-success-container, var(--color-surface-variant));
+  background: var(--color-success-container);
 }
 
 .unpublishedHint {
-  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-size: var(--font-size-label-sm);
   color: var(--color-warning);
   white-space: nowrap;
 }
@@ -115,9 +115,16 @@
    Ribbon
    ------------------------------------------------------------------------- */
 
+/*
+ * ONE HAIRLINE. The chrome drew its frame lines with `--color-outline-variant`
+ * (9% black) while the format pane, the add menu and the canvas beside it used
+ * `--border-hairline` (7%) — the same kind of line, a third darker on one side
+ * of the window than the other. Every divider in the builder is the hairline
+ * now.
+ */
 .ribbon {
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 .tabs {
@@ -143,7 +150,7 @@
   justify-content: space-between;
   gap: 2px;
   padding: 0 var(--spacing-sm);
-  border-right: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-right: 1px solid var(--border-hairline);
 }
 
 .group:last-child {
@@ -160,8 +167,8 @@
 
 .groupLabel {
   text-align: center;
-  font-size: var(--font-size-label-sm, 0.6875rem);
-  color: var(--text-tertiary, var(--text-secondary));
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
   user-select: none;
 }
 
@@ -197,8 +204,17 @@
   background: var(--color-surface-variant);
 }
 
+/* A toggle that is currently ON. Same treatment the formatting toggles use, so
+   "this is switched on" reads identically wherever it appears in the ribbon. */
+.buttonPressed,
+.buttonPressed:hover:not(:disabled) {
+  background: var(--color-primary-container);
+  border-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
 .button:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 
@@ -227,9 +243,9 @@
   align-items: center;
   gap: var(--spacing-base);
   padding: 2px var(--spacing-base);
-  border-top: 1px solid var(--color-outline-variant, var(--border-hairline));
+  border-top: 1px solid var(--border-hairline);
   background: var(--color-surface);
-  font-size: var(--font-size-label-md, 0.75rem);
+  font-size: var(--font-size-label-md);
   color: var(--text-secondary);
 }
 
@@ -274,12 +290,27 @@
  * hovered exactly like a live one while doing nothing — the same lie the
  * quick-access cluster above already avoids. */
 .zoomCluster button:disabled {
-  color: var(--text-quaternary, var(--text-tertiary));
+  color: var(--text-quaternary);
   cursor: not-allowed;
 }
 
+/* The percentage is a button now (it opens the zoom menu), so it takes the
+   same borderless treatment as the steppers beside it — `.zoomCluster button`
+   above already supplies hover and padding. Tabular figures keep the strip
+   from twitching as the number changes width. */
 .zoomPercent {
-  min-width: 40px;
+  min-width: 44px;
+  justify-content: center;
   text-align: center;
+  font: inherit;
   font-variant-numeric: tabular-nums;
+}
+
+/* Keeps every level in the zoom menu on one left edge, whether or not it is
+   the one currently in force — a list that shuffles sideways as the tick moves
+   is harder to read down than one that does not. */
+.zoomTickSpacer {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
 }

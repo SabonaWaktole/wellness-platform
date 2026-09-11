@@ -5,6 +5,11 @@ import { RibbonGroup } from './RibbonGroup';
 import { RibbonButton } from './RibbonButton';
 
 export interface LayoutTabProps {
+  /**
+   * False before any page has been selected or clicked, when `targetPageId` is
+   * still null and every page command silently does nothing.
+   */
+  hasTargetPage: boolean;
   canDeletePage: boolean;
   canMovePageUp: boolean;
   canMovePageDown: boolean;
@@ -28,6 +33,7 @@ export interface LayoutTabProps {
  * worked on.
  */
 export const LayoutTab: React.FC<LayoutTabProps> = ({
+  hasTargetPage,
   canDeletePage,
   canMovePageUp,
   canMovePageDown,
@@ -45,7 +51,18 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
   return (
     <>
       <RibbonGroup label={t('formBuilder.ribbon.pagesGroup')}>
-        <RibbonButton icon={<Copy size={16} />} label={t('formBuilder.duplicatePage')} onClick={onDuplicatePage} />
+        {/*
+          It resolves through `targetPageId`, which falls back to
+          `activePageId` — and that starts null. So on a freshly opened form
+          this was a lit, hoverable button that did nothing when pressed and
+          gave no reason, right up until the owner happened to click a page.
+        */}
+        <RibbonButton
+          icon={<Copy size={16} />}
+          label={t('formBuilder.duplicatePage')}
+          onClick={onDuplicatePage}
+          disabled={!hasTargetPage}
+        />
         <RibbonButton
           icon={<ChevronUp size={16} />}
           label={t('formBuilder.movePageUp')}
@@ -73,10 +90,12 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
       </RibbonGroup>
 
       <RibbonGroup label={t('formBuilder.ribbon.viewGroup')}>
+        {/* It always toggled; it just never said which way it was. */}
         <RibbonButton
           icon={<PanelLeft size={16} />}
           label={t('formBuilder.navigationPane')}
           onClick={onToggleNavigationPane}
+          pressed={isNavigationPaneOpen}
           title={isNavigationPaneOpen ? t('formBuilder.hideNavigationPane') : t('formBuilder.showNavigationPane')}
         />
       </RibbonGroup>

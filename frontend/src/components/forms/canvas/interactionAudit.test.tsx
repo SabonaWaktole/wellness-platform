@@ -441,8 +441,10 @@ describe('Audit — icon-only controls carry a tooltip', () => {
     [/^redo$/i],
     [/zoom in/i],
     [/zoom out/i],
-    [/fit page/i],
-    [/fit width/i],
+    // Fit page and Fit width are no longer icon-only buttons in the strip:
+    // they carry their own text inside the zoom menu, which is where the
+    // levels are. `ribbon.test.tsx` asserts they are still reachable there.
+    [/zoom level/i],
     [/go to page 2/i],
     [/duplicate page 2/i],
     [/delete page 2/i],
@@ -633,7 +635,7 @@ describe('Audit — the read view shows the form, not a printout of it', () => {
    */
   const openReadView = () => {
     fireEvent.click(screen.getByRole('button', { name: /^file$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /read view/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /read view/i }));
   };
 
   it('gives every field a working control, not a dash', () => {
@@ -904,5 +906,369 @@ describe('Free placement — one line means one line', () => {
 
     const height = Number.parseFloat(overlays()[0].style.height);
     expect(height).toBeLessThanOrEqual(sectionHeight);
+  });
+});
+
+describe('Free placement — Insert puts things where the cursor is', () => {
+  beforeEach(mockHooks);
+
+  const typeAt = (x, y) => {
+    const paper = sheet('p1');
+    paper.getBoundingClientRect = () => ({ left: 0, top: 0, width: 794, height: 1123, right: 794, bottom: 1123, x: 0, y: 0 });
+    fireEvent.click(paper, { clientX: x, clientY: y });
+  };
+  const insert = (name) => {
+    fireEvent.click(screen.getByRole('tab', { name: /insert/i }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`add ${name}`, 'i') }));
+  };
+  const selected = () => overlays().find((o) => /elementSelected/.test(o.className));
+
+  /*
+   * Insert used to drop everything at the bottom of the target section,
+   * whatever the owner happened to be doing — click halfway down a page, ask
+   * for a field, and it appeared somewhere else entirely, to be dragged back
+   * to where it was wanted. In a document editor Insert means "here".
+   */
+  it('drops a new field where the caret is, not at the end of the section', () => {
+    render(<FormBuilder />);
+    typeAt(200, 640);
+
+    // The editor lives in the renderer's DOM, so the caret's own box is the
+    // `[data-element-id]` wrapper rather than the overlay drawn above it.
+    const caret = document.querySelector('[contenteditable="true"]').closest('[data-element-id]');
+    const top = caret.style.top;
+
+    insert('text field');
+
+    expect(selected().style.top).toBe(top);
+  });
+
+  /* The empty line the owner clicked into was standing in for exactly this,
+   * so it makes way rather than sitting above the thing it announced. */
+  it('takes the empty line away instead of leaving it above the new field', () => {
+    render(<FormBuilder />);
+    const before = overlays().length;
+
+    typeAt(200, 640);
+    expect(overlays().length).toBe(before + 1);
+
+    insert('text field');
+
+    expect(overlays().length).toBe(before + 1);
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  /* No caret, but something pointed at: "another one of these" belongs under
+   * the thing that was pointed at. */
+  it('drops it under the selected object when there is no caret', () => {
+    render(<FormBuilder />);
+    fireEvent.click(overlays()[1]);
+    const anchor = overlays()[1];
+    const below = Number.parseFloat(anchor.style.top) + Number.parseFloat(anchor.style.height) + 16;
+
+    insert('text field');
+
+    expect(Number.parseFloat(selected().style.top)).toBe(below);
+  });
+});
+
+describe('Audit — a drag reflows for where the pointer IS, not where it has been', () => {
+  /*
+   * Every `pointermove` runs the overflow ladder, and each run used to be fed
+   * the document the PREVIOUS move had already reflowed. So a section dragged
+   * DOWN PAST a neighbour pushed that neighbour once per frame the two
+   * overlapped — and left it pushed, because the ladder has no way to know a
+   * shove it applied a frame ago was only ever about a position the pointer
+   * was passing THROUGH. Drag far enough and a whole column of sections walked
+   * down the page, and off the end of it, for a place nothing was dropped.
+   *
+   * The fix is a per-gesture baseline: every move replays against the document
+   * as it stood when the drag began. `useDragMove` reports absolute geometry
+   * measured from its own pointer-down origin, so the replay is exact and the
+   * layout depends on the CURRENT pointer position alone.
+   */
+  const spacedForm = () => ({
+    ...form(),
+    layout: {
+      version: 3,
+      page: emptyPageGeometry(),
+      pages: [
+        {
+          id: 'p1',
+          sections: [
+            { id: 'a', title: 'A', x: 48, y: 48, width: 500, height: 200, elements: [] },
+            { id: 'b', title: 'B', x: 48, y: 600, width: 500, height: 200, elements: [] },
+            { id: 'c', title: 'C', x: 48, y: 900, width: 500, height: 150, elements: [] },
+          ],
+        },
+      ],
+    },
+  });
+
+  const tops = () => [...document.querySelectorAll('[class*="sectionOverlay"]')].map((o) => o.style.top);
+  const pageCount = () => document.querySelectorAll('[data-page-id]').length;
+  const grab = (index) => {
+    const overlay = document.querySelectorAll('[class*="sectionOverlay"]')[index];
+    const handle = document.querySelectorAll('[class*="sectionDragHandle"]')[index];
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    return {
+      to: (dy) => fireEvent.pointerMove(overlay, { pointerId: 1, clientX: 0, clientY: dy }),
+      drop: () => fireEvent.pointerUp(overlay, { pointerId: 1 }),
+    };
+  };
+
+  beforeEach(() => {
+    mockHooks();
+    vi.mocked(clientFormHooks.useClientForm).mockReturnValue({
+      form: spacedForm(), setForm: vi.fn(), isLoading: false, error: null, fetchForm: vi.fn(),
+    });
+  });
+
+  it('leaves the sections it merely dragged past exactly where they were', () => {
+    render(<FormBuilder />);
+    expect(tops()).toEqual(['48px', '600px', '900px']);
+
+    const drag = grab(0);
+    // Squarely onto B, with no free band big enough to take A instead — so
+    // this position really does displace B, and displaces it hard enough to
+    // push C off the page altogether.
+    drag.to(600);
+    // ...and back to where it started, without ever releasing.
+    drag.to(0);
+    drag.drop();
+
+    expect(tops()).toEqual(['48px', '600px', '900px']);
+    expect(pageCount()).toBe(1);
+  });
+
+  /* And a drop that lands in the empty space keeps it empty space: the
+   * section occupies the gap, and the page below it does not shuffle. */
+  it('drops a section into the gap it was aimed at and moves nothing else', () => {
+    render(<FormBuilder />);
+
+    const drag = grab(2);
+    drag.to(-550);
+    drag.drop();
+
+    expect(tops()).toEqual(['48px', '350px', '600px']);
+    expect(pageCount()).toBe(1);
+  });
+});
+
+describe('Audit — a section resizes from its edges, not just its corners', () => {
+  /*
+   * All eight handles have always been wired to `useResize`. The problem was
+   * that an EDGE handle was a 9px square at the midpoint of its side, so
+   * "drag the edge to resize" only worked on that one dot; anywhere else along
+   * the border the pointer reached the section's drag band underneath and
+   * MOVED the section instead. The handle is now a strip spanning the whole
+   * side, with the square drawn at its midpoint as the affordance.
+   *
+   * These cases pin the WIRING — that each edge grows the box on its own axis
+   * and leaves the other one alone. The strip's geometry is CSS, and jsdom
+   * computes no layout, so its span is not something a unit test can see;
+   * `data-handle` is what makes the individual handles addressable at all.
+   */
+  const sizedForm = () => ({
+    ...form(),
+    layout: {
+      version: 3,
+      page: emptyPageGeometry(),
+      pages: [
+        {
+          id: 'p1',
+          sections: [{ id: 'a', title: 'A', x: 100, y: 100, width: 400, height: 200, elements: [] }],
+        },
+      ],
+    },
+  });
+
+  const box = () => {
+    const o = document.querySelector('[class*="sectionOverlay"]');
+    return { left: o.style.left, top: o.style.top, width: o.style.width, height: o.style.height };
+  };
+
+  const dragHandle = (name, dx, dy) => {
+    const overlay = document.querySelector('[class*="sectionOverlay"]');
+    const handle = overlay.querySelector(`[data-handle="${name}"]`);
+    expect(handle).not.toBeNull();
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(overlay, { pointerId: 1, clientX: dx, clientY: dy });
+    fireEvent.pointerUp(overlay, { pointerId: 1 });
+  };
+
+  beforeEach(() => {
+    mockHooks();
+    vi.mocked(clientFormHooks.useClientForm).mockReturnValue({
+      form: sizedForm(), setForm: vi.fn(), isLoading: false, error: null, fetchForm: vi.fn(),
+    });
+  });
+
+  const select = () => fireEvent.click(document.querySelector('[class*="sectionOverlay"]'));
+
+  it('offers all eight handles once the section is selected', () => {
+    render(<FormBuilder />);
+    select();
+
+    const named = [...document.querySelectorAll('[data-handle]')].map((h) => h.dataset.handle);
+    expect(named.sort()).toEqual(['e', 'n', 'ne', 'nw', 's', 'se', 'sw', 'w']);
+  });
+
+  it('grows the section downward from the bottom edge, leaving its top and width alone', () => {
+    render(<FormBuilder />);
+    select();
+    dragHandle('s', 0, 120);
+
+    expect(box()).toEqual({ left: '100px', top: '100px', width: '400px', height: '320px' });
+  });
+
+  it('grows the section sideways from the right edge, leaving its height alone', () => {
+    render(<FormBuilder />);
+    select();
+    dragHandle('e', 80, 0);
+
+    expect(box()).toEqual({ left: '100px', top: '100px', width: '480px', height: '200px' });
+  });
+
+  /* The top and left edges move the box's origin as well as its size — the
+   * edge being dragged is the one that moves, and the opposite one stays put. */
+  it('moves the top edge without moving the bottom one', () => {
+    render(<FormBuilder />);
+    select();
+    dragHandle('n', 0, -40);
+
+    expect(box()).toEqual({ left: '100px', top: '60px', width: '400px', height: '240px' });
+  });
+
+  it('moves the left edge without moving the right one', () => {
+    render(<FormBuilder />);
+    select();
+    dragHandle('w', -50, 0);
+
+    expect(box()).toEqual({ left: '50px', top: '100px', width: '450px', height: '200px' });
+  });
+
+  /* The whole point: a pointer-down on an edge must not reach the drag band
+   * underneath and turn a resize into a move. */
+  it('resizes from an edge rather than moving the section', () => {
+    render(<FormBuilder />);
+    select();
+    const before = box();
+    dragHandle('s', 0, 60);
+    const after = box();
+
+    expect(after.top).toBe(before.top);
+    expect(after.left).toBe(before.left);
+    expect(Number.parseInt(after.height, 10)).toBeGreaterThan(Number.parseInt(before.height, 10));
+  });
+});
+
+/*
+ * THE CARET AND THE THING IT IS IN DIE TOGETHER.
+ *
+ * `inline.target` was never cleared when the object it pointed at was
+ * removed, and a stale one is not cosmetic: three features read it as "the
+ * user is typing" and quietly stop working for the rest of the session. The
+ * gesture that reaches it is ordinary — open a caret, click a ribbon button,
+ * press Delete.
+ */
+describe('Audit — deleting what is being typed into closes the caret', () => {
+  beforeEach(mockHooks);
+
+  const openCaret = () => {
+    fireEvent.doubleClick(overlays()[0]);
+    expect(document.querySelector('[contenteditable="true"]')).toBeTruthy();
+  };
+
+  it('leaves no editing session behind when the element is deleted', () => {
+    render(<FormBuilder />);
+    openCaret();
+
+    // Blurs the editor but leaves the session open, exactly as clicking any
+    // ribbon control does. Deliberately one that changes neither the document
+    // nor the selection, so the only thing under test is the dangling caret.
+    fireEvent.click(button(/zoom in/i));
+    fireEvent.keyDown(window, { key: 'Delete' });
+
+    expect(document.querySelector('[contenteditable="true"]')).toBeNull();
+  });
+
+  /*
+   * The consequence that mattered most. `FormCanvas` keeps the history window
+   * shut while a caret is live because the edit session owns it — so a dangling
+   * target meant the window never opened again and a drag pushed one undo entry
+   * per pointermove. One drag, one undo, still.
+   */
+  it('still coalesces a whole drag into one undo afterwards', () => {
+    render(<FormBuilder />);
+    openCaret();
+    fireEvent.click(button(/zoom in/i));
+    fireEvent.keyDown(window, { key: 'Delete' });
+
+    selectElement(0);
+    const startedAt = overlays()[0].style.top;
+
+    const box = overlays()[0];
+    fireEvent.pointerDown(box, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(box, { pointerId: 1, clientX: 0, clientY: 40 });
+    fireEvent.pointerMove(box, { pointerId: 1, clientX: 0, clientY: 80 });
+    fireEvent.pointerMove(box, { pointerId: 1, clientX: 0, clientY: 120 });
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    expect(overlays()[0].style.top).not.toEqual(startedAt);
+
+    /*
+     * ONE press, all the way back. Three pointer moves reached the document; if
+     * the gesture window had stayed shut they would be three history entries
+     * and this would land on an intermediate position instead of the start.
+     */
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+    expect(overlays()[0].style.top).toEqual(startedAt);
+  });
+});
+
+/*
+ * ONE ARRANGEMENT, MOVED TOGETHER. Delete has always acted on every selected
+ * object; the arrow keys moved only the primary, so a row of fields lined up
+ * and selected together came apart the moment the owner nudged it — the one
+ * operation where holding the arrangement is the entire point.
+ */
+describe('Audit — the arrow keys move everything that is selected', () => {
+  beforeEach(mockHooks);
+
+  it('nudges every selected element, not just the primary', () => {
+    render(<FormBuilder />);
+    selectElement(1);
+    selectElement(2, { shiftKey: true });
+
+    const before = [overlays()[1].style.top, overlays()[2].style.top];
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    const after = [overlays()[1].style.top, overlays()[2].style.top];
+
+    expect(after[0]).not.toEqual(before[0]);
+    expect(after[1]).not.toEqual(before[1]);
+  });
+
+  /* And a modifier makes them mean something else entirely — Ctrl+arrow is
+   * word-wise movement in text, never a one-pixel nudge. */
+  it('leaves a modified arrow alone', () => {
+    render(<FormBuilder />);
+    selectElement(1);
+
+    const before = overlays()[1].style.top;
+    fireEvent.keyDown(window, { key: 'ArrowDown', ctrlKey: true });
+
+    expect(overlays()[1].style.top).toEqual(before);
+  });
+
+  /* Ctrl+Backspace deletes a word, not an object. */
+  it('leaves a modified Backspace alone', () => {
+    render(<FormBuilder />);
+    selectElement(1);
+    const count = overlays().length;
+
+    fireEvent.keyDown(window, { key: 'Backspace', ctrlKey: true });
+
+    expect(overlays()).toHaveLength(count);
   });
 });

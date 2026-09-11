@@ -26,6 +26,12 @@ export interface PropertiesPanelProps {
   onEditText?: (elementId: string) => void;
   /** Dismisses the pane. Reopened from the contextual tab's launcher. */
   onClose?: () => void;
+  /**
+   * How many objects the selection holds. The pane formats ONE of them — the
+   * primary — so with several selected it has to say so rather than let the
+   * user believe a change here reached all of them.
+   */
+  selectionCount?: number;
 }
 
 /**
@@ -42,14 +48,36 @@ export interface PropertiesPanelProps {
  * Appearance and Layout are collapsed until asked for, so the ordinary
  * workflow stays simple.
  */
+/*
+ * A NOTE ON LABELS. `SelectInput` and `TagInput` both render a real
+ * <label htmlFor> when given a `label` prop; this panel used to bypass that
+ * every time and emit a sibling <span> beside the control instead. It looked
+ * identical and named nothing: five controls in the format pane — Field type,
+ * Shown as, Options, Orientation — had no accessible name at all, and clicking
+ * the word above them did not focus them either. Use the prop.
+ */
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selection,
   onChangeElement,
   onChangeSection,
   onEditText,
   onClose,
+  selectionCount = 1,
 }) => {
   const { t } = useTranslation('settings');
+
+  /*
+   * `ColorPicker` has always measured the chosen colour against BOTH page
+   * grounds and offered to report a failure — and no caller ever supplied the
+   * message, so the check ran on every render of all five pickers and could
+   * never say anything. The tenant picks one colour for both themes and only
+   * ever sees the one they are in, so without this a form looks fine to its
+   * author and washes out for half its readers.
+   */
+  const contrastWarning = (theme: 'light' | 'dark', ratio: number) =>
+    t(theme === 'light' ? 'formBuilder.contrastWarningLight' : 'formBuilder.contrastWarningDark', {
+      ratio: ratio.toFixed(1),
+    });
   // Component type names live beside the registry that defines them.
   const { t: tForms } = useTranslation('forms');
 
@@ -64,7 +92,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     const section = selection.section;
     return (
       <aside className={styles.panel} data-format-pane>
-        <PaneHeader title={t('formBuilder.sectionSettings')} onClose={onClose} />
+        <PaneHeader
+          title={t('formBuilder.sectionSettings')}
+          onClose={onClose}
+          selectionCount={selectionCount}
+        />
         <TextInput
           label={t('formBuilder.sectionTitle')}
           value={section.title ?? ''}
@@ -77,6 +109,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             label={t('formBuilder.backgroundColour')}
             value={section.styles?.background}
             clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
             onChange={(background) =>
               onChangeSection(section.id, { styles: { ...section.styles, background } })
             }
@@ -85,6 +118,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             label={t('formBuilder.borderColour')}
             value={section.styles?.borderColor}
             clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
             onChange={(borderColor) =>
               onChangeSection(section.id, { styles: { ...section.styles, borderColor } })
             }
@@ -116,7 +150,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
   return (
     <aside className={styles.panel} data-format-pane>
-      <PaneHeader title={objectName} onClose={onClose} />
+      <PaneHeader title={objectName} onClose={onClose} selectionCount={selectionCount} />
 
       {isDataBearing(element.type) && field && (
         <>
@@ -127,8 +161,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           />
 
           <div className={styles.field}>
-            <span className={styles.label}>{t('formBuilder.fieldType')}</span>
             <SelectInput
+              label={t('formBuilder.fieldType')}
               value={field.dataType}
               onChange={(e) => {
                 const dataType = e.target.value as FormFieldType;
@@ -153,8 +187,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
           {componentOptionsFor(field.dataType).length > 1 && (
             <div className={styles.field}>
-              <span className={styles.label}>{t('formBuilder.control')}</span>
               <SelectInput
+                label={t('formBuilder.control')}
                 value={element.type}
                 onChange={(e) => onChangeElement(element.id, { type: e.target.value as FormElement['type'] })}
               >
@@ -169,8 +203,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
           {(field.dataType === 'SINGLE_SELECT' || field.dataType === 'MULTI_SELECT') && (
             <div className={styles.field}>
-              <span className={styles.label}>{t('formBuilder.options')}</span>
               <TagInput
+                label={t('formBuilder.options')}
                 helperText={t('formBuilder.optionsHelp')}
                 value={(field.options ?? []).map((o) => o.label)}
                 onChange={(labels) =>
@@ -237,7 +271,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
       */}
       {element.type === 'TEXT' && (
         <div className={styles.field}>
-          <span className={styles.label}>{t('formBuilder.text')}</span>
+          {/* A group heading rather than a control label: what follows is a
+              sentence and a button, neither of which a <label> can name. */}
+          <h4 className={styles.label}>{t('formBuilder.text')}</h4>
           <p className={styles.hint}>{t('formBuilder.textEditsOnPage')}</p>
           {onEditText && (
             <button type="button" className={styles.inlineAction} onClick={() => onEditText(element.id)}>
@@ -265,8 +301,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
       {element.type === 'DIVIDER' && (
         <div className={styles.field}>
-          <span className={styles.label}>{t('formBuilder.dividerOrientation')}</span>
           <SelectInput
+            label={t('formBuilder.dividerOrientation')}
             value={(element.content as DividerContent | undefined)?.orientation ?? 'horizontal'}
             onChange={(e) =>
               onChangeElement(element.id, {
@@ -289,18 +325,21 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           label={t('formBuilder.textColour')}
           value={element.styles?.textColor}
           clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
           onChange={(textColor) => onChangeElement(element.id, { styles: { ...element.styles, textColor } })}
         />
         <ColorPicker
           label={t('formBuilder.backgroundColour')}
           value={element.styles?.background}
           clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
           onChange={(background) => onChangeElement(element.id, { styles: { ...element.styles, background } })}
         />
         <ColorPicker
           label={t('formBuilder.borderColour')}
           value={element.styles?.borderColor}
           clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
           onChange={(borderColor) => onChangeElement(element.id, { styles: { ...element.styles, borderColor } })}
         />
       </details>
@@ -338,17 +377,35 @@ const slugifyOption = (label: string): string =>
  * Word's format pane closes, and a panel that cannot be put away is a panel
  * permanently competing with the page for width.
  */
-const PaneHeader: React.FC<{ title: string; onClose?: () => void }> = ({ title, onClose }) => {
+const PaneHeader: React.FC<{ title: string; onClose?: () => void; selectionCount?: number }> = ({
+  title,
+  onClose,
+  selectionCount = 1,
+}) => {
   const { t } = useTranslation('settings');
   return (
-    <div className={styles.paneHeader}>
-      <h3 className={styles.title}>{title}</h3>
-      {onClose && (
-        <button type="button" className={styles.paneClose} onClick={onClose} aria-label={t('formBuilder.closePane')}>
-          <X size={14} />
-        </button>
+    <>
+      <div className={styles.paneHeader}>
+        <h3 className={styles.title}>{title}</h3>
+        {onClose && (
+          <button type="button" className={styles.paneClose} onClick={onClose} aria-label={t('formBuilder.closePane')}>
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {/*
+        WHICH OF THEM THIS IS. Every control below edits the primary object,
+        so with several selected the pane was quietly formatting one of them
+        and looking exactly as it does when that one is all there is. The
+        commands that DO act on the whole selection — align, distribute,
+        duplicate, delete — are on the contextual tab, and saying the count
+        here is what sends the user there instead of leaving them to discover
+        that four of their five fields did not change.
+      */}
+      {selectionCount > 1 && (
+        <p className={styles.hint}>{t('formBuilder.formattingOneOf', { count: selectionCount })}</p>
       )}
-    </div>
+    </>
   );
 };
 

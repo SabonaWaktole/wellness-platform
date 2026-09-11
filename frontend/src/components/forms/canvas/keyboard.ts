@@ -22,6 +22,9 @@ export type ShortcutAction =
   | { action: 'escape' }
   | { action: 'save' }
   | { action: 'print' }
+  | { action: 'zoomIn' }
+  | { action: 'zoomOut' }
+  | { action: 'zoomReset' }
   | { action: 'nudge'; dx: number; dy: number };
 
 /**
@@ -79,15 +82,31 @@ export const resolveShortcut = (event: KeyboardEvent): ShortcutAction | null => 
   const key = event.key;
 
   if (key === 'Escape') return { action: 'escape' };
-  if (key === 'Delete' || key === 'Backspace') return { action: 'delete' };
 
-  const nudge = NUDGES[key];
-  if (nudge) {
-    const step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
-    return { action: 'nudge', dx: nudge.dx * step, dy: nudge.dy * step };
+  /*
+   * THE UNMODIFIED KEYS FIRST, AND ONLY WHILE UNMODIFIED.
+   *
+   * These three used to be resolved above the `mod` check, which made
+   * Ctrl+Backspace and Ctrl+Delete mean "delete the selected object" — where
+   * every editor means "delete the previous word" — and Ctrl+arrow a one-pixel
+   * nudge rather than the word-wise movement the same keys have in text.
+   * Reading them only when no modifier is held is what keeps a modified
+   * chord from arriving as its unmodified self.
+   *
+   * Shift is deliberately not part of `mod`: Shift+arrow is the coarse nudge,
+   * and it has to keep resolving here.
+   */
+  if (!mod) {
+    if (key === 'Delete' || key === 'Backspace') return { action: 'delete' };
+
+    const nudge = NUDGES[key];
+    if (nudge) {
+      const step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+      return { action: 'nudge', dx: nudge.dx * step, dy: nudge.dy * step };
+    }
+
+    return null;
   }
-
-  if (!mod) return null;
 
   switch (key.toLowerCase()) {
     case 'z':
@@ -113,6 +132,27 @@ export const resolveShortcut = (event: KeyboardEvent): ShortcutAction | null => 
       return { action: 'save' };
     case 'p':
       return { action: 'print' };
+    /*
+     * ZOOM. Ctrl+0 / Ctrl+plus / Ctrl+minus are the bindings a document editor
+     * is expected to answer, and they were falling through to the BROWSER —
+     * which zooms the whole application, chrome and all, rather than the page
+     * being edited. That leaves the ribbon and the sheet at different scales
+     * and the pointer maths measuring a page that is no longer the size the
+     * document says it is.
+     *
+     * Both spellings of each key: `=` and `-` are what the unshifted keys
+     * report, `+` and `_` what they report with Shift, and a user pressing
+     * Ctrl+Shift+= means "bigger" just as much as one who did not reach for
+     * Shift.
+     */
+    case '0':
+      return { action: 'zoomReset' };
+    case '=':
+    case '+':
+      return { action: 'zoomIn' };
+    case '-':
+    case '_':
+      return { action: 'zoomOut' };
     default:
       return null;
   }

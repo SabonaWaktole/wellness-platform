@@ -30,6 +30,11 @@ import { componentOptionsFor } from '../FormRenderer/fieldControl';
  * WHAT MOVES, never the content. Every geometry mutation runs the same ladder,
  * in this order:
  *
+ *   0. USE THE EMPTY SPACE THAT IS ALREADY THERE. Before anything is pushed,
+ *      a section the user MOVED that clips a neighbour is offered the nearby
+ *      free bands on the page; if one can hold it, it settles there and no
+ *      other section moves at all (spec §10, priority 1). Only a move gets
+ *      this rung — a resize is changing a size, not asking to relocate.
  *   1. GROW IN PLACE while `section.y + section.height` stays inside the
  *      bottom margin.
  *   2. PUSH SIBLINGS down; a sibling pushed past the bottom margin is
@@ -63,6 +68,27 @@ export const SECTION_TOO_TALL =
 const STACK_GAP = 8;
 /** Breathing room left below the lowest element when a section grows to fit. */
 const SECTION_GROW_PADDING = 16;
+/**
+ * How far a section may be nudged, ON DROP, to settle into an existing gap
+ * instead of shoving its neighbours down (see `fitIntoFreeSpace`).
+ *
+ * 72px is about the height of a field row: a drop that visibly aimed at a gap
+ * lands in it, while one squarely on top of another section still means
+ * "displace that section".
+ *
+ * A BUDGET THIS LARGE IS ONLY SAFE BECAUSE IT IS SPENT ONCE. Applied on every
+ * `pointermove` — which is what the first version did — a clamp of N pixels
+ * freezes the section for N pixels of pointer travel and then leaps the rest:
+ * drag a section one pixel onto its neighbour and it jumped BACKWARDS into
+ * the gap above, sat there through seventy pixels of drag, then jumped
+ * forwards. Sticky-then-leap is exactly the push-and-pull §12 rules out.
+ *
+ * So the caller runs the ladder without free space while the pointer is
+ * moving — the section tracks the pointer and the reflow is honest about what
+ * dropping here would do — and replays the final position with it once, on
+ * release. See `FormBuilder`'s gesture handling.
+ */
+const GAP_SNAP_TOLERANCE = 72;
 
 export const newId = (): string =>
   // crypto.randomUUID needs a secure context; jsdom and plain-HTTP previews
@@ -84,6 +110,28 @@ export const usableWidth = (page: FormPage): number => usablePageWidth(page);
 
 const clampSize = (n: number): number => Math.min(MAX_SIZE_PX, Math.max(MIN_SIZE_PX, Math.round(n)));
 const clampCoord = (n: number): number => Math.round(n);
+
+/**
+ * Keeps a section on the paper HORIZONTALLY.
+ *
+ * There was no horizontal bound at all — `clampCoord` is only a rounding — so
+ * a section could be dragged to a negative x or out past the right edge, and
+ * `.sheet` has `overflow: hidden`, which means it then had no visible surface
+ * left to grab. Nothing in the builder could bring it back: the page rail
+ * shows thumbnails, the format pane needs a selection, and the selection is
+ * made by clicking the thing. The document still held it, and it still
+ * printed, so the only symptom was a section that had silently vanished.
+ *
+ * Clamped to the margins rather than to the paper edge, because that is where
+ * a section belongs — the same bound `addSection` and the width clamp already
+ * use. A section wider than the usable width (possible on a document authored
+ * elsewhere) is pinned to the left margin rather than given a negative range.
+ */
+const clampSectionX = (x: number, width: number, page: FormPage): number => {
+  const left = page.margin.left;
+  const right = Math.max(left, page.width - page.margin.right - width);
+  return Math.min(Math.max(clampCoord(x), left), right);
+};
 
 const boxesOverlap = (
   a: { x: number; y: number; width: number; height: number },
@@ -272,6 +320,120 @@ const fitsOnPage = (section: FormSection, page: FormPage): boolean =>
 const bottomLimit = (page: FormPage): number => page.height - page.margin.bottom;
 
 /**
+ * Sorts a page's sections into READING ORDER — top to bottom, then left to
+ * right (spec §14).
+ *
+ * The array order is the document's order: it is what the renderer emits, what
+ * screen readers and tab order follow, and what a submission is keyed by. The
+ * ladder moves sections around by geometry alone, so without this a section
+ * dragged above another would LOOK earlier while still being later in the
+ * document. Re-sorting after every settle keeps the two definitions of "first"
+ * from drifting apart.
+ */
+const readingOrder = (sections: FormSection[]): FormSection[] =>
+  [...sections].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+
+const inReadingOrder = (page: DocumentPage): DocumentPage => ({
+  ...page,
+  sections: readingOrder(page.sections),
+});
+
+/**
+ * The vertical bands on a page that no section other than `excludeId`
+ * occupies — EMPTY SPACE AS A FIRST-CLASS LAYOUT RESOURCE (spec §1).
+ *
+ * Bands are full-width: a band is only offered as free if nothing at all sits
+ * beside it. That is deliberately conservative — two half-width sections side
+ * by side leave no band, so the move falls back to the x-aware collision
+ * handling below rather than dropping a section on top of one of them.
+ *
+ * Each band is inset by `STACK_GAP` from the section above and below it, so a
+ * section placed inside one lands with the same breathing room a pushed
+ * sibling would get.
+ */
+const freeBands = (
+  page: DocumentPage,
+  geometry: FormPage,
+  excludeId: string
+): { top: number; bottom: number }[] => {
+  const others = readingOrder(page.sections.filter((s) => s.id !== excludeId));
+  const bands: { top: number; bottom: number }[] = [];
+  let cursor = geometry.margin.top;
+
+  for (const s of others) {
+    const top = cursor === geometry.margin.top ? cursor : cursor + STACK_GAP;
+    if (s.y - STACK_GAP > top) bands.push({ top, bottom: s.y - STACK_GAP });
+    cursor = Math.max(cursor, s.y + s.height);
+  }
+
+  const tail = cursor === geometry.margin.top ? cursor : cursor + STACK_GAP;
+  if (bottomLimit(geometry) > tail) bands.push({ top: tail, bottom: bottomLimit(geometry) });
+
+  return bands;
+};
+
+/**
+ * PRIORITY 1 of spec §10: before pushing anything, look for usable empty
+ * space.
+ *
+ * A section dropped so that it clips a neighbour used to shove that neighbour
+ * down, and whatever was below it after that — a cascade that could run off
+ * the page and mint a new one, even while an empty band sat right there. This
+ * runs first: if the dragged section fits in a nearby free band, it slides
+ * into that band and NOBODY ELSE MOVES.
+ *
+ * Returns `null` when there is nothing to do (no collision) or nothing to be
+ * done (no band close enough, or none tall enough), and the caller falls
+ * through to the push-and-cascade rungs — spec §6's "actual collision should
+ * trigger reflow" is still exactly what happens when the space really is not
+ * there.
+ */
+const fitIntoFreeSpace = (
+  page: DocumentPage,
+  geometry: FormPage,
+  anchorId: string
+): DocumentPage | null => {
+  const anchor = page.sections.find((s) => s.id === anchorId);
+  if (!anchor) return null;
+
+  const others = page.sections.filter((s) => s.id !== anchorId);
+  if (!others.some((o) => boxesOverlap(o, anchor))) return null;
+
+  const anchorBottom = anchor.y + anchor.height;
+
+  let best: { y: number; shift: number } | null = null;
+  for (const band of freeBands(page, geometry, anchorId)) {
+    if (band.bottom - band.top < anchor.height) continue;
+
+    /*
+     * THE SECTION HAS TO BE IN THE BAND ALREADY. Without this a section can
+     * be offered a gap it is nowhere near — the nearest one by pure distance,
+     * which on a crowded page may be at the other end of the sheet. "Use the
+     * empty space at the destination" means the space the user dropped it
+     * IN, so a band that its dropped span does not touch is not a candidate
+     * at any tolerance.
+     *
+     * It also makes `freeBands`' side-by-side guarantee explicit rather than
+     * accidental: a band that only exists because nothing spans that height
+     * can no longer be handed a section that is not there.
+     */
+    if (Math.min(anchorBottom, band.bottom) <= Math.max(anchor.y, band.top)) continue;
+
+    const y = Math.min(Math.max(anchor.y, band.top), band.bottom - anchor.height);
+    const shift = Math.abs(y - anchor.y);
+    if (shift > GAP_SNAP_TOLERANCE) continue;
+    if (!best || shift < best.shift) best = { y: clampCoord(y), shift };
+  }
+
+  if (!best) return null;
+  const settledY = best.y;
+  return {
+    ...page,
+    sections: page.sections.map((s) => (s.id === anchorId ? { ...s, y: settledY } : s)),
+  };
+};
+
+/**
  * Rungs 2-4, applied to one page after a section on it changed geometry.
  *
  * Returns the settled pages plus any sections that could not stay on this
@@ -307,7 +469,7 @@ const settlePage = (
     }
   }
 
-  return { page: { ...page, sections: kept }, overflow };
+  return { page: inReadingOrder({ ...page, sections: kept }), overflow };
 };
 
 /**
@@ -365,19 +527,39 @@ const cascade = (doc: FormDocument, fromIndex: number, incoming: FormSection[]):
  * The single entry point every mutation funnels through, so there is exactly
  * one answer to "what happens at the page boundary".
  */
-const settle = (doc: FormDocument, pageIndex: number, sectionId: string): ApplyResult => {
-  const target = doc.pages[pageIndex];
-  const section = target.sections.find((s) => s.id === sectionId);
+const settle = (
+  doc: FormDocument,
+  pageIndex: number,
+  sectionId: string,
+  /** Set by the pointer- and keyboard-driven MOVES, which may reposition the
+   *  section itself to use existing empty space. A resize or a grow must not:
+   *  the user is changing the section's size, not asking it to relocate. */
+  options: { useFreeSpace?: boolean } = {}
+): ApplyResult => {
+  let target = doc.pages[pageIndex];
+  let section = target.sections.find((s) => s.id === sectionId);
   if (!section) return ok(doc);
 
   // RUNG 4: nowhere left to go under §7.
   if (!fitsOnPage(section, doc.page)) return refuse(doc, SECTION_TOO_TALL);
 
   let pages = [...doc.pages];
+
+  // RUNG 0 (spec §10, priority 1): reuse empty space before pushing anything.
+  if (options.useFreeSpace) {
+    const fitted = fitIntoFreeSpace(target, doc.page, sectionId);
+    if (fitted) {
+      target = fitted;
+      section = target.sections.find((s) => s.id === sectionId) as FormSection;
+      pages[pageIndex] = target;
+    }
+  }
+
   let working: FormDocument = { ...doc, pages };
 
   // RUNG 3: the section itself crosses the bottom margin -> relocate whole.
   if (section.y + section.height > bottomLimit(doc.page)) {
+    const relocating = section;
     pages[pageIndex] = { ...target, sections: target.sections.filter((s) => s.id !== sectionId) };
     working = { ...working, pages };
 
@@ -387,7 +569,7 @@ const settle = (doc: FormDocument, pageIndex: number, sectionId: string): ApplyR
       if (inserted.refusal) return refuse(doc, inserted.refusal);
       working = inserted.document;
     }
-    working = cascade(working, pageIndex, [{ ...section, y: doc.page.margin.top }]);
+    working = cascade(working, pageIndex, [{ ...relocating, y: doc.page.margin.top }]);
     return ok(working);
   }
 
@@ -419,9 +601,10 @@ const settleOrRevert = (
   original: FormDocument,
   mutated: FormDocument,
   pageIndex: number,
-  sectionId: string
+  sectionId: string,
+  options: { useFreeSpace?: boolean } = {}
 ): ApplyResult => {
-  const result = settle(mutated, pageIndex, sectionId);
+  const result = settle(mutated, pageIndex, sectionId, options);
   return result.refusal ? refuse(original, result.refusal) : result;
 };
 
@@ -485,15 +668,46 @@ export const addSection = (
  * as rung 3, just pointer-driven rather than growth-driven — a section can
  * never be left overhanging a page boundary (spec §7).
  */
-export const moveSection = (doc: FormDocument, sectionId: string, x: number, y: number): ApplyResult => {
+export const moveSection = (
+  doc: FormDocument,
+  sectionId: string,
+  x: number,
+  y: number,
+  /*
+   * WHO IS ALLOWED TO USE THE EMPTY SPACE. Rung 0 repositions the section
+   * itself, which is right for a pointer drag — the user is choosing a place
+   * and "near enough" is what they meant — and wrong for everything else that
+   * routes through here:
+   *
+   *   align / distribute  computes exact coordinates and then asks us to
+   *                       write them. A settle that slides one of them into a
+   *                       gap means the row does not line up, which is the
+   *                       single thing the command exists to do.
+   *   arrow nudge         is the precision instrument. One press means one
+   *                       pixel; a press that moved the section fourteen
+   *                       would make the keyboard useless for the job it is
+   *                       reached for.
+   *
+   * Off by default so a new caller has to think about it rather than inherit
+   * a behaviour it did not ask for.
+   */
+  options: { useFreeSpace?: boolean } = {}
+): ApplyResult => {
   const found = findSection(doc, sectionId);
   if (!found) return ok(doc);
 
   const { pageIndex, page, section } = found;
-  const nextY = clampCoord(y);
+  /*
+   * The first page has nothing above it, so a section dragged past its top
+   * margin pins there rather than going to a page that does not exist. Left
+   * unclamped it kept the negative y and disappeared under the top of the
+   * sheet, which `overflow: hidden` then made unrecoverable — the horizontal
+   * version of the same trap `clampSectionX` closes.
+   */
+  const nextY = pageIndex === 0 ? Math.max(clampCoord(y), doc.page.margin.top) : clampCoord(y);
 
   if (nextY < 0 && pageIndex > 0) {
-    return moveSectionToPage(doc, sectionId, doc.pages[pageIndex - 1].id, x, doc.page.margin.top);
+    return moveSectionToPage(doc, sectionId, doc.pages[pageIndex - 1].id, x, doc.page.margin.top, options);
   }
 
   if (nextY + section.height > bottomLimit(doc.page)) {
@@ -503,15 +717,17 @@ export const moveSection = (doc: FormDocument, sectionId: string, x: number, y: 
       if (inserted.refusal) return refuse(doc, inserted.refusal);
       working = inserted.document;
     }
-    return moveSectionToPage(working, sectionId, working.pages[pageIndex + 1].id, x, working.page.margin.top);
+    return moveSectionToPage(working, sectionId, working.pages[pageIndex + 1].id, x, working.page.margin.top, options);
   }
 
   const pages = [...doc.pages];
   pages[pageIndex] = {
     ...page,
-    sections: page.sections.map((s) => (s.id === sectionId ? { ...s, x: clampCoord(x), y: nextY } : s)),
+    sections: page.sections.map((s) =>
+      s.id === sectionId ? { ...s, x: clampSectionX(x, s.width, doc.page), y: nextY } : s
+    ),
   };
-  return settleOrRevert(doc, { ...doc, pages }, pageIndex, sectionId);
+  return settleOrRevert(doc, { ...doc, pages }, pageIndex, sectionId, options);
 };
 
 export const resizeSection = (
@@ -519,13 +735,18 @@ export const resizeSection = (
   sectionId: string,
   box: { x: number; y: number; width: number; height: number }
 ): ApplyResult =>
-  withSection(doc, sectionId, (section) => ({
-    ...section,
-    x: clampCoord(box.x),
-    y: clampCoord(box.y),
-    width: Math.min(clampSize(box.width), usableWidth(doc.page)),
-    height: clampSize(box.height),
-  }));
+  withSection(doc, sectionId, (section) => {
+    // A west or corner handle moves the origin as well as the size, so a
+    // resize can walk a section off the paper exactly as a move can.
+    const width = Math.min(clampSize(box.width), usableWidth(doc.page));
+    return {
+      ...section,
+      x: clampSectionX(box.x, width, doc.page),
+      y: clampCoord(box.y),
+      width,
+      height: clampSize(box.height),
+    };
+  });
 
 export const renameSection = (doc: FormDocument, sectionId: string, title: string): ApplyResult =>
   withSection(doc, sectionId, (section) => ({ ...section, title }));
@@ -549,14 +770,21 @@ export const moveSectionToPage = (
   sectionId: string,
   targetPageId: string,
   x: number,
-  y: number
+  y: number,
+  /** Same rule as `moveSection`: only a pointer-driven placement may settle
+   *  into a gap. See that function's note. */
+  options: { useFreeSpace?: boolean } = {}
 ): ApplyResult => {
   const found = findSection(doc, sectionId);
   const targetIndex = doc.pages.findIndex((p) => p.id === targetPageId);
   if (!found || targetIndex < 0 || found.page.id === targetPageId) return ok(doc);
   if (!fitsOnPage(found.section, doc.page)) return refuse(doc, SECTION_TOO_TALL);
 
-  const moved: FormSection = { ...found.section, x: clampCoord(x), y: clampCoord(y) };
+  const moved: FormSection = {
+    ...found.section,
+    x: clampSectionX(x, found.section.width, doc.page),
+    y: clampCoord(y),
+  };
 
   const pages = doc.pages.map((p) => {
     if (p.id === found.page.id) return { ...p, sections: p.sections.filter((s) => s.id !== sectionId) };
@@ -564,7 +792,7 @@ export const moveSectionToPage = (
     return p;
   });
 
-  return settleOrRevert(doc, { ...doc, pages }, targetIndex, sectionId);
+  return settleOrRevert(doc, { ...doc, pages }, targetIndex, sectionId, options);
 };
 
 // ---------------------------------------------------------------------------

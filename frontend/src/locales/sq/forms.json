@@ -1,9 +1,7 @@
 {
   "addMenu": {
-    "title": "Shto",
     "section": "Seksion",
     "selectSectionFirst": "Zgjidhni një seksion për t'i shtuar komponentë.",
-    "addingTo": "Duke shtuar te seksioni i zgjedhur.",
     "uploadImage": "Ngarko një imazh",
     "uploading": "Duke ngarkuar…",
     "addItem": "Shto {{item}}"

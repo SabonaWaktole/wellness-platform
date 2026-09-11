@@ -87,11 +87,11 @@ const updateLayout = vi.fn();
 const openFileMenu = () => fireEvent.click(screen.getByRole('button', { name: /^file$/i }));
 const readViewItem = () => {
   openFileMenu();
-  return screen.getByRole('button', { name: /read view|hide preview/i });
+  return screen.getByRole('menuitem', { name: /read view|hide preview/i });
 };
 const historyItem = () => {
   openFileMenu();
-  return screen.getByRole('button', { name: /version history|hide history/i });
+  return screen.getByRole('menuitem', { name: /version history|hide history/i });
 };
 
 const openInsertTab = () => fireEvent.click(screen.getByRole('tab', { name: /insert/i }));

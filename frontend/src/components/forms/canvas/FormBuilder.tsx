@@ -139,6 +139,11 @@ export const FormBuilder: React.FC = () => {
 
   /** Which piece of text has the caret, if any (spec §7). */
   const inline = useInlineEditing();
+  /* `apply` is memoised on [history, sel] so that a mutation does not rebuild
+   * every canvas handler; reading the edit session through a ref keeps it out
+   * of that dependency list without letting it go stale. */
+  const inlineRef = useRef(inline);
+  inlineRef.current = inline;
 
   /**
    * Selection made FROM THE CANVAS, which closes any open caret on its way.
@@ -190,6 +195,10 @@ export const FormBuilder: React.FC = () => {
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const viewport = useCanvasViewport(layout.page);
+  // Pulled out because `viewport` is a fresh object every render while these
+  // three are `useCallback`-stable — effects that only need the commands should
+  // depend on the commands, not on the wrapper.
+  const { zoomIn, zoomOut, setZoom } = viewport;
 
   /*
    * A throwaway form instance so the PREVIEW's controls are real ones. Nothing
@@ -258,7 +267,36 @@ export const FormBuilder: React.FC = () => {
       // is still selected. Dropping dead ids here — rather than letting the
       // panel read a ghost — is what keeps the selection honest after every
       // mutation, including the ones the owner did not initiate.
-      sel.retain(aliveIds(result.document));
+      const alive = aliveIds(result.document);
+      sel.retain(alive);
+      /*
+       * AND THE CARET DIES WITH THE THING IT WAS IN.
+       *
+       * `inline.target` was left pointing at deleted objects, and a stale one
+       * is not a cosmetic problem — three separate features read it as "the
+       * user is typing" and quietly stop working, permanently, until
+       * something else happens to close the session:
+       *
+       *   the drag/undo bracket   `FormCanvas` deliberately keeps the history
+       *                           window shut while a caret is live, because
+       *                           the edit session owns it. With a dead target
+       *                           the window never opens again, so every later
+       *                           drag pushes one undo entry PER POINTERMOVE.
+       *   the right-click menu    declines to open while editing, so it goes
+       *                           dead for the rest of the session.
+       *   contextual tabs         stop raising, because a live caret pins the
+       *                           ribbon to Home.
+       *
+       * Reachable in one gesture: open a caret, click a ribbon button (which
+       * blurs the editor but leaves the target set), press Delete. It belongs
+       * here beside the selection rather than in `doDelete`, because every
+       * path that can remove an object runs through `apply` — cut, undo, a
+       * paste that replaces, and the overflow ladder relocating a section off
+       * a page the caret was on.
+       */
+      if (inlineRef.current.target && !alive.has(inlineRef.current.target.id)) {
+        inlineRef.current.end();
+      }
       setIsDirty(true);
       autosaveRef.current?.schedule();
     },
@@ -269,19 +307,39 @@ export const FormBuilder: React.FC = () => {
     if (!form) return;
     const toSave = stripSyntheticPages(history.present);
     const updated = await updateLayout(form.id, toSave, form.version);
-    if (updated) {
-      selfSavedVersion.current = `${updated.id}@${updated.version}`;
-      setForm(updated);
-      setIsDirty(false);
-    }
-    // A version conflict resolves to `null` rather than throwing (see
-    // useUpdateFormLayout) — autosave has nothing further to retry until the
-    // owner reloads, so this is treated as success from ITS perspective; the
-    // conflict banner is what actually tells the owner.
+    /*
+     * A SAVE THAT SENT NOTHING IS NOT A SAVE.
+     *
+     * The comment that stood here said a version conflict "resolves to `null`
+     * rather than throwing" and that this therefore counted as success.
+     * `useUpdateFormLayout` does no such thing — it sets `hasConflict` and
+     * RETHROWS, so a 409 has always reached `useAutosave`'s catch and shown
+     * the error state, and the reasoning built on top of it was describing
+     * behaviour that does not exist.
+     *
+     * What `null` actually means is the one case that returns early: no
+     * tenant slug, so no request was ever made. That fell through to here,
+     * skipped the block below, and let `useAutosave` report `saved` — the
+     * status bar saying the work was safe when nothing had left the browser.
+     * Refusing it loudly is the only honest answer.
+     */
+    if (!updated) throw new Error('The form could not be saved.');
+    selfSavedVersion.current = `${updated.id}@${updated.version}`;
+    setForm(updated);
+    setIsDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, history.present, updateLayout, setForm]);
 
-  const autosave = useAutosave({ save: doSave, enabled: true });
+  /*
+   * A CONFLICT STOPS THE CLOCK. `enabled` was hardcoded true, against this
+   * hook's own contract ("false while ... a version conflict awaits reload").
+   * After a 409 the document is provably out of date, every retry carries the
+   * same stale `expectedVersion`, and every one is guaranteed to 409 again —
+   * so each keystroke armed another doomed request and the server was
+   * hammered until the owner happened to reload. The conflict banner already
+   * tells them what to do; until they do it there is nothing worth sending.
+   */
+  const autosave = useAutosave({ save: doSave, enabled: !hasConflict });
   // A ref so `apply` (defined above `autosave`) can reach the latest
   // `schedule` without widening its own dependency list every render.
   const autosaveRef = useRef(autosave);
@@ -584,16 +642,89 @@ export const FormBuilder: React.FC = () => {
    * the interaction (spec §3).
    *
    * TWO THINGS KEEP THIS FROM BECOMING LITTER. The element is created QUIETLY:
-   * `history.commit` without marking the document dirty, so the stray clicks
-   * everyone makes to dismiss a selection do not schedule a save of a document
-   * that has not changed. And when the caret leaves a block that was never
-   * typed into, the block goes with it — see the effect below.
+   * `history.replacePresent`, so it marks nothing dirty, schedules no save and
+   * leaves no undo entry — the stray clicks everyone makes to dismiss a
+   * selection cost the document nothing at all. And when the caret leaves a
+   * block that was never typed into, the block goes with it — see the effect
+   * below.
    */
   const autoCreated = useRef<string | null>(null);
+  /** The section the provisional block landed in, and how tall it was before
+   *  `growSectionToFit` made room for it. Restored if nothing is written. */
+  const autoCreatedHost = useRef<{ sectionId: string; height: number } | null>(null);
   // Read by that effect's cleanup, which must see the CURRENT document rather
   // than the one captured when the caret was opened.
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
+
+  /*
+   * THE DRAG BASELINE.
+   *
+   * A pointer drag fires a geometry op per `pointermove`, and each one used to
+   * run the overflow ladder against the document the PREVIOUS move had already
+   * reflowed. That compounds: drag a section down past its neighbour and the
+   * neighbour is pushed once per frame the two overlap, and it stays pushed —
+   * even when the drop point turns out to sit in empty space and nothing
+   * needed to move at all. A long drag could therefore shove a whole column of
+   * sections onto a new page for a position it merely passed THROUGH (spec §7:
+   * no cascading movement, §9: no jitter, no push-and-pull).
+   *
+   * So a gesture reflows against the document as it was when the gesture
+   * started, not against its own intermediate results. `useDragMove` and
+   * `useResize` already report ABSOLUTE geometry measured from their own
+   * pointer-down origin, so replaying the op against that baseline is exact —
+   * the layout depends only on where the pointer is NOW, and passing over a
+   * neighbour leaves no trace once the pointer has moved on.
+   *
+   * Captured lazily on the first move of a gesture and keyed by object id, so
+   * it is right even when no history window opened (an edit session owns the
+   * window while a caret is live); `resetGesture` drops it on every pointer
+   * down and release.
+   */
+  const gesture = useRef<{
+    id: string;
+    document: FormDocument;
+    /** The last position a section drag asked for, replayed on release. */
+    pendingSectionMove?: { x: number; y: number };
+  } | null>(null);
+
+  const gestureBase = useCallback((id: string): FormDocument => {
+    if (gesture.current?.id !== id) gesture.current = { id, document: layoutRef.current };
+    return gesture.current.document;
+  }, []);
+
+  /*
+   * AND THE SETTLE HAPPENS ONCE, WHEN THE SECTION IS PUT DOWN.
+   *
+   * Rung 0 — "use the empty space that is already there" — repositions the
+   * section itself, so running it per `pointermove` clamps the section to a
+   * gap's edge and holds it there while the pointer keeps travelling, then
+   * releases it in one leap (see `GAP_SNAP_TOLERANCE`). Both halves of that
+   * are wrong: §12 asks that a dragged object not jump unexpectedly, and a
+   * control that stops answering the pointer for seventy pixels has stopped
+   * being a drag at all.
+   *
+   * The two requirements are only in tension while the pointer is down. §13's
+   * "empty space at the destination" is about where the section ENDS UP, and
+   * that is not known until the button comes up. So the drag runs the ladder
+   * plainly — the section tracks the pointer, and a neighbour it is genuinely
+   * overlapping gets pushed, which is honest about what dropping here would
+   * do — and the release replays the same move once WITH free space, from the
+   * same baseline. One settle, at the moment the user commits, which is when
+   * every editor resolves a snap.
+   */
+  const settleGesture = useCallback(() => {
+    const pending = gesture.current?.pendingSectionMove;
+    const base = gesture.current?.document;
+    const id = gesture.current?.id;
+    if (!pending || !base || !id) return;
+    apply(moveSection(base, id, pending.x, pending.y, { useFreeSpace: true }));
+  }, [apply]);
+
+  const resetGesture = useCallback(() => {
+    settleGesture();
+    gesture.current = null;
+  }, [settleGesture]);
 
   const handleTypeAt = useCallback(
     (pageId: string, x: number, y: number) => {
@@ -626,7 +757,18 @@ export const FormBuilder: React.FC = () => {
           '',
           {
             x: Math.max(layout.page.margin.left, Math.min(x, layout.page.width - layout.page.margin.right - NEW_TEXT_WIDTH)),
-            y,
+            /*
+             * CLAMPED THE SAME WAY x IS. `y` was passed through raw, so a
+             * click low on the page put the host past the bottom margin — and
+             * the overflow ladder answered by relocating it to the NEXT page.
+             * The caret then opened on a page the owner had not clicked, off
+             * screen, with their first keystroke going somewhere they could
+             * not see.
+             */
+            y: Math.max(
+              layout.page.margin.top,
+              Math.min(y, layout.page.height - layout.page.margin.bottom - NEW_TEXT_HEIGHT)
+            ),
             width: NEW_TEXT_WIDTH,
             height: NEW_TEXT_HEIGHT,
           },
@@ -664,14 +806,32 @@ export const FormBuilder: React.FC = () => {
         content: wrapText(''),
       };
 
+      /*
+       * The height the section had BEFORE the block went in. `addElement` runs
+       * `growSectionToFit`, and growth is one-way by design — so a block
+       * reclaimed for never being written in still left the section it landed
+       * in permanently taller, and a stray click on an existing section grew
+       * it by 38px that nothing ever gave back.
+       */
+      const hostBefore = findSection(document, sectionId)?.section;
       const placed = addElement(document, sectionId, element);
       if (placed.refusal) {
         setRefusal(placed.refusal);
         return;
       }
+      autoCreatedHost.current = hostBefore
+        ? { sectionId, height: hostBefore.height }
+        : null;
 
-      // Quiet: no dirty flag, no autosave — nothing has been written yet.
-      history.commit(placed.document);
+      /*
+       * Quiet in every sense: no dirty flag, no autosave, and NO HISTORY
+       * ENTRY. An empty block the editor put there on the owner's behalf is
+       * not an edit — recording it made every stray click cost an undo step
+       * that did nothing visible when pressed, and reclaiming the block cost
+       * a second. Three clicks on blank paper left five entries describing a
+       * document that had not changed.
+       */
+      history.replacePresent(placed.document);
       autoCreated.current = element.id;
       setSelection({ type: 'element', id: element.id });
       inline.begin({ kind: 'element-text', id: element.id });
@@ -692,11 +852,24 @@ export const FormBuilder: React.FC = () => {
       const element = findElement(layoutRef.current, id);
       if (!element || plainTextOf(element.content as never) !== '') {
         autoCreated.current = null;
+        autoCreatedHost.current = null;
         return;
       }
       const host = sectionContaining(layoutRef.current, id);
       const pruned = removeElement(layoutRef.current, id);
       if (!pruned.refusal) {
+        /*
+         * Give back the height the block cost. Only when the section is still
+         * exactly as tall as the block made it — if it has been resized or
+         * grown by something else since, that is the owner's size and not ours
+         * to take back.
+         */
+        const grown = autoCreatedHost.current;
+        const current = grown ? findSection(pruned.document, grown.sectionId)?.section : undefined;
+        if (grown && current && current.height > grown.height) {
+          const restored = updateSection(pruned.document, grown.sectionId, { height: grown.height });
+          if (!restored.refusal) pruned.document = restored.document;
+        }
         /*
          * The host was created FOR this block. With the block gone it holds
          * nothing, renders nothing and can never be selected — an invisible
@@ -709,20 +882,37 @@ export const FormBuilder: React.FC = () => {
             .flatMap((page) => page.sections)
             .find((section) => section.id === host.id)?.elements.length;
         const next = emptied ? removeSection(pruned.document, host.id) : pruned;
-        history.commit(next.refusal ? pruned.document : next.document);
+        // As quietly as it arrived — see `handleTypeAt`.
+        history.replacePresent(next.refusal ? pruned.document : next.document);
       }
       autoCreated.current = null;
+      autoCreatedHost.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inline.target?.kind, inline.target?.id]);
 
   const handleAddSection = () => {
-    const pageId = targetPageId ?? layout.pages[0].id;
+    /*
+     * A section is a page-level thing, so "at the cursor" means at the height
+     * the caret is sitting at on the page it is on — not tacked onto the
+     * bottom of the document, which is where it used to appear regardless of
+     * what the owner was looking at.
+     */
+    const caretHost = inline.target && inline.target.kind !== 'section-title'
+      ? sectionContaining(layout, inline.target.id)
+      : inline.target?.kind === 'section-title'
+        ? findSection(layout, inline.target.id)?.section
+        : undefined;
+    const caretPage = caretHost ? pageContainingSection(layout, caretHost.id) : undefined;
+
+    const pageId = caretPage?.id ?? targetPageId ?? layout.pages[0].id;
     const page = layout.pages.find((p) => p.id === pageId);
-    const y = (page?.sections ?? []).reduce(
-      (max, s) => Math.max(max, s.y + s.height + 24),
-      layout.page.margin.top
-    );
+    const y = caretHost
+      ? caretHost.y
+      : (page?.sections ?? []).reduce(
+          (max, s) => Math.max(max, s.y + s.height + 24),
+          layout.page.margin.top
+        );
     const result = addSection(layout, pageId, t('formBuilder.newSectionTitle'), {
       x: layout.page.margin.left,
       y,
@@ -859,24 +1049,110 @@ export const FormBuilder: React.FC = () => {
     [setSelection, inline]
   );
 
+  /**
+   * WHERE THE NEXT INSERTED THING LANDS.
+   *
+   * Insert used to drop everything at the bottom of the target section,
+   * whatever the owner happened to be doing — click halfway down a page, ask
+   * for a picture, and it appeared somewhere else entirely, to be dragged back
+   * to where it was wanted. In a document editor Insert means "here", and here
+   * is wherever the caret is.
+   *
+   * Read in order of how specific the intent is:
+   *
+   *   a live caret   — the owner is writing at that exact spot, so the thing
+   *                    goes there and the empty line it replaces gets out of
+   *                    the way (see `handleInsertAt`);
+   *   a selected object — under the thing they just pointed at, which is where
+   *                    "another one of these" belongs;
+   *   neither        — the old behaviour, below whatever is already in the
+   *                    section, because there is nothing better to go on.
+   */
+  const insertionPoint = useCallback(
+    (width: number): { sectionId: string; x: number; y: number; replacing?: string } | null => {
+      if (inline.target && inline.target.kind !== 'section-title') {
+        const element = findElement(layout, inline.target.id);
+        const host = sectionContaining(layout, inline.target.id);
+        if (element && host) {
+          return {
+            sectionId: host.id,
+            x: Math.max(0, Math.min(element.x, host.width - width)),
+            y: element.y,
+            // An empty line the owner clicked into is a placeholder for
+            // exactly this: it makes way rather than sitting above the thing
+            // it was standing in for.
+            replacing: plainTextOf(element.content as never) === '' ? element.id : undefined,
+          };
+        }
+      }
+
+      if (selection?.type === 'element') {
+        const element = findElement(layout, selection.id);
+        const host = sectionContaining(layout, selection.id);
+        if (element && host) {
+          return {
+            sectionId: host.id,
+            x: Math.max(0, Math.min(element.x, host.width - width)),
+            y: element.y + element.height + 16,
+          };
+        }
+      }
+
+      return null;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout, selection, inline.target]
+  );
+
+  /**
+   * Places a ready-made element at the insertion point, standing the empty
+   * line it lands on down first so the two do not overlap.
+   */
+  const handleInsertAt = useCallback(
+    (element: FormElement, fallbackSectionId: string, width: number) => {
+      const point = insertionPoint(width);
+      const sectionId = point?.sectionId ?? fallbackSectionId;
+
+      let document = layout;
+      if (point?.replacing) {
+        // The caret is inside the line being replaced; close it before the
+        // element it was standing in for goes away underneath it.
+        inline.end();
+        const pruned = removeElement(document, point.replacing);
+        if (!pruned.refusal) document = pruned.document;
+      }
+
+      const placed: FormElement = point
+        ? { ...element, x: point.x, y: point.y }
+        : { ...element, ...nextElementPosition(document, sectionId, width) };
+
+      apply(addElement(document, sectionId, placed));
+      setSelection({ type: 'element', id: placed.id });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout, insertionPoint, apply, setSelection, inline]
+  );
+
   const handleAddComponent = (type: ComponentType) => {
     if (!selectedSectionId) return;
     const definition = COMPONENT_REGISTRY[type];
     if (!definition) return;
 
     const defaults = definition.defaultField?.();
-    const element: FormElement = {
-      id: newId(),
-      type,
-      ...nextElementPosition(layout, selectedSectionId, definition.defaultSize.width),
-      width: definition.defaultSize.width,
-      height: definition.defaultSize.height,
-      content: definition.defaultContent?.(),
-      field: defaults ? { ...defaults, key: nextFieldKey(layout, defaults.label) } : undefined,
-    };
-
-    apply(addElement(layout, selectedSectionId, element));
-    setSelection({ type: 'element', id: element.id });
+    handleInsertAt(
+      {
+        id: newId(),
+        type,
+        x: 0,
+        y: 0,
+        width: definition.defaultSize.width,
+        height: definition.defaultSize.height,
+        content: definition.defaultContent?.(),
+        field: defaults ? { ...defaults, key: nextFieldKey(layout, defaults.label) } : undefined,
+      },
+      selectedSectionId,
+      definition.defaultSize.width
+    );
   };
 
   const handleAddImage = async (file: File) => {
@@ -885,15 +1161,18 @@ export const FormBuilder: React.FC = () => {
       const asset = await uploadAsset(form.id, file);
       const ratio = asset.height > 0 ? asset.width / asset.height : 1;
       const width = COMPONENT_REGISTRY.IMAGE.defaultSize.width;
-      apply(
-        addElement(layout, selectedSectionId, {
+      handleInsertAt(
+        {
           id: newId(),
           type: 'IMAGE',
           content: { url: asset.url },
-          ...nextElementPosition(layout, selectedSectionId, width),
+          x: 0,
+          y: 0,
           width,
           height: Math.round(width / ratio),
-        })
+        },
+        selectedSectionId,
+        width
       );
     } catch {
       // surfaced through uploadError
@@ -964,8 +1243,22 @@ export const FormBuilder: React.FC = () => {
           return;
         }
 
+        /*
+         * ZOOM IS NOT A DOCUMENT COMMAND, so it has nothing to compete with
+         * here: Ctrl+plus while writing means "make the page bigger" in Word
+         * and in Docs exactly as it does with nothing selected. Left out of
+         * this list it would not merely do nothing — the keystroke would fall
+         * through to the BROWSER and zoom the whole application, ribbon and
+         * all, which is the thing binding it was meant to stop.
+         */
+        const isViewportCommand =
+          shortcut.action === 'zoomIn' ||
+          shortcut.action === 'zoomOut' ||
+          shortcut.action === 'zoomReset';
+
         const allowed =
           shortcut.action === 'escape' ||
+          isViewportCommand ||
           (inContentEditable && (shortcut.action === 'undo' || shortcut.action === 'redo'));
         if (!allowed) return;
       }
@@ -999,28 +1292,73 @@ export const FormBuilder: React.FC = () => {
         case 'delete':
           doDelete();
           break;
+        /*
+         * EVERY SELECTED OBJECT, exactly as Delete does a dozen lines above.
+         * Nudging moved only the primary, so a row of five fields lined up and
+         * shifted together came apart the moment the owner tried to move it
+         * one pixel — the one operation where keeping the arrangement is the
+         * whole point.
+         *
+         * Folded one at a time and abandoned whole on a refusal, so a batch
+         * that would push a section off the page leaves the document alone
+         * rather than moving three of five.
+         */
         case 'nudge': {
           // The arrow keys belong to whichever control has focus when that
           // control navigates with them — the ribbon's tab strip, a menu.
           if (isArrowNavigableControl(event.target)) break;
-          if (selection?.type === 'element') {
-            const el = findElement(layout, selection.id);
-            if (el) apply(moveElement(layout, selection.id, el.x + shortcut.dx, el.y + shortcut.dy));
-          } else if (selection?.type === 'section') {
-            const found = findSection(layout, selection.id);
-            if (found) apply(moveSection(layout, selection.id, found.section.x + shortcut.dx, found.section.y + shortcut.dy));
+          if (!sel.kind || sel.kind === 'page' || sel.ids.length === 0) break;
+          // Otherwise the canvas scrolls under the object being moved.
+          event.preventDefault();
+
+          let moved = layout;
+          for (const id of sel.ids) {
+            if (sel.kind === 'element') {
+              const el = findElement(moved, id);
+              if (!el) continue;
+              const step = moveElement(moved, id, el.x + shortcut.dx, el.y + shortcut.dy);
+              if (step.refusal) {
+                setRefusal(step.refusal);
+                return;
+              }
+              moved = step.document;
+            } else {
+              const found = findSection(moved, id);
+              if (!found) continue;
+              const step = moveSection(
+                moved,
+                id,
+                found.section.x + shortcut.dx,
+                found.section.y + shortcut.dy
+              );
+              if (step.refusal) {
+                setRefusal(step.refusal);
+                return;
+              }
+              moved = step.document;
+            }
           }
+          apply({ document: moved, refusal: null });
           break;
         }
         // The clipboard verbs work on whichever KIND is selected, and are the
         // same three functions the ribbon and the right-click menu call.
+        /*
+         * `preventDefault` on all three: the browser's own clipboard would
+         * otherwise act as well. With no DOM selection that is usually inert,
+         * but a stray text selection left on the page turned one Ctrl+X into
+         * two cuts — the object's and the browser's.
+         */
         case 'copy':
+          event.preventDefault();
           doCopy();
           break;
         case 'cut':
+          event.preventDefault();
           doCut();
           break;
         case 'paste':
+          event.preventDefault();
           doPaste();
           break;
         case 'save':
@@ -1048,6 +1386,24 @@ export const FormBuilder: React.FC = () => {
           event.preventDefault();
           doDuplicate();
           break;
+        /*
+         * Zoom belongs to the DOCUMENT, not to the browser. Left unbound these
+         * reached Chrome's own page zoom, which scales the ribbon and the rail
+         * along with the sheet and leaves the pointer maths measuring a page
+         * that is no longer the size the document says it is.
+         */
+        case 'zoomIn':
+          event.preventDefault();
+          zoomIn();
+          break;
+        case 'zoomOut':
+          event.preventDefault();
+          zoomOut();
+          break;
+        case 'zoomReset':
+          event.preventDefault();
+          setZoom(1);
+          break;
         default:
           break;
       }
@@ -1073,7 +1429,38 @@ export const FormBuilder: React.FC = () => {
     doPaste,
     doDuplicate,
     doDelete,
+    zoomIn,
+    zoomOut,
+    setZoom,
   ]);
+
+  /*
+   * CTRL + WHEEL ZOOMS THE PAGE.
+   *
+   * The reflex every user of a document editor already has, and the one
+   * gesture that makes a zoom ladder feel like a continuous control rather
+   * than two buttons. Unbound, the browser answers it by zooming the whole
+   * application — ribbon, rail and sheet together — which is not what the
+   * gesture means over a document.
+   *
+   * Bound natively rather than through React's `onWheel` because the listener
+   * has to be non-passive to call `preventDefault`, and React attaches wheel
+   * listeners as passive: a passive handler cannot stop the browser zoom, so
+   * both would happen at once.
+   */
+  useEffect(() => {
+    const el = canvasAreaRef.current;
+    if (!el) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      if (event.deltaY < 0) zoomIn();
+      else if (event.deltaY > 0) zoomOut();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+    // `viewport` itself is a fresh object every render; its commands are not.
+  }, [zoomIn, zoomOut]);
 
   if (isLoading && !form) return <p>{t('formBuilder.loading')}</p>;
   if (error && !form) return <p role="alert">{error}</p>;
@@ -1139,7 +1526,6 @@ export const FormBuilder: React.FC = () => {
           <ContextualTab
             kind={contextualTab}
             element={selectedElement}
-            section={selectedSection}
             onDelete={doDelete}
             onDuplicate={doDuplicate}
             onEditText={
@@ -1151,7 +1537,8 @@ export const FormBuilder: React.FC = () => {
                   )
                 : undefined
             }
-            onOpenFormatPane={() => setShowFormatPane(true)}
+            onToggleFormatPane={() => setShowFormatPane((v) => !v)}
+            isFormatPaneOpen={showFormatPane}
             selectionCount={sel.ids.length}
             onAlign={(mode) => handleArrange((boxes) => alignBoxes(boxes, mode))}
             onDistribute={(axis) => handleArrange((boxes) => distributeBoxes(boxes, axis))}
@@ -1160,6 +1547,7 @@ export const FormBuilder: React.FC = () => {
 
         {activeTab === 'layout' && (
           <LayoutTab
+            hasTargetPage={!!targetPageId}
             canDeletePage={layout.pages.length > 1}
             canMovePageUp={activePageIndex > 0}
             canMovePageDown={activePageIndex < layout.pages.length - 1}
@@ -1371,15 +1759,22 @@ export const FormBuilder: React.FC = () => {
               onEditorReady={inline.setEditor}
               onGestureStart={history.beginInteraction}
               onGestureEnd={history.endInteraction}
-              onMoveSection={(id, x, y) => apply(moveSection(layout, id, x, y))}
-              onResizeSection={(id, box) => apply(resizeSection(layout, id, box))}
+              onGestureReset={resetGesture}
+              onMoveSection={(id, x, y) => {
+                // Plain ladder while the pointer is down; `settleGesture`
+                // replays this position with free space on release.
+                const base = gestureBase(id);
+                if (gesture.current) gesture.current.pendingSectionMove = { x, y };
+                apply(moveSection(base, id, x, y));
+              }}
+              onResizeSection={(id, box) => apply(resizeSection(gestureBase(id), id, box))}
               onRenameSection={(id, title) => apply(renameSection(layout, id, title))}
               onDeleteSection={(id) => {
                 apply(removeSection(layout, id));
                 setSelection(null);
               }}
-              onMoveElement={(id, x, y) => apply(moveElement(layout, id, x, y))}
-              onResizeElement={(id, box) => apply(resizeElement(layout, id, box))}
+              onMoveElement={(id, x, y) => apply(moveElement(gestureBase(id), id, x, y))}
+              onResizeElement={(id, box) => apply(resizeElement(gestureBase(id), id, box))}
               onContextMenu={handleContextMenu}
               onDeleteElement={(id) => {
                 apply(removeElement(layout, id));
@@ -1403,6 +1798,7 @@ export const FormBuilder: React.FC = () => {
               onChangeSection={(id, changes) => apply(updateSection(layout, id, changes))}
               onEditText={(id) => handleBeginEdit({ kind: 'element-text', id })}
               onClose={() => setShowFormatPane(false)}
+              selectionCount={sel.ids.length}
             />
           </div>
         )}
@@ -1448,9 +1844,35 @@ export const FormBuilder: React.FC = () => {
                 // Keep the horizontal placement, and land at the top margin —
                 // the section is arriving at the start of the next page, which
                 // is where the reader's eye goes.
-                apply(
-                  moveSectionToPage(layout, section.id, next.id, section.x, layout.page.margin.top)
+                const moved = moveSectionToPage(
+                  layout,
+                  section.id,
+                  next.id,
+                  section.x,
+                  layout.page.margin.top,
+                  { useFreeSpace: true }
                 );
+                apply(moved);
+                /*
+                 * AND GO WITH IT. The section leaves the page being looked at
+                 * and arrives on one that may be entirely off-screen, so the
+                 * command read as a delete: the thing was there, the user
+                 * asked for something, and now it is gone. Following it is
+                 * what makes "move to next page" a move rather than a
+                 * disappearance.
+                 *
+                 * Only from this command, never from the drag that relocates a
+                 * section at the page boundary — the pointer is already at the
+                 * edge of the page there, the next sheet is right below it, and
+                 * scrolling under a live gesture is exactly the lurch §12 rules
+                 * out.
+                 */
+                if (!moved.refusal) {
+                  setActivePageId(next.id);
+                  document
+                    .querySelector(`[data-page-id="${next.id}"]`)
+                    ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+                }
               },
               duplicatePage: () => targetPageId && apply(duplicatePage(layout, targetPageId)),
               deletePage: () => targetPageId && apply(deletePage(layout, targetPageId)),
@@ -1471,6 +1893,7 @@ export const FormBuilder: React.FC = () => {
         canZoomOut={viewport.canZoomOut}
         onZoomIn={viewport.zoomIn}
         onZoomOut={viewport.zoomOut}
+        onSetZoom={viewport.setZoom}
         onFitPage={() => {
           const el = canvasAreaRef.current;
           if (el) viewport.fitPage(el.clientWidth, el.clientHeight);

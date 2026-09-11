@@ -1,6 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ZoomIn, ZoomOut, Maximize2, MoveHorizontal } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, MoveHorizontal, Check } from 'lucide-react';
+import { DropdownMenu } from '../../../ui/DropdownMenu';
+import type { DropdownMenuItemType } from '../../../ui/DropdownMenu/DropdownMenu';
+import { ZOOM_STEPS } from '../useCanvasViewport';
 import type { AutosaveStatus } from '../useAutosave';
 import styles from './Ribbon.module.css';
 
@@ -14,6 +17,7 @@ export interface StatusBarProps {
   canZoomOut: boolean;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onSetZoom: (zoom: number) => void;
   onFitPage: () => void;
   onFitWidth: () => void;
 }
@@ -38,10 +42,51 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   canZoomOut,
   onZoomIn,
   onZoomOut,
+  onSetZoom,
   onFitPage,
   onFitWidth,
 }) => {
   const { t } = useTranslation('settings');
+
+  /*
+   * THE PERCENTAGE IS THE CONTROL.
+   *
+   * `ZOOM_STEPS` and `setZoom` have existed since the canvas was built with no
+   * caller anywhere: the only way to change zoom was to press `+` repeatedly,
+   * and the number itself was inert text sitting between the two steppers. In
+   * Word and in Docs the number is the thing you click, and it opens the list
+   * of levels — which is also where "fit the page" and "fit the width" live,
+   * because they are answers to the same question.
+   *
+   * Those two were icon-only buttons here. Moving them into the menu is what
+   * lets the status bar shrink to what it is for — a reading of the current
+   * state with one way in — rather than five controls in a row.
+   */
+  const zoomItems: DropdownMenuItemType[] = [
+    ...ZOOM_STEPS.map((step) => {
+      const percent = Math.round(step * 100);
+      return {
+        id: `zoom-${percent}`,
+        label: `${percent}%`,
+        // A tick against the level in force, so the menu says where you are as
+        // well as where you can go.
+        icon: percent === zoomPercent ? <Check size={14} /> : <span className={styles.zoomTickSpacer} />,
+        onClick: () => onSetZoom(step),
+      };
+    }),
+    {
+      id: 'fit-page',
+      label: t('formBuilder.fitPage'),
+      icon: <Maximize2 size={14} />,
+      onClick: onFitPage,
+    },
+    {
+      id: 'fit-width',
+      label: t('formBuilder.fitWidth'),
+      icon: <MoveHorizontal size={14} />,
+      onClick: onFitWidth,
+    },
+  ];
 
   return (
     <div className={styles.statusBar}>
@@ -49,7 +94,15 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {t('formBuilder.pageOf', { number: pageNumber, count: pageCount })}
       </span>
 
-      <span className={styles.statusItem}>
+      {/*
+        THE ONE THING HERE THAT CHANGES ON ITS OWN.
+        Saving, Saved and "Autosave failed" appear without anyone pressing
+        anything, and a status that only exists as pixels is no status at all
+        for someone who is not looking at that corner of the window. `polite`
+        rather than `assertive`: it should be heard between sentences, not cut
+        across the one being typed.
+      */}
+      <span className={styles.statusItem} aria-live="polite">
         {autosave === 'error' ? (
           <>
             {t('formBuilder.autosaveFailed')}{' '}
@@ -81,7 +134,20 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         >
           <ZoomOut size={14} />
         </button>
-        <span className={styles.zoomPercent}>{zoomPercent}%</span>
+        <DropdownMenu
+          align="right"
+          items={zoomItems}
+          trigger={
+            <button
+              type="button"
+              className={styles.zoomPercent}
+              aria-label={t('formBuilder.zoomLevel')}
+              title={t('formBuilder.zoomLevel')}
+            >
+              {zoomPercent}%
+            </button>
+          }
+        />
         <button
           type="button"
           onClick={onZoomIn}
@@ -90,17 +156,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           title={t('formBuilder.zoomIn')}
         >
           <ZoomIn size={14} />
-        </button>
-        <button type="button" onClick={onFitPage} aria-label={t('formBuilder.fitPage')} title={t('formBuilder.fitPage')}>
-          <Maximize2 size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={onFitWidth}
-          aria-label={t('formBuilder.fitWidth')}
-          title={t('formBuilder.fitWidth')}
-        >
-          <MoveHorizontal size={14} />
         </button>
       </div>
     </div>

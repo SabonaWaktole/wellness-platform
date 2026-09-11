@@ -34,6 +34,19 @@ export interface History {
    *  into one entry. Safe to nest-call; only the outermost pair counts. */
   beginInteraction: () => void;
   endInteraction: () => void;
+  /**
+   * Updates the document WITHOUT recording anything.
+   *
+   * For provisional state only — content the editor puts on the page on the
+   * user's behalf and will take away again if they do not use it. The empty
+   * block a click on blank paper creates is the case this exists for: it is
+   * not an edit until something is typed into it, and recording it made a
+   * stray click cost an undo entry that appeared to do nothing when pressed
+   * (one for the block, another for reclaiming it).
+   *
+   * Anything the USER did belongs in `commit`.
+   */
+  replacePresent: (next: FormDocument) => void;
   /** Replaces the document and discards history (a fresh load or a reload
    *  after a save conflict — the old stack no longer describes this form). */
   reset: (next: FormDocument) => void;
@@ -127,6 +140,10 @@ export const useHistory = (initial: FormDocument): History => {
     });
   }, []);
 
+  const replacePresent = useCallback((next: FormDocument) => {
+    setState((s) => (s.present === next ? s : { ...s, present: next }));
+  }, []);
+
   const reset = useCallback((next: FormDocument) => {
     setState({ past: [], present: next, future: [], groupDepth: 0, groupPushed: false });
   }, []);
@@ -140,6 +157,7 @@ export const useHistory = (initial: FormDocument): History => {
     redo,
     beginInteraction,
     endInteraction,
+    replacePresent,
     reset,
   };
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tabs } from '../../../ui/Tabs/Tabs';
 import { RIBBON_TABS, type AnyRibbonTabId, type ContextualTabId } from './ribbonTypes';
@@ -29,10 +29,18 @@ export interface RibbonProps {
  */
 export const Ribbon: React.FC<RibbonProps> = ({ activeTab, onChangeTab, contextualTab, children }) => {
   const { t } = useTranslation('settings');
+  /*
+   * The panel is rendered here, not by `Tabs`, so the two have to agree on
+   * ids. Without a shared base every tab's `aria-controls` named an element
+   * that did not exist — the reference dangled, and the panel itself was
+   * unreachable by keyboard for want of a tab stop.
+   */
+  const idBase = useId();
 
   return (
     <div className={styles.ribbon}>
       <Tabs<AnyRibbonTabId>
+        idBase={idBase}
         className={styles.tabs}
         label={t('formBuilder.ribbon.label')}
         activeId={activeTab}
@@ -44,7 +52,16 @@ export const Ribbon: React.FC<RibbonProps> = ({ activeTab, onChangeTab, contextu
             : []),
         ]}
       />
-      <div className={styles.panel} role="tabpanel" aria-label={t(`formBuilder.ribbon.${activeTab}`)}>
+      <div
+        className={styles.panel}
+        id={`${idBase}-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`${idBase}-tab-${activeTab}`}
+        // A tab panel is a tab stop of its own: Tab out of the strip lands on
+        // the commands rather than skipping past them.
+        tabIndex={0}
+        aria-label={t(`formBuilder.ribbon.${activeTab}`)}
+      >
         {children}
       </div>
     </div>

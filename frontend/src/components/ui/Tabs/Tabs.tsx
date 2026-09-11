@@ -12,6 +12,13 @@ export interface TabItem<T extends string = string> {
 }
 
 export interface TabsProps<T extends string = string> {
+  /**
+   * Shared prefix for the generated tab and panel ids. Pass it when the PANEL
+   * is rendered by the caller rather than here, so `aria-controls` can point at
+   * an element that actually exists — without it the ids are internal and the
+   * reference dangles.
+   */
+  idBase?: string;
   tabs: TabItem<T>[];
   activeId: T;
   onChange: (id: T) => void;
@@ -26,13 +33,15 @@ export interface TabsProps<T extends string = string> {
  * caller; pass `panelId` through `aria-controls` if you render one.
  */
 export function Tabs<T extends string = string>({
+  idBase,
   tabs,
   activeId,
   onChange,
   label = 'Tabs',
   className = '',
 }: TabsProps<T>) {
-  const baseId = useId();
+  const generatedId = useId();
+  const baseId = idBase ?? generatedId;
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const enabledTabs = tabs.filter((tab) => !tab.disabled);

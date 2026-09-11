@@ -100,4 +100,36 @@ describe('resolveShortcut', () => {
   it('ignores a bare letter — that is typing, not a command', () => {
     expect(resolveShortcut(ev({ key: 'd' }))).toBeNull();
   });
+
+  /*
+   * ZOOM. Unbound, these three reached the BROWSER, which zooms the whole
+   * application — ribbon, page rail and sheet together — rather than the
+   * document. That is not a smaller version of the right answer: it leaves the
+   * chrome and the page at different scales, and the pointer maths measuring a
+   * sheet that is no longer the size the document says it is.
+   */
+  it('maps Ctrl+0 to the natural size', () => {
+    expect(resolveShortcut(ev({ key: '0', ctrlKey: true }))).toEqual({ action: 'zoomReset' });
+    expect(resolveShortcut(ev({ key: '0', metaKey: true }))).toEqual({ action: 'zoomReset' });
+  });
+
+  /*
+   * Both spellings of each key. `=` and `-` are what the unshifted keys
+   * report; `+` and `_` are what they report with Shift held, and someone
+   * pressing Ctrl+Shift+= means "bigger" just as much as someone who did not
+   * reach for Shift.
+   */
+  it('maps Ctrl+plus and Ctrl+minus to zoom, shifted or not', () => {
+    expect(resolveShortcut(ev({ key: '=', ctrlKey: true }))).toEqual({ action: 'zoomIn' });
+    expect(resolveShortcut(ev({ key: '+', ctrlKey: true }))).toEqual({ action: 'zoomIn' });
+    expect(resolveShortcut(ev({ key: '-', ctrlKey: true }))).toEqual({ action: 'zoomOut' });
+    expect(resolveShortcut(ev({ key: '_', ctrlKey: true }))).toEqual({ action: 'zoomOut' });
+  });
+
+  /* Without the modifier these are ordinary characters someone is typing. */
+  it('leaves the same keys alone without a modifier', () => {
+    expect(resolveShortcut(ev({ key: '0' }))).toBeNull();
+    expect(resolveShortcut(ev({ key: '=' }))).toBeNull();
+    expect(resolveShortcut(ev({ key: '-' }))).toBeNull();
+  });
 });

@@ -83,6 +83,13 @@ export interface FormCanvasProps {
    *  intermediate commit into one undo entry (spec §21). */
   onGestureStart?: () => void;
   onGestureEnd?: () => void;
+  /**
+   * Fired on every pointer down and every pointer release, WHETHER OR NOT a
+   * history window opens. `onGestureStart`/`onGestureEnd` deliberately stay
+   * shut while a caret is live; the builder's drag baseline must not, or a
+   * drag begun during an edit session would reflow against a stale document.
+   */
+  onGestureReset?: () => void;
 }
 
 /**
@@ -121,6 +128,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onTypeAt,
   onGestureStart,
   onGestureEnd,
+  onGestureReset,
 }) => {
   const [guides, setGuides] = useState<Guide[]>([]);
   // Which page's overlay the current guides belong to — a drag on page 2
@@ -150,6 +158,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
     const clear = () => {
       setGuides([]);
       setGuidePageId(null);
+      onGestureReset?.();
       // Same rule as `onPointerDownCapture` above: an edit session brackets
       // its own history entry, so a stray release must not close it early.
       if (!editing) onGestureEnd?.();
@@ -160,7 +169,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
       window.removeEventListener('pointerup', clear);
       window.removeEventListener('pointercancel', clear);
     };
-  }, [onGestureEnd, editing]);
+  }, [onGestureEnd, onGestureReset, editing]);
 
   /**
    * Snaps a section move against its page siblings and the page edges/centre,
@@ -239,14 +248,31 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   // editor mid-word loses both the focus and the keystrokes in flight.
   const pageIds = layout.pages.map((p) => p.id);
   const { isVisible, setPageRef } = useVisiblePages(pageIds);
-  const selectedPageId =
-    selection?.type === 'page'
-      ? selection.id
-      : selection?.type === 'section'
-        ? pageContainingSection(layout, selection.id)?.id ?? null
-        : selection?.type === 'element'
-          ? pageContainingSection(layout, sectionContaining(layout, selection.id)?.id ?? '')?.id ?? null
-          : null;
+  /*
+   * EVERY page holding a selected object, not just the primary's.
+   *
+   * This used to resolve `selection` alone — the primary — so a shift-click
+   * selection spanning two pages force-rendered one of them and left the other
+   * to virtualisation. On the unrendered page the outlines, handles and delete
+   * buttons simply did not exist, while Delete, Ctrl+D and the arrow keys went
+   * on acting for all of it: objects the user could not see being changed by
+   * commands aimed at the ones they could.
+   */
+  const pageOfObject = (id: string): string | null =>
+    pageContainingSection(layout, id)?.id ??
+    pageContainingSection(layout, sectionContaining(layout, id)?.id ?? '')?.id ??
+    null;
+
+  const forcedPageIds = new Set<string>();
+  if (selection?.type === 'page') forcedPageIds.add(selection.id);
+  else if (selection) {
+    const own = pageOfObject(selection.id);
+    if (own) forcedPageIds.add(own);
+  }
+  for (const id of selectedIds ?? []) {
+    const page = pageOfObject(id);
+    if (page) forcedPageIds.add(page);
+  }
 
   const editingPageId = editing
     ? editing.kind === 'section-title'
@@ -274,16 +300,45 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
        * the edit session owns the window instead (see `FormBuilder`).
        */
       onPointerDownCapture={() => {
+        onGestureReset?.();
         if (!editing) onGestureStart?.();
       }}
     >
+      {/*
+        * THE FRAME RESERVES THE SPACE; THE SCALER DRAWS IN IT.
+        *
+        * A CSS transform does not affect layout, so the scaled stack used to
+        * take up its UNSCALED size in the scroll container. `.canvasArea` can
+        * only scroll over the layout it was given, and with the surplus
+        * spilling equally to both sides of a centred origin, the left half of
+        * it was unreachable — an LTR scroll container cannot scroll into
+        * negative space. Measured at 300%: 403px of the page, its whole left
+        * margin and the left third of every field on it, could not be brought
+        * into view by any amount of scrolling.
+        *
+        * It takes two elements, because one cannot both be scaled and stand
+        * for the space the scaling needs: giving the scaler itself the larger
+        * size only scales that larger size again. So the frame is a plain box
+        * of the drawn dimensions — that is what the scroll container measures
+        * — and the scaler is taken out of the flow inside it, anchored at the
+        * top left so the scale runs from the frame's own corner and lands
+        * exactly on its far edge.
+        */}
+      <div
+        className={styles.scalerFrame}
+        style={{
+          width: layout.page.width * viewport.zoom,
+          height:
+            (layout.pages.length * layout.page.height +
+              (layout.pages.length - 1) * CANVAS_GUTTER) *
+            viewport.zoom,
+        }}
+      >
       <div
         className={styles.scaler}
         style={{
           transform: `scale(${viewport.zoom})`,
-          transformOrigin: 'top center',
-          // Reserve the SCALED footprint so the scroll container sizes
-          // correctly — a CSS transform does not affect layout on its own.
+          transformOrigin: 'top left',
           width: layout.page.width,
           height:
             layout.pages.length * layout.page.height +
@@ -318,17 +373,19 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onTypeAt={onTypeAt}
             getScale={viewport.getScale}
             shouldRender={
-              isVisible(page.id) || page.id === selectedPageId || page.id === editingPageId
+              isVisible(page.id) || forcedPageIds.has(page.id) || page.id === editingPageId
             }
             wrapRef={setPageRef(page.id)}
           />
         ))}
       </div>
+      </div>
     </div>
   );
 };
 
-interface SheetProps extends Omit<FormCanvasProps, 'viewport' | 'onGestureStart' | 'onGestureEnd'> {
+interface SheetProps
+  extends Omit<FormCanvasProps, 'viewport' | 'onGestureStart' | 'onGestureEnd' | 'onGestureReset'> {
   page: DocumentPage;
   index: number;
   control: ReturnType<typeof useForm<{ data: object }>>['control'];
@@ -383,6 +440,27 @@ const Sheet: React.FC<SheetProps> = ({
         e.stopPropagation();
         // A click that belongs to the open caret is not a click on the page.
         if (isInsideCaret(e, editing)) return;
+
+        /*
+         * A CLICK THAT PUTS SOMETHING DOWN DOES NOT ALSO PICK UP A PEN.
+         *
+         * This handler stops propagation, so the stack's "click away to
+         * deselect" never ran for a click on the sheet — and since the section
+         * overlay is pointer-transparent, the empty half of a section reaches
+         * here too. The result was that dismissing a selection, the most
+         * ordinary gesture there is, CREATED CONTENT: an empty block, and a
+         * section silently grown to fit it.
+         *
+         * A selected object is dismissed instead, and the next click writes.
+         * A LIVE CARET is deliberately not treated this way: moving from one
+         * empty spot to another mid-thought is one gesture, not two, and the
+         * selection during an edit session points at the block being typed in
+         * rather than at something the owner picked up.
+         */
+        if (!editing && selection) {
+          onSelect(null);
+          return;
+        }
 
         /*
          * CLICK -> CARET -> TYPE.

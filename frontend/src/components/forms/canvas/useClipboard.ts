@@ -101,9 +101,29 @@ const pasteInto = (
       x: originX + PASTE_OFFSET + (element.x - originX),
       y: originY + PASTE_OFFSET + (element.y - originY),
       field: element.field
-        ? // Minted against the working document so a batch paste cannot
-          // collide with itself, not just with what was already there.
-          { ...element.field, key: nextFieldKey(working, element.field.label) }
+        ? {
+            ...element.field,
+            // Minted against the working document so a batch paste cannot
+            // collide with itself, not just with what was already there.
+            key: nextFieldKey(working, element.field.label),
+            /*
+             * AND THE BINDING DOES NOT COME WITH IT.
+             *
+             * `clientFieldId` ties a field to a column on the client record,
+             * and the server refuses a document that binds one column twice —
+             * rightly, since a submission could not say which of the two won.
+             * The copy kept it, so duplicating any bound field produced a
+             * document that could never be saved again: every autosave from
+             * that moment on returned 400 with "\"Phone\" is bound to more
+             * than one field on this form", and the owner had to find and
+             * unbind the copy themselves.
+             *
+             * A copy is a new field on the form. The original keeps the
+             * binding it was given; the copy is unbound until someone says
+             * otherwise, which is the same thing `key` already does.
+             */
+            clientFieldId: undefined,
+          }
         : undefined,
     };
 
@@ -165,7 +185,13 @@ const pasteSectionsOnto = (
         ...element,
         id: newId(),
         field: element.field
-          ? { ...element.field, key: nextFieldKey(working, element.field.label) }
+          ? {
+              ...element.field,
+              key: nextFieldKey(working, element.field.label),
+              // Same reason as the element paste above: one client column,
+              // one field.
+              clientFieldId: undefined,
+            }
           : undefined,
       };
       const placed = addElement(working, targetId, copied);

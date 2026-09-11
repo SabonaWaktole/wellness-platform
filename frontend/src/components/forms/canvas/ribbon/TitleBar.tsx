@@ -115,7 +115,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   return (
     <div className={styles.titleBar}>
       <button type="button" className={styles.backButton} onClick={onBack}>
-        <ArrowLeft size={16} />
+        <ArrowLeft size={16} aria-hidden="true" />
         {t('formBuilder.back')}
       </button>
 
@@ -158,7 +158,11 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       <div className={styles.titleCentre}>
-        <span className={styles.formName}>{formName}</span>
+        {/* Ellipsised by `.formName`, so without this a long name has no way
+            of being read in full anywhere in the builder. */}
+        <span className={styles.formName} title={formName}>
+          {formName}
+        </span>
         <span
           className={`${styles.statusBadge} ${
             status === 'PUBLISHED' ? styles.statusBadgePublished : styles.statusBadgeDraft

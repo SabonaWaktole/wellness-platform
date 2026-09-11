@@ -1,9 +1,7 @@
 {
   "addMenu": {
-    "title": "Add",
     "section": "Section",
     "selectSectionFirst": "Select a section to add components to it.",
-    "addingTo": "Adding to the selected section.",
     "uploadImage": "Upload an image",
     "uploading": "Uploading…",
     "addItem": "Add {{item}}"

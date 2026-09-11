@@ -19,82 +19,6 @@
   min-height: 0;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-base);
-  border-bottom: 1px solid var(--border-hairline);
-  background: var(--color-surface);
-  flex-wrap: wrap;
-}
-
-.formName {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-body-md);
-  font-weight: 600;
-  color: var(--text-primary);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 4px 6px;
-  min-width: 120px;
-}
-
-.formName:hover,
-.formName:focus {
-  border-color: var(--border-hairline);
-  background: var(--surface-raised, var(--color-surface-variant));
-}
-
-.toolbarSpacer {
-  margin-left: auto;
-}
-
-.statusBadge {
-  font-size: var(--font-size-caption, 0.75rem);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill, 999px);
-  white-space: nowrap;
-}
-
-.statusBadgeDraft {
-  color: var(--text-secondary);
-  background: var(--surface-raised, #f1f5f9);
-}
-
-.statusBadgePublished {
-  color: var(--color-success-dark, #15803d);
-  background: var(--color-success-bg, #dcfce7);
-}
-
-.shareLinkButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-pill, 999px);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--font-size-caption, 0.75rem);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.shareLinkButton:hover {
-  background: var(--surface-raised, #f1f5f9);
-  color: var(--text-primary);
-}
-
-.unpublishedHint {
-  font-size: var(--font-size-caption, 0.75rem);
-  color: var(--color-warning, #b45309);
-  white-space: nowrap;
-}
-
 .hint {
   padding: var(--spacing-sm);
   color: var(--text-secondary);
@@ -142,12 +66,12 @@
 }
 
 .historyItem:hover {
-  background: var(--surface-raised, #f1f5f9);
+  background: var(--surface-raised);
 }
 
 .historyItemActive {
-  border-color: var(--color-primary, #1d4ed8);
-  background: var(--surface-raised, #f1f5f9);
+  border-color: var(--color-primary);
+  background: var(--surface-raised);
 }
 
 .historyItemNumber {
@@ -156,57 +80,12 @@
 }
 
 .historyItemDate {
-  font-size: var(--font-size-caption, 0.75rem);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
-}
-
-.zoomGroup {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm);
-}
-
-.zoomGroup button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.zoomGroup button:hover:not(:disabled) {
-  background: var(--surface-raised, #f1f5f9);
-}
-
-.zoomGroup button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.zoomPercent {
-  min-width: 40px;
-  text-align: center;
-  font-size: var(--font-size-caption, 0.75rem);
-  color: var(--text-secondary);
-}
-
-.zoomDivider {
-  width: 1px;
-  align-self: stretch;
-  background: var(--border-hairline);
-  margin: 2px 2px;
 }
 
 .banner {
-  border-left: 3px solid var(--color-warning, #b45309);
+  border-left: 3px solid var(--color-warning);
   border: 1px solid var(--border-hairline);
   border-left-width: 3px;
   border-radius: var(--radius-sm);
@@ -253,14 +132,6 @@
   min-height: 0;
 }
 
-/* History mode swaps the 132px page rail for a wider version list and drops
- * the properties sidebar entirely (there is nothing to edit while viewing a
- * frozen version) — a dedicated template rather than trying to squeeze dates
- * and version labels into the rail's 132px track. */
-.bodyHistory {
-  grid-template-columns: 280px minmax(0, 1fr);
-}
-
 .canvasArea {
   overflow: auto;
   /* One continuous workspace behind the whole page stack, so scrolling between
@@ -268,13 +139,16 @@
   background: var(--canvas-backdrop);
   padding: var(--spacing-xl);
   display: flex;
-  justify-content: center;
-}
-
-/* The page itself, positioned so absolute-positioned sections have a frame
- * to sit inside. Rendered by FormRenderer inside this wrapper in edit mode. */
-.pageFrame {
-  position: relative;
+  /*
+   * `safe` IS THE WHOLE POINT. A plain `center` splits any overflow evenly
+   * between the two sides, and the half that goes off the START edge cannot be
+   * scrolled to — a scroll container has no negative scroll position. So a page
+   * wider than the window loses its left edge outright, however much the user
+   * scrolls. `safe center` centres while the content fits and falls back to
+   * `start` the moment it does not, which is the only version where zooming in
+   * never puts part of the document out of reach.
+   */
+  justify-content: safe center;
 }
 
 .sidebar {
@@ -312,7 +186,7 @@
 }
 
 .sectionSelected {
-  outline: 2px solid var(--color-primary, #2563eb);
+  outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
 
@@ -320,9 +194,9 @@
  * direct selection itself (e.g. a field inside it is selected instead) — a
  * softer cue than .sectionSelected so the two states stay visually distinct. */
 .sectionActive {
-  outline: 2px dashed var(--color-primary, #2563eb);
+  outline: 2px dashed var(--color-primary);
   outline-offset: 1px;
-  background: color-mix(in srgb, var(--color-primary, #2563eb) 4%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
 .sectionDragHandle {
@@ -354,7 +228,7 @@
   right: 32px;
   height: 24px;
   z-index: 1;
-  background: var(--surface-raised, var(--color-surface));
+  background: var(--surface-raised);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-family: var(--font-family-base);
@@ -373,7 +247,9 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  z-index: 1;
+  /* Above the edge strips, which otherwise clip a couple of pixels off this
+     button's top and right sides and answer the clicks that land there. */
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -404,6 +280,21 @@
    */
   cursor: default;
   touch-action: none;
+  /*
+   * ABOVE THE SECTION'S OWN CHROME.
+   *
+   * A section's edge handles are strips spanning a whole side (see `.handle`
+   * below), so a field sitting flush against that side is underneath one. The
+   * strips carry `z-index: 2` and an element overlay carried none, which meant
+   * the strip painted over the field and took its clicks: clicking a field to
+   * select it started resizing the section around it instead.
+   *
+   * The object nearest the surface wins, which is both what the page looks
+   * like and what every editor does — you click a picture, you get the
+   * picture, not the frame it happens to sit in. The section keeps its whole
+   * edge everywhere an element is not actually in the way.
+   */
+  z-index: 3;
 }
 
 .elementSelected {
@@ -450,7 +341,7 @@
   background: var(--color-surface);
   color: var(--text-primary);
   font-family: var(--font-family-base);
-  font-size: var(--font-size-label-md, 0.8125rem);
+  font-size: var(--font-size-label-md);
   font-weight: 540;
 }
 
@@ -476,35 +367,94 @@
 }
 
 /*
+ * THE GRIP IS NOT THE HANDLE.
+ *
+ * All eight handles have always existed, but an edge handle was a 9px square
+ * sitting at the midpoint of its side — so "drag the edge to resize" only
+ * worked if you found that one dot. Everywhere else along the border, the
+ * pointer fell through to the section's own drag band and MOVED the section
+ * instead. Word and Docs let you grab anywhere along a side, and that is what
+ * a border looks like it affords.
+ *
+ * So an edge handle is now a STRIP that spans its whole side, and the visible
+ * 9px square is drawn by its `::after` at the midpoint — the affordance stays
+ * exactly where it was, the target grew to the entire edge. The strip stops
+ * 6px short of each corner so the corner handles, which resize two axes at
+ * once, keep their own hit area.
+ *
+ * Each strip straddles the border rather than sitting inside it (`-5px` with a
+ * 9px cross-axis), so only ~4px of it reaches into the box and it cannot eat
+ * clicks meant for content near the edge.
+ */
+.handle {
+  position: absolute;
+  touch-action: none;
+  z-index: 2;
+}
+
+/*
  * White fill, accent border — the office-suite convention, and legible over
  * dark and light content alike, where a solid accent square disappears into
  * anything of a similar colour underneath it.
  */
-.handle {
-  position: absolute;
+.handle-ne,
+.handle-nw,
+.handle-se,
+.handle-sw,
+.handle-n::after,
+.handle-s::after,
+.handle-e::after,
+.handle-w::after {
+  box-sizing: border-box;
   width: 9px;
   height: 9px;
   background: var(--canvas-paper);
   border: 1.5px solid var(--color-primary);
   border-radius: 1px;
-  touch-action: none;
-  z-index: 2;
 }
 
-.handle-n { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
-.handle-s { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
-.handle-e { right: -5px; top: calc(50% - 5px); cursor: ew-resize; }
-.handle-w { left: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+.handle-n::after,
+.handle-s::after,
+.handle-e::after,
+.handle-w::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.handle-n, .handle-s { left: 6px; right: 6px; height: 9px; cursor: ns-resize; }
+.handle-e, .handle-w { top: 6px; bottom: 6px; width: 9px; cursor: ew-resize; }
+
+.handle-n { top: -5px; }
+.handle-s { bottom: -5px; }
+.handle-e { right: -5px; }
+.handle-w { left: -5px; }
 .handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
 .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
 .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
 .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
 
+/*
+ * ABOVE THE CORNER, NOT ON IT.
+ *
+ * At `top: -12px; right: -12px` this 22px circle was centred on (W+1, -1) —
+ * a point that sits INSIDE the 9px north-east resize handle at (W-4..W+5,
+ * -5..4). The handles render after it with the same z-index, so the handle
+ * won: clicking the middle of the trash icon started a diagonal resize, and
+ * the only part of the button that actually deleted anything was its rim.
+ *
+ * Lifted clear of the handle's row entirely rather than nudged sideways —
+ * anything short of `right: -27px` still overlaps it vertically, and a delete
+ * button hanging that far off the object's edge reads as belonging to
+ * whatever is beside it.
+ */
 .elementDelete {
   position: absolute;
-  top: -12px;
-  right: -12px;
-  z-index: 2;
+  top: -30px;
+  right: -6px;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -527,13 +477,27 @@
 .stack {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Same reasoning as `.canvasArea`'s justify-content — this is the axis the
+     zoomed page overflows on. */
+  align-items: safe center;
+  /* Never narrower than the page it holds, or centring has overflow to strand
+     in the first place. */
+  flex: none;
   min-height: 100%;
   /* Whitespace around the sheets so a page reads as paper on a desk (§5). */
   background: var(--canvas-backdrop);
 }
 
+/* Stands for the space the scaled stack draws into — see FormCanvas.tsx. */
+.scalerFrame {
+  position: relative;
+  flex: none;
+}
+
 .scaler {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -593,7 +557,7 @@
   right: 0;
   bottom: -34px;
   text-align: center;
-  font-size: var(--font-size-label-sm, 0.6875rem);
+  font-size: var(--font-size-label-sm);
   letter-spacing: 0.04em;
   color: var(--canvas-page-label);
   user-select: none;

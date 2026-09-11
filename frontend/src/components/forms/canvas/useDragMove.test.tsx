@@ -115,4 +115,36 @@ describe('useDragMove', () => {
 
     expect(onMove).toHaveBeenCalledWith(10, 5);
   });
+
+  /*
+   * A CLICK IS NOT A DRAG. With no threshold the first `pointermove` reported
+   * a new position however small it was, so a press with any tremor in it ran
+   * the overflow ladder, marked the document dirty and armed a save — a form
+   * could be modified by being clicked on.
+   */
+  it('ignores movement too small to be a drag', () => {
+    const onMove = vi.fn();
+    const { getByTestId } = render(<Harness start={{ x: 0, y: 0 }} onMove={onMove} />);
+    const handle = getByTestId('handle');
+
+    fireEvent.pointerDown(handle, pointerEvent(100, 100));
+    fireEvent.pointerMove(handle, pointerEvent(102, 101));
+
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  /* And once it IS a drag, the position is still measured from the press, so
+   * crossing the threshold does not cost the pixels it took to get there. */
+  it('reports from the original press once the threshold is crossed', () => {
+    const onMove = vi.fn();
+    const { getByTestId } = render(<Harness start={{ x: 0, y: 0 }} onMove={onMove} />);
+    const handle = getByTestId('handle');
+
+    fireEvent.pointerDown(handle, pointerEvent(100, 100));
+    fireEvent.pointerMove(handle, pointerEvent(102, 100));
+    fireEvent.pointerMove(handle, pointerEvent(140, 100));
+
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenLastCalledWith(40, 0);
+  });
 });

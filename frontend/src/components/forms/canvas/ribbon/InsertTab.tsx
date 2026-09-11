@@ -33,7 +33,7 @@ export const InsertTab: React.FC<InsertTabProps> = ({ onAddPage, ...addMenu }) =
       </RibbonGroup>
 
       <RibbonGroup label={t('formBuilder.ribbon.insertGroup')}>
-        <AddMenu {...addMenu} layout="ribbon" />
+        <AddMenu {...addMenu} />
       </RibbonGroup>
     </>
   );

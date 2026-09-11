@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import styles from './DropdownMenu.module.css';
@@ -45,6 +45,17 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const [position, setPosition] = useState<MenuPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  /*
+   * Which enabled item has the roving focus. `-1` means the menu was opened by
+   * pointer and nothing should be pulled off the trigger yet; the arrow keys
+   * move it from there.
+   */
+  const [focused, setFocused] = useState(-1);
+  /** The trigger element, focused again when the menu closes. */
+  const triggerFocusRef = useRef<HTMLElement | null>(null);
+
+  const focusable = items.filter((item) => !item.disabled);
 
   /*
     The menu is portalled to <body> rather than rendered beside its trigger: as a
@@ -119,8 +130,39 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       }
     };
 
+    /*
+     * THE SAME KEYBOARD THE RIGHT-CLICK MENU HAS.
+     *
+     * `ui/ContextMenu` has had roving arrow-key focus, Home/End, Tab-to-close
+     * and focus restoration since it was written; this menu — which is second
+     * in the builder's tab order and the first menu any keyboard user meets —
+     * had only Escape. A menu a keyboard user can open and then not move
+     * around in is worse than one they cannot open at all.
+     */
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false);
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        return;
+      }
+      if (event.key === 'Tab') {
+        setIsOpen(false);
+        return;
+      }
+      if (focusable.length === 0) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setFocused((i) => (i + 1) % focusable.length);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setFocused((i) => (i <= 0 ? focusable.length : i) - 1);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setFocused(0);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        setFocused(focusable.length - 1);
+      }
     };
 
     if (isOpen) {
@@ -132,6 +174,35 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('keydown', handleKeyDown);
     };
+  }, [isOpen, focusable.length]);
+
+  /** Moves real DOM focus to whichever enabled item is current. */
+  useEffect(() => {
+    if (!isOpen || focused < 0) return;
+    menuRef.current
+      ?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)')
+      ?.[focused]?.focus();
+  }, [isOpen, focused]);
+
+  /**
+   * Returns focus to the trigger when the menu closes, so dismissing does not
+   * strand a keyboard user on <body> with no way back to where they were.
+   *
+   * Restores to the TRIGGER rather than to whatever happened to have focus
+   * when the menu opened: a menu opened by pointer may have been opened from
+   * nowhere in particular, and "back to the control you just used" is the
+   * answer in both cases. `wasOpen` keeps this from firing on mount.
+   */
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (isOpen) {
+      wasOpen.current = true;
+      setFocused(-1);
+      return;
+    }
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
+    (triggerFocusRef.current ?? containerRef.current?.querySelector('button'))?.focus?.();
   }, [isOpen]);
 
   const handleToggle = () => setIsOpen((prev) => !prev);
@@ -150,6 +221,8 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const menu = (
     <div
       ref={menuRef}
+      id={menuId}
+      role="menu"
       className={dropdownClasses}
       style={{
         top: position?.top ?? 0,
@@ -165,6 +238,9 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       {items.map((item) => (
         <button
           key={item.id}
+          role="menuitem"
+          // Roving tabindex: the menu is one tab stop, arrows move within it.
+          tabIndex={-1}
           className={[
             styles.item,
             item.danger ? styles.itemDanger : '',
@@ -181,10 +257,42 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
     </div>
   );
 
+  /*
+   * THE TRIGGER ITSELF CARRIES THE STATE.
+   *
+   * The click handler used to sit on the wrapping <div>, with the trigger
+   * inside it as inert markup — so the control announced itself as an ordinary
+   * button with no hint that it opens anything, and nothing ever said whether
+   * it was open. Cloned rather than wrapped so `aria-haspopup` and
+   * `aria-expanded` land on the element a screen reader actually reports,
+   * composing with whatever onClick the caller already gave it.
+   */
+  const triggerNode = React.isValidElement(trigger)
+    ? React.cloneElement(trigger as React.ReactElement<Record<string, unknown>>, {
+        'aria-haspopup': 'menu',
+        'aria-expanded': isOpen,
+        'aria-controls': isOpen ? menuId : undefined,
+        onClick: (event: React.MouseEvent) => {
+          (trigger as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>).props.onClick?.(
+            event
+          );
+          handleToggle();
+        },
+      })
+    : trigger;
+
   return (
     <div className={`${styles.container} ${className}`.trim()} ref={containerRef}>
-      <div className={styles.triggerWrapper} onClick={handleToggle}>
-        {trigger}
+      {/* The wrapper keeps its own handler only for a trigger that is not a
+          real element and so could not be cloned. */}
+      <div
+        ref={(node) => {
+          triggerFocusRef.current = node?.querySelector('button') ?? null;
+        }}
+        className={styles.triggerWrapper}
+        onClick={React.isValidElement(trigger) ? undefined : handleToggle}
+      >
+        {triggerNode}
       </div>
       {isOpen && createPortal(menu, document.body)}
     </div>
