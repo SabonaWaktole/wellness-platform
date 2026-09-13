@@ -398,6 +398,47 @@ describe('sections and elements', () => {
     expect(findElement(next, 'e1')).toBeUndefined();
     expect(findElement(next, 'e2')).toBeDefined();
   });
+
+  it('addSection omits titleStyles when the caller does not pass one', () => {
+    const d = doc([{ id: 'p1', sections: [] }]);
+
+    const next = addSection(d, 'p1', 'New', { x: 48, y: 48, width: 300, height: 150 }).document;
+
+    expect(next.pages[0].sections[0].titleStyles).toBeUndefined();
+  });
+
+  it('addSection seeds titleStyles when the caller passes one, e.g. a band preset', () => {
+    const d = doc([{ id: 'p1', sections: [] }]);
+    const titleStyles = { background: '#0071e3', color: '#ffffff' };
+
+    const next = addSection(
+      d,
+      'p1',
+      'New',
+      { x: 48, y: 48, width: 300, height: 150 },
+      undefined,
+      titleStyles
+    ).document;
+
+    expect(next.pages[0].sections[0].titleStyles).toEqual(titleStyles);
+  });
+
+  it('a titled band does not change how a section reflows — geometry is unaffected by appearance', () => {
+    const plain = doc([{ id: 'p1', sections: [section({ id: 's1', y: 700, height: 200 })] }]);
+    const banded = doc([
+      {
+        id: 'p1',
+        sections: [section({ id: 's1', y: 700, height: 200, titleStyles: { background: '#1d4ed8' } })],
+      },
+    ]);
+
+    const plainMoved = moveSection(plain, 's1', 100, 1000).document;
+    const bandedMoved = moveSection(banded, 's1', 100, 1000).document;
+
+    const strip = (d: typeof plainMoved) =>
+      d.pages.map((p) => p.sections.map(({ titleStyles: _titleStyles, ...rest }) => rest));
+    expect(strip(bandedMoved)).toEqual(strip(plainMoved));
+  });
 });
 
 describe('stripSyntheticPages', () => {

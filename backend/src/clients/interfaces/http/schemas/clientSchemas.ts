@@ -43,8 +43,23 @@ export const searchClientsSchema = z.object({
    * `?archived=true` returns the tenant's archived clients instead of its
    * active ones — the Clients page's "Archived" view. Absent/false keeps the
    * default active-only behaviour every existing caller relies on.
+   *
+   * NOT `z.coerce.boolean()`. That is `Boolean(value)`, and every non-empty
+   * string is truthy — so the literal `"false"` axios puts on the wire for
+   * `{ archived: false }` parsed as TRUE, and the Clients tab asked for
+   * ARCHIVED clients on every load. The active list came back empty for every
+   * workspace that had not archived anything, which is to say: the clients
+   * were invisible. Only an explicit affirmative counts here.
    */
-  archived: z.coerce.boolean().optional(),
+  archived: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined) return undefined;
+      if (typeof value === 'boolean') return value;
+      const normalised = value.trim().toLowerCase();
+      return normalised === 'true' || normalised === '1';
+    }),
   customFields: z.string().optional().transform((val) => {
     if (!val) return undefined;
     try {

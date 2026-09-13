@@ -5,6 +5,7 @@ import { isTextHostSection } from '../../../types/form';
 import type { RenderMode } from '../registry/types';
 import type { Editor } from '@tiptap/react';
 import type {
+  ComponentType,
   DocumentPage,
   ElementContent,
   FormElement,
@@ -40,6 +41,9 @@ export interface FormPageRendererProps<TValues extends FieldValues = FieldValues
   editingElementId?: string;
   onElementContentChange?: (elementId: string, content: ElementContent) => void;
   onEditorReady?: (editor: Editor | null) => void;
+  /** BUILDER ONLY, same as `onElementContentChange` — opens the `/` insert
+   *  menu inside whichever TEXT block currently holds the caret. */
+  onInsertComponent?: (type: ComponentType) => void;
 }
 
 /**
@@ -72,6 +76,7 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
   editingElementId,
   onElementContentChange,
   onEditorReady,
+  onInsertComponent,
 }: FormPageRendererProps<TValues>) => (
   <>
     {page.sections.map((section) => (
@@ -89,7 +94,7 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
         data-section-id={section.id}
       >
         {section.title ? (
-          <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeader} style={headerStyle(section)}>
             <h3 className={styles.sectionTitle} style={titleStyle(section)}>
               {section.title}
             </h3>
@@ -138,6 +143,7 @@ export const FormPageRenderer = <TValues extends FieldValues = FieldValues>({
                 isEditing={element.id === editingElementId}
                 onElementContentChange={onElementContentChange}
                 onEditorReady={onEditorReady}
+                onInsertComponent={onInsertComponent}
               />
             </div>
           ))}
@@ -159,6 +165,7 @@ const ElementRenderer: React.FC<{
   isEditing: boolean;
   onElementContentChange?: (elementId: string, content: ElementContent) => void;
   onEditorReady?: (editor: Editor | null) => void;
+  onInsertComponent?: (type: ComponentType) => void;
 }> = ({
   element,
   mode,
@@ -171,6 +178,7 @@ const ElementRenderer: React.FC<{
   isEditing,
   onElementContentChange,
   onEditorReady,
+  onInsertComponent,
 }) => {
   const definition = componentFor(element.type);
 
@@ -203,6 +211,7 @@ const ElementRenderer: React.FC<{
           : undefined
       }
       onEditorReady={isEditing ? onEditorReady : undefined}
+      onInsertComponent={isEditing ? onInsertComponent : undefined}
     />
   );
 };
@@ -224,3 +233,15 @@ const titleStyle = (section: FormSection): React.CSSProperties => ({
   color: section.titleStyles?.color,
   textAlign: section.titleStyles?.align,
 });
+
+/**
+ * `.sectionHeader`'s own hairline bottom border reads as a stray line across
+ * a filled band, so a band colour turns it off rather than letting the two
+ * fight. Absent `background` changes nothing — the class's own border still
+ * applies.
+ */
+const headerStyle = (section: FormSection): React.CSSProperties => {
+  const background = section.titleStyles?.background;
+  if (!background) return {};
+  return { background, borderBottomColor: 'transparent' };
+};

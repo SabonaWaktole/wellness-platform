@@ -486,4 +486,84 @@ describe('Client Routes', () => {
     expect(res.status).toBe(403);
     expect(res.body.error).toContain('Cross-tenant access forbidden');
   });
+
+  /*
+   * THE CLIENTS TAB CAME UP EMPTY.
+   *
+   * A query string has no types, so `{ archived: false }` reaches the server as
+   * the literal string "false" — and the schema coerced it with
+   * `z.coerce.boolean()`, i.e. `Boolean('false')`, which is TRUE. The default
+   * view therefore asked for ARCHIVED clients on every load, and any workspace
+   * that had archived nothing saw an empty list while the API answered exactly
+   * what it had been asked.
+   *
+   * Asserted here at the HTTP boundary rather than on the schema alone,
+   * because the wire format IS the bug: a test that passes a real boolean
+   * cannot see it.
+   */
+  describe('GET /search — the archived flag as it arrives on the wire', () => {
+    const activeId = 'archived-flag-active';
+    const archivedId = 'archived-flag-archived';
+
+    beforeAll(async () => {
+      await prisma.client.createMany({
+        data: [
+          {
+            id: activeId,
+            tenantId: 't1',
+            name: 'Active Annie',
+            status: ClientStatus.ACTIVE,
+            customFieldValues: {},
+            lastUpdatedByUserId: 'u1',
+            deletedAt: null,
+          },
+          {
+            id: archivedId,
+            tenantId: 't1',
+            name: 'Archived Archie',
+            status: ClientStatus.ACTIVE,
+            customFieldValues: {},
+            lastUpdatedByUserId: 'u1',
+            deletedAt: new Date(),
+          },
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.client.deleteMany({ where: { id: { in: [activeId, archivedId] } } });
+    });
+
+    const ids = (body: any) => body.items.map((c: any) => c.id);
+
+    it('returns the ACTIVE clients for ?archived=false, which is what the tab sends', async () => {
+      const res = await request(app)
+        .get('/api/t1/clients/search?search=&archived=false')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.status).toBe(200);
+      expect(ids(res.body)).toContain(activeId);
+      expect(ids(res.body)).not.toContain(archivedId);
+    });
+
+    it('returns the ARCHIVED clients for ?archived=true', async () => {
+      const res = await request(app)
+        .get('/api/t1/clients/search?archived=true')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.status).toBe(200);
+      expect(ids(res.body)).toContain(archivedId);
+      expect(ids(res.body)).not.toContain(activeId);
+    });
+
+    it('defaults to the active clients when the flag is left off entirely', async () => {
+      const res = await request(app)
+        .get('/api/t1/clients/search')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(res.status).toBe(200);
+      expect(ids(res.body)).toContain(activeId);
+      expect(ids(res.body)).not.toContain(archivedId);
+    });
+  });
 });

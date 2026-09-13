@@ -16,6 +16,7 @@ import {
   type FormElement,
   type FormPage,
   type FormSection,
+  type TitleStyles,
 } from '../../../types/form';
 import { componentOptionsFor } from '../FormRenderer/fieldControl';
 
@@ -640,7 +641,11 @@ export const addSection = (
   box: { x: number; y: number; width: number; height: number },
   /** Caller-chosen id, so a section created to hold free text can be
    *  recognised later (see `TEXT_HOST_PREFIX`). */
-  id?: string
+  id?: string,
+  /** Seeds the section's title band, e.g. Insert -> Section's default band
+   *  colours. Omitted (every existing caller) leaves the section titleless
+   *  in appearance, exactly as before. */
+  titleStyles?: TitleStyles
 ): ApplyResult => {
   const index = doc.pages.findIndex((p) => p.id === pageId);
   if (index < 0) return ok(doc);
@@ -653,6 +658,7 @@ export const addSection = (
     width: Math.min(clampSize(box.width), usableWidth(doc.page)),
     height: clampSize(box.height),
     elements: [],
+    ...(titleStyles ? { titleStyles } : {}),
   };
 
   if (!fitsOnPage(section, doc.page)) return refuse(doc, SECTION_TOO_TALL);

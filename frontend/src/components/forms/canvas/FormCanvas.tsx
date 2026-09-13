@@ -11,7 +11,7 @@ import { findSection, pageContainingSection, sectionContaining } from './layoutO
 import { useVisiblePages } from './useVisiblePages';
 import type { EditTarget } from './useInlineEditing';
 import type { Editor } from '@tiptap/react';
-import type { DocumentPage, ElementContent, FormDocument } from '../../../types/form';
+import type { ComponentType, DocumentPage, ElementContent, FormDocument } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
 const EMPTY_GUIDES: Guide[] = [];
@@ -62,6 +62,10 @@ export interface FormCanvasProps {
   onChangeElementContent: (elementId: string, content: ElementContent) => void;
   onRenameField: (elementId: string, label: string) => void;
   onEditorReady: (editor: Editor | null) => void;
+  /** Opens the `/` insert menu inside whichever TEXT block currently holds
+   *  the caret — see FormPageRenderer's own doc for why this is gated the
+   *  same way as `onChangeElementContent`. */
+  onInsertComponent?: (type: ComponentType) => void;
   /** Right-click. The target decides which menu is built. */
   onContextMenu: (
     event: React.MouseEvent,
@@ -117,6 +121,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
   onChangeElementContent,
   onRenameField,
   onEditorReady,
+  onInsertComponent,
   onContextMenu,
   onMoveSection,
   onResizeSection,
@@ -362,6 +367,7 @@ export const FormCanvas: React.FC<FormCanvasProps> = ({
             onChangeElementContent={onChangeElementContent}
             onRenameField={onRenameField}
             onEditorReady={onEditorReady}
+            onInsertComponent={onInsertComponent}
             onContextMenu={onContextMenu}
             onMoveSection={handleMoveSection}
             onResizeSection={onResizeSection}
@@ -414,6 +420,7 @@ const Sheet: React.FC<SheetProps> = ({
   onChangeElementContent,
   onRenameField,
   onEditorReady,
+  onInsertComponent,
   onContextMenu,
   onMoveSection,
   onResizeSection,
@@ -510,6 +517,7 @@ const Sheet: React.FC<SheetProps> = ({
             editingElementId={editing && editing.kind !== 'section-title' ? editing.id : undefined}
             onElementContentChange={onChangeElementContent}
             onEditorReady={onEditorReady}
+            onInsertComponent={onInsertComponent}
           />
           {/* Guides are computed in this page's coordinate space, but only the
               page currently being dragged on ever has any — drawing them on

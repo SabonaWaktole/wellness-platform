@@ -30,3 +30,21 @@
   color: var(--text-primary);
   overflow-wrap: break-word;
 }
+
+/* A `Label: value` row for print/fill's read-only path — mirrors what
+ * CustomFieldInput's own `.inline` does for the live control. */
+.readOnlyInline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
+.readOnlyInline .readOnlyLabel {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.readOnlyInline .readOnlyValue {
+  flex: 1;
+  border-bottom: 1px solid var(--border-strong);
+}

@@ -99,6 +99,17 @@ export interface ElementStyles {
   borderColor?: string;
   fontSize?: number;
   align?: 'left' | 'center' | 'right';
+  /** A data-bearing field's label-and-control presentation. Absent (or
+   *  'stacked') renders exactly as before — label above a boxed control.
+   *  'inline' draws a paper-form-style `Label: ________` row instead. */
+  fieldLayout?: 'stacked' | 'inline';
+  /** Columns for a choice field's option grid (radio/checkbox). Absent
+   *  falls through to CustomFieldInput's own default of 1. */
+  optionColumns?: 1 | 2 | 3 | 4;
+  /** A data-bearing field's control sizing. Absent (or 'default') renders
+   *  exactly as before. 'compact' shrinks the control, its label and its
+   *  checkbox/radio squares for dense paper-style forms. */
+  density?: 'default' | 'compact';
 }
 
 export interface SectionStyles {
@@ -111,6 +122,9 @@ export interface TitleStyles {
   fontSize?: number;
   color?: string;
   align?: 'left' | 'center' | 'right';
+  /** A filled band behind the title, e.g. a numbered section header bar.
+   *  Absent renders exactly as before (no band). */
+  background?: string;
 }
 
 /**

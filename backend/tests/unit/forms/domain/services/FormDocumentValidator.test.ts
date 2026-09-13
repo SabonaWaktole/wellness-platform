@@ -126,6 +126,26 @@ describe('FormDocumentValidator', () => {
     expect(() => FormDocumentValidator.validate(d, [])).toThrow(DomainError);
   });
 
+  it('rejects an invalid hex colour in a section title band', () => {
+    const d = doc([docPage([section({ titleStyles: { background: 'blue' } })])]);
+    expect(() => FormDocumentValidator.validate(d, [])).toThrow(DomainError);
+  });
+
+  it('accepts a valid title band colour', () => {
+    const d = doc([
+      docPage([section({ titleStyles: { background: '#1d4ed8', color: '#ffffff' } })]),
+    ]);
+    expect(() => FormDocumentValidator.validate(d, [])).not.toThrow();
+  });
+
+  it('accepts fieldLayout and optionColumns on an element without complaint', () => {
+    const s = section({
+      elements: [inputField({ styles: { fieldLayout: 'inline', optionColumns: 4 } })],
+    });
+    const d = doc([docPage([s])]);
+    expect(() => FormDocumentValidator.validate(d, [])).not.toThrow();
+  });
+
   it('rejects a component type incompatible with its field dataType', () => {
     const s = section({
       elements: [
