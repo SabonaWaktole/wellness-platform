@@ -46,7 +46,14 @@ export const ClientListContent: React.FC = () => {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { clients, total, isLoading, fetchClients } = useClients();
+  /*
+   * `loadError` was previously destructured away and dropped. A search that
+   * failed left the table rendering its ordinary "no clients yet" empty state,
+   * so a broken request and an empty workspace looked identical — and the
+   * page said "add your first client" to someone who already had hundreds.
+   * Whatever goes wrong next, it says so.
+   */
+  const { clients, total, isLoading, error: loadError, fetchClients } = useClients();
   const { user } = useAuthStore();
   /* Archiving is Business-Owner-only on the backend (ArchiveClientUseCase).
    * Hiding the action for everyone else keeps the UI honest rather than
@@ -292,7 +299,9 @@ export const ClientListContent: React.FC = () => {
           )}
         </div>
 
-        {actionError && <div className={styles.actionError} role="alert">{actionError}</div>}
+        {(actionError || loadError) && (
+          <div className={styles.actionError} role="alert">{actionError ?? loadError}</div>
+        )}
 
         {/* Table */}
         <DataTable

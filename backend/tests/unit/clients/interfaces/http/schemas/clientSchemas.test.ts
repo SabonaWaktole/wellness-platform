@@ -152,4 +152,51 @@ describe('clientSchemas', () => {
       expect(defineOutcomeCategorySchema.parse(data)).toEqual(data);
     });
   });
+
+  /*
+   * A query string carries no types: every value arrives as a string. The
+   * `archived` flag was declared `z.coerce.boolean()`, which is `Boolean(v)` —
+   * and `Boolean('false')` is TRUE. So the Clients tab, which sends
+   * `archived=false` on every load, asked for the ARCHIVED clients and got an
+   * empty list back on any workspace that had archived nothing.
+   *
+   * The list looked broken while the API was answering exactly what it was
+   * asked. These cases pin the wire format, not the intent.
+   */
+  describe('searchClientsSchema — the archived flag', () => {
+    const archived = (query: Record<string, unknown>) => searchClientsSchema.parse(query).archived;
+
+    it('reads the literal string "false" as false, not as a non-empty string', () => {
+      expect(archived({ archived: 'false' })).toBe(false);
+    });
+
+    it('reads "true" as true', () => {
+      expect(archived({ archived: 'true' })).toBe(true);
+    });
+
+    it.each(['0', 'FALSE', 'False', '', 'no', 'nope'])(
+      'treats %p as not-archived',
+      (value) => {
+        expect(archived({ archived: value })).toBe(false);
+      }
+    );
+
+    it.each(['1', 'TRUE', 'True'])('treats %p as archived', (value) => {
+      expect(archived({ archived: value })).toBe(true);
+    });
+
+    it('leaves the flag undefined when it is absent, so the default applies', () => {
+      expect(archived({})).toBeUndefined();
+    });
+
+    it('still accepts a real boolean, for callers that are not a query string', () => {
+      expect(archived({ archived: false })).toBe(false);
+      expect(archived({ archived: true })).toBe(true);
+    });
+
+    /* The exact query the Clients tab puts on the wire for its default view. */
+    it('parses the Clients tab default view as active-only', () => {
+      expect(searchClientsSchema.parse({ search: '', archived: 'false' }).archived).toBe(false);
+    });
+  });
 });
