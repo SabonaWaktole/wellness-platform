@@ -13,19 +13,44 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        * for an FK with no explicit `onDelete`, which is what most tenantId
        * relations in schema.prisma are).
        *
+       * INCIDENT, SEP 11 2026: this list was written before the forms feature,
+       * Invoice and OwnershipTransfer existed, and was never updated when they
+       * were added — each carries its own tenantId FK under the same RESTRICT
+       * default. Because every tenant gets a default ClientForm the moment it
+       * is provisioned, that alone broke deletion for every workspace on the
+       * platform: `tx.tenant.delete()` failed with "Foreign key constraint
+       * violated on the fields: (`tenantId`)" every time. Invoice is the
+       * sharper case — it also references the Client, Quotation and User rows
+       * this function was ALREADY deleting, so it has to be removed before
+       * those deleteManys run, not merely before the tenant itself; the
+       * integration test this comment sits beside proves it by failing at
+       * `quotation.deleteMany()`, not at the final delete, when Invoice is
+       * left out.
+       *
        * Rows with `onDelete: Cascade` to a parent deleted here are NOT listed
        * separately — deleting the parent removes them for free:
        *   - Appointment  -> AppointmentAuditLog
        *   - Quotation    -> QuotationLineItem, QuotationStatusHistory
        *   - Product      -> ProductImage
+       *   - Invoice      -> InvoiceLineItem, InvoiceStatusHistory
        *   - Tenant       -> NotificationSettings (deleted last, below)
        *
+       * AuditLog is deliberately absent: its tenantId column carries no
+       * foreign key at all (see the model comment in schema.prisma), on
+       * purpose, so the TENANT_DELETED entry can still be written after this
+       * transaction commits and the tenant is gone.
+       *
        * Everything that references User under RESTRICT (Client, Interaction,
-       * Appointment, Quotation, StockMovement, Notification, Invitation) is
-       * therefore deleted BEFORE `user.deleteMany`, and Warehouse — which only
-       * User.warehouseId still points at by the time we get there — is deleted
-       * after Users.
+       * Appointment, Quotation, Invoice, OwnershipTransfer, StockMovement,
+       * Notification, Invitation) is therefore deleted BEFORE
+       * `user.deleteMany`, and Warehouse — which only User.warehouseId still
+       * points at by the time we get there — is deleted after Users.
        */
+      await tx.formSubmission.deleteMany({ where: { tenantId } });
+      await tx.formVersion.deleteMany({ where: { tenantId } });
+      await tx.clientForm.deleteMany({ where: { tenantId } });
+      await tx.invoice.deleteMany({ where: { tenantId } });
+      await tx.ownershipTransfer.deleteMany({ where: { tenantId } });
       await tx.notification.deleteMany({ where: { tenantId } });
       await tx.appointment.deleteMany({ where: { tenantId } });
       await tx.interaction.deleteMany({ where: { tenantId } });
