@@ -1,3 +1,5 @@
+import type { MutableRefObject } from 'react';
+import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, Color, FontFamily, FontSize, BackgroundColor, LineHeight } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
@@ -63,3 +65,56 @@ export const RICH_TEXT_EXTENSIONS = [
     alignments: ['left', 'center', 'right', 'justify'],
   }),
 ];
+
+/** What the slash-menu extension needs from RichTextEditor on every
+ *  keystroke it might intercept. Read through a ref (see below), never
+ *  captured at extension-creation time, so a single editor instance can stay
+ *  in sync with menu state that changes on every render. */
+export interface SlashMenuControl {
+  isOpen: () => boolean;
+  moveSelection: (delta: number) => void;
+  choose: () => void;
+  close: () => void;
+}
+
+/**
+ * Intercepts ArrowUp/ArrowDown/Enter/Escape ONLY while RichTextEditor's own
+ * slash-menu popup is open (`control.current.isOpen()`) — every other
+ * keystroke, and all four of these the rest of the time, fall through to
+ * ProseMirror's own keymap untouched. No node, no mark, no `@tiptap/suggestion`
+ * dependency: this extension changes nothing about the document schema, only
+ * which component gets first refusal on four keys.
+ *
+ * `control` is a REF, not a plain object, because `useEditor` only builds its
+ * extensions once per editor instance — the ref is what lets RichTextEditor
+ * hand this extension fresh closures (over its latest state) on every render
+ * without tearing down and recreating the whole editor.
+ */
+export const createSlashMenuExtension = (control: MutableRefObject<SlashMenuControl>) =>
+  Extension.create({
+    name: 'slashMenu',
+    addKeyboardShortcuts() {
+      return {
+        ArrowDown: () => {
+          if (!control.current.isOpen()) return false;
+          control.current.moveSelection(1);
+          return true;
+        },
+        ArrowUp: () => {
+          if (!control.current.isOpen()) return false;
+          control.current.moveSelection(-1);
+          return true;
+        },
+        Enter: () => {
+          if (!control.current.isOpen()) return false;
+          control.current.choose();
+          return true;
+        },
+        Escape: () => {
+          if (!control.current.isOpen()) return false;
+          control.current.close();
+          return true;
+        },
+      };
+    },
+  });

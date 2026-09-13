@@ -123,6 +123,24 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               onChangeSection(section.id, { styles: { ...section.styles, borderColor } })
             }
           />
+          <ColorPicker
+            label={t('formBuilder.titleBandColour')}
+            value={section.titleStyles?.background}
+            clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
+            onChange={(background) =>
+              onChangeSection(section.id, { titleStyles: { ...section.titleStyles, background } })
+            }
+          />
+          <ColorPicker
+            label={t('formBuilder.titleTextColour')}
+            value={section.titleStyles?.color}
+            clearLabel={t('formBuilder.clearColour')}
+          contrastWarning={contrastWarning}
+            onChange={(color) =>
+              onChangeSection(section.id, { titleStyles: { ...section.titleStyles, color } })
+            }
+          />
         </details>
 
         <SizeFields
@@ -219,6 +237,71 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                   })
                 }
               />
+            </div>
+          )}
+
+          {(field.dataType === 'SINGLE_SELECT' || field.dataType === 'MULTI_SELECT') && (
+            <div className={styles.field}>
+              <SelectInput
+                label={t('formBuilder.optionColumns')}
+                value={String(element.styles?.optionColumns ?? 1)}
+                onChange={(e) =>
+                  onChangeElement(element.id, {
+                    styles: { ...element.styles, optionColumns: Number(e.target.value) as 1 | 2 | 3 | 4 },
+                  })
+                }
+              >
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </SelectInput>
+            </div>
+          )}
+
+          {/* SIGNATURE draws through its own SignaturePad, not
+              CustomFieldInput — a layout switch there would change nothing,
+              so it is left off the pane rather than offered and ignored. */}
+          {field.dataType !== 'SIGNATURE' && (
+            <div className={styles.field}>
+              <SelectInput
+                label={t('formBuilder.fieldLayout')}
+                value={element.styles?.fieldLayout ?? 'stacked'}
+                onChange={(e) =>
+                  onChangeElement(element.id, {
+                    styles: {
+                      ...element.styles,
+                      fieldLayout: e.target.value as 'stacked' | 'inline',
+                    },
+                  })
+                }
+              >
+                <option value="stacked">{t('formBuilder.fieldLayoutStacked')}</option>
+                <option value="inline">{t('formBuilder.fieldLayoutInline')}</option>
+              </SelectInput>
+            </div>
+          )}
+
+          {/* SIGNATURE is excluded for the same reason as Field layout above
+              — its own SignaturePad ignores this. */}
+          {field.dataType !== 'SIGNATURE' && (
+            <div className={styles.field}>
+              <SelectInput
+                label={t('formBuilder.density')}
+                value={element.styles?.density ?? 'default'}
+                onChange={(e) =>
+                  onChangeElement(element.id, {
+                    styles: {
+                      ...element.styles,
+                      density: e.target.value as 'default' | 'compact',
+                    },
+                  })
+                }
+              >
+                <option value="default">{t('formBuilder.densityDefault')}</option>
+                <option value="compact">{t('formBuilder.densityCompact')}</option>
+              </SelectInput>
             </div>
           )}
 

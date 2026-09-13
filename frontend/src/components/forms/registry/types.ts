@@ -43,6 +43,13 @@ export interface ComponentRenderProps {
    * way Word's Home tab acts on the insertion point rather than on a panel.
    */
   onEditorReady?: (editor: Editor | null) => void;
+  /**
+   * Enables the `/` insert menu inside a TEXT block's live editor. Present
+   * iff `isEditing`, same gating as `onContentChange` — `fill` and `print`
+   * never pass it, so only the builder's own text-editing session can ever
+   * open the menu.
+   */
+  onInsertComponent?: (type: ComponentType) => void;
 }
 
 export interface ComponentPropertiesProps {

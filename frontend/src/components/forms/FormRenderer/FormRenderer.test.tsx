@@ -41,6 +41,23 @@ describe('FormRenderer', () => {
     expect(screen.queryByText('1')).not.toBeInTheDocument();
   });
 
+  it('does not draw a title band when no background is set (backward compatibility)', () => {
+    render(<Harness layout={doc([])} />);
+    const heading = screen.getByRole('heading', { name: 'Company Information' });
+    expect(heading.parentElement?.style.background).toBe('');
+  });
+
+  it('draws the title band background on the header, not the heading text', () => {
+    render(
+      <Harness
+        layout={doc([], { titleStyles: { background: '#1d4ed8', color: '#ffffff' } })}
+      />
+    );
+    const heading = screen.getByRole('heading', { name: 'Company Information' });
+    expect(heading.parentElement?.style.background).toBe('rgb(29, 78, 216)');
+    expect(heading.style.color).toBe('rgb(255, 255, 255)');
+  });
+
   it('renders a text field labelled from the FIELD, not from any definition', () => {
     render(<Harness layout={doc([{ id: 'i1', type: 'INPUT', ...box, field: field() }])} />);
     expect(screen.getByLabelText(/Company Name/)).toBeInTheDocument();
@@ -193,6 +210,102 @@ describe('FormRenderer', () => {
       />
     );
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  /*
+   * `fieldLayout: 'inline'` has to look the same whether the field is being
+   * filled in or already printed — `inputRenderer` draws each mode through
+   * separate markup (a live CustomFieldInput for fill, hand-rolled <p> tags
+   * for print), and a fix applied to only one of them is exactly the
+   * builder/print disagreement the shared renderer exists to prevent.
+   */
+  it('draws an inline field as one row in fill mode', () => {
+    render(
+      <Harness
+        layout={doc([{ id: 'i1', type: 'INPUT', ...box, styles: { fieldLayout: 'inline' }, field: field() }])}
+        mode="fill"
+      />
+    );
+    expect(document.querySelector('[class*="inline"]')).not.toBeNull();
+  });
+
+  it('draws an inline field as one row in print mode too', () => {
+    render(
+      <FormRenderer
+        layout={doc([{ id: 'i1', type: 'INPUT', ...box, styles: { fieldLayout: 'inline' }, field: field() }])}
+        mode="print"
+        values={{ company_name: 'WorkMed Ltd' }}
+      />
+    );
+    expect(document.querySelector('[class*="readOnlyInline"]')).not.toBeNull();
+    expect(screen.getByText('WorkMed Ltd')).toBeInTheDocument();
+  });
+
+  it('draws a stacked field with no inline marker in either mode (backward compatibility)', () => {
+    const { unmount } = render(
+      <Harness layout={doc([{ id: 'i1', type: 'INPUT', ...box, field: field() }])} mode="fill" />
+    );
+    expect(document.querySelector('[class*="inline"]')).toBeNull();
+    unmount();
+
+    render(
+      <FormRenderer
+        layout={doc([{ id: 'i1', type: 'INPUT', ...box, field: field() }])}
+        mode="print"
+        values={{ company_name: 'WorkMed Ltd' }}
+      />
+    );
+    expect(document.querySelector('[class*="readOnlyInline"]')).toBeNull();
+  });
+
+  /*
+   * `density: 'compact'` has the same builder/print consistency requirement
+   * as `fieldLayout: 'inline'` above — a live CustomFieldInput in fill mode,
+   * hand-rolled markup in print mode, and both must shrink together.
+   */
+  it('draws a compact field smaller in fill mode', () => {
+    render(
+      <Harness
+        layout={doc([{ id: 'i1', type: 'INPUT', ...box, styles: { density: 'compact' }, field: field() }])}
+        mode="fill"
+      />
+    );
+    expect(document.querySelector('[class*="compact"]')).not.toBeNull();
+  });
+
+  it('draws a compact field smaller in print mode too, even with no explicit fontSize', () => {
+    render(
+      <FormRenderer
+        layout={doc([{ id: 'i1', type: 'INPUT', ...box, styles: { density: 'compact' }, field: field() }])}
+        mode="print"
+        values={{ company_name: 'WorkMed Ltd' }}
+      />
+    );
+    expect(screen.getByText('WorkMed Ltd')).toHaveStyle({ fontSize: '10px' });
+  });
+
+  it('leaves print font size alone for a default-density field (backward compatibility)', () => {
+    render(
+      <FormRenderer
+        layout={doc([{ id: 'i1', type: 'INPUT', ...box, field: field() }])}
+        mode="print"
+        values={{ company_name: 'WorkMed Ltd' }}
+      />
+    );
+    expect(screen.getByText('WorkMed Ltd')).not.toHaveStyle({ fontSize: '10px' });
+  });
+
+  it('an explicit fontSize still wins over the compact default in print mode', () => {
+    render(
+      <FormRenderer
+        layout={doc([
+          { id: 'i1', type: 'INPUT', ...box, styles: { density: 'compact', fontSize: 18 }, field: field() },
+        ])}
+        mode="print"
+        values={{ company_name: 'WorkMed Ltd' }}
+      />
+    );
+    expect(screen.getByText('WorkMed Ltd')).toHaveStyle({ fontSize: '18px' });
   });
 
   /* A USER_SELECT must print the person's NAME, never their opaque id. */

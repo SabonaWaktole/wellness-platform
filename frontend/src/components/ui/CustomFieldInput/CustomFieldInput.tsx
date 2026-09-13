@@ -33,10 +33,23 @@ export interface CustomFieldInputProps {
   helperText?: string;
   /**
    * Columns for the radio/checkbox option grid. Paper intake forms lay long
-   * option lists out in two or three columns; one column per option would make
-   * the "Main Workplace Type" style questions run for a whole page.
+   * option lists out in two, three or four columns; one column per option
+   * would make the "Main Workplace Type" style questions run for a whole page.
    */
-  optionColumns?: 1 | 2 | 3;
+  optionColumns?: 1 | 2 | 3 | 4;
+  /**
+   * Draws this control the way a paper form does: `Label: ________` on one
+   * line rather than a label above a boxed input, and a choice group's legend
+   * beside its options rather than above them. False (the default) is today's
+   * stacked presentation, unchanged.
+   */
+  inline?: boolean;
+  /**
+   * Shrinks the control, its label and its checkbox/radio squares for dense
+   * paper-style forms. False (the default) is today's sizing, unchanged.
+   * Composes with `inline` — a dense paper form wants both.
+   */
+  compact?: boolean;
 }
 
 export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
@@ -54,6 +67,8 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
       placeholder,
       helperText,
       optionColumns = 1,
+      inline = false,
+      compact = false,
     },
     ref
   ) => {
@@ -64,6 +79,17 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
     // mounted instance rather than derived from the label.
     const groupName = useId();
     const optionGridStyle = { '--option-columns': optionColumns } as React.CSSProperties;
+    // Appended everywhere `className` already is, so the modifier reaches
+    // whichever DOM this variant renders — see CustomFieldInput.module.css's
+    // `.inline`/`.compact` rules, which target plain element selectors
+    // (label, input, select, textarea) rather than another component's own
+    // hashed classes. The two compose: a dense paper form wants both.
+    const inlineClass = inline ? styles.inline : '';
+    const compactClass = compact ? styles.compact : '';
+    const groupClassName = [styles.multiSelectGroup, className, inlineClass, compactClass]
+      .filter(Boolean)
+      .join(' ');
+    const controlClassName = [className, inlineClass, compactClass].filter(Boolean).join(' ');
     const describedBy = !error && helperText ? `${groupName}-help` : undefined;
     const renderHelp = () =>
       !error && helperText ? (
@@ -87,7 +113,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
             onChange={(e) => onChange(e.target.value)}
             error={error}
             required={required}
-            className={className}
+            className={controlClassName}
           />
         );
       case 'multiline':
@@ -101,7 +127,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
             onChange={(e) => onChange(e.target.value)}
             error={error}
             required={required}
-            className={className}
+            className={controlClassName}
           />
         );
       case 'dropdown':
@@ -113,7 +139,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
             onChange={(e) => onChange(e.target.value)}
             error={error}
             required={required}
-            className={className}
+            className={controlClassName}
           >
             <option value="" disabled>{t('input.selectAnOption')}</option>
             {options.map((opt) => (
@@ -132,7 +158,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
             onChange={(e) => onChange(e.target.value)}
             error={error}
             required={required}
-            className={className}
+            className={controlClassName}
           >
             <option value="">{t('input.unassigned', { defaultValue: 'Unassigned' })}</option>
             {userOptions.map((u) => (
@@ -153,7 +179,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
       case 'radio':
         return (
           <fieldset
-            className={`${styles.multiSelectGroup} ${className}`}
+            className={groupClassName}
             aria-describedby={describedBy}
           >
             <legend className={styles.multiSelectLegend}>
@@ -195,7 +221,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
           );
         return (
           <fieldset
-            className={`${styles.multiSelectGroup} ${className}`}
+            className={groupClassName}
             aria-describedby={describedBy}
           >
             <legend className={styles.multiSelectLegend}>
@@ -225,7 +251,7 @@ export const CustomFieldInput = forwardRef<HTMLElement, CustomFieldInputProps>(
       }
       case 'checkbox':
         return (
-          <div className={`${styles.checkboxContainer} ${className}`}>
+          <div className={[styles.checkboxContainer, controlClassName].filter(Boolean).join(' ')}>
             <label className={styles.checkboxLabel}>
               <input
                 ref={ref as React.Ref<HTMLInputElement>}

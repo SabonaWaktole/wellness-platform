@@ -137,6 +137,17 @@ export const CanvasSection: React.FC<CanvasSectionProps> = ({
               aria-label={t('formBuilder.sectionTitle')}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => onRename(e.target.value)}
+              /*
+               * This opaque overlay sits directly on top of the real <h3> so
+               * the two do not read as doubled text while typing — it has to
+               * match the band's own colours too, or a titled band flashes
+               * back to plain grey for the one moment it is being renamed.
+               */
+              style={
+                section.titleStyles?.background
+                  ? { background: section.titleStyles.background, color: section.titleStyles.color }
+                  : undefined
+              }
             />
           )}
           <button

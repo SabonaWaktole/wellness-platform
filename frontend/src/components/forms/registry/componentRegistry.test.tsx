@@ -143,6 +143,77 @@ describe('component registry — rendering', () => {
     render(<Harness type="SIGNATURE" mode="fill" />);
     expect(document.querySelector('canvas')).toBeTruthy();
   });
+
+  /*
+   * Backward-compatibility lock (spec: every existing saved document must
+   * render byte-identically after adding `fieldLayout`/`optionColumns`/
+   * `density`). An element carrying no `styles` at all — every document
+   * saved before this work — must not pick up the inline or compact
+   * modifier by accident.
+   */
+  it('renders the stacked, default-density (pre-existing) presentation when styles is absent', () => {
+    render(<Harness type="INPUT" />);
+    expect(document.querySelector('[class*="inline"]')).toBeNull();
+    expect(document.querySelector('[class*="compact"]')).toBeNull();
+  });
+
+  it('reaches CustomFieldInput\'s inline presentation via element.styles.fieldLayout', () => {
+    const Wrapped: React.FC = () => {
+      const { control } = useForm({ defaultValues: { data: {} } });
+      const element = { ...el('INPUT'), styles: { fieldLayout: 'inline' as const } };
+      return (
+        <COMPONENT_REGISTRY.INPUT.Render
+          element={element}
+          mode="fill"
+          control={control as never}
+          name="data.k"
+          userOptions={[]}
+          value={undefined}
+        />
+      );
+    };
+    render(<Wrapped />);
+    expect(document.querySelector('[class*="inline"]')).not.toBeNull();
+  });
+
+  it('reaches CustomFieldInput\'s option-columns via element.styles.optionColumns', () => {
+    const Wrapped: React.FC = () => {
+      const { control } = useForm({ defaultValues: { data: {} } });
+      const element = { ...el('CHECKBOX_GROUP'), styles: { optionColumns: 4 as const } };
+      return (
+        <COMPONENT_REGISTRY.CHECKBOX_GROUP.Render
+          element={element}
+          mode="fill"
+          control={control as never}
+          name="data.k"
+          userOptions={[]}
+          value={undefined}
+        />
+      );
+    };
+    render(<Wrapped />);
+    const grid = document.querySelector('fieldset > div') as HTMLElement | null;
+    expect(grid?.style.getPropertyValue('--option-columns')).toBe('4');
+  });
+
+  it('reaches CustomFieldInput\'s compact presentation via element.styles.density', () => {
+    const Wrapped: React.FC = () => {
+      const { control } = useForm({ defaultValues: { data: {} } });
+      const element = { ...el('INPUT'), styles: { density: 'compact' as const } };
+      return (
+        <COMPONENT_REGISTRY.INPUT.Render
+          element={element}
+          mode="fill"
+          control={control as never}
+          name="data.k"
+          userOptions={[]}
+          value={undefined}
+        />
+      );
+    };
+    render(<Wrapped />);
+    expect(document.querySelector('[class*="compact"]')).not.toBeNull();
+  });
 });
 
 /*

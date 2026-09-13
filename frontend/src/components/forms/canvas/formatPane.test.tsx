@@ -98,6 +98,24 @@ const form = () => ({
                 height: 20,
                 content: { orientation: 'horizontal', thickness: 2 },
               },
+              {
+                id: 'c1',
+                type: 'CHECKBOX_GROUP',
+                x: 10,
+                y: 250,
+                width: 200,
+                height: 40,
+                field: {
+                  key: 'workforce_type',
+                  label: 'Workforce Type',
+                  dataType: 'MULTI_SELECT',
+                  required: false,
+                  options: [
+                    { value: 'office', label: 'Office' },
+                    { value: 'production', label: 'Production' },
+                  ],
+                },
+              },
             ],
           },
         ],
@@ -136,6 +154,7 @@ const selectAt = (top) =>
 const selectField = () => selectAt(10);
 const selectImage = () => selectAt(90);
 const selectDivider = () => selectAt(190);
+const selectChoice = () => selectAt(250);
 const selectSection = () => fireEvent.click(document.querySelector('[class*="sectionOverlay"]'));
 /* A stable hook: the ribbon's own panel shares the "panel" class name. */
 const pane = () => within(document.querySelector('[data-format-pane]'));
@@ -317,5 +336,39 @@ describe('Format pane — every capability survives', () => {
     expect(pane().getByLabelText(/section title/i)).toBeInTheDocument();
     expect(pane().getByText(/background colour/i)).toBeInTheDocument();
     expect(pane().getByText(/border colour/i)).toBeInTheDocument();
+  });
+
+  it('offers a title band for a section, alongside its fill', () => {
+    render(<FormBuilder />);
+    selectSection();
+    fireEvent.click(pane().getByText(/fill & line/i));
+
+    expect(pane().getByText(/title band/i)).toBeInTheDocument();
+    expect(pane().getByText(/title text colour/i)).toBeInTheDocument();
+  });
+
+  it('offers a field layout switch for a plain field, but no option columns', () => {
+    render(<FormBuilder />);
+    selectField();
+
+    expect(pane().getByText(/field layout/i)).toBeInTheDocument();
+    expect(pane().queryByText(/^columns$/i)).not.toBeInTheDocument();
+  });
+
+  it('offers option columns for a choice field, alongside its field layout switch', () => {
+    render(<FormBuilder />);
+    selectChoice();
+
+    expect(pane().getByText(/^columns$/i)).toBeInTheDocument();
+    expect(pane().getByText(/field layout/i)).toBeInTheDocument();
+  });
+
+  it('offers a density switch for a plain field and for a choice field', () => {
+    render(<FormBuilder />);
+    selectField();
+    expect(pane().getByText(/^density$/i)).toBeInTheDocument();
+
+    selectChoice();
+    expect(pane().getByText(/^density$/i)).toBeInTheDocument();
   });
 });

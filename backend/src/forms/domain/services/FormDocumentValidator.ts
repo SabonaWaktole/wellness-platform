@@ -4,7 +4,6 @@ import { ComponentType, isDataBearingComponent } from '../enums/ComponentType';
 import { FormFieldType } from '../enums/FormFieldType';
 import {
   FormDocument,
-  FormElement,
   FormSection,
   Box,
   fieldSpecsOf,
@@ -153,9 +152,12 @@ export class FormDocumentValidator {
         this.assertBox(section, `Section "${section.title ?? section.id}"`);
         this.assertSectionFitsPage(section, document);
 
+        this.assertColorMap(section.titleStyles);
+        this.assertColorMap(section.styles);
+
         for (const element of section.elements) {
           this.assertBox(element, `An element in section "${section.title ?? section.id}"`);
-          this.assertColor(element);
+          this.assertColorMap(element.styles);
 
           if (element.type === ComponentType.IMAGE) {
             const url = (element.content as { url?: string } | undefined)?.url;
@@ -176,10 +178,17 @@ export class FormDocumentValidator {
     }
   }
 
-  private static assertColor(element: FormElement): void {
-    if (!element.styles) return;
+  /**
+   * Walks ANY styles-shaped object for its colour-named keys — an element's
+   * `styles`, but also a section's `titleStyles`/`styles`, which carry the
+   * same colour properties (`background`, `color`, `borderColor`) but are not
+   * `FormElement`s themselves. Zod already guards the wire; this guards
+   * migrations, seeds and template imports, which bypass zod.
+   */
+  private static assertColorMap(source: object | undefined): void {
+    if (!source) return;
     const colorKeys = new Set(['textColor', 'labelColor', 'background', 'borderColor', 'color']);
-    for (const [key, value] of Object.entries(element.styles)) {
+    for (const [key, value] of Object.entries(source)) {
       if (!colorKeys.has(key) || typeof value !== 'string') continue;
       if (!HEX_COLOR_PATTERN.test(value)) {
         throw new DomainError(`"${value}" is not a valid colour. Use a six-digit hex value like #1d4ed8.`);

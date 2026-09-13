@@ -115,3 +115,140 @@
   max-height: 220px;
   overflow-y: auto;
 }
+
+/* ---------------------------------------------------------------------------
+ * `inline` — a paper-form-style `Label: ________` row instead of a label
+ * above a boxed control. Applied as a SECOND class alongside whichever
+ * variant's own class the caller already passes down (TextInput's
+ * `.container`, `.multiSelectGroup`, …), so every rule here targets either a
+ * doubled class (raises specificity above the base rule it overrides,
+ * without caring which stylesheet loads first) or a plain element selector
+ * (label/input/select/textarea — these reach INSIDE another component's own
+ * module, which a hashed class name never could, see CustomFieldInput.tsx).
+ * A field with no `inline` prop is untouched by anything below.
+ * ------------------------------------------------------------------------ */
+.inline.inline {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  height: auto;
+}
+
+.inline label {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inline input:not([type='checkbox']):not([type='radio']),
+.inline select,
+.inline textarea {
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 2px;
+  min-height: 0;
+}
+
+.inline input:not([type='checkbox']):not([type='radio']):focus,
+.inline select:focus,
+.inline textarea:focus {
+  border-bottom-color: var(--color-primary);
+  box-shadow: none;
+}
+
+/* The fieldset variants (radio/multi-select): the legend sits beside the
+ * options instead of above them, and the box the group otherwise draws
+ * around itself goes away — the ruled line stands in for it. */
+.multiSelectGroup.inline {
+  border: 0;
+  padding: 0;
+  align-items: baseline;
+}
+
+.inline .multiSelectLegend {
+  padding: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.inline .optionGrid {
+  flex: 1;
+  max-height: none;
+  overflow: visible;
+  align-content: center;
+}
+
+/* ---------------------------------------------------------------------------
+ * `compact` — a dense paper-form control: smaller label, smaller control
+ * text, a shorter box, smaller checkbox/radio squares. Same technique as
+ * `.inline` above (a second class reaching into another module's DOM via
+ * plain element selectors) and composes with it — a dense paper form uses
+ * both at once. A field with no `compact` prop is untouched by anything
+ * below.
+ * ------------------------------------------------------------------------ */
+.compact label {
+  font-size: 10px;
+}
+
+.compact input:not([type='checkbox']):not([type='radio']),
+.compact select,
+.compact textarea {
+  font-size: 10px;
+  min-height: 20px;
+  padding: 0 6px;
+}
+
+.compact.checkboxContainer,
+.compact .checkboxLabel {
+  gap: 4px;
+  padding: 1px 0;
+  /* A relative line-height so the row actually shrinks with the smaller
+     font — the base stylesheet's line-height is a fixed px value sized for
+     the default body font, and left alone it holds every compact row open
+     to that same height regardless of how small the font gets. */
+  line-height: 1.3;
+}
+
+.compact .checkboxText {
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.compact .checkboxInput {
+  width: 12px;
+  height: 12px;
+}
+
+.compact .multiSelectLegend {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.multiSelectGroup.compact {
+  padding: 2px 6px 4px;
+}
+
+/*
+ * `inline` + `compact` together (a dense paper form's own choice groups):
+ * `.multiSelectGroup.inline` (above) and `.multiSelectGroup.compact` (this
+ * block) both set `padding` at equal specificity, so source order alone
+ * would decide the winner — and it must not, because which of the two
+ * happens to be declared later is an implementation detail, not a design
+ * choice. Naming both classes together raises this rule's specificity above
+ * either alone, so the combination has its own explicit, order-independent
+ * answer: no box, matching `.inline`'s ruled-baseline presentation.
+ */
+.multiSelectGroup.inline.compact {
+  padding: 0;
+}
+
+.compact .optionGrid {
+  gap: 1px 8px;
+}
+
+.compact .helperText,
+.compact .helperTextError {
+  font-size: 9px;
+}

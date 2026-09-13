@@ -41,6 +41,9 @@ const stylesSchema = z
     borderColor: hexColor.optional(),
     fontSize: z.number().finite().min(8).max(72).optional(),
     align: z.enum(['left', 'center', 'right']).optional(),
+    fieldLayout: z.enum(['stacked', 'inline']).optional(),
+    optionColumns: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+    density: z.enum(['default', 'compact']).optional(),
   })
   .optional();
 
@@ -251,6 +254,7 @@ const sectionSchema = z.object({
       fontSize: z.number().finite().min(8).max(72).optional(),
       color: hexColor.optional(),
       align: z.enum(['left', 'center', 'right']).optional(),
+      background: hexColor.optional(),
     })
     .optional(),
   styles: z

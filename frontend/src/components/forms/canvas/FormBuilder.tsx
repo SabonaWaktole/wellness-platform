@@ -78,11 +78,16 @@ import type {
   ElementContent,
   FormDocument,
   FormElement,
+  TitleStyles,
 } from '../../../types/form';
 import styles from './FormCanvas.module.css';
 
 const NEW_SECTION_WIDTH = 420;
 const NEW_SECTION_HEIGHT = 220;
+/** Default title band for a freshly inserted section — a numbered header bar
+ *  like a paper intake form's, not a colour tied to any one tenant's brand.
+ *  The Format pane can change or clear it afterwards. */
+const NEW_SECTION_TITLE_STYLES: TitleStyles = { background: '#0071e3', color: '#ffffff' };
 /** A freshly typed block: wide enough for a line of prose, one line tall. */
 const NEW_TEXT_WIDTH = 320;
 const NEW_TEXT_HEIGHT = 40;
@@ -648,6 +653,26 @@ export const FormBuilder: React.FC = () => {
    * block that was never typed into, the block goes with it — see the effect
    * below.
    */
+  /**
+   * A component chosen from the `/` slash menu (RichTextEditor), waiting to
+   * be inserted the moment its `/query` text is stripped from the document.
+   *
+   * Set synchronously by `handleSlashInsertComponent`, BEFORE the strip's own
+   * `deleteRange` triggers `handleChangeElementContent` — and consumed there,
+   * combined with the content update into ONE `apply()` call rather than two.
+   * That is not a style choice: `layout` here is a plain render-time snapshot,
+   * not something a second `apply()` call could see the first's result of
+   * within the same synchronous handler (React state updates do not land
+   * until the next render). Two separate `apply()` calls computed from the
+   * same stale `layout` would have the second silently overwrite the first —
+   * the strip would revert the instant the field was inserted. One call,
+   * built from one document threaded through both changes, cannot do that.
+   */
+  const pendingSlashInsert = useRef<{ type: ComponentType } | null>(null);
+  const handleSlashInsertComponent = useCallback((type: ComponentType) => {
+    pendingSlashInsert.current = { type };
+  }, []);
+
   const autoCreated = useRef<string | null>(null);
   /** The section the provisional block landed in, and how tall it was before
    *  `growSectionToFit` made room for it. Restored if nothing is written. */
@@ -913,12 +938,19 @@ export const FormBuilder: React.FC = () => {
           (max, s) => Math.max(max, s.y + s.height + 24),
           layout.page.margin.top
         );
-    const result = addSection(layout, pageId, t('formBuilder.newSectionTitle'), {
-      x: layout.page.margin.left,
-      y,
-      width: NEW_SECTION_WIDTH,
-      height: NEW_SECTION_HEIGHT,
-    });
+    const result = addSection(
+      layout,
+      pageId,
+      t('formBuilder.newSectionTitle'),
+      {
+        x: layout.page.margin.left,
+        y,
+        width: NEW_SECTION_WIDTH,
+        height: NEW_SECTION_HEIGHT,
+      },
+      undefined,
+      NEW_SECTION_TITLE_STYLES
+    );
     apply(result);
     if (result.refusal) return;
 
@@ -933,13 +965,66 @@ export const FormBuilder: React.FC = () => {
     }
   };
 
-  /** Commits a keystroke made inside a TEXT block's on-page editor. */
+  /**
+   * Commits a keystroke made inside a TEXT block's on-page editor.
+   *
+   * Also where a pending slash-menu insertion (see `pendingSlashInsert`
+   * above) actually lands: the `/query` strip that triggers this call and
+   * the new field it is waiting to place are combined here into one document
+   * and one `apply()`, so undo reverses both together and neither can be
+   * computed against a document that has not seen the other yet.
+   */
   const handleChangeElementContent = useCallback(
     (elementId: string, content: ElementContent) => {
       // Normalised on the way in: an attribute the editor left as `''` would
       // be refused by the stored schema and take the whole save down with it
       // (see `normaliseRichText`).
-      apply(updateElement(layout, elementId, { content: normaliseRichText(content) }));
+      const stripped = updateElement(layout, elementId, { content: normaliseRichText(content) });
+      const pending = pendingSlashInsert.current;
+      pendingSlashInsert.current = null;
+
+      if (pending && !stripped.refusal) {
+        const definition = COMPONENT_REGISTRY[pending.type];
+        const element = findElement(stripped.document, elementId);
+        const host = sectionContaining(stripped.document, elementId);
+
+        if (definition && element && host) {
+          // A slash typed as the block's only content ("/date" with nothing
+          // else on the line) replaces that now-empty placeholder — the same
+          // rule `insertionPoint` already applies to a caret in an empty
+          // text block. Anything typed before the slash ("Company Name: ")
+          // survives, and the field lands beside it instead — the paper
+          // form's `Label: ________` pattern, for free.
+          const isEmptyNow = plainTextOf(element.content as never) === '';
+          const width = definition.defaultSize.width;
+          const defaults = definition.defaultField?.();
+          const newElement: FormElement = {
+            id: newId(),
+            type: pending.type,
+            x: isEmptyNow ? element.x : Math.min(element.x + element.width + 16, host.width - width),
+            y: element.y,
+            width,
+            height: definition.defaultSize.height,
+            content: definition.defaultContent?.(),
+            field: defaults ? { ...defaults, key: nextFieldKey(stripped.document, defaults.label) } : undefined,
+          };
+
+          let document = stripped.document;
+          if (isEmptyNow) {
+            const pruned = removeElement(document, elementId);
+            if (!pruned.refusal) document = pruned.document;
+          }
+
+          const withNew = addElement(document, host.id, newElement);
+          if (!withNew.refusal) {
+            apply(withNew);
+            setSelection({ type: 'element', id: newElement.id });
+            return;
+          }
+        }
+      }
+
+      apply(stripped);
       growToFitText(elementId);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1757,6 +1842,7 @@ export const FormBuilder: React.FC = () => {
               onChangeElementContent={handleChangeElementContent}
               onRenameField={handleRenameField}
               onEditorReady={inline.setEditor}
+              onInsertComponent={handleSlashInsertComponent}
               onGestureStart={history.beginInteraction}
               onGestureEnd={history.endInteraction}
               onGestureReset={resetGesture}

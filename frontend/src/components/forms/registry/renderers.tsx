@@ -37,16 +37,30 @@ export const inputRenderer =
         variant === 'user-select'
           ? userOptions.find((u) => u.id === value)?.label ?? value
           : value;
+      const inline = element.styles?.fieldLayout === 'inline';
+      const compact = element.styles?.density === 'compact';
+      /*
+       * `edit`/`fill` draw this field through CustomFieldInput below, which
+       * already turns `inline` into a `Label: ________` row and `density:
+       * 'compact'` into a shrunk control (see its own module CSS). Print has
+       * its own hand-rolled label/value markup — left unpatched, an inline or
+       * compact field would render on-screen as one small ruled line and on
+       * paper as two large stacked ones, exactly the builder/print
+       * disagreement the shared FormPageRenderer exists to prevent. An
+       * explicit `element.styles.fontSize` still wins over the compact
+       * default — this only fills in when the author hasn't set one.
+       */
+      const printFontSize = element.styles?.fontSize ?? (compact ? 10 : undefined);
       return (
-        <>
-          <p className={styles.readOnlyLabel} style={{ color: element.styles?.labelColor, fontSize: element.styles?.fontSize }}>
+        <div className={inline ? styles.readOnlyInline : undefined}>
+          <p className={styles.readOnlyLabel} style={{ color: element.styles?.labelColor, fontSize: printFontSize }}>
             {field.label}
             {field.required && <span aria-hidden="true"> *</span>}
           </p>
-          <p className={styles.readOnlyValue} style={{ color: element.styles?.textColor, fontSize: element.styles?.fontSize, textAlign: element.styles?.align }}>
+          <p className={styles.readOnlyValue} style={{ color: element.styles?.textColor, fontSize: printFontSize, textAlign: element.styles?.align }}>
             {formatValue(shown)}
           </p>
-        </>
+        </div>
       );
     }
 
@@ -67,6 +81,9 @@ export const inputRenderer =
             value={rhf.value}
             onChange={rhf.onChange}
             error={error}
+            optionColumns={element.styles?.optionColumns}
+            inline={element.styles?.fieldLayout === 'inline'}
+            compact={element.styles?.density === 'compact'}
           />
         )}
       />
@@ -94,6 +111,7 @@ export const TextRender: React.FC<ComponentRenderProps> = ({
   isEditing,
   onContentChange,
   onEditorReady,
+  onInsertComponent,
 }) => (
   <div
     className={styles.text}
@@ -108,6 +126,7 @@ export const TextRender: React.FC<ComponentRenderProps> = ({
         content={(element.content as RichTextDoc | undefined) ?? EMPTY_DOC}
         onChange={onContentChange}
         onEditorReady={onEditorReady}
+        onInsertComponent={onInsertComponent}
         autoFocus
       />
     ) : (
