@@ -60,10 +60,19 @@ Anything else is the exact list of what is still missing.
 
 ```bash
 cd backend
-npm ci --omit=dev          # or: npm install --omit=dev
+npm ci                     # full install — the build needs devDependencies
 npm run build              # generates the Prisma client, then compiles
+npm prune --omit=dev       # now safe to drop dev-only packages
 npm start                  # node dist/main/server.js
 ```
+
+**Do not `npm ci --omit=dev` before the build.** `typescript`, `prisma`,
+`tsc-alias`, `tsconfig-paths` and every `@types/*` package `tsc` needs to
+compile are devDependencies — installing without them makes `npm run build`
+fail with a wall of `TS7016: Could not find a declaration file` errors.
+`npm run build` needs them; the running server (`node dist/main/server.js`)
+does not, which is what `npm prune --omit=dev` is for, run only after the
+build has already produced `dist/`.
 
 `npm run build` picks the Prisma schema from the **protocol of `DATABASE_URL`**
 (`scripts/generate-prisma-client.js`): a `mysql://` URL generates from
@@ -122,8 +131,6 @@ Against MySQL 8.0 in a throwaway container, using the real archive contents:
 - baseline + upgrade → **`No difference detected.`** against
   `schema.mysql.prisma`;
 - the upgrade run a second time → 30 `skip:` notices, still no difference;
-- `npm run build` with a `mysql://` URL → selects `schema.mysql.prisma`,
-  compiles clean;
 - live Prisma round-trip on the upgraded database: a v3 form document written to
   and read back from the `ClientForm.layout` JSON column with section geometry
   intact, plus `FormVersion`, `FormSubmission`, a nullable-name/status `Client`
@@ -131,6 +138,22 @@ Against MySQL 8.0 in a throwaway container, using the real archive contents:
   and a JSON `options` array;
 - `frontend`: `tsc -b && vite build` clean;
 - `frontend` unit suites: 385 passing.
+
+**Re-verified end to end** (2026-09-13, PR #83's changes), unpacking the actual
+built archives rather than the source tree:
+
+- `npm ci` (full, not `--omit=dev`) → `npm run build` → `npm prune --omit=dev`
+  → `node dist/main/server.js` against the upgraded MySQL container: boots,
+  and `GET /api/:tenantSlug/forms/default` with a minted JWT returns a real
+  form read live through Prisma;
+- the new style properties this PR added (`titleStyles.background`,
+  `styles.fieldLayout`, `styles.optionColumns`, `styles.density`) round-trip
+  through `ClientForm.layout` on MySQL intact;
+- `frontend`: `npm ci` → `npm run build` from the unpacked archive succeeds
+  (`tsc -b && vite build`), `dist/` fully formed;
+- `deploy/package.py`'s own archive contents checked directly: no `.env`, no
+  `node_modules`, no `*.test.*`, `backend/prisma/mysql_upgrade_to_current.sql`
+  present.
 
 ## Rebuilding the archives
 
