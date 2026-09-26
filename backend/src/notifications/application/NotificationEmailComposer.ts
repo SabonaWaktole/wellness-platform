@@ -118,6 +118,16 @@ export class NotificationEmailComposer {
           subject: `New submission for "${String(p.form ?? 'your form')}"`,
           body: `Someone submitted <strong>${esc(String(p.form ?? 'your form'))}</strong>.`,
         };
+      case 'CONTRACT_EXPIRING':
+        return {
+          subject: `${client}'s contract expires in ${String(p.daysRemaining ?? '')} days`,
+          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> ends on <strong>${esc(String(p.endsAt ?? ''))}</strong>. Renew it before then to keep the subscription running.`,
+        };
+      case 'CONTRACT_EXPIRED':
+        return {
+          subject: `${client}'s contract has expired`,
+          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> reached its end date and is now marked expired.`,
+        };
       case 'INVITATION_ACCEPTED':
         return {
           subject: `${String(p.memberName ?? 'A new member')} joined the workspace`,
@@ -146,7 +156,9 @@ export class NotificationEmailComposer {
             ? `clients/${entityId}`
             : entityType === 'FORM'
               ? `settings/client-management/forms/${entityId}/submissions`
-              : null;
+              : entityType === 'CONTRACT'
+                ? `contracts/${entityId}`
+                : null;
     return path ? `${this.appUrl}/${tenantSlug}/${path}` : null;
   }
 
@@ -177,6 +189,8 @@ export class NotificationEmailComposer {
         return 'Client';
       case 'FORM':
         return 'Form';
+      case 'CONTRACT':
+        return 'Contract';
       default:
         return 'Notification';
     }

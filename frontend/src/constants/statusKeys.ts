@@ -55,6 +55,38 @@ export const INVOICE_STATUS_KEYS: Record<InvoiceStatus, string> = {
   VOID: 'invoices:status.void',
 };
 
+/** Mirrors the backend's ContractStatus enum (backend Contract.ts). */
+export const CONTRACT_STATUSES = ['DRAFT', 'ACTIVE', 'EXPIRED', 'CANCELLED'] as const;
+
+export type ContractStatus = (typeof CONTRACT_STATUSES)[number];
+
+export const CONTRACT_STATUS_KEYS: Record<ContractStatus, string> = {
+  DRAFT: 'contracts:status.draft',
+  ACTIVE: 'contracts:status.active',
+  EXPIRED: 'contracts:status.expired',
+  CANCELLED: 'contracts:status.cancelled',
+};
+
+/** Mirrors the backend's PaymentStatus enum (backend ContractPayment.ts). */
+export const CONTRACT_PAYMENT_STATUSES = ['UNPAID', 'PAID', 'PARTIAL', 'WAIVED'] as const;
+
+export type ContractPaymentStatus = (typeof CONTRACT_PAYMENT_STATUSES)[number];
+
+export const CONTRACT_PAYMENT_STATUS_KEYS: Record<ContractPaymentStatus, string> = {
+  UNPAID: 'contracts:paymentStatus.unpaid',
+  PAID: 'contracts:paymentStatus.paid',
+  PARTIAL: 'contracts:paymentStatus.partial',
+  WAIVED: 'contracts:paymentStatus.waived',
+};
+
+/** Mirrors the backend's BillingPeriod enum. Not a status, but same problem. */
+export const BILLING_PERIOD_KEYS: Record<string, string> = {
+  MONTHLY: 'contracts:billingPeriod.monthly',
+  QUARTERLY: 'contracts:billingPeriod.quarterly',
+  ANNUAL: 'contracts:billingPeriod.annual',
+  ONE_TIME: 'contracts:billingPeriod.oneTime',
+};
+
 export const CLIENT_STATUS_KEYS: Record<ClientStatus, string> = {
   PROSPECT: 'clients:status.prospect',
   ACTIVE: 'clients:status.active',
@@ -102,3 +134,7 @@ export const invoiceStatusKey = (status: string) => lookup(INVOICE_STATUS_KEYS, 
 export const clientStatusKey = (status: string) => lookup(CLIENT_STATUS_KEYS, status);
 export const productStatusKey = (status: string) => lookup(PRODUCT_STATUS_KEYS, status);
 export const appointmentStatusKey = (status: string) => lookup(APPOINTMENT_STATUS_KEYS, status);
+export const contractStatusKey = (status: string) => lookup(CONTRACT_STATUS_KEYS, status);
+export const contractPaymentStatusKey = (status: string) =>
+  lookup(CONTRACT_PAYMENT_STATUS_KEYS, status);
+export const billingPeriodKey = (period: string) => lookup(BILLING_PERIOD_KEYS, period);

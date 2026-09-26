@@ -5,6 +5,9 @@ import {
   clientStatusKey,
   productStatusKey,
   appointmentStatusKey,
+  contractStatusKey,
+  contractPaymentStatusKey,
+  billingPeriodKey,
 } from '../constants/statusKeys';
 
 /**
@@ -28,5 +31,8 @@ export function useStatusLabel() {
     client: (status: string) => translate(clientStatusKey(status), status),
     product: (status: string) => translate(productStatusKey(status), status),
     appointment: (status: string) => translate(appointmentStatusKey(status), status),
+    contract: (status: string) => translate(contractStatusKey(status), status),
+    contractPayment: (status: string) => translate(contractPaymentStatusKey(status), status),
+    billingPeriod: (period: string) => translate(billingPeriodKey(period), period),
   };
 }

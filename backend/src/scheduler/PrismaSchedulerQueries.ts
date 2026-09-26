@@ -5,6 +5,7 @@ import {
   DueAppointment,
   StaleQuotation,
   PastDueInvoice,
+  ExpiringContract,
 } from './ISchedulerQueries';
 
 /** Rows a sweep will consider in one pass. Bounds the blast radius of a backlog. */
@@ -123,6 +124,69 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
       sentAt: r.sentAt as Date,
       clientName: r.client.name ?? 'Client',
     }));
+  }
+
+  /** Columns every contract sweep needs. Declared once so the two agree. */
+  private static readonly CONTRACT_SELECT = {
+    id: true,
+    tenantId: true,
+    clientId: true,
+    planName: true,
+    endsAt: true,
+    assignedUserId: true,
+    createdByUserId: true,
+    client: { select: { name: true } },
+  } as const;
+
+  private toExpiringContract(row: any): ExpiringContract {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      clientId: row.clientId,
+      clientName: row.client.name ?? 'Client',
+      planName: row.planName,
+      endsAt: row.endsAt,
+      assignedUserId: row.assignedUserId,
+      createdByUserId: row.createdByUserId,
+    };
+  }
+
+  async findContractsPastEnd(now: Date): Promise<ExpiringContract[]> {
+    const rows = await this.prisma.contract.findMany({
+      where: { status: 'ACTIVE', endsAt: { lt: now } },
+      select: PrismaSchedulerQueries.CONTRACT_SELECT,
+      orderBy: { endsAt: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+
+    return rows.map((row) => this.toExpiringContract(row));
+  }
+
+  async findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]> {
+    const horizon = new Date(now.getTime() + days * 24 * 60 * 60_000);
+
+    const rows = await this.prisma.contract.findMany({
+      where: {
+        status: 'ACTIVE',
+        expiryNotifiedAt: null,
+        // `gte: now` keeps this sweep off contracts that have already lapsed —
+        // those belong to findContractsPastEnd, and warning that something
+        // "expires soon" after it already has would be worse than silence.
+        endsAt: { gte: now, lte: horizon },
+      },
+      select: PrismaSchedulerQueries.CONTRACT_SELECT,
+      orderBy: { endsAt: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+
+    return rows.map((row) => this.toExpiringContract(row));
+  }
+
+  async markContractExpiryNotified(contractId: string, at: Date): Promise<void> {
+    await this.prisma.contract.update({
+      where: { id: contractId },
+      data: { expiryNotifiedAt: at },
+    });
   }
 
   async findInvoicesPastDue(now: Date): Promise<PastDueInvoice[]> {

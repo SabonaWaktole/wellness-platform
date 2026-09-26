@@ -14,6 +14,7 @@ import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { TimelineItem } from '../../components/ui/TimelineItem/TimelineItem';
 import { Tabs } from '../../components/ui/Tabs';
+import { ClientContractsTab } from '../../components/clients/ClientContractsTab';
 import { getActivityConfig } from '../../utils/activityMapper';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { AppointmentForm } from '../../components/forms/AppointmentForm/AppointmentForm';
@@ -78,7 +79,7 @@ export const ClientDetailContent: React.FC = () => {
   // pending invitations are a Business-Owner-only endpoint.
   const { staff, fetchStaff } = useTeam();
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts'>('timeline');
   const [isInteractionSlideOverOpen, setIsInteractionSlideOverOpen] = useState(false);
   const [isAppointmentSlideOverOpen, setIsAppointmentSlideOverOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -295,10 +296,16 @@ export const ClientDetailContent: React.FC = () => {
             tabs={[
               { id: 'timeline', label: t('detail.tabTimeline'), count: history?.timeline.length },
               { id: 'appointments', label: t('detail.tabAppointments'), count: appointments.length },
+              // No count: the contracts tab loads its own data lazily, and a
+              // count here would mean fetching every client's contracts on
+              // every client page whether or not anyone opens the tab.
+              { id: 'contracts', label: t('detail.tabContracts') },
             ]}
           />
 
-          {activeTab === 'timeline' ? (
+          {activeTab === 'contracts' ? (
+            <ClientContractsTab clientId={clientId || ''} />
+          ) : activeTab === 'timeline' ? (
             <Card padding="lg" className={styles.timelineCard}>
               <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitle}>{t('detail.interactions')}</h2>

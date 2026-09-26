@@ -27,6 +27,8 @@
     "FORM_SUBMITTED": "Νέα υποβολή για \"{{form}}\"",
     "INVITATION_ACCEPTED": "Ο/Η {{email}} αποδέχτηκε την πρόσκλησή σας και εντάχθηκε στην ομάδα",
     "APPOINTMENT_REMINDER": "Υπενθύμιση: ραντεβού με τον/την {{clientName}}",
-    "QUOTATION_FOLLOW_UP": "Η προσφορά {{reference}} δεν έχει λάβει απάντηση από τον/την {{clientName}} εδώ και {{daysWaiting}} ημέρες"
+    "QUOTATION_FOLLOW_UP": "Η προσφορά {{reference}} δεν έχει λάβει απάντηση από τον/την {{clientName}} εδώ και {{daysWaiting}} ημέρες",
+    "CONTRACT_EXPIRING": "Το συμβόλαιο {{planName}} του πελάτη {{clientName}} λήγει σε {{daysRemaining}} ημέρες",
+    "CONTRACT_EXPIRED": "Το συμβόλαιο {{planName}} του πελάτη {{clientName}} έληξε"
   }
 }

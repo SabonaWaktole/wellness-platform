@@ -36,6 +36,9 @@ import { CreateQuotation } from '../pages/quotations/CreateQuotation';
 import { EditQuotation } from '../pages/quotations/EditQuotation';
 import { InvoiceList } from '../pages/invoices/InvoiceList';
 import { InvoiceDetail } from '../pages/invoices/InvoiceDetail';
+import { ContractList } from '../pages/contracts/ContractList';
+import { ContractDetail } from '../pages/contracts/ContractDetail';
+import { ContractFormPage } from '../pages/contracts/ContractFormPage';
 import { IntegrationsPage } from '../pages/IntegrationsPage';
 import { StatusPage } from '../components/StatusPage/StatusPage';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -387,6 +390,42 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <InvoiceDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contracts',
+        element: (
+          <ProtectedRoute>
+            <ContractList />
+          </ProtectedRoute>
+        ),
+      },
+      /*
+       * `contracts/new` is declared BEFORE `contracts/:id`, or the router
+       * matches "new" as a contract id and the form never renders.
+       */
+      {
+        path: 'contracts/new',
+        element: (
+          <ProtectedRoute>
+            <ContractFormPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contracts/:contractId',
+        element: (
+          <ProtectedRoute>
+            <ContractDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contracts/:contractId/edit',
+        element: (
+          <ProtectedRoute>
+            <ContractFormPage />
           </ProtectedRoute>
         ),
       },

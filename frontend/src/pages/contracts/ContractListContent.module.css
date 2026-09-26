@@ -1,0 +1,456 @@
+/* ============================================================================
+ * ContractListContent
+ * This page hand-rolls its own table rather than using DataTable, so the
+ * header/row/hover treatment here is kept deliberately identical to
+ * DataTable.module.css — a quote list and a client list should not look like
+ * they came from two different products.
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.breadcrumb {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  letter-spacing: var(--font-letter-spacing-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* ------------------------------------------------------------ table card */
+
+.tableCard {
+  background-color: var(--color-surface-container-lowest);
+  border: none;
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 0 0 1px var(--border-hairline);
+}
+
+.tableToolbar {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+  background-color: var(--color-surface-container-low);
+}
+
+@media (min-width: 900px) {
+  .tableToolbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* Status filter tabs — same grammar as the Tabs primitive. */
+.tabs {
+  display: flex;
+  gap: var(--spacing-base);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 9px 2px;
+  color: var(--text-secondary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-md);
+  font-weight: 520;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background-color: var(--color-primary);
+  transform: scaleX(0);
+  opacity: 0;
+  transition:
+    transform var(--transition-normal),
+    opacity var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+.tabActive {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.tabActive::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.searchWrapper {
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .searchWrapper {
+    width: 320px;
+  }
+}
+
+/* ---------------------------------------------------------------- table */
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.table th {
+  text-align: left;
+  padding: 0 var(--spacing-lg);
+  height: 40px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  background-color: var(--color-surface-container-low);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+  padding: var(--spacing-base) var(--spacing-lg);
+  height: 56px;
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+  transition: background-color var(--duration-instant) var(--ease-out);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background-color: var(--color-surface-container-low);
+}
+
+/* Accent rail on hover, matching DataTable. */
+.table tbody td:first-child {
+  position: relative;
+}
+
+.table tbody td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-primary);
+  transform: scaleY(0);
+  transition: transform var(--transition-fast);
+}
+
+.table tbody tr:hover td:first-child::before {
+  transform: scaleY(1);
+}
+
+.clientName {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  display: block;
+}
+
+.quoteIdLink {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.quoteIdLink:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mutedText {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  color: var(--text-tertiary);
+}
+
+.amountText {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  font-weight: 620;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.clientEmail {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-tertiary);
+  display: block;
+}
+
+.tdAction {
+  width: 48px;
+  text-align: right;
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+tr:hover .actionButton,
+.actionButton:focus-visible {
+  opacity: 1;
+}
+
+.actionButton:hover {
+  background-color: var(--color-surface-container-high);
+  color: var(--text-primary);
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+@media (hover: none) {
+  .actionButton {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------ pagination */
+
+.pagination {
+  padding: var(--spacing-base) var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+  border-top: 1px solid var(--border-hairline);
+  background-color: var(--color-surface-container-low);
+}
+
+@media (min-width: 640px) {
+  .pagination {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.paginationText {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.paginationControls {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* ----------------------------------------------------------- empty state */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl) var(--spacing-lg);
+  text-align: center;
+}
+
+.emptyStateIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: var(--spacing-base);
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface-container-low);
+  color: var(--text-tertiary);
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 1px var(--border-hairline),
+    0 0 0 8px color-mix(in srgb, var(--color-surface-container) 45%, transparent);
+}
+
+.emptyStateTitle {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-body-lg);
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+}
+
+.emptyStateMessage {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  line-height: var(--font-line-height-body-md);
+  color: var(--text-secondary);
+  max-width: 42ch;
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+/* ----------------------------------------------------------------------------
+ * Contract-specific cells.
+ * Everything above is shared with the quotation and invoice lists on purpose;
+ * only what a contract shows that they do not lives down here.
+ * ------------------------------------------------------------------------- */
+
+.planName {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.termCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/*
+ * The countdown under the term. Colour is applied by the modifier classes
+ * below rather than inline, so "urgent" has one definition instead of one per
+ * render branch.
+ */
+.expiryHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.expirySoon {
+  color: var(--color-warning-text, #92400e);
+  font-weight: var(--font-weight-medium);
+}
+
+.expiryPast {
+  color: var(--color-error-text, #b91c1c);
+}
+
+.owedCell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.owedClear {
+  color: var(--color-text-secondary);
+}
+
+.overdueChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-error-bg, #fee2e2);
+  color: var(--color-error-text, #b91c1c);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
