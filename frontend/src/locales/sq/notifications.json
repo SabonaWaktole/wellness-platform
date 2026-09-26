@@ -28,6 +28,8 @@
     "INVITATION_ACCEPTED": "{{email}} pranoi ftesën tuaj dhe iu bashkua ekipit",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "FORM_SUBMITTED": "Një përgjigje e re u dërgua për {{form}}"
+    "FORM_SUBMITTED": "Një përgjigje e re u dërgua për {{form}}",
+    "CONTRACT_EXPIRING": "Kontrata {{planName}} e {{clientName}} skadon për {{daysRemaining}} ditë",
+    "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar"
   }
 }

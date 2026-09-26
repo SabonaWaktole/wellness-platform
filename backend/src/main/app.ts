@@ -116,6 +116,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     origin: (origin, callback) => {
       const allowedOrigins = [
         'https://neva-crm.vercel.app',
+        'https://nevacrm.eu',
+        'https://www.nevacrm.eu',
         process.env.FRONTEND_URL
       ];
       if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
@@ -658,6 +660,59 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   const invoiceRoutes = createInvoiceRouter(invoicesController, tokenService, tenantRepository);
   app.use('/api/:tenantSlug/invoices', invoiceRoutes);
+
+  // Contracts Routes
+  //
+  // Subscriptions a tenant has sold to its own clients — deliberately not the
+  // same thing as Tenant.subscriptionStatus, which is the platform billing its
+  // tenants. See the Contract model's docblock.
+  const { PrismaContractRepository } = require('../contracts/infrastructure/repositories/PrismaContractRepository');
+  const { PrismaContractPaymentRepository } = require('../contracts/infrastructure/repositories/PrismaContractPaymentRepository');
+  const { PrismaContractStatusHistoryRepository } = require('../contracts/infrastructure/repositories/PrismaContractStatusHistoryRepository');
+  const { PrismaContractWriteTransaction } = require('../contracts/infrastructure/PrismaContractWriteTransaction');
+  const { ContractDocumentStore } = require('../contracts/infrastructure/ContractDocumentStore');
+
+  const { CreateContractUseCase } = require('../contracts/application/use-cases/CreateContractUseCase');
+  const { UpdateContractUseCase } = require('../contracts/application/use-cases/UpdateContractUseCase');
+  const { ActivateContractUseCase } = require('../contracts/application/use-cases/ActivateContractUseCase');
+  const { CancelContractUseCase } = require('../contracts/application/use-cases/CancelContractUseCase');
+  const { RenewContractUseCase } = require('../contracts/application/use-cases/RenewContractUseCase');
+  const { SearchContractsUseCase } = require('../contracts/application/use-cases/SearchContractsUseCase');
+  const { GetContractDetailUseCase } = require('../contracts/application/use-cases/GetContractDetailUseCase');
+  const { GetClientContractsUseCase } = require('../contracts/application/use-cases/GetClientContractsUseCase');
+  const { RecordContractPaymentUseCase } = require('../contracts/application/use-cases/RecordContractPaymentUseCase');
+  const { AddContractPaymentUseCase } = require('../contracts/application/use-cases/AddContractPaymentUseCase');
+  const { UpdateContractPaymentUseCase } = require('../contracts/application/use-cases/UpdateContractPaymentUseCase');
+  const { DeleteContractPaymentUseCase } = require('../contracts/application/use-cases/DeleteContractPaymentUseCase');
+  const { AttachContractDocumentUseCase } = require('../contracts/application/use-cases/AttachContractDocumentUseCase');
+
+  const { ContractsController } = require('../contracts/interfaces/http/ContractsController');
+  const { createContractRouter } = require('../contracts/interfaces/http/contractRoutes');
+
+  const contractRepo = new PrismaContractRepository(prisma);
+  const contractPaymentRepo = new PrismaContractPaymentRepository(prisma);
+  const contractHistoryRepo = new PrismaContractStatusHistoryRepository(prisma);
+  const contractWriteTx = new PrismaContractWriteTransaction(prisma);
+  const contractDocumentStore = new ContractDocumentStore();
+
+  const contractsController = new ContractsController(
+    new CreateContractUseCase(contractWriteTx, prismaClientRepository),
+    new UpdateContractUseCase(contractWriteTx),
+    new ActivateContractUseCase(contractWriteTx),
+    new CancelContractUseCase(contractWriteTx),
+    new RenewContractUseCase(contractWriteTx),
+    new SearchContractsUseCase(contractRepo),
+    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo),
+    new GetClientContractsUseCase(contractRepo),
+    new RecordContractPaymentUseCase(contractWriteTx),
+    new AddContractPaymentUseCase(contractWriteTx),
+    new UpdateContractPaymentUseCase(contractWriteTx),
+    new DeleteContractPaymentUseCase(contractWriteTx),
+    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore)
+  );
+
+  const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository);
+  app.use('/api/:tenantSlug/contracts', contractRoutes);
 
   // Media Routes (profile photos + workspace branding)
   const { MediaController } = require('../media/interfaces/http/MediaController');

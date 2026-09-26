@@ -16,6 +16,7 @@ import enAppointments from '../locales/en/appointments.json';
 import enInventory from '../locales/en/inventory.json';
 import enQuotations from '../locales/en/quotations.json';
 import enInvoices from '../locales/en/invoices.json';
+import enContracts from '../locales/en/contracts.json';
 import enSettings from '../locales/en/settings.json';
 import enDashboard from '../locales/en/dashboard.json';
 import enNotifications from '../locales/en/notifications.json';
@@ -28,6 +29,7 @@ import sqAppointments from '../locales/sq/appointments.json';
 import sqInventory from '../locales/sq/inventory.json';
 import sqQuotations from '../locales/sq/quotations.json';
 import sqInvoices from '../locales/sq/invoices.json';
+import sqContracts from '../locales/sq/contracts.json';
 import sqSettings from '../locales/sq/settings.json';
 import sqDashboard from '../locales/sq/dashboard.json';
 import sqNotifications from '../locales/sq/notifications.json';
@@ -40,6 +42,7 @@ import elAppointments from '../locales/el/appointments.json';
 import elInventory from '../locales/el/inventory.json';
 import elQuotations from '../locales/el/quotations.json';
 import elInvoices from '../locales/el/invoices.json';
+import elContracts from '../locales/el/contracts.json';
 import elSettings from '../locales/el/settings.json';
 import elDashboard from '../locales/el/dashboard.json';
 import elNotifications from '../locales/el/notifications.json';
@@ -52,6 +55,7 @@ import itAppointments from '../locales/it/appointments.json';
 import itInventory from '../locales/it/inventory.json';
 import itQuotations from '../locales/it/quotations.json';
 import itInvoices from '../locales/it/invoices.json';
+import itContracts from '../locales/it/contracts.json';
 import itSettings from '../locales/it/settings.json';
 import itDashboard from '../locales/it/dashboard.json';
 import itNotifications from '../locales/it/notifications.json';
@@ -75,6 +79,7 @@ export const resources = {
     inventory: enInventory,
     quotations: enQuotations,
     invoices: enInvoices,
+    contracts: enContracts,
     settings: enSettings,
     dashboard: enDashboard,
     notifications: enNotifications,
@@ -88,6 +93,7 @@ export const resources = {
     inventory: sqInventory,
     quotations: sqQuotations,
     invoices: sqInvoices,
+    contracts: sqContracts,
     settings: sqSettings,
     dashboard: sqDashboard,
     notifications: sqNotifications,
@@ -101,6 +107,7 @@ export const resources = {
     inventory: elInventory,
     quotations: elQuotations,
     invoices: elInvoices,
+    contracts: elContracts,
     settings: elSettings,
     dashboard: elDashboard,
     notifications: elNotifications,
@@ -114,6 +121,7 @@ export const resources = {
     inventory: itInventory,
     quotations: itQuotations,
     invoices: itInvoices,
+    contracts: itContracts,
     settings: itSettings,
     dashboard: itDashboard,
     notifications: itNotifications,

@@ -122,6 +122,9 @@ model Tenant {
   // Invoices
   invoices Invoice[]
 
+  // Contracts
+  contracts Contract[]
+
   notifications        Notification[]
   notificationSettings NotificationSettings?
 
@@ -249,6 +252,9 @@ model User {
   statusChanges                     QuotationStatusHistory[]
   invoices                          Invoice[]
   invoiceStatusChanges              InvoiceStatusHistory[]
+  assignedContracts                 Contract[]               @relation("AssignedContracts")
+  createdContracts                  Contract[]               @relation("CreatedContracts")
+  contractStatusChanges             ContractStatusHistory[]  @relation("ContractStatusChanges")
   notifications                     Notification[]           @relation("NotificationRecipient")
   causedNotifications               Notification[]           @relation("NotificationActor")
   sentInvitations                   Invitation[]             @relation("InvitationSender")
@@ -377,6 +383,7 @@ model Client {
   appointments      Appointment[]
   quotations        Quotation[]
   invoices          Invoice[]
+  contracts         Contract[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, status])
@@ -881,17 +888,17 @@ model Notification {
 /// has no form in scope) could not answer "the client's email" if that depended
 /// on which form happened to be open.
 model ClientForm {
-  id          String    @id
-  tenantId    String
-  name        String
-  description String?
+  id                      String    @id
+  tenantId                String
+  name                    String
+  description             String?
   /// Exactly one per tenant. This is the form the internal client create/edit
   /// page renders, and the only one that shows fields not yet placed on it.
-  isDefault   Boolean   @default(false)
+  isDefault               Boolean   @default(false)
   /// FormStatus: DRAFT | PUBLISHED | ARCHIVED. A plain String for the same
   /// reason CustomFieldDefinition.fieldType is — the authoritative list lives
   /// in src/forms/domain/enums/FormStatus.ts and new values cost no migration.
-  status      String    @default("DRAFT")
+  status                  String    @default("DRAFT")
   /// The section/item tree — see src/forms/domain/value-objects/FormLayout.ts.
   /// Sections and items are deliberately NOT tables. Presentation metadata
   /// (help text, accent colour, column span, placeholder) churns constantly,
@@ -905,29 +912,29 @@ model ClientForm {
   ///
   /// No @default: MySQL cannot take a literal default on a JSON column, and the
   /// application always writes it (same as Client.customFieldValues).
-  layout      Json
+  layout                  Json
   /// Optimistic concurrency counter, bumped on every layout write. A layout is
   /// a whole document, so a lost update costs an entire builder session rather
   /// than one field — updates are compare-and-set on this value.
-  version     Int       @default(1)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  version                 Int       @default(1)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
   /// Soft delete, so a form that already produced clients keeps its identity.
-  deletedAt   DateTime?
+  deletedAt               DateTime?
   /// Randomly-generated public share token (43 chars, base64url of 32 bytes),
   /// minted on first publish. NULL until then. This is what stands in for
   /// authentication on the client-facing fill route — same design as
   /// Quotation's share token, see src/quotations/domain/shareToken.ts.
-  shareToken  String?   @unique
+  shareToken              String?   @unique
   /// A template is a form kept as a reusable starting point rather than one
   /// clients fill. Creating a form FROM a template deep-copies the document,
   /// so later edits to either side never propagate (spec §30).
-  isTemplate  Boolean   @default(false)
+  isTemplate              Boolean   @default(false)
   /// The FormVersion clients currently submit against. NULL until first
   /// publish. Deliberately NOT a relation field: FormVersion.formId already
   /// points back here, and a second FK in the opposite direction would make
   /// both rows un-deletable without a two-step dance.
-  publishedVersionId String?
+  publishedVersionId      String?
   /// The draft `version` counter's value at the moment of the last publish.
   /// NULL until first publish. This is what "unpublished changes" is computed
   /// from (`version > publishedAtDraftVersion`) without ever diffing the
@@ -941,7 +948,7 @@ model ClientForm {
   /// migration AND a hand-written MySQL script.
   ///
   /// No @default: MySQL cannot take a literal default on a JSON column.
-  settings    Json
+  settings                Json
 
   tenant      Tenant           @relation(fields: [tenantId], references: [id])
   versions    FormVersion[]
@@ -1009,4 +1016,191 @@ model FormSubmission {
 
   @@index([tenantId, formId, submittedAt])
   @@index([tenantId, submittedAt])
+}
+
+// ==========================================
+// CONTRACTS MODULE
+// ==========================================
+
+/// A subscription a business (Client) has bought: one TERM, with its own
+/// start, end, price and payment schedule.
+///
+/// Deliberately NOT the same thing as `Tenant.subscriptionStatus`, which says
+/// whether THIS workspace may operate. That is the platform billing its
+/// tenants; this is a tenant billing its own customers. The two are different
+/// directions of the same word and must never be conflated — a SUSPENDED
+/// tenant is locked out of the product, whereas a CANCELLED contract is just a
+/// business fact about one of that tenant's clients.
+///
+/// One row per TERM, not per customer relationship. Renewing does not mutate
+/// dates in place — it creates the next Contract pointing back at this one
+/// through `renewedFromContractId`, so "what did they pay us in 2025" stays
+/// answerable after the 2026 renewal. Same snapshot reasoning as
+/// InvoiceLineItem copying its product price rather than referencing it.
+model Contract {
+  id       String @id
+  tenantId String
+  clientId String
+
+  /// Which staff member owns this account. Nullable and `onDelete: Restrict`
+  /// via the relation below, same as Client.assignedUserId: a deactivated
+  /// salesperson must not drag their contracts out of the database with them.
+  /// Drives "my contracts" filtering and who receives the expiry notification.
+  assignedUserId String?
+
+  /// The plan sold, as free text rather than an enum. Medwork's plan list is
+  /// commercial, not structural — it changes with a price sheet, and a schema
+  /// migration is the wrong unit of work for "we renamed Gold to Premium".
+  planName String
+
+  /// DRAFT | ACTIVE | EXPIRED | CANCELLED — see ContractStatus in
+  /// src/contracts/domain/Contract.ts. A String column for the same reason
+  /// every other status here is one: the authoritative list is the TypeScript
+  /// enum, and adding a value needs no migration.
+  status String
+
+  /// Price for ONE billing period, not for the whole term. A 1200/year plan
+  /// billed MONTHLY stores 100 here, and the term's total is derived by
+  /// multiplying by the generated schedule length — storing both a period
+  /// price and a term total is how the two drift apart.
+  amount Float
+
+  /// MONTHLY | QUARTERLY | ANNUAL | ONE_TIME — how often `amount` falls due.
+  /// Determines how many ContractPayment rows activation generates.
+  billingPeriod String
+
+  startsAt DateTime
+  /// Last day the term covers. The expiry sweep compares this against now.
+  endsAt   DateTime
+
+  /// Internal notes, private to the workspace. A dedicated column rather than
+  /// a custom field, same rationale as Client.notes.
+  notes String?
+
+  /// The signed contract document, if one was uploaded. Stored as a public
+  /// `/uploads/...` URL like ProductImage.url, but written by the contract
+  /// document endpoint rather than MediaService: this is a PDF kept verbatim,
+  /// not an image to be re-encoded through sharp.
+  documentUrl  String?
+  /// Original filename, so a download can be offered under the name the user
+  /// recognises rather than the UUID the file is stored as.
+  documentName String?
+
+  /// The term this one renewed, if any. Unique because a term can be renewed
+  /// exactly once — a second renewal of the same term would mean two live
+  /// successors and no answer to "which one is current". The constraint is in
+  /// the database rather than only in RenewContractUseCase for the same reason
+  /// Invoice.quotationId is: the use case's check is not atomic.
+  renewedFromContractId String? @unique
+
+  activatedAt DateTime?
+  cancelledAt DateTime?
+
+  /// When the "expires soon" warning went out. NULL means not yet warned, and
+  /// that is the entire dedup mechanism — the sweep selects on IS NULL, same
+  /// convention as Appointment.remindedAt and Quotation.followUpSentAt.
+  /// Cleared by a renewal so the next term earns its own warning.
+  expiryNotifiedAt DateTime?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id])
+  client       Client @relation(fields: [clientId], references: [id])
+  assignedUser User?  @relation("AssignedContracts", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  createdBy    User   @relation("CreatedContracts", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  renewedFrom Contract? @relation("ContractRenewal", fields: [renewedFromContractId], references: [id], onDelete: Restrict)
+  renewedInto Contract? @relation("ContractRenewal")
+
+  payments      ContractPayment[]
+  statusHistory ContractStatusHistory[]
+
+  @@index([tenantId, clientId])
+  @@index([tenantId, status])
+  @@index([tenantId, assignedUserId])
+  /// Drives the expiry sweep, which scans ACTIVE contracts by end date across
+  /// all tenants rather than within one — same shape as Invoice's
+  /// `[status, dueDate]`, for the same reason.
+  @@index([status, endsAt])
+}
+
+/// One expected payment against a contract: "the March instalment".
+///
+/// There is no payment provider anywhere in this module and that is by design
+/// — nothing here talks to a gateway, reconciles a webhook or holds a card.
+/// A person collects the money however they collect it (bank transfer, cash,
+/// standing order) and records that fact here by hand. `status` is therefore
+/// a human assertion, not a system observation.
+///
+/// Rows are generated up front by ActivateContractUseCase so the schedule is
+/// visible before any money moves, and stay fully editable afterwards: real
+/// billing has part-payments, waived months and off-cycle extras.
+model ContractPayment {
+  id         String @id
+  tenantId   String
+  contractId String
+
+  /// 1-based position within the generated schedule. Not a unique key — an
+  /// ad-hoc payment added later shares the index of the period it falls in,
+  /// which is correct: two payments can belong to the same month.
+  periodIndex Int
+
+  dueDate DateTime
+  /// What is owed for this period. Copied from Contract.amount at generation
+  /// time, then independently editable — a mid-term price change must not
+  /// rewrite instalments the customer already paid at the old rate.
+  amount  Float
+
+  /// UNPAID | PAID | PARTIAL | WAIVED — see PaymentStatus in
+  /// src/contracts/domain/ContractPayment.ts.
+  status String @default("UNPAID")
+
+  /// How much has actually landed. Equals `amount` for PAID and 0 for UNPAID;
+  /// the field exists for PARTIAL, which is the only state where "how much is
+  /// still owed" cannot be derived from the status alone.
+  paidAmount Float @default(0)
+
+  /// When the money was received — the real-world date the user enters, which
+  /// is not the same as when they got round to recording it here.
+  paidAt DateTime?
+
+  /// Free text: "bank transfer", "cash", "card at reception". Not an enum,
+  /// because the list is whatever this business actually does.
+  method String?
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, contractId, dueDate])
+  /// Drives the unpaid/overdue rollup across all of a tenant's contracts.
+  @@index([tenantId, status, dueDate])
+}
+
+/// Audit trail for a contract's lifecycle transitions, mirroring
+/// InvoiceStatusHistory exactly — including the NULL-means-the-scheduler
+/// convention on `changedByUserId`, which is what lets an EXPIRED contract's
+/// own history explain that time expired it rather than a person.
+model ContractStatusHistory {
+  id         String @id
+  tenantId   String
+  contractId String
+  fromStatus String
+  toStatus   String
+
+  changedByUserId String?
+  note            String?
+  createdAt       DateTime @default(now())
+
+  contract  Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  /// `onDelete: Restrict`, stated explicitly — same rationale as
+  /// InvoiceStatusHistory.changedBy: deleting a user must not silently rewrite
+  /// their past status changes as "done by the scheduler".
+  changedBy User?    @relation("ContractStatusChanges", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, contractId])
 }

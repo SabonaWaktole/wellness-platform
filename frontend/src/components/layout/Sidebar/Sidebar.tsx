@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Calendar, Package, FileText, BarChart3,
   Settings, Building, CreditCard, Search, ClipboardCheck, Plus,
-  HelpCircle, LogOut, Receipt,
+  HelpCircle, LogOut, Receipt, FileSignature,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
@@ -25,6 +25,10 @@ const iconMap: Record<string, LucideIcon> = {
   credit_card: CreditCard,
   manage_search: Search,
   task_alt: ClipboardCheck,
+  // Contracts. A signed page rather than another document icon, so it reads as
+  // distinct from quotations (description) and invoices (receipt_long) in the
+  // same stack.
+  contract: FileSignature,
 };
 
 export interface NavItem {

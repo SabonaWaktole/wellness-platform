@@ -33,6 +33,7 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        *   - Quotation    -> QuotationLineItem, QuotationStatusHistory
        *   - Product      -> ProductImage
        *   - Invoice      -> InvoiceLineItem, InvoiceStatusHistory
+       *   - Contract     -> ContractPayment, ContractStatusHistory
        *   - Tenant       -> NotificationSettings (deleted last, below)
        *
        * AuditLog is deliberately absent: its tenantId column carries no
@@ -41,8 +42,8 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        * transaction commits and the tenant is gone.
        *
        * Everything that references User under RESTRICT (Client, Interaction,
-       * Appointment, Quotation, Invoice, OwnershipTransfer, StockMovement,
-       * Notification, Invitation) is therefore deleted BEFORE
+       * Appointment, Quotation, Invoice, Contract, OwnershipTransfer,
+       * StockMovement, Notification, Invitation) is therefore deleted BEFORE
        * `user.deleteMany`, and Warehouse — which only User.warehouseId still
        * points at by the time we get there — is deleted after Users.
        */
@@ -50,6 +51,15 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.formVersion.deleteMany({ where: { tenantId } });
       await tx.clientForm.deleteMany({ where: { tenantId } });
       await tx.invoice.deleteMany({ where: { tenantId } });
+      /*
+       * Before Client and User, like Invoice above and for the same reason:
+       * Contract holds RESTRICT references to both, plus a self-reference
+       * (`renewedFromContractId`). The self-reference is why this is a single
+       * deleteMany rather than an ordered walk — Postgres defers nothing here,
+       * but one statement removing the whole set satisfies the constraint in a
+       * way that deleting renewals one at a time would not.
+       */
+      await tx.contract.deleteMany({ where: { tenantId } });
       await tx.ownershipTransfer.deleteMany({ where: { tenantId } });
       await tx.notification.deleteMany({ where: { tenantId } });
       await tx.appointment.deleteMany({ where: { tenantId } });

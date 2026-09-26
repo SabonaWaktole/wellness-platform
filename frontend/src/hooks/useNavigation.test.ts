@@ -145,7 +145,7 @@ describe('useNavigation', () => {
 
       expect(afterwards).toEqual(first);
       expect(idsFor(OWNER)).toEqual([
-        'dashboard', 'clients', 'appointments', 'inventory', 'quotations', 'invoices', 'reports', 'settings',
+        'dashboard', 'clients', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'reports', 'settings',
       ]);
     });
 

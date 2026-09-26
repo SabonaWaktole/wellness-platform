@@ -27,6 +27,8 @@
     "FORM_SUBMITTED": "Nuovo invio per \"{{form}}\"",
     "INVITATION_ACCEPTED": "{{email}} ha accettato il tuo invito e si è unito al team",
     "APPOINTMENT_REMINDER": "Promemoria: appuntamento con {{clientName}}",
-    "QUOTATION_FOLLOW_UP": "Il preventivo {{reference}} non ha ricevuto risposta da {{clientName}} da {{daysWaiting}} giorni"
+    "QUOTATION_FOLLOW_UP": "Il preventivo {{reference}} non ha ricevuto risposta da {{clientName}} da {{daysWaiting}} giorni",
+    "CONTRACT_EXPIRING": "Il contratto {{planName}} di {{clientName}} scade tra {{daysRemaining}} giorni",
+    "CONTRACT_EXPIRED": "Il contratto {{planName}} di {{clientName}} è scaduto"
   }
 }

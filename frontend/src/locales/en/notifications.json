@@ -28,6 +28,8 @@
     "INVITATION_ACCEPTED": "{{email}} accepted your invitation and joined the team",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "FORM_SUBMITTED": "A new response was submitted for {{form}}"
+    "FORM_SUBMITTED": "A new response was submitted for {{form}}",
+    "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract expires in {{daysRemaining}} days",
+    "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired"
   }
 }

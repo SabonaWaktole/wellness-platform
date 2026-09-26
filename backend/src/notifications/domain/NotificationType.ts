@@ -42,6 +42,14 @@ export const NOTIFICATION_TYPES = [
   // account), same as the two scheduled types above.
   'FORM_SUBMITTED',
 
+  /*
+   * Contracts. Both are scheduled types with no actor, like the two above —
+   * a term approaching its end and a term reaching it are both time passing,
+   * not anyone acting.
+   */
+  'CONTRACT_EXPIRING',
+  'CONTRACT_EXPIRED',
+
   // Team.
   'INVITATION_ACCEPTED',
 ] as const;
@@ -52,7 +60,13 @@ export const isNotificationType = (value: string): value is NotificationType =>
   (NOTIFICATION_TYPES as readonly string[]).includes(value);
 
 /** What a notification points at, so the UI can deep-link. */
-export const NOTIFICATION_ENTITY_TYPES = ['QUOTATION', 'APPOINTMENT', 'CLIENT', 'FORM'] as const;
+export const NOTIFICATION_ENTITY_TYPES = [
+  'QUOTATION',
+  'APPOINTMENT',
+  'CLIENT',
+  'FORM',
+  'CONTRACT',
+] as const;
 export type NotificationEntityType = (typeof NOTIFICATION_ENTITY_TYPES)[number];
 
 /**

@@ -32,6 +32,9 @@ const ownerNavItems: NavItemSpec[] = [
   // so `receipt_long` reads as "description, but final" without inventing a
   // third visual language for billing documents.
   { id: 'invoices', labelKey: 'nav.invoices', icon: 'receipt_long' },
+  // Subscriptions sold to clients. Sits after invoices because it reads as the
+  // ongoing commitment behind them rather than a separate part of the product.
+  { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart' },
   { id: 'settings', path: 'settings/profile', labelKey: 'nav.settings', icon: 'settings' },
 ];
@@ -42,6 +45,7 @@ const staffNavItems: NavItemSpec[] = [
   { id: 'appointments', labelKey: 'nav.appointments', icon: 'event' },
   { id: 'quotations', labelKey: 'nav.quotations', icon: 'description' },
   { id: 'invoices', labelKey: 'nav.invoices', icon: 'receipt_long' },
+  { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract' },
   // No 'tasks' entry: there is no Tasks feature in this codebase — no route,
   // page, Prisma model or endpoint. The link was a leftover from early planning
   // and sent staff to a 404.

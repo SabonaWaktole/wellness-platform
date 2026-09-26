@@ -78,6 +78,42 @@ export interface ISchedulerQueries {
    * `findQuotationsDueExpiry`.
    */
   findInvoicesPastDue(now: Date): Promise<PastDueInvoice[]>;
+
+  /**
+   * Every ACTIVE contract whose end date has passed, across all tenants.
+   *
+   * Cross-tenant and unconditional for the same reason as
+   * `findInvoicesPastDue`: a term running out is a fact about the calendar,
+   * not a destructive action a tenant needs to have switched on. The state
+   * change (Active -> Expired) is its own idempotency marker.
+   */
+  findContractsPastEnd(now: Date): Promise<ExpiringContract[]>;
+
+  /**
+   * ACTIVE contracts ending within `days` that have not been warned about yet.
+   *
+   * Unlike the sweep above, this one DOES need a marker column
+   * (`expiryNotifiedAt`): warning about an upcoming expiry does not change the
+   * contract, so nothing about the row would stop the next hourly pass from
+   * warning again. Same mechanism as `Appointment.remindedAt`.
+   */
+  findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]>;
+
+  /** Idempotency marker. Set once the expiry warning has actually been emitted. */
+  markContractExpiryNotified(contractId: string, at: Date): Promise<void>;
+}
+
+/** A contract at or near the end of its term, with enough context to write a notice. */
+export interface ExpiringContract {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  clientName: string;
+  planName: string;
+  endsAt: Date;
+  /** Who to tell. NULL when nobody owns the account — see the job for the fallback. */
+  assignedUserId: string | null;
+  createdByUserId: string;
 }
 
 /** A Sent invoice whose due date has passed. */
