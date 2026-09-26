@@ -116,6 +116,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     origin: (origin, callback) => {
       const allowedOrigins = [
         'https://neva-crm.vercel.app',
+        'https://nevacrm.eu',
+        'https://www.nevacrm.eu',
         process.env.FRONTEND_URL
       ];
       if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
