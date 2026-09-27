@@ -11,6 +11,7 @@ import { GetInvoicePdfViewUseCase } from '../../application/GetInvoicePdfViewUse
 import { InvoicePdfRenderer } from '../../infrastructure/InvoicePdfRenderer';
 import { invoiceReference } from '../../domain/invoiceReference';
 import { convertToInvoiceSchema, searchInvoicesSchema } from './schemas/invoiceSchemas';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 
 export class InvoicesController {
   public router = Router();
@@ -29,13 +30,20 @@ export class InvoicesController {
   }
 
   private initializeRoutes() {
-    this.router.post('/from-quotation/:quotationId', this.convertFromQuotation.bind(this));
-    this.router.get('/', this.searchInvoices.bind(this));
-    this.router.get('/:id', this.getInvoiceDetail.bind(this));
-    this.router.get('/:id/pdf', this.downloadPdf.bind(this));
-    this.router.post('/:id/send', this.sendInvoice.bind(this));
-    this.router.post('/:id/mark-paid', this.markPaid.bind(this));
-    this.router.post('/:id/void', this.voidInvoice.bind(this));
+    // invoices.manage (scoped OWN/TEAM/ALL): the creator-only ("OWN") check
+    // stays inside each use case — see GetInvoiceDetailUseCase and friends —
+    // this only screens out someone with no invoices right at all.
+    this.router.post(
+      '/from-quotation/:quotationId',
+      requirePermission('invoices.manage'),
+      this.convertFromQuotation.bind(this)
+    );
+    this.router.get('/', requirePermission('invoices.manage'), this.searchInvoices.bind(this));
+    this.router.get('/:id', requirePermission('invoices.manage'), this.getInvoiceDetail.bind(this));
+    this.router.get('/:id/pdf', requirePermission('invoices.manage'), this.downloadPdf.bind(this));
+    this.router.post('/:id/send', requirePermission('invoices.manage'), this.sendInvoice.bind(this));
+    this.router.post('/:id/mark-paid', requirePermission('invoices.manage'), this.markPaid.bind(this));
+    this.router.post('/:id/void', requirePermission('invoices.manage'), this.voidInvoice.bind(this));
   }
 
   private async convertFromQuotation(req: Request, res: Response) {

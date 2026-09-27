@@ -19,6 +19,7 @@ import {
   CONTRACT_DOC_MIME,
   MAX_CONTRACT_DOC_BYTES,
 } from '../../infrastructure/ContractDocumentStore';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 import {
   createContractSchema,
   updateContractSchema,
@@ -68,25 +69,45 @@ export class ContractsController {
   }
 
   private initializeRoutes() {
+    // contracts.validity.view (scoped): reads. contracts.manage (scoped):
+    // writes. The creator-or-assignee check (`contractAccess.canAccessContract`)
+    // stays keyed on the legacy role string for now — it produces the same
+    // result as a scope-based OWN check for every user that exists today,
+    // since no roleId-carrying user can exist before Slice 5/6 ship. Moving
+    // it onto `access.scopeOf(...)` is follow-on work for those slices.
+    //
     // `/client/:clientId` is declared BEFORE `/:id`, or Express would match
     // the literal segment "client" as a contract id.
-    this.router.get('/client/:clientId', this.getClientContracts.bind(this));
+    this.router.get('/client/:clientId', requirePermission('contracts.validity.view'), this.getClientContracts.bind(this));
 
-    this.router.get('/', this.searchContracts.bind(this));
-    this.router.post('/', this.createContract.bind(this));
-    this.router.get('/:id', this.getContractDetail.bind(this));
-    this.router.patch('/:id', this.updateContract.bind(this));
-    this.router.post('/:id/activate', this.activateContract.bind(this));
-    this.router.post('/:id/cancel', this.cancelContract.bind(this));
-    this.router.post('/:id/renew', this.renewContract.bind(this));
+    this.router.get('/', requirePermission('contracts.validity.view'), this.searchContracts.bind(this));
+    this.router.post('/', requirePermission('contracts.manage'), this.createContract.bind(this));
+    this.router.get('/:id', requirePermission('contracts.validity.view'), this.getContractDetail.bind(this));
+    this.router.patch('/:id', requirePermission('contracts.manage'), this.updateContract.bind(this));
+    this.router.post('/:id/activate', requirePermission('contracts.manage'), this.activateContract.bind(this));
+    this.router.post('/:id/cancel', requirePermission('contracts.manage'), this.cancelContract.bind(this));
+    this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
 
-    this.router.post('/:id/payments', this.addPayment.bind(this));
-    this.router.patch('/:id/payments/:paymentId', this.updatePayment.bind(this));
-    this.router.post('/:id/payments/:paymentId/record', this.recordPayment.bind(this));
-    this.router.delete('/:id/payments/:paymentId', this.deletePayment.bind(this));
+    this.router.post('/:id/payments', requirePermission('contracts.manage'), this.addPayment.bind(this));
+    this.router.patch(
+      '/:id/payments/:paymentId',
+      requirePermission('contracts.manage'),
+      this.updatePayment.bind(this)
+    );
+    this.router.post(
+      '/:id/payments/:paymentId/record',
+      requirePermission('contracts.manage'),
+      this.recordPayment.bind(this)
+    );
+    this.router.delete(
+      '/:id/payments/:paymentId',
+      requirePermission('contracts.manage'),
+      this.deletePayment.bind(this)
+    );
 
     this.router.post(
       '/:id/document',
+      requirePermission('contracts.manage'),
       // Multer errors (too large, wrong type) surface as thrown errors, so they
       // are translated here rather than falling through to the global 500
       // handler — same treatment as MediaController.
@@ -104,7 +125,7 @@ export class ContractsController {
       },
       this.attachDocument.bind(this)
     );
-    this.router.delete('/:id/document', this.clearDocument.bind(this));
+    this.router.delete('/:id/document', requirePermission('contracts.manage'), this.clearDocument.bind(this));
   }
 
   /**

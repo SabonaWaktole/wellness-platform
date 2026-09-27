@@ -5,6 +5,7 @@ import { TenantProfileStore } from '../../infrastructure/TenantProfileStore';
 import { UpdateTenantSettingsUseCase } from '../../application/use-cases/UpdateTenantSettingsUseCase';
 import { UnauthorizedError } from '../../../auth/domain/errors';
 import { ZodError } from 'zod';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 
 export class SettingsController {
   public router = Router({ mergeParams: true });
@@ -19,7 +20,7 @@ export class SettingsController {
 
   private initializeRoutes() {
     this.router.get('/', this.getSettings.bind(this));
-    this.router.put('/', this.updateSettings.bind(this));
+    this.router.put('/', requirePermission('settings.manage'), this.updateSettings.bind(this));
   }
 
   /**

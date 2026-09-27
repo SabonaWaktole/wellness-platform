@@ -669,7 +669,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new InvoicePdfRenderer()
   );
 
-  const invoiceRoutes = createInvoiceRouter(invoicesController, tokenService, tenantRepository);
+  const invoiceRoutes = createInvoiceRouter(invoicesController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/invoices', invoiceRoutes);
 
   // Contracts Routes
@@ -722,7 +722,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore)
   );
 
-  const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository);
+  const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/contracts', contractRoutes);
 
   // Media Routes (profile photos + workspace branding)
@@ -731,7 +731,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { UPLOADS_DIR } = require('../media/MediaService');
 
   const mediaController = new MediaController();
-  const mediaRoutes = createMediaRouter(mediaController, tokenService, tenantRepository);
+  const mediaRoutes = createMediaRouter(mediaController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/media', mediaRoutes);
 
   // Serve stored images. Filenames contain a UUID and are never reused, so a
@@ -761,7 +761,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const tenantProfileStore = new TenantProfileStore();
   const updateTenantSettingsUseCase = new UpdateTenantSettingsUseCase(tenantRepository, tenantProfileStore);
   const settingsController = new SettingsController(tenantRepository, tenantProfileStore, updateTenantSettingsUseCase);
-  const settingsRoutes = createSettingsRouter(settingsController, tokenService, tenantRepository);
+  const settingsRoutes = createSettingsRouter(settingsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/settings', settingsRoutes);
 
   // Integrations Routes
@@ -820,7 +820,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   );
   app.use(
     '/api/:tenantSlug/notifications',
-    createNotificationRouter(notificationController, tokenService, tenantRepository)
+    createNotificationRouter(notificationController, tokenService, tenantRepository, resolveAccessContext)
   );
 
   app.use(errorHandler);
