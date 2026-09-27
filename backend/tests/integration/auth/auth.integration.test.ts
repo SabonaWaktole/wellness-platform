@@ -22,6 +22,7 @@ import { Tenant } from '@tenant/domain/entities/Tenant';
 import { Invitation } from '@auth/domain/entities/Invitation';
 import { PasswordResetToken } from '@auth/domain/entities/PasswordResetToken';
 import { UserRole } from '@auth/domain/enums/UserRole';
+import { IAccessRepository, AccessRecord } from '../../../src/access/application/ports/IAccessRepository';
 
 // ---------------------------------------------------------------------------
 // In-memory implementations of ports â€” lightweight fakes that behave like
@@ -404,6 +405,35 @@ class FakeTenantProvisioningTransaction implements ITenantProvisioningTransactio
   }
 }
 
+/**
+ * Slice 3: `loadAccess` resolves `req.access` through `IAccessRepository`,
+ * separately from `IUserRepository` (it is a dedicated read model over
+ * User + Role + RolePermission — see PrismaAccessRepository). These fixtures
+ * never seed a Role, so `roleId` is always null and every user resolves via
+ * `LegacyRoleMapping` (D2) — exactly the BUSINESS_OWNER/STAFF behaviour these
+ * tests already assume.
+ */
+class FakeAccessRepository implements IAccessRepository {
+  constructor(private readonly userRepo: IUserRepository) {}
+
+  async findAccessRecord(tenantId: string, userId: string): Promise<AccessRecord | null> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.tenantId !== tenantId) {
+      return null;
+    }
+    return {
+      userId: user.id,
+      tenantId,
+      legacyRole: user.role,
+      roleId: null,
+      roleKey: null,
+      isActive: user.isActive,
+      deletedAt: user.deletedAt,
+      grants: {},
+    };
+  }
+}
+
 // ===========================================================================
 // INTEGRATION TESTS
 // ===========================================================================
@@ -438,6 +468,7 @@ describe('Auth Integration Tests', () => {
       tokenService,
       emailSender,
       tenantProvisioningTransaction,
+      accessRepository: new FakeAccessRepository(userRepo),
     });
   });
 

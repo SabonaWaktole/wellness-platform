@@ -34,3 +34,26 @@ export function requirePermission(key: string): PermissionCheckingMiddleware {
   middleware.permissionKey = key;
   return middleware;
 }
+
+/**
+ * For an endpoint whose exact permission depends on the request body — e.g.
+ * adding an interaction is `notes.add` for a NOTE and `activities.add` for
+ * everything else (D3) — and so cannot be pinned to one key at the route
+ * level. This only checks "is at least one of these held at all"; the use
+ * case still makes the real, body-dependent check and is the actual
+ * authorization boundary. `permissionKey` carries a joined label so the
+ * route-coverage test still sees this route as declaring something.
+ */
+export function requireAnyPermission(keys: string[]): PermissionCheckingMiddleware {
+  const middleware = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.access) {
+      return next(new Error(`requireAnyPermission(${keys.join(',')}): req.access is not set — is loadAccess mounted first?`));
+    }
+    if (!keys.some((key) => req.access!.can(key))) {
+      return res.status(403).json({ error: 'Forbidden. Insufficient permissions.' });
+    }
+    next();
+  };
+  middleware.permissionKey = keys.join('|');
+  return middleware;
+}

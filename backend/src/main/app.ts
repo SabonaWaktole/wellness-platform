@@ -82,6 +82,10 @@ import { QuotationDeliveryService } from '../quotations/application/QuotationDel
 import { GetPublicQuotationUseCase } from '../quotations/application/GetPublicQuotationUseCase';
 import { RespondToPublicQuotationUseCase } from '../quotations/application/use-cases/RespondToPublicQuotationUseCase';
 import { createPublicQuotationRouter } from '../quotations/interfaces/http/publicQuotationRoutes';
+import { IAccessRepository } from '../access/application/ports/IAccessRepository';
+import { PrismaAccessRepository } from '../access/infrastructure/PrismaAccessRepository';
+import { InMemoryAccessCache } from '../access/infrastructure/InMemoryAccessCache';
+import { ResolveAccessContextUseCase } from '../access/application/use-cases/ResolveAccessContextUseCase';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -99,6 +103,10 @@ export interface AppDependencies {
   tenantProvisioningTransaction: ITenantProvisioningTransaction;
   platformSettingsRepository: IPlatformSettingsRepository;
   integrationRepository?: any;
+  /** Slice 3: overridable so tests can seed a fake AccessRecord instead of hitting Postgres. */
+  accessRepository: IAccessRepository;
+  /** Fresh per `createApp()` call by default, so test suites never share cached grants. */
+  accessCache: InMemoryAccessCache;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -159,6 +167,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     overrides?.tenantProvisioningTransaction ?? new PrismaTenantProvisioningTransaction();
   const platformSettingsRepository =
     overrides?.platformSettingsRepository ?? new PrismaPlatformSettingsRepository();
+  const accessRepository = overrides?.accessRepository ?? new PrismaAccessRepository();
+  const accessCache = overrides?.accessCache ?? new InMemoryAccessCache();
+  const resolveAccessContext = new ResolveAccessContextUseCase(accessRepository, accessCache);
 
   // Use Cases
   //
@@ -284,14 +295,14 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Auth Routes
   const { createGlobalAuthRoutes, createTenantAuthRoutes } = require('@auth/interfaces/http/routes/authRoutes');
   const globalAuthRoutes = createGlobalAuthRoutes(authController, tokenService);
-  const tenantAuthRoutes = createTenantAuthRoutes(authController, tokenService, tenantRepository);
+  const tenantAuthRoutes = createTenantAuthRoutes(authController, tokenService, tenantRepository, resolveAccessContext);
   
   app.use('/api/auth', globalAuthRoutes);
   app.use('/api/:tenantSlug/auth', tenantAuthRoutes);
 
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');
-  const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService);
+  const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService, resolveAccessContext);
   app.use('/api/:tenantSlug/clients', clientRoutes);
 
   // The client-facing form (§24) — no tenant prefix, no auth. Mounted BEFORE
