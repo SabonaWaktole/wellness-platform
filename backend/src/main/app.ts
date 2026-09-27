@@ -230,11 +230,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
   const changePasswordUseCase = new ChangePasswordUseCase(userRepository, passwordHasher);
   const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
-  const updateUserRoleUseCase = new UpdateUserRoleUseCase(userRepository);
+  const updateUserRoleUseCase = new UpdateUserRoleUseCase(userRepository, accessCache);
   const cancelInvitationUseCase = new CancelInvitationUseCase(invitationRepository);
-  const deactivateUserUseCase = new DeactivateUserUseCase(userRepository);
+  const deactivateUserUseCase = new DeactivateUserUseCase(userRepository, accessCache);
   const getDeactivationImpactUseCase = new GetDeactivationImpactUseCase(userRepository);
-  const reactivateUserUseCase = new ReactivateUserUseCase(userRepository);
+  const reactivateUserUseCase = new ReactivateUserUseCase(userRepository, accessCache);
 
   // Platform Admin user lifecycle (suspend/reactivate/delete, including
   // Business Owner ownership transfer). Distinct actor and scope from the
@@ -289,7 +289,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     reactivateUserUseCase,
     createUserUseCase,
     exitTenantUseCase,
-    changePasswordUseCase
+    changePasswordUseCase,
+    resolveAccessContext
   );
 
   // Auth Routes

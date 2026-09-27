@@ -20,6 +20,7 @@ import { DeactivateUserUseCase } from '@auth/application/use-cases/DeactivateUse
 import { GetDeactivationImpactUseCase } from '@auth/application/use-cases/GetDeactivationImpactUseCase';
 import { ITenantRepository } from '@tenant/domain/repositories/ITenantRepository';
 import { UserRole } from '@auth/domain/enums/UserRole';
+import { ResolveAccessContextUseCase } from '../../../../access/application/use-cases/ResolveAccessContextUseCase';
 export class AuthController {
   constructor(
     private loginUseCase: LoginUseCase,
@@ -39,7 +40,8 @@ export class AuthController {
     private reactivateUserUseCase?: ReactivateUserUseCase,
     private createUserUseCase?: CreateUserUseCase,
     private exitTenantUseCase?: ExitTenantUseCase,
-    private changePasswordUseCase?: ChangePasswordUseCase
+    private changePasswordUseCase?: ChangePasswordUseCase,
+    private resolveAccessContext?: ResolveAccessContextUseCase
   ) {}
 
   loginTenant = async (req: Request, res: Response) => {
@@ -205,6 +207,35 @@ export class AuthController {
         });
       }
 
+      // Slice 3 (FR-RBAC-01, enabler for FR-USR-03): the permissions this
+      // session actually has, resolved the same way `loadAccess` does for
+      // every tenant-scoped request — SUPER_ADMIN and impersonation both
+      // short-circuit to platformOperator() inside the use case. Optional
+      // because a handful of test doubles still construct AuthController
+      // without it; a session without it simply carries no permissions.
+      let permissions: Record<string, unknown> = {};
+      let permissionsVersion: string | undefined;
+      if (this.resolveAccessContext && effectiveTenantId) {
+        const access = await this.resolveAccessContext.execute({
+          userId: user.id,
+          tenantId: effectiveTenantId,
+          legacyRole: effectiveRole,
+          impersonatorId: req.user.impersonatorId ?? null,
+        });
+        permissions = access.toJSON();
+        permissionsVersion = access.version;
+        res.setHeader('X-Permissions-Version', permissionsVersion);
+      } else if (this.resolveAccessContext && effectiveRole === UserRole.SUPER_ADMIN) {
+        const access = await this.resolveAccessContext.execute({
+          userId: user.id,
+          tenantId: null,
+          legacyRole: effectiveRole,
+        });
+        permissions = access.toJSON();
+        permissionsVersion = access.version;
+        res.setHeader('X-Permissions-Version', permissionsVersion);
+      }
+
       res.status(200).json({
         user: {
           userId: user.id,
@@ -234,6 +265,9 @@ export class AuthController {
           // settings UI can show "Follow company default" as selected.
           userLanguage: user.language ?? null,
           tenantDefaultLanguage: tenantBranding?.defaultLanguage ?? null,
+          // Slice 3: { [permissionKey]: scope | true }, from AccessContext.toJSON().
+          permissions,
+          permissionsVersion: permissionsVersion ?? null,
         },
         /*
          * Non-null while a platform administrator is managing this workspace.

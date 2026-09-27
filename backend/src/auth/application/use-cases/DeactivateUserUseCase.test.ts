@@ -58,6 +58,15 @@ describe('DeactivateUserUseCase', () => {
     expect(userRepository.setActive).toHaveBeenCalledWith('staff-1', false);
   });
 
+  it('D1: clears the access cache for the deactivated user', async () => {
+    const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
+    useCase = new DeactivateUserUseCase(userRepository, permissionsChanged);
+
+    await deactivate();
+
+    expect(permissionsChanged.userChanged).toHaveBeenCalledWith('staff-1');
+  });
+
   it('never deletes â€” deactivation is the only off-boarding path', () => {
     // Seven non-nullable columns reference User; a delete method would be
     // blocked by RESTRICT or would destroy financial and audit history.

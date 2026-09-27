@@ -1,6 +1,7 @@
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { UserRole } from '../../domain/enums/UserRole';
 import { UnauthorizedError } from '../../domain/errors';
+import { IPermissionsChanged } from '../../../access/application/ports/IPermissionsChanged';
 
 export interface DeactivateUserDTO {
   /** Role of the caller, for authorization. */
@@ -27,7 +28,11 @@ export interface DeactivateUserDTO {
  * caller is shown the outstanding counts instead and can reassign separately.
  */
 export class DeactivateUserUseCase {
-  constructor(private userRepository: IUserRepository) {}
+  constructor(
+    private userRepository: IUserRepository,
+    /** D1: cleared so a still-valid token stops working on the deactivated user's next request. */
+    private permissionsChanged?: IPermissionsChanged
+  ) {}
 
   async execute(dto: DeactivateUserDTO): Promise<{ userId: string }> {
     if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER) {
@@ -59,6 +64,7 @@ export class DeactivateUserUseCase {
     }
 
     await this.userRepository.setActive(dto.userIdToDeactivate, false);
+    this.permissionsChanged?.userChanged(dto.userIdToDeactivate);
     return { userId: dto.userIdToDeactivate };
   }
 }

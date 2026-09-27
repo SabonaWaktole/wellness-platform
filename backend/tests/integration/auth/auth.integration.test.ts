@@ -753,6 +753,28 @@ describe('Auth Integration Tests', () => {
   });
 
   // -----------------------------------------------------------------------
+  // 4b. GET /api/auth/me — Slice 3 permissions
+  // -----------------------------------------------------------------------
+  describe('GET /api/auth/me (FR-RBAC-01, enabler for FR-USR-03)', () => {
+    it('returns permissions (D2 legacy mapping) and an X-Permissions-Version header', async () => {
+      await provisionTenant({ name: 'Acme Corp', slug: 'acme', ownerEmail: 'owner@acme.com', ownerPassword: 'Password1' });
+      const loginRes = await request(app)
+        .post('/api/acme/auth/login')
+        .send({ email: 'owner@acme.com', password: 'Password1' });
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${loginRes.body.token}`)
+        .expect(200);
+
+      // BUSINESS_OWNER -> Administrator (D2): holds users.manage.
+      expect(res.body.user.permissions['users.manage']).toBe(true);
+      expect(typeof res.body.user.permissionsVersion).toBe('string');
+      expect(res.headers['x-permissions-version']).toBe(res.body.user.permissionsVersion);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // 5. PASSWORD RESET FLOW
   // -----------------------------------------------------------------------
   describe('Password Reset Flow', () => {

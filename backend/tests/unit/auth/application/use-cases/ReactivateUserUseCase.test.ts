@@ -59,6 +59,16 @@ describe('ReactivateUserUseCase', () => {
     expect(userRepository.setActive).toHaveBeenCalledWith('u1', true);
   });
 
+  it('D1: clears the access cache for the reactivated user', async () => {
+    userRepository.findById.mockResolvedValue(makeUser());
+    const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
+    useCase = new ReactivateUserUseCase(userRepository, permissionsChanged);
+
+    await useCase.execute({ requestingUserRole: UserRole.BUSINESS_OWNER, tenantId: 'tenant1', userIdToReactivate: 'u1' });
+
+    expect(permissionsChanged.userChanged).toHaveBeenCalledWith('u1');
+  });
+
   it('is idempotent â€” reactivating an active member succeeds and writes nothing', async () => {
     userRepository.findById.mockResolvedValue(makeUser({ isActive: true } as any));
 
