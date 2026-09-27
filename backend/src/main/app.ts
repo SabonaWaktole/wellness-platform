@@ -358,7 +358,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // the tenant's field dictionary, and clientRoutes already wires 18 use cases
   // into a single controller.
   const { createFormRouter } = require('../forms/interfaces/http/routes/formRoutes');
-  const formRoutes = createFormRouter(prisma, tokenService, tenantRepository);
+  const formRoutes = createFormRouter(prisma, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/forms', formRoutes);
 
   // Appointment routes
