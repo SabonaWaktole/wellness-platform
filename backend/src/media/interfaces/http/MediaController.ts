@@ -2,7 +2,6 @@ import { Request, Response, Router } from 'express';
 import multer from 'multer';
 import { prisma } from '../../../shared/infrastructure/prisma/client';
 import { requireTenantId } from '../../../main/interfaces/http/tenantContext';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import {
   ACCEPTED_MIME,
   MAX_UPLOAD_BYTES,
@@ -91,10 +90,11 @@ export class MediaController {
     const spec = MEDIA_SPECS[kind];
     const user = req.user!;
 
-    // Workspace branding is owner-only; personal images are always the
-    // caller's own, so there is nothing extra to check for those.
-    if (spec.owner === 'tenant' && user.role !== UserRole.BUSINESS_OWNER) {
-      res.status(403).json({ error: 'Only business owners can change workspace branding.' });
+    // Workspace branding is workspace configuration (settings.manage,
+    // FR-RBAC-05); personal images are always the caller's own, so there is
+    // nothing extra to check for those.
+    if (spec.owner === 'tenant' && !req.access!.can('settings.manage')) {
+      res.status(403).json({ error: 'You do not have permission to change workspace branding.' });
       return null;
     }
 

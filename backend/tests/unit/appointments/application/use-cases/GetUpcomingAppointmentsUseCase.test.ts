@@ -30,7 +30,7 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     const results = await useCase.execute({
       tenantId: 'tenant-1',
       userId: 'staff-1',
-      role: 'STAFF',
+      scope: 'OWN',
       limit: 10,
     });
 
@@ -74,7 +74,7 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     const results = await useCase.execute({
       tenantId: 'tenant-1',
       userId: 'owner-1',
-      role: 'BUSINESS_OWNER',
+      scope: 'ALL',
       limit: 5,
     });
 
@@ -128,7 +128,7 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     await useCase.execute({
       tenantId: 'tenant-1',
       userId: 'staff-1',
-      role: 'STAFF',
+      scope: 'OWN',
     });
 
     expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', 'staff-1', 5);
@@ -140,7 +140,7 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     await useCase.execute({
       tenantId: 'tenant-A',
       userId: 'staff-1',
-      role: 'STAFF',
+      scope: 'OWN',
       limit: 3,
     });
 
