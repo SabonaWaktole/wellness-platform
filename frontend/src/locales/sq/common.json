@@ -103,7 +103,6 @@
     "people": "Përdoruesit"
   },
   "shell": {
-    "standardTier": "Niveli standard",
     "platformName": "Platforma {{appName}}",
     "platformTier": "Administrim global"
   },

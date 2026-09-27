@@ -103,7 +103,6 @@
     "people": "Utenti"
   },
   "shell": {
-    "standardTier": "Livello standard",
     "platformName": "Piattaforma {{appName}}",
     "platformTier": "Amministrazione globale"
   },

@@ -31,8 +31,6 @@ export const ShellWithSidebar: Story = {
     userAvatarSrc: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCUVO_U904UXtp4jWW0TlbxmzPuBGIREJnS7rJvUtLWgv77vYvS4vxvhNtsn7uCPM4v19ncCYsTNjqR9gmBTthGZKxWksFTi3WHzwUACJE3fdYz43ve1_UcjRrGN0DsSAnzWy8bcm_ue3gBSicCHOQXi3nTG59avgqC7yDJvl_xzAPCtNRbIGrfduLtU3kRkzKkv4b6G4JpGzlfYerk5A74tOh2EEID2ccvMJyWClcbv_w3W2yL1Gy2hiSvmpCVC63iIga-3SmPV8Nj',
     sidebar: (
       <Sidebar 
-        orgName="Wellness Albania" 
-        orgTier="Enterprise Tier" 
         navItems={mockNavItems} 
       />
     ),

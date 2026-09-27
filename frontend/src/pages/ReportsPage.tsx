@@ -79,7 +79,6 @@ export const ReportsPage: React.FC = () => {
   const { t } = useTranslation('dashboard');
   const user = useAuthStore(state => state.user);
   const tenantSlug = user?.tenantSlug;
-  const roleName = user?.role;
   const userName = user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email || 'User';
 
   const logout = useAuthStore(state => state.logout);
@@ -139,8 +138,6 @@ export const ReportsPage: React.FC = () => {
 
   const sidebarElement = (
     <Sidebar
-      orgName={tenantSlug || 'Workspace'}
-      orgTier={roleName || ''}
       navItems={navItems}
       onNavItemClick={(id) => navigate(`/${tenantSlug}/${id}`)}
       onLogoutClick={handleLogout}

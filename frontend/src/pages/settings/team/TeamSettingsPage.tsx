@@ -25,7 +25,6 @@ export const TeamSettingsPage = () => {
   };
 
   const userName = getUserDisplayName(user, 'Settings User');
-  const roleName = user?.role === 'SUPER_ADMIN' ? 'Super Admin' : user?.role === 'BUSINESS_OWNER' ? 'Business Owner' : 'Staff';
 
   const handleNavClick = (id: string) => {
     navigate(`/${tenantSlug || ''}/${id === 'dashboard' ? '' : id}`);
@@ -38,8 +37,6 @@ export const TeamSettingsPage = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar 
-          orgName={tenantSlug || 'Workspace'} 
-          orgTier={roleName} 
           navItems={navItems} 
           onLogoutClick={handleLogout}
           onNavItemClick={handleNavClick}

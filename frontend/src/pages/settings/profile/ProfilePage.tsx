@@ -71,7 +71,6 @@ export const ProfilePage: React.FC = () => {
   };
 
   const userName = getUserDisplayName(user, 'Settings User');
-  const roleName = user?.role === 'SUPER_ADMIN' ? 'Super Admin' : user?.role === 'BUSINESS_OWNER' ? 'Business Owner' : 'Staff';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,8 +138,6 @@ export const ProfilePage: React.FC = () => {
       userAvatarSrc={resolveMediaUrl(user?.avatarUrl)}
       sidebar={
         <Sidebar 
-          orgName={tenantSlug || 'Workspace'} 
-          orgTier={roleName} 
           navItems={navItems} 
           onLogoutClick={handleLogout}
           onNavItemClick={handleNavClick}

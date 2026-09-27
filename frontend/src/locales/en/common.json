@@ -103,7 +103,6 @@
     "people": "Users"
   },
   "shell": {
-    "standardTier": "Standard Tier",
     "platformName": "{{appName}} Platform",
     "platformTier": "Global Administration"
   },

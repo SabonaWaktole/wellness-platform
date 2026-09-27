@@ -103,7 +103,6 @@
     "people": "Χρήστες"
   },
   "shell": {
-    "standardTier": "Τυπικό επίπεδο",
     "platformName": "Πλατφόρμα {{appName}}",
     "platformTier": "Καθολική διαχείριση"
   },

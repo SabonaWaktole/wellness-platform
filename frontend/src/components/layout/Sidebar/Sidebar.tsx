@@ -7,6 +7,7 @@ import {
 import { Button } from '../../ui/Button/Button';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { resolveMediaUrl, srcSetFor } from '../../../services/mediaService';
+import { PRODUCT_NAME } from '../../../constants/brand';
 import styles from './Sidebar.module.css';
 import { useTranslation } from 'react-i18next';
 
@@ -40,7 +41,12 @@ export interface NavItem {
 }
 
 export interface SidebarProps {
-  orgName: string;
+  /**
+   * Heading for the organisation block. Defaults to the signed-in workspace's
+   * own name; only the platform console, which has no workspace, passes one.
+   */
+  orgName?: string;
+  /** Caption under the heading. Shown only when given. */
   orgTier?: string;
   navItems: NavItem[];
   isOpen?: boolean;
@@ -61,10 +67,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogoutClick,
 }) => {
   const { t } = useTranslation('common');
-  // Defaulted here rather than in the parameter list: a default parameter is
-  // evaluated per render but written in English, so it has to be a lookup, and
-  // `t` is not in scope until the component body has started.
-  const tier = orgTier ?? t('shell.standardTier');
+  /*
+   * The workspace's own name, from the session, so every page shows the same
+   * heading without passing it. Pages used to pass the URL slug here, with a
+   * SaaS subscription tier ("Enterprise Tier") as the caption. The product
+   * name covers the moment before the session has loaded.
+   */
+  const tenantName = useAuthStore((state) => state.user?.tenantName);
+  const heading = orgName ?? tenantName ?? PRODUCT_NAME;
   const tenantLogoUrl = useAuthStore((state) => state.user?.tenantLogoUrl);
   const logoSrc = resolveMediaUrl(tenantLogoUrl);
 
@@ -98,8 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
         <div className={styles.orgInfo}>
-          <h2 className={styles.orgName}>{orgName}</h2>
-          <p className={styles.orgTier}>{tier}</p>
+          <h2 className={styles.orgName}>{heading}</h2>
+          {orgTier && <p className={styles.orgTier}>{orgTier}</p>}
         </div>
       </div>
 
