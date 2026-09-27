@@ -1,8 +1,9 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { randomUUID } from 'crypto';
 import { IProductImageRepository, IProductRepository } from '../../domain/repositories';
 import { ProductImage } from '../../domain/ProductImage';
 import { IProductImageStorage } from '../ports/IProductImageStorage';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 /** How many images one product may carry. */
 export const MAX_IMAGES_PER_PRODUCT = 8;
@@ -11,7 +12,7 @@ export interface UploadProductImagesDTO {
   tenantId: string;
   productId: string;
   files: Buffer[];
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -19,7 +20,7 @@ export interface DeleteProductImageDTO {
   tenantId: string;
   productId: string;
   imageId: string;
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -28,7 +29,7 @@ export interface ReorderProductImagesDTO {
   productId: string;
   /** The gallery in its intended order. Must name every current image. */
   imageIds: string[];
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -50,14 +51,12 @@ export class ManageProductImagesUseCase {
   private async authorize(dto: {
     tenantId: string;
     productId: string;
-    authorRole: UserRole;
+    access: AccessContext;
     authorWarehouseId?: string | null;
   }): Promise<void> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can change product images.');
-    }
-    if (dto.authorRole === UserRole.STAFF && !dto.authorWarehouseId) {
-      throw new Error('Unauthorized: You must be assigned to a warehouse to change product images.');
+    dto.access.ensure('inventory.manage');
+    if (dto.access.ownOnly('inventory.manage') && !dto.authorWarehouseId) {
+      throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You must be assigned to a warehouse to change product images.');
     }
 
     const product = await this.productRepo.findById(dto.tenantId, dto.productId);

@@ -1,7 +1,8 @@
 import { GetCategoriesUseCase } from './GetCategoriesUseCase';
 import { ICategoryRepository } from '../../domain/repositories';
 import { Category } from '../../domain/Category';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('GetCategoriesUseCase', () => {
   let categoryRepo: jest.Mocked<ICategoryRepository>;
@@ -28,7 +29,7 @@ describe('GetCategoriesUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(results).toHaveLength(2);
@@ -43,7 +44,7 @@ describe('GetCategoriesUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.STAFF
+      access: salesUser()
     });
 
     expect(results).toHaveLength(1);
@@ -53,14 +54,14 @@ describe('GetCategoriesUseCase', () => {
   it('should reject SUPER_ADMIN from listing tenant categories', async () => {
     await expect(useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.SUPER_ADMIN
-    })).rejects.toThrow('Unauthorized');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should explicitly scope query to tenantId, proving tenant isolation', async () => {
     await useCase.execute({
       tenantId: 'tenant-isolated',
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(categoryRepo.findAllWithItemCount).toHaveBeenCalledTimes(1);

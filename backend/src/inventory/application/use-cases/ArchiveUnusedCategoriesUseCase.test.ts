@@ -1,7 +1,8 @@
 import { ArchiveUnusedCategoriesUseCase } from './ArchiveUnusedCategoriesUseCase';
 import { ICategoryRepository } from '../../domain/repositories';
 import { Category } from '../../domain/Category';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 /**
  * The previous version of this suite asserted
@@ -47,7 +48,7 @@ describe('ArchiveUnusedCategoriesUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
     });
 
     expect(result.count).toBe(5);
@@ -64,7 +65,7 @@ describe('ArchiveUnusedCategoriesUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
     });
 
     expect(result.categories).toEqual([{ id: 'c1', name: 'Obsolete Fittings' }]);
@@ -75,7 +76,7 @@ describe('ArchiveUnusedCategoriesUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
     });
 
     expect(result.count).toBe(0);
@@ -89,7 +90,7 @@ describe('ArchiveUnusedCategoriesUseCase', () => {
 
       const result = await useCase.preview({
         tenantId: 'tenant1',
-        authorRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
       });
 
       expect(result.count).toBe(1);
@@ -101,21 +102,21 @@ describe('ArchiveUnusedCategoriesUseCase', () => {
 
     it('rejects non-business owners', async () => {
       await expect(
-        useCase.preview({ tenantId: 'tenant1', authorRole: UserRole.STAFF })
-      ).rejects.toThrow('Unauthorized');
+        useCase.preview({ tenantId: 'tenant1', access: salesUser() })
+      ).rejects.toThrow(PermissionDeniedError);
     });
   });
 
   it('rejects non-business owners', async () => {
     await expect(
-      useCase.execute({ tenantId: 'tenant1', authorRole: UserRole.STAFF })
-    ).rejects.toThrow('Unauthorized');
+      useCase.execute({ tenantId: 'tenant1', access: salesUser() })
+    ).rejects.toThrow(PermissionDeniedError);
   });
 
   it('does not read the repository at all when unauthorised', async () => {
     await expect(
-      useCase.execute({ tenantId: 'tenant1', authorRole: UserRole.STAFF })
-    ).rejects.toThrow('Unauthorized');
+      useCase.execute({ tenantId: 'tenant1', access: salesUser() })
+    ).rejects.toThrow(PermissionDeniedError);
 
     expect(categoryRepo.findUnusedCategories).not.toHaveBeenCalled();
     expect(categoryRepo.update).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { PermissionGrant } from './DefaultRoleMatrix';
-import { PermissionScope } from './PermissionScope';
+import { PermissionScope, scopeAtLeast } from './PermissionScope';
 import { PERMISSION_CATALOGUE } from './PermissionCatalogue';
 import { PermissionDeniedError } from './errors';
 
@@ -57,6 +57,17 @@ export class AccessContext {
    */
   ensure(key: string, message?: string): void {
     if (!this.can(key)) {
+      throw new PermissionDeniedError(key, message);
+    }
+  }
+
+  /**
+   * Throws `PermissionDeniedError` unless `key` is held at `minScope` or
+   * wider — for an action a narrower grant of the same key must not reach
+   * (e.g. warehouse management under `inventory.manage: ALL`).
+   */
+  ensureScope(key: string, minScope: PermissionScope, message?: string): void {
+    if (!scopeAtLeast(this.scopeOf(key), minScope)) {
       throw new PermissionDeniedError(key, message);
     }
   }

@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IProductRepository, IWarehouseRepository, IStockTransactionManager } from '../../domain/repositories';
 import { Product } from '../../domain/Product';
 import { StockLevel } from '../../domain/StockLevel';
@@ -5,7 +7,6 @@ import { randomUUID } from 'crypto';
 import { CrossTenantIsolationError } from '../../domain/errors';
 import { DuplicateSkuError } from '../../domain/inUseErrors';
 
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface InitialStock {
   warehouseId: string;
@@ -24,7 +25,7 @@ export interface CreateProductDTO {
   tags?: string[];
   lowStockThreshold?: number;
   initialStock: InitialStock[];
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -36,12 +37,10 @@ export class CreateProductUseCase {
   ) {}
 
   async execute(dto: CreateProductDTO): Promise<{ product: Product; stockLevels: StockLevel[] }> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can create products.');
-    }
+    dto.access.ensure('inventory.manage');
 
-    if (dto.authorRole === UserRole.STAFF && !dto.authorWarehouseId) {
-      throw new Error('Unauthorized: You must be assigned to a warehouse to create products.');
+    if (dto.access.ownOnly('inventory.manage') && !dto.authorWarehouseId) {
+      throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You must be assigned to a warehouse to create products.');
     }
 
     // 1. Verify warehouses belong to the same tenant and staff permissions
@@ -57,8 +56,8 @@ export class CreateProductUseCase {
     }
 
     for (const stock of dto.initialStock) {
-      if (dto.authorRole === UserRole.STAFF && dto.authorWarehouseId !== stock.warehouseId) {
-        throw new Error('Unauthorized: You can only add initial stock to your assigned warehouse.');
+      if (dto.access.ownOnly('inventory.manage') && dto.authorWarehouseId !== stock.warehouseId) {
+        throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You can only add initial stock to your assigned warehouse.');
       }
 
       const warehouse = await this.warehouseRepo.findById(dto.tenantId, stock.warehouseId);

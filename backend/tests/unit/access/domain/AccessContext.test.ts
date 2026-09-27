@@ -162,4 +162,26 @@ describe('AccessContext', () => {
       expect(team.reaches('invoices.manage', ['me'])).toBe(false);
     });
   });
+
+  describe('ensureScope()', () => {
+    const own = new AccessContext({
+      userId: 'me',
+      tenantId: 't1',
+      roleKey: RoleKey.SalesUser,
+      permissions: { 'inventory.manage': PermissionScope.Own, 'users.manage': true },
+      isPlatformOperator: false,
+    });
+
+    it('FR-RBAC-03 passes when the key is held at least at the given scope', () => {
+      expect(() => own.ensureScope('inventory.manage', PermissionScope.Own)).not.toThrow();
+    });
+
+    it('FR-RBAC-03 throws PermissionDeniedError when the scope is narrower', () => {
+      expect(() => own.ensureScope('inventory.manage', PermissionScope.All)).toThrow(PermissionDeniedError);
+    });
+
+    it('throws when the key is not held at all', () => {
+      expect(() => own.ensureScope('companies.view', PermissionScope.Own)).toThrow(PermissionDeniedError);
+    });
+  });
 });

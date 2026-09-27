@@ -1,3 +1,4 @@
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { SearchProductsUseCase } from './SearchProductsUseCase';
 import {
   IProductRepository,
@@ -6,7 +7,8 @@ import {
   ProductWithStock,
 } from '../../domain/repositories';
 import { Product } from '../../domain/Product';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('SearchProductsUseCase', () => {
   let useCase: SearchProductsUseCase;
@@ -79,7 +81,7 @@ describe('SearchProductsUseCase', () => {
     const results = await useCase.execute({
       tenantId: 'tenant1',
       name: 'Product',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -92,6 +94,18 @@ describe('SearchProductsUseCase', () => {
       warehouseId: 'w1',
       availability: undefined,
     }));
+  });
+
+  it('FR-RBAC-03 does not pin a caller above OWN scope to their own warehouse', async () => {
+    productRepo.search.mockResolvedValue(page([]));
+
+    await useCase.execute({
+      tenantId: 'tenant1',
+      access: salesUser({ grant: { 'inventory.manage': PermissionScope.All } }),
+      authorWarehouseId: 'w1'
+    });
+
+    expect(productRepo.search).toHaveBeenCalledWith('tenant1', expect.objectContaining({ warehouseId: undefined }));
   });
 
   // ===== BOUNDARY TESTS FOR AVAILABILITY =====
@@ -107,7 +121,7 @@ describe('SearchProductsUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -122,7 +136,7 @@ describe('SearchProductsUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -137,7 +151,7 @@ describe('SearchProductsUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -152,7 +166,7 @@ describe('SearchProductsUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -166,7 +180,7 @@ describe('SearchProductsUseCase', () => {
     await useCase.execute({
       tenantId: 'tenant1',
       availability: 'LOW_STOCK',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -178,7 +192,7 @@ describe('SearchProductsUseCase', () => {
   it('should reject unauthorized roles', async () => {
     await expect(useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.SUPER_ADMIN as any
-    })).rejects.toThrow('Unauthorized: Only Business Owners and Staff can search products.');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 });

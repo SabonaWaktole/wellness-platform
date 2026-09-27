@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import {
   IProductRepository,
   ProductSearchFilters,
@@ -7,7 +9,6 @@ import {
   ProductSummary,
   SortDirection,
 } from '../../domain/repositories';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface SearchProductsDTO {
   tenantId: string;
@@ -23,7 +24,7 @@ export interface SearchProductsDTO {
   sortDirection?: SortDirection;
   page?: number;
   pageSize?: number;
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -36,16 +37,14 @@ export class SearchProductsUseCase {
   constructor(private productRepo: IProductRepository) {}
 
   async execute(dto: SearchProductsDTO): Promise<SearchProductsResponse> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can search products.');
-    }
+    dto.access.ensure('inventory.manage');
 
-    if (dto.authorRole === UserRole.STAFF && !dto.authorWarehouseId) {
-      throw new Error('Unauthorized: You must be assigned to a warehouse to view products.');
+    if (dto.access.ownOnly('inventory.manage') && !dto.authorWarehouseId) {
+      throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You must be assigned to a warehouse to view products.');
     }
 
     let filterWarehouseId = dto.warehouseId;
-    if (dto.authorRole === UserRole.STAFF) {
+    if (dto.access.ownOnly('inventory.manage')) {
       // Force the filter to the staff's assigned warehouse
       filterWarehouseId = dto.authorWarehouseId as string;
     }

@@ -1,10 +1,10 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IWarehouseRepository } from '../../domain/repositories';
 import { Warehouse } from '../../domain/Warehouse';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface GetWarehousesRequest {
   tenantId: string;
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -12,13 +12,11 @@ export class GetWarehousesUseCase {
   constructor(private warehouseRepository: IWarehouseRepository) {}
 
   async execute(request: GetWarehousesRequest): Promise<Warehouse[]> {
-    if (request.authorRole !== UserRole.BUSINESS_OWNER && request.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can view warehouses.');
-    }
+    request.access.ensure('inventory.manage');
 
     const allWarehouses = await this.warehouseRepository.findAllByTenantId(request.tenantId);
 
-    if (request.authorRole === UserRole.STAFF) {
+    if (request.access.ownOnly('inventory.manage')) {
       if (!request.authorWarehouseId) {
         return [];
       }

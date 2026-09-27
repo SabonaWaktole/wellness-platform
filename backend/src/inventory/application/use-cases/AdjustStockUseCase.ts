@@ -1,7 +1,8 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IStockLevelRepository, IStockMovementRepository } from '../../domain/repositories';
 import { StockMovement, StockMovementType } from '../../domain/StockMovement';
 import { StockLevel } from '../../domain/StockLevel';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { randomUUID } from 'crypto';
 
 export interface AdjustStockDTO {
@@ -11,7 +12,7 @@ export interface AdjustStockDTO {
   quantityChange: number; // positive = add, negative = remove
   reason: string;
   authorUserId: string;
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -22,12 +23,10 @@ export class AdjustStockUseCase {
   ) {}
 
   async execute(dto: AdjustStockDTO): Promise<{ stockLevel: StockLevel; movement: StockMovement }> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can adjust stock.');
-    }
+    dto.access.ensure('inventory.manage');
 
-    if (dto.authorRole === UserRole.STAFF && dto.authorWarehouseId !== dto.warehouseId) {
-      throw new Error('Unauthorized: You can only adjust stock in your assigned warehouse.');
+    if (dto.access.ownOnly('inventory.manage') && dto.authorWarehouseId !== dto.warehouseId) {
+      throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You can only adjust stock in your assigned warehouse.');
     }
 
     const stockLevel = await this.stockLevelRepo.findByProductAndWarehouse(

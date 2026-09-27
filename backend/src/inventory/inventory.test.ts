@@ -372,19 +372,10 @@ describe('Inventory Module Integration Tests', () => {
       expect(createWhRes.status).toBe(403);
       expect(createWhRes.body.error).toContain('Forbidden');
 
-      // 2. Business-Owner-or-Staff endpoint: Adjust Stock (Super Admin is rejected)
-      // First create a product as owner so we have something to adjust
-      const p = await request(app).post('/api/t1-inv/inventory/products')
-        .set('Authorization', `Bearer ${tokenTenant1Owner}`)
-        .send({ name: 'RoleTest Prod', description: 'D', price: 10, initialStock: [{ warehouseId: testWh1Id, quantity: 50 }] });
-      
-      const tokenSuperAdmin = tokenService.sign({ userId: 'u_super', role: UserRole.SUPER_ADMIN as any, tenantId: t1Id, tenantSlug: 't1-inv', warehouseId: null });
-      
-      const adjustRes = await request(app).post(`/api/t1-inv/inventory/products/${p.body.id}/adjust`)
-        .set('Authorization', `Bearer ${tokenSuperAdmin}`) // SUPER_ADMIN attempting to adjust tenant stock
-        .send({ warehouseId: testWh1Id, quantityChange: 10 });
-      expect(adjustRes.status).toBe(403);
-      expect(adjustRes.body.error).toContain('Unauthorized');
+      // A role without inventory.manage at all is refused by requirePermission
+      // before any use case runs — see tests/integration/access/permissionMatrix.
+      // (A forged SUPER_ADMIN token is no longer a useful negative case: D2
+      // makes the platform operator hold every permission.)
     });
   });
 });
