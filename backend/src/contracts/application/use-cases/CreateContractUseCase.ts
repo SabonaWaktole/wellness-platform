@@ -30,7 +30,6 @@ export class CreateContractUseCase {
     assignedUserId?: string | null;
     notes?: string | null;
     actingUserId: string;
-    actingUserRole: string;
   }) {
     // The client is checked through its own repository, which already filters
     // soft-deleted rows — a raw FK insert would happily attach a contract to a

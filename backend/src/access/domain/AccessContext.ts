@@ -71,6 +71,19 @@ export class AccessContext {
   }
 
   /**
+   * True when the caller may touch a record through `key`: they hold it, and
+   * either their scope is wider than OWN or they are one of `ownerIds` (the
+   * record's creator, assignee, …). The per-record form of what a repository
+   * filter does for lists.
+   */
+  reaches(key: string, ownerIds: ReadonlyArray<string | null | undefined>): boolean {
+    if (!this.can(key)) {
+      return false;
+    }
+    return !this.ownOnly(key) || ownerIds.includes(this.userId);
+  }
+
+  /**
    * A stable fingerprint of this context's grants, sent as
    * `X-Permissions-Version` (FR-USR-03). It changes exactly when the grants
    * change — a role's permissions are edited, or the user's role changes —

@@ -131,4 +131,35 @@ describe('AccessContext', () => {
     expect(access.ownOnly('users.manage')).toBe(false);
     expect(access.ownOnly('invoices.manage')).toBe(false);
   });
+
+  describe('reaches()', () => {
+    const own = new AccessContext({
+      userId: 'me',
+      tenantId: 't1',
+      roleKey: RoleKey.SalesUser,
+      permissions: { 'quotations.manage': PermissionScope.Own },
+      isPlatformOperator: false,
+    });
+    const team = new AccessContext({
+      userId: 'me',
+      tenantId: 't1',
+      roleKey: RoleKey.SalesManager,
+      permissions: { 'quotations.manage': PermissionScope.Team },
+      isPlatformOperator: false,
+    });
+
+    it('FR-RBAC-11 at OWN, reaches only a record the caller owns', () => {
+      expect(own.reaches('quotations.manage', ['me'])).toBe(true);
+      expect(own.reaches('quotations.manage', ['someone', null])).toBe(false);
+      expect(own.reaches('quotations.manage', ['someone', 'me'])).toBe(true);
+    });
+
+    it('FR-RBAC-11 at a wider scope, reaches any record', () => {
+      expect(team.reaches('quotations.manage', ['someone'])).toBe(true);
+    });
+
+    it('FR-RBAC-05 never reaches through a key that is not held', () => {
+      expect(team.reaches('invoices.manage', ['me'])).toBe(false);
+    });
+  });
 });

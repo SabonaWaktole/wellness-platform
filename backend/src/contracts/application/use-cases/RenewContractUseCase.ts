@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
@@ -33,7 +34,7 @@ export class RenewContractUseCase {
     endsAt?: Date;
     notes?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const previous = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -41,7 +42,7 @@ export class RenewContractUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(previous, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(previous, input.access);
 
       if (!previous.canRenew()) {
         throw new Error(

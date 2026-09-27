@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
 
@@ -17,7 +18,7 @@ export class DeleteContractPaymentUseCase {
     contractId: string;
     paymentId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -25,7 +26,7 @@ export class DeleteContractPaymentUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(contract, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(contract, input.access);
 
       const payment = await repos.paymentRepo.findById(input.tenantId, input.paymentId);
       if (!payment || payment.contractId !== input.contractId) {

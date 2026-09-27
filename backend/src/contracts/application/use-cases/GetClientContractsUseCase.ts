@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractRepository } from '../../domain/IContractRepository';
 import { ContractStatus } from '../../domain/Contract';
 import { canAccessContract } from './contractAccess';
@@ -18,11 +19,11 @@ export class GetClientContractsUseCase {
     tenantId: string;
     clientId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     const all = await this.contractRepo.findByClientId(input.tenantId, input.clientId);
     const contracts = all.filter((contract) =>
-      canAccessContract(contract, input.actingUserId, input.actingUserRole)
+      canAccessContract(contract, input.access, 'contracts.validity.view')
     );
 
     const active = contracts.find((contract) => contract.status === ContractStatus.Active) ?? null;

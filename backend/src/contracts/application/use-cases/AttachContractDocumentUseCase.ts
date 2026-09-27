@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { ContractDocumentStore } from '../../infrastructure/ContractDocumentStore';
 import { assertCanAccessContract } from './contractAccess';
@@ -22,7 +23,7 @@ export class AttachContractDocumentUseCase {
     contractId: string;
     file?: { originalName: string; buffer: Buffer };
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     const stored = input.file
       ? await this.documentStore.store(input.tenantId, input.file.originalName, input.file.buffer)
@@ -34,7 +35,7 @@ export class AttachContractDocumentUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(found, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(found, input.access);
 
       const previousUrl = found.documentUrl;
 

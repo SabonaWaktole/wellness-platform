@@ -1,8 +1,10 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
 import { ContractStatus } from '../../domain/Contract';
 import { canAccessContract } from './contractAccess';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 /**
  * Everything one contract's page needs, including what the viewer is allowed
@@ -24,38 +26,42 @@ export class GetContractDetailUseCase {
     tenantId: string;
     contractId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     const contract = await this.contractRepo.findById(input.tenantId, input.contractId);
     if (!contract) {
       throw new Error('Contract not found');
     }
 
-    const canAct = canAccessContract(contract, input.actingUserId, input.actingUserRole);
-    if (!canAct) {
-      throw new Error('Unauthorized: Staff can only view their own contracts');
+    if (!canAccessContract(contract, input.access, 'contracts.validity.view')) {
+      throw new PermissionDeniedError('contracts.validity.view', 'Unauthorized: you can only view your own contracts');
     }
 
     const payments = await this.paymentRepo.findByContractId(input.tenantId, input.contractId);
     const history = await this.historyRepo.findByContractId(input.tenantId, input.contractId);
 
-    const permittedActions: string[] = [];
-    switch (contract.status) {
-      case ContractStatus.Draft:
-        permittedActions.push('EDIT', 'ACTIVATE', 'CANCEL');
-        break;
-      case ContractStatus.Active:
-        permittedActions.push('EDIT', 'CANCEL', 'RECORD_PAYMENT', 'ADD_PAYMENT');
-        break;
-      case ContractStatus.Expired:
-      case ContractStatus.Cancelled:
-        // Terminal terms are read-only except for the money: an instalment
-        // settled after a contract ended is a late payment, not an edit to the
-        // deal, and refusing to record it would leave the books wrong.
-        permittedActions.push('RENEW', 'RECORD_PAYMENT');
-        break;
-    }
+    // A viewer who may read this contract but not manage it (Reception's
+    // validity-only view) is offered no actions at all.
+    const canAct = canAccessContract(contract, input.access, 'contracts.manage');
+    const permittedActions = canAct ? actionsFor(contract.status) : [];
 
     return { contract, payments, history, permittedActions };
+  }
+}
+
+function actionsFor(status: ContractStatus): string[] {
+  switch (status) {
+    case ContractStatus.Draft:
+      return ['EDIT', 'ACTIVATE', 'CANCEL'];
+    case ContractStatus.Active:
+      return ['EDIT', 'CANCEL', 'RECORD_PAYMENT', 'ADD_PAYMENT'];
+    case ContractStatus.Expired:
+    case ContractStatus.Cancelled:
+      // Terminal terms are read-only except for the money: an instalment
+      // settled after a contract ended is a late payment, not an edit to the
+      // deal, and refusing to record it would leave the books wrong.
+      return ['RENEW', 'RECORD_PAYMENT'];
+    default:
+      return [];
   }
 }

@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { ContractPayment } from '../../domain/ContractPayment';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
@@ -23,7 +24,7 @@ export class AddContractPaymentUseCase {
     method?: string | null;
     note?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -31,7 +32,7 @@ export class AddContractPaymentUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(contract, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(contract, input.access);
 
       const existing = await repos.paymentRepo.findByContractId(input.tenantId, input.contractId);
       const nextIndex = existing.reduce((max, p) => Math.max(max, p.periodIndex), 0) + 1;

@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
@@ -19,7 +20,7 @@ export class CancelContractUseCase {
     contractId: string;
     reason?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -27,7 +28,7 @@ export class CancelContractUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(contract, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(contract, input.access);
 
       const fromStatus = contract.status;
       contract.cancel();

@@ -70,11 +70,8 @@ export class ContractsController {
 
   private initializeRoutes() {
     // contracts.validity.view (scoped): reads. contracts.manage (scoped):
-    // writes. The creator-or-assignee check (`contractAccess.canAccessContract`)
-    // stays keyed on the legacy role string for now — it produces the same
-    // result as a scope-based OWN check for every user that exists today,
-    // since no roleId-carrying user can exist before Slice 5/6 ship. Moving
-    // it onto `access.scopeOf(...)` is follow-on work for those slices.
+    // writes. At OWN scope the use cases narrow further to the caller's own
+    // contracts (`contractAccess.canAccessContract`).
     //
     // `/client/:clientId` is declared BEFORE `/:id`, or Express would match
     // the literal segment "client" as a contract id.
@@ -157,7 +154,6 @@ export class ContractsController {
         assignedUserId: data.assignedUserId,
         notes: data.notes,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
       });
       res.status(201).json(result.contract);
     } catch (error: any) {
@@ -179,7 +175,7 @@ export class ContractsController {
         assignedUserId: data.assignedUserId,
         notes: data.notes,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ contract: result.contract, scheduleNeedsReview: result.scheduleNeedsReview });
     } catch (error: any) {
@@ -193,7 +189,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ contract: result.contract, generatedPayments: result.generatedPayments });
     } catch (error: any) {
@@ -209,7 +205,7 @@ export class ContractsController {
         contractId: req.params.id as string,
         reason: data.reason,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result.contract);
     } catch (error: any) {
@@ -230,7 +226,7 @@ export class ContractsController {
         endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
         notes: data.notes,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.status(201).json(result.contract);
     } catch (error: any) {
@@ -244,7 +240,7 @@ export class ContractsController {
       const result = await this.searchContractsUseCase.execute({
         tenantId: requireTenantId(req),
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         params,
       });
       res.json(result);
@@ -259,7 +255,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -273,7 +269,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         clientId: req.params.clientId as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -294,7 +290,7 @@ export class ContractsController {
         method: data.method,
         note: data.note,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ payment: result.payment, contract: result.contract });
     } catch (error: any) {
@@ -313,7 +309,7 @@ export class ContractsController {
         method: data.method,
         note: data.note,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.status(201).json({ payment: result.payment, contract: result.contract });
     } catch (error: any) {
@@ -333,7 +329,7 @@ export class ContractsController {
         method: data.method,
         note: data.note,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ payment: result.payment, contract: result.contract });
     } catch (error: any) {
@@ -348,7 +344,7 @@ export class ContractsController {
         contractId: req.params.id as string,
         paymentId: req.params.paymentId as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ contract: result.contract });
     } catch (error: any) {
@@ -366,7 +362,7 @@ export class ContractsController {
         contractId: req.params.id as string,
         file: { originalName: req.file.originalname, buffer: req.file.buffer },
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result.contract);
     } catch (error: any) {
@@ -380,7 +376,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result.contract);
     } catch (error: any) {
