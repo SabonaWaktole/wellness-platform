@@ -1,3 +1,4 @@
+import { RecordScope } from '../../../access/domain/RecordScope';
 import { Client } from '../entities/Client';
 import { FieldRole } from '../enums/FieldRole';
 
@@ -22,6 +23,18 @@ export interface SearchClientsFilters {
    * what the Clients page's "Archived" view asks for.
    */
   archived?: boolean;
+  /**
+   * The viewer's reach (FR-RBAC-11..13), applied in the query so counts and
+   * pagination match what they may see. Omitted means every client — for
+   * system callers only; every user-facing read passes one.
+   */
+  scope?: RecordScope;
+}
+
+export interface FindClientOptions {
+  includeArchived?: boolean;
+  /** Outside the scope reads as not found (FR-RBAC-05: 404, not 403). */
+  scope?: RecordScope;
 }
 
 /** What an archive would leave behind — shown in the confirmation dialog. */
@@ -38,10 +51,10 @@ export interface IClientRepository {
    * the archive/restore paths, which must be able to load a client that
    * ordinary reads deliberately hide.
    */
-  findById(tenantId: string, id: string, options?: { includeArchived?: boolean }): Promise<Client | null>;
+  findById(tenantId: string, id: string, options?: FindClientOptions): Promise<Client | null>;
   search(tenantId: string, filters: SearchClientsFilters, skip: number, take: number): Promise<{ items: Client[]; total: number }>;
   countByTenant(tenantId: string, createdBefore?: Date): Promise<number>;
-  findRecentByTenant(tenantId: string, limit: number, assignedUserId?: string): Promise<Client[]>;
+  findRecentByTenant(tenantId: string, limit: number, scope?: RecordScope): Promise<Client[]>;
   save(tenantId: string, client: Client): Promise<void>;
   update(tenantId: string, client: Client): Promise<void>;
   /** Stamps `deletedAt`, hiding the client from every client-facing read. */

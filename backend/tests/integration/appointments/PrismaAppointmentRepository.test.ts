@@ -124,11 +124,16 @@ describe('PrismaAppointmentRepository Integration', () => {
   });
 
   it('proves findRecentByTenant correctly scopes by assignedUserId', async () => {
-    const scopedT1 = await repo.findRecentByTenant(tenant1Id, 10, user1Id);
+    const own = (userId: string) => ({ kind: 'owners' as const, userIds: [userId], includeUnowned: false });
+    const scopedT1 = await repo.findRecentByTenant(tenant1Id, 10, own(user1Id));
     expect(scopedT1.length).toBe(5);
 
-    const scopedT1Other = await repo.findRecentByTenant(tenant1Id, 10, 'other-user');
+    const scopedT1Other = await repo.findRecentByTenant(tenant1Id, 10, own('other-user'));
     expect(scopedT1Other.length).toBe(0);
+
+    // TEAM's "unassigned" branch cannot apply: an appointment always has an assignee.
+    const team = await repo.findRecentByTenant(tenant1Id, 10, { kind: 'owners', userIds: [user1Id], includeUnowned: true });
+    expect(team.length).toBe(5);
   });
 
   it('proves findRecentByTenant orders by updatedAt descending', async () => {

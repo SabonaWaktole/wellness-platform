@@ -1,4 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
+import { RecordScopeResolver } from '../../../../access/application/RecordScopeResolver';
+import { PrismaTeamRoster } from '../../../../access/infrastructure/PrismaTeamRoster';
 import multer from 'multer';
 import { ClientController } from '../controllers/ClientController';
 import { CreateClientUseCase } from '../../../application/use-cases/CreateClientUseCase';
@@ -98,6 +100,7 @@ export const createClientRouter = (
   const interactionRepo = new PrismaInteractionRepository(prisma);
   const outcomeCategoryRepo = new PrismaOutcomeCategoryRepository(prisma);
   const appointmentRepo = new PrismaAppointmentRepository(prisma);
+  const scopes = new RecordScopeResolver(new PrismaTeamRoster(prisma));
 
   const notifications =
     notificationService ??
@@ -106,22 +109,22 @@ export const createClientRouter = (
   // Use Cases
   const ensureDefaultClientFieldsUseCase = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
   const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, notifications);
-  const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, notifications);
-  const searchClientsUseCase = new SearchClientsUseCase(clientRepo);
-  const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, appointmentRepo);
-  const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo);
+  const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, scopes, notifications);
+  const searchClientsUseCase = new SearchClientsUseCase(clientRepo, scopes);
+  const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, scopes, appointmentRepo);
+  const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo, scopes);
   const defineCustomFieldUseCase = new DefineCustomFieldUseCase(customFieldRepo);
   const updateCustomFieldUseCase = new UpdateCustomFieldUseCase(customFieldWriteTransaction);
   const deleteCustomFieldUseCase = new DeleteCustomFieldUseCase(customFieldRepo);
   const reorderCustomFieldsUseCase = new ReorderCustomFieldsUseCase(customFieldRepo);
   const defineOutcomeCategoryUseCase = new DefineOutcomeCategoryUseCase(outcomeCategoryRepo);
-  const getClientUseCase = new GetClientUseCase(clientRepo);
+  const getClientUseCase = new GetClientUseCase(clientRepo, scopes);
   const getCustomFieldsUseCase = new GetCustomFieldsUseCase(ensureDefaultClientFieldsUseCase);
   const getOutcomeCategoriesUseCase = new GetOutcomeCategoriesUseCase(outcomeCategoryRepo);
   const importCustomFieldsUseCase = new ImportCustomFieldsUseCase(customFieldRepo);
-  const archiveClientUseCase = new ArchiveClientUseCase(clientRepo);
-  const restoreClientUseCase = new RestoreClientUseCase(clientRepo);
-  const getClientRelatedCountsUseCase = new GetClientRelatedCountsUseCase(clientRepo);
+  const archiveClientUseCase = new ArchiveClientUseCase(clientRepo, scopes);
+  const restoreClientUseCase = new RestoreClientUseCase(clientRepo, scopes);
+  const getClientRelatedCountsUseCase = new GetClientRelatedCountsUseCase(clientRepo, scopes);
   const importClientsUseCase = new ImportClientsUseCase(createClientUseCase, ensureDefaultClientFieldsUseCase);
 
   // Controller

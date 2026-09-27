@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
@@ -13,6 +15,7 @@ interface UpdateClientDTO {
   /** Omitted leaves the existing notes untouched; '' clears them. */
   notes?: string | null;
   updatingUserId: string;
+  access: AccessContext;
 }
 
 export class UpdateClientUseCase {
@@ -20,11 +23,14 @@ export class UpdateClientUseCase {
     private clientRepo: IClientRepository,
     private customFieldRepo: ICustomFieldDefinitionRepository,
     private ensureDefaultFields: EnsureDefaultClientFieldsUseCase,
+    private scopes: RecordScopeResolver,
     private notifications?: NotificationService
   ) {}
 
   async execute(dto: UpdateClientDTO): Promise<Client> {
-    const existingClient = await this.clientRepo.findById(dto.tenantId, dto.clientId);
+    // Outside the viewer's companies.edit scope reads as not found (FR-RBAC-05, 11).
+    const scope = await this.scopes.resolve(dto.access, 'companies.edit');
+    const existingClient = await this.clientRepo.findById(dto.tenantId, dto.clientId, { scope });
     if (!existingClient || existingClient.tenantId !== dto.tenantId) {
       throw new DomainError('Client not found or access denied');
     }
@@ -55,6 +61,12 @@ export class UpdateClientUseCase {
       createdAt: existingClient.createdAt,
       updatedAt: new Date(),
     }, definitions);
+
+    // Handing a company to someone else is its own permission: without it an
+    // edit may not move the responsible salesperson.
+    if ((updatedClient.assignedUserId ?? null) !== (existingClient.assignedUserId ?? null)) {
+      dto.access.ensure('companies.reassign');
+    }
 
     await this.clientRepo.update(dto.tenantId, updatedClient);
 

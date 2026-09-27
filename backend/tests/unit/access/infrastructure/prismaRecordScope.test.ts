@@ -20,4 +20,10 @@ describe('ownerWhere', () => {
       OR: [{ assignedUserId: { in: ['u1', 'u2'] } }, { assignedUserId: null }],
     });
   });
+
+  it('drops the unowned branch for a column that can never be null', () => {
+    expect(
+      ownerWhere({ kind: 'owners', userIds: ['u1'], includeUnowned: true }, 'assignedUserId', { nullable: false })
+    ).toEqual({ assignedUserId: { in: ['u1'] } });
+  });
 });

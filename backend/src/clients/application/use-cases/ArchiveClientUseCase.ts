@@ -1,4 +1,5 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { IClientRepository, ClientRelatedCounts } from '../../domain/repositories/IClientRepository';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
@@ -25,14 +26,18 @@ interface ArchiveClientResult {
  * still resolve the client's name. Reversible via RestoreClientUseCase.
  */
 export class ArchiveClientUseCase {
-  constructor(private clientRepo: IClientRepository) {}
+  constructor(
+    private clientRepo: IClientRepository,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(dto: ArchiveClientDTO): Promise<ArchiveClientResult> {
     dto.access.ensure('companies.delete');
+    const scope = await this.scopes.resolve(dto.access, 'companies.delete');
 
     // Not includeArchived: archiving an already-archived client is a no-op the
     // caller should hear about, not a silent success.
-    const existing = await this.clientRepo.findById(dto.tenantId, dto.clientId);
+    const existing = await this.clientRepo.findById(dto.tenantId, dto.clientId, { scope });
     if (!existing) {
       throw new DomainError('Client not found');
     }

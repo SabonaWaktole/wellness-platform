@@ -25,6 +25,9 @@ export class DeleteCustomFieldUseCase {
     if (!existing) {
       throw new DomainError('Custom field not found');
     }
+    if (existing.isLocked) {
+      throw new DomainError(`Field "${existing.fieldName}" is locked and cannot be deleted.`);
+    }
 
     // Deliberately does not touch Client.customFieldValues: the orphaned JSON
     // key is left in place, cheapest option and preserves historical data if

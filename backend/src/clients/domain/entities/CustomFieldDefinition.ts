@@ -67,6 +67,13 @@ export class CustomFieldDefinition {
    * result. Used by UpdateCustomFieldUseCase — never mutates `this`.
    */
   public update(changes: Partial<Omit<CustomFieldDefinitionProps, 'id' | 'tenantId'>>): CustomFieldDefinition {
+    if (this.isLocked) {
+      const losesRole = changes.role !== undefined && changes.role !== this.role;
+      const changesType = changes.fieldType !== undefined && changes.fieldType !== this.fieldType;
+      if (losesRole || changesType) {
+        throw new DomainError(`Field "${this.fieldName}" is locked: its role and type cannot change.`);
+      }
+    }
     const merged: CustomFieldDefinitionProps = {
       id: this.id,
       tenantId: this.tenantId,
@@ -79,5 +86,15 @@ export class CustomFieldDefinition {
     };
     CustomFieldDefinition.validate(merged);
     return new CustomFieldDefinition(merged);
+  }
+
+  /**
+   * D7: the responsible-salesperson field is a system field. Data scope
+   * (FR-RBAC-11..13) reads `Client.assignedUserId`, which is mirrored from
+   * this field on every write — so it may be renamed and reordered, but
+   * never deleted, retyped or stripped of its role.
+   */
+  public get isLocked(): boolean {
+    return this.role === FieldRole.ASSIGNEE;
   }
 }

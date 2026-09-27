@@ -1,3 +1,7 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { admits } from '../../../access/domain/RecordScope';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRepository';
 import { Appointment } from '../../domain/entities/Appointment';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
@@ -15,6 +19,7 @@ export interface CreateAppointmentDTO {
    * "X scheduled an appointment for you" had no X to name.
    */
   actingUserId: string;
+  access: AccessContext;
 }
 
 export class CreateAppointmentUseCase {
@@ -22,11 +27,21 @@ export class CreateAppointmentUseCase {
     private readonly appointmentRepository: IAppointmentRepository,
     private readonly clientRepository: any, // IClientRepository in reality
     private readonly userRepository: any, // IUserRepository in reality
+    private readonly scopes: RecordScopeResolver,
     private readonly notifications?: NotificationService
   ) {}
 
+  /**
+   * FR-RBAC-11: an appointment is an activity of its company, so the company
+   * has to be inside the viewer's `activities.add` scope, and so does the
+   * person it is assigned to — at OWN scope, that is the viewer themselves.
+   */
   async execute(dto: CreateAppointmentDTO): Promise<Appointment> {
-    const client = await this.clientRepository.findById(dto.tenantId, dto.clientId);
+    const scope = await this.scopes.resolve(dto.access, 'activities.add');
+    if (!admits(scope, dto.assignedUserId)) {
+      throw new PermissionDeniedError('activities.add', 'You cannot schedule an appointment for this person.');
+    }
+    const client = await this.clientRepository.findById(dto.tenantId, dto.clientId, { scope });
     if (!client) {
       throw new Error('Client not found');
     }

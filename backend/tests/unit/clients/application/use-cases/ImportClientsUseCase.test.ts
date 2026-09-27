@@ -8,6 +8,7 @@ import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
 import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
 import { ParsedSheet } from '../../../../../src/clients/infrastructure/excel/sheet';
+import { administrator, scopeResolver } from '../../../../support/access';
 
 describe('ImportClientsUseCase', () => {
   const tenantId = 'tenant-1';
@@ -76,6 +77,7 @@ describe('ImportClientsUseCase', () => {
     const result = await useCase.execute({
       tenantId,
       authorUserId,
+      access: administrator(),
       sheet: sheetOf([
         {
           name: 'Acme Ltd',
@@ -94,6 +96,7 @@ describe('ImportClientsUseCase', () => {
       expect.objectContaining({
         tenantId,
         authorUserId,
+        access: administrator(),
         customFieldValues: {
           Name: 'Acme Ltd',
           Email: 'hi@acme.com',
@@ -108,7 +111,7 @@ describe('ImportClientsUseCase', () => {
   });
 
   it('defaults a missing status to PROSPECT', async () => {
-    await useCase.execute({ tenantId, authorUserId, sheet: sheetOf([{ name: 'Acme', status: '' }]) });
+    await useCase.execute({ tenantId, authorUserId, access: administrator(), sheet: sheetOf([{ name: 'Acme', status: '' }]) });
     expect(createClientUseCase.execute).toHaveBeenCalledWith(
       expect.objectContaining({
         customFieldValues: expect.objectContaining({ Status: ClientStatus.PROSPECT }),
@@ -120,6 +123,7 @@ describe('ImportClientsUseCase', () => {
     await useCase.execute({
       tenantId,
       authorUserId,
+      access: administrator(),
       sheet: sheetOf([{ name: 'Acme', 'Company Size': '', 'Is VIP': '' }]),
     });
     expect(createClientUseCase.execute).toHaveBeenCalledWith(
@@ -133,6 +137,7 @@ describe('ImportClientsUseCase', () => {
     const result = await useCase.execute({
       tenantId,
       authorUserId,
+      access: administrator(),
       sheet: sheetOf([
         { name: 'Good One', 'Company Size': '10' },
         { name: 'Unknown Column', Unknown: 'x' },
@@ -151,6 +156,7 @@ describe('ImportClientsUseCase', () => {
     const result = await useCase.execute({
       tenantId,
       authorUserId,
+      access: administrator(),
       sheet: sheetOf([{ name: 'Acme', Unknown: 'x' }]),
     });
 
@@ -161,7 +167,7 @@ describe('ImportClientsUseCase', () => {
   it('surfaces a domain rejection from the create use case as a row error', async () => {
     createClientUseCase.execute.mockRejectedValueOnce(new Error('boom'));
     const result = await useCase.execute({
-      tenantId, authorUserId, sheet: sheetOf([{ name: 'Acme' }]),
+      tenantId, authorUserId, access: administrator(), sheet: sheetOf([{ name: 'Acme' }]),
     });
 
     expect(result).toEqual({ created: 0, errors: [{ row: 2, message: 'boom' }] });

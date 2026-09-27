@@ -1,6 +1,6 @@
 import { AccessContext } from '../domain/AccessContext';
 import { PermissionScope } from '../domain/PermissionScope';
-import { RecordScope, recordScopeFor } from '../domain/RecordScope';
+import { effectiveScope, RecordScope, recordScopeFor } from '../domain/RecordScope';
 import { ITeamRoster } from './ports/ITeamRoster';
 
 /**
@@ -11,9 +11,11 @@ import { ITeamRoster } from './ports/ITeamRoster';
 export class RecordScopeResolver {
   constructor(private readonly roster: ITeamRoster) {}
 
-  async resolve(access: AccessContext, key: string): Promise<RecordScope> {
+  async resolve(access: AccessContext, key: string, narrowTo?: PermissionScope): Promise<RecordScope> {
     const team =
-      access.scopeOf(key) === PermissionScope.Team ? await this.roster.salesUserIds(access.tenantId) : [];
-    return recordScopeFor(access, key, team);
+      access.can(key) && effectiveScope(access.scopeOf(key), narrowTo) === PermissionScope.Team
+        ? await this.roster.salesUserIds(access.tenantId)
+        : [];
+    return recordScopeFor(access, key, team, narrowTo);
   }
 }

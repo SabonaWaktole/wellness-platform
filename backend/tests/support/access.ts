@@ -1,3 +1,4 @@
+import { RecordScopeResolver } from '../../src/access/application/RecordScopeResolver';
 import { AccessContext } from '../../src/access/domain/AccessContext';
 import { DEFAULT_ROLE_MATRIX, PermissionGrant } from '../../src/access/domain/DefaultRoleMatrix';
 import { RoleKey } from '../../src/access/domain/RoleKey';
@@ -50,3 +51,7 @@ export const salesManager = (options?: AccessOptions) => accessAs(RoleKey.SalesM
 export const reception = (options?: AccessOptions) => accessAs(RoleKey.Reception, options);
 export const ceo = (options?: AccessOptions) => accessAs(RoleKey.Ceo, options);
 export const platformOperator = (userId = 'sa1', tenantId = 't1') => AccessContext.platformOperator(userId, tenantId);
+
+/** A `RecordScopeResolver` over a fixed Sales User roster, for use-case tests. */
+export const scopeResolver = (salesUserIds: string[] = []) =>
+  new RecordScopeResolver({ salesUserIds: async () => salesUserIds });

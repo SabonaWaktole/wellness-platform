@@ -3,13 +3,13 @@ import { IInteractionRepository } from '../../../clients/domain/repositories/IIn
 import { IAppointmentRepository } from '../../../appointments/domain/repositories/IAppointmentRepository';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
 import { TimelineMerger } from '../../../shared/application/TimelineMerger';
+import { InteractionChannel } from '../../../clients/domain/enums/InteractionChannel';
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 export interface GetTenantActivityFeedDTO {
   tenantId: string;
-  /** The requesting user. Only used when their scope restricts them to own data. */
-  userId?: string;
-  /** Slice 3: the caller's `companies.view` scope. `OWN` sees only their own activity. */
-  scope?: string | null;
+  access: AccessContext;
   limit?: number;
 }
 
@@ -18,23 +18,35 @@ export class GetTenantActivityFeedUseCase {
     private clientRepo: IClientRepository,
     private interactionRepo: IInteractionRepository,
     private appointmentRepo: IAppointmentRepository,
+    private scopes: RecordScopeResolver,
     private userRepo?: IUserRepository
   ) {}
 
+  /**
+   * The workspace's recent activity, as far as the viewer reaches
+   * (FR-RBAC-11..13): companies by `companies.view`, their notes and
+   * activities by D3's `notes.view` / `activities.view` within the same
+   * company scope, appointments by `calendar.view`. Decided here rather than
+   * in the route so the policy lives with the business rules and cannot be
+   * forgotten by a second caller.
+   */
   async execute(dto: GetTenantActivityFeedDTO) {
     const limit = dto.limit ?? 20;
+    const { access } = dto;
 
-    // Scope-based visibility, matching GetUpcomingAppointmentsUseCase: OWN
-    // sees only their own activity, wider scopes see the tenant. Decided
-    // here rather than in the route so the policy lives with the business rules
-    // and cannot be forgotten by a second caller.
-    const scopedUserId = dto.scope === 'OWN' ? dto.userId : undefined;
+    const [companies, calendar] = await Promise.all([
+      this.scopes.resolve(access, 'companies.view'),
+      this.scopes.resolve(access, 'calendar.view'),
+    ]);
+    const channels = visibleChannels(access);
 
     // We fetch `limit` from each to ensure we don't miss anything if one is full of recent events
     const [clients, interactions, appointments] = await Promise.all([
-      this.clientRepo.findRecentByTenant(dto.tenantId, limit, scopedUserId),
-      this.interactionRepo.findRecentByTenant(dto.tenantId, limit, scopedUserId),
-      this.appointmentRepo.findRecentByTenant(dto.tenantId, limit, scopedUserId),
+      this.clientRepo.findRecentByTenant(dto.tenantId, limit, companies),
+      channels.length > 0
+        ? this.interactionRepo.findRecentByTenant(dto.tenantId, limit, { scope: companies, channels })
+        : Promise.resolve([]),
+      this.appointmentRepo.findRecentByTenant(dto.tenantId, limit, calendar),
     ]);
 
     const timeline = TimelineMerger.merge(interactions, appointments, clients, { limit });
@@ -64,4 +76,14 @@ export class GetTenantActivityFeedUseCase {
 
     return { timeline: timelineWithActors };
   }
+}
+
+/** D3: notes and every other channel are separate permissions. */
+function visibleChannels(access: AccessContext): InteractionChannel[] {
+  const channels: InteractionChannel[] = [];
+  if (access.can('notes.view')) channels.push(InteractionChannel.NOTE);
+  if (access.can('activities.view')) {
+    channels.push(...Object.values(InteractionChannel).filter((channel) => channel !== InteractionChannel.NOTE));
+  }
+  return channels;
 }

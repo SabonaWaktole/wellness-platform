@@ -1,4 +1,5 @@
 import { admits, recordScopeFor, RecordScope } from '../../../../src/access/domain/RecordScope';
+import { PermissionScope } from '../../../../src/access/domain/PermissionScope';
 import { accessWith, administrator, reception, salesManager, salesUser } from '../../../support/access';
 
 describe('RecordScope', () => {
@@ -47,5 +48,22 @@ describe('RecordScope', () => {
 
     expect(scope).toEqual({ kind: 'none' });
     expect(admits(scope, null)).toBe(false);
+  });
+
+  describe('narrowing (the list\'s my / team / all filter)', () => {
+    it('narrows a wider grant to the requested reach', () => {
+      expect(recordScopeFor(administrator({ userId: 'adm' }), 'companies.view', team, PermissionScope.Own)).toEqual({
+        kind: 'owners', userIds: ['adm'], includeUnowned: false,
+      });
+      expect(recordScopeFor(administrator({ userId: 'adm' }), 'companies.view', team, PermissionScope.Team)).toEqual({
+        kind: 'owners', userIds: ['sales-a', 'sales-b', 'adm'], includeUnowned: true,
+      });
+    });
+
+    it('FR-RBAC-05 never widens past the grant', () => {
+      expect(recordScopeFor(salesUser({ userId: 'sales-a' }), 'companies.view', team, PermissionScope.All)).toEqual({
+        kind: 'owners', userIds: ['sales-a'], includeUnowned: false,
+      });
+    });
   });
 });

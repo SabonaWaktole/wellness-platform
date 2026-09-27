@@ -1,4 +1,5 @@
 import { UpdateAppointmentStatusUseCase } from '../../../../../src/appointments/application/use-cases/UpdateAppointmentStatusUseCase';
+import { administrator, salesUser, scopeResolver } from '../../../../support/access';
 
 describe('UpdateAppointmentStatusUseCase', () => {
   let useCase: UpdateAppointmentStatusUseCase;
@@ -16,13 +17,13 @@ describe('UpdateAppointmentStatusUseCase', () => {
       update: jest.fn(),
     };
 
-    useCase = new UpdateAppointmentStatusUseCase(mockAppointmentRepository);
+    useCase = new UpdateAppointmentStatusUseCase(mockAppointmentRepository, scopeResolver());
   });
 
   it('should confirm an appointment when status is CONFIRMED', async () => {
     mockAppointmentRepository.findById.mockResolvedValue(mockAppointment);
 
-    await useCase.execute({ id: 'apt-123', tenantId: 'tenant-1', status: 'CONFIRMED' });
+    await useCase.execute({ access: administrator(), id: 'apt-123', tenantId: 'tenant-1', status: 'CONFIRMED' });
 
     expect(mockAppointmentRepository.findById).toHaveBeenCalledWith('apt-123', 'tenant-1');
     expect(mockAppointment.confirm).toHaveBeenCalled();
@@ -32,7 +33,7 @@ describe('UpdateAppointmentStatusUseCase', () => {
   it('should complete an appointment when status is COMPLETED', async () => {
     mockAppointmentRepository.findById.mockResolvedValue(mockAppointment);
 
-    await useCase.execute({ id: 'apt-123', tenantId: 'tenant-1', status: 'COMPLETED' });
+    await useCase.execute({ access: administrator(), id: 'apt-123', tenantId: 'tenant-1', status: 'COMPLETED' });
 
     expect(mockAppointment.complete).toHaveBeenCalled();
     expect(mockAppointmentRepository.update).toHaveBeenCalledWith(mockAppointment);
@@ -42,7 +43,7 @@ describe('UpdateAppointmentStatusUseCase', () => {
     mockAppointmentRepository.findById.mockResolvedValue(mockAppointment);
 
     await expect(
-      useCase.execute({ id: 'apt-123', tenantId: 'tenant-1', status: 'INVALID_STATUS' })
+      useCase.execute({ access: administrator(), id: 'apt-123', tenantId: 'tenant-1', status: 'INVALID_STATUS' })
     ).rejects.toThrow('Invalid status');
 
     expect(mockAppointment.confirm).not.toHaveBeenCalled();
@@ -54,7 +55,7 @@ describe('UpdateAppointmentStatusUseCase', () => {
     mockAppointmentRepository.findById.mockResolvedValue(null);
 
     await expect(
-      useCase.execute({ id: 'apt-not-found', tenantId: 'tenant-2', status: 'CONFIRMED' })
+      useCase.execute({ access: administrator(), id: 'apt-not-found', tenantId: 'tenant-2', status: 'CONFIRMED' })
     ).rejects.toThrow('Appointment not found');
   });
 
@@ -68,11 +69,11 @@ describe('UpdateAppointmentStatusUseCase', () => {
     });
 
     await expect(
-      useCase.execute({ id: 'apt-123', tenantId: 'tenant-1', status: 'COMPLETED' })
+      useCase.execute({ access: administrator(), id: 'apt-123', tenantId: 'tenant-1', status: 'COMPLETED' })
     ).rejects.toThrow(DomainError);
     
     await expect(
-      useCase.execute({ id: 'apt-123', tenantId: 'tenant-1', status: 'COMPLETED' })
+      useCase.execute({ access: administrator(), id: 'apt-123', tenantId: 'tenant-1', status: 'COMPLETED' })
     ).rejects.toThrow('Cannot transition from SCHEDULED to COMPLETED');
   });
 });

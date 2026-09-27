@@ -1,4 +1,6 @@
 import express from 'express';
+import { RecordScopeResolver } from '../access/application/RecordScopeResolver';
+import { PrismaTeamRoster } from '../access/infrastructure/PrismaTeamRoster';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -170,6 +172,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const accessRepository = overrides?.accessRepository ?? new PrismaAccessRepository();
   const accessCache = overrides?.accessCache ?? new InMemoryAccessCache();
   const resolveAccessContext = new ResolveAccessContextUseCase(accessRepository, accessCache);
+  const recordScopes = new RecordScopeResolver(new PrismaTeamRoster());
 
   // Use Cases
   //
@@ -442,8 +445,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const interactionRepository = new PrismaInteractionRepository(prisma);
   const appointmentRepository = new PrismaAppointmentRepository(prisma);
   
-  const getTenantClientMetricsUseCase = new GetTenantClientMetricsUseCase(prismaClientRepository, notificationSettingsRepository);
-  const getTenantActivityFeedUseCase = new GetTenantActivityFeedUseCase(prismaClientRepository, interactionRepository, appointmentRepository, userRepository);
+  const getTenantClientMetricsUseCase = new GetTenantClientMetricsUseCase(prismaClientRepository, notificationSettingsRepository, recordScopes);
+  const getTenantActivityFeedUseCase = new GetTenantActivityFeedUseCase(prismaClientRepository, interactionRepository, appointmentRepository, recordScopes, userRepository);
   
   const { createDashboardRouter } = require('../dashboard/interfaces/http/routes/dashboardRoutes');
   const dashboardRoutes = createDashboardRouter(getTenantClientMetricsUseCase, getTenantActivityFeedUseCase, tokenService, tenantRepository, resolveAccessContext);

@@ -1,5 +1,5 @@
 import { AccessContext } from './AccessContext';
-import { PermissionScope } from './PermissionScope';
+import { PermissionScope, scopeAtLeast } from './PermissionScope';
 
 /**
  * Which records one scoped permission reaches (FR-RBAC-11, 12), expressed as
@@ -27,17 +27,20 @@ export const ALL_RECORDS: RecordScope = { kind: 'all' };
  *   not held → no record at all.
  *
  * `teamUserIds` is the tenant's Sales Users; it is only read for TEAM.
+ * `narrowTo` asks for less than the grant (a list's "mine" / "team" filter);
+ * it never widens past it.
  */
 export function recordScopeFor(
   access: AccessContext,
   key: string,
-  teamUserIds: readonly string[]
+  teamUserIds: readonly string[],
+  narrowTo?: PermissionScope
 ): RecordScope {
   if (!access.can(key)) {
     return { kind: 'none' };
   }
 
-  switch (access.scopeOf(key)) {
+  switch (effectiveScope(access.scopeOf(key), narrowTo)) {
     case PermissionScope.Own:
       return { kind: 'owners', userIds: [access.userId], includeUnowned: false };
     case PermissionScope.Team:
@@ -50,6 +53,12 @@ export function recordScopeFor(
       // ALL, or a plain capability held without a scope.
       return { kind: 'all' };
   }
+}
+
+/** The narrower of the grant and the request. A plain capability counts as ALL. */
+export function effectiveScope(granted: PermissionScope | null, narrowTo?: PermissionScope): PermissionScope {
+  const grant = granted ?? PermissionScope.All;
+  return narrowTo && scopeAtLeast(grant, narrowTo) ? narrowTo : grant;
 }
 
 /** True when a record owned by `ownerId` (or by no one, `null`) is inside `scope`. */

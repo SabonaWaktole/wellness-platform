@@ -36,8 +36,7 @@ export function createDashboardRouter(
         const result = await metricsUseCase.execute({
           tenantId: requireTenantId(req),
           timeZone: requireTenant(req).timezone,
-          userId: req.user!.userId,
-          scope: req.access!.scopeOf('companies.view'),
+          access: req.access!,
         });
         res.json(result);
       } catch (error) {
@@ -53,12 +52,11 @@ export function createDashboardRouter(
       try {
         const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
 
-        // Identity and scope are passed through; the use case decides what
+        // The access context is passed through; the use case decides what
         // each scope may see, so the policy stays in one place.
         const result = await feedUseCase.execute({
           tenantId: requireTenantId(req),
-          userId: req.user!.userId,
-          scope: req.access!.scopeOf('companies.view'),
+          access: req.access!,
           limit,
         });
         res.json(result);

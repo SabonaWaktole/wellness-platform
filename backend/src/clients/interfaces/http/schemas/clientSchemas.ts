@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PermissionScope } from '../../../../access/domain/PermissionScope';
 import { InteractionChannel } from '../../../domain/enums/InteractionChannel';
 import { FieldType } from '../../../domain/enums/FieldType';
 import { FieldRole } from '../../../domain/enums/FieldRole';
@@ -39,6 +40,11 @@ export const searchClientsSchema = z.object({
   /** Free text: status is now a tenant-configurable SINGLE_SELECT, not a fixed enum. */
   status: z.string().optional(),
   assignedUserId: z.string().uuid().optional(),
+  /**
+   * The list's "mine / team / all" filter (FR-RBAC-11..13). It narrows the
+   * viewer's `companies.view` scope and never widens it.
+   */
+  reach: z.nativeEnum(PermissionScope).optional(),
   /**
    * `?archived=true` returns the tenant's archived clients instead of its
    * active ones — the Clients page's "Archived" view. Absent/false keeps the
