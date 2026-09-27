@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { IReportRepository, NewClientsPoint } from '../../domain/IReportRepository';
 
 /** Bounds on the requested window, so a caller cannot ask for a decade of buckets. */
@@ -16,17 +18,22 @@ const DEFAULT_MONTHS = 12;
  * for.
  */
 export class GetClientTrendUseCase {
-  constructor(private readonly reportRepository: IReportRepository) {}
+  constructor(
+    private readonly reportRepository: IReportRepository,
+    private readonly scopes: RecordScopeResolver
+  ) {}
 
-  async execute(tenantId: string, months: number = DEFAULT_MONTHS): Promise<NewClientsPoint[]> {
+  /** Counted over the companies in the viewer's `companies.view` scope (FR-RBAC-13). */
+  async execute(tenantId: string, months: number | undefined, access: AccessContext): Promise<NewClientsPoint[]> {
     if (!tenantId) {
       throw new Error('Tenant ID is required');
     }
 
     // Clamped rather than rejected: an out-of-range window is a UI mistake, not
     // a reason to show the owner an error instead of their growth chart.
-    const clamped = Math.min(Math.max(Math.floor(months) || DEFAULT_MONTHS, MIN_MONTHS), MAX_MONTHS);
+    const clamped = Math.min(Math.max(Math.floor(months ?? DEFAULT_MONTHS) || DEFAULT_MONTHS, MIN_MONTHS), MAX_MONTHS);
 
-    return this.reportRepository.getNewClientsTrend(tenantId, clamped);
+    const scope = await this.scopes.resolve(access, 'companies.view');
+    return this.reportRepository.getNewClientsTrend(tenantId, clamped, scope);
   }
 }

@@ -64,7 +64,7 @@ export class ReportsController {
       const tenantId = requireTenantId(req);
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 12;
       
-      const data = await this.getRevenueReport.execute(tenantId, limit);
+      const data = await this.getRevenueReport.execute(tenantId, limit, req.access!);
       res.status(200).json({ revenue: data });
     } catch (error) {
       next(error);
@@ -74,7 +74,7 @@ export class ReportsController {
   getClients = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const tenantId = requireTenantId(req);
-      const data = await this.getClientReport.execute(tenantId);
+      const data = await this.getClientReport.execute(tenantId, req.access!);
       res.status(200).json({ clients: data });
     } catch (error) {
       next(error);
@@ -101,7 +101,7 @@ export class ReportsController {
         assignedUserId: req.query.assignedUserId
           ? String(req.query.assignedUserId)
           : undefined,
-      });
+      }, req.access!);
       res.status(200).json(data);
     } catch (error) {
       next(error);
@@ -113,7 +113,7 @@ export class ReportsController {
     try {
       const tenantId = requireTenantId(req);
       const months = req.query.months ? parseInt(String(req.query.months), 10) : undefined;
-      const data = await this.getClientTrendUseCase.execute(tenantId, months);
+      const data = await this.getClientTrendUseCase.execute(tenantId, months, req.access!);
       res.status(200).json({ trend: data });
     } catch (error) {
       next(error);

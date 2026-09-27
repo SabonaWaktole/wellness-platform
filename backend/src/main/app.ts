@@ -802,11 +802,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   const reportRepo = new PrismaReportRepository(prisma);
   const reportsController = new ReportsController(
-    new GetRevenueReportUseCase(reportRepo),
-    new GetClientReportUseCase(reportRepo),
+    new GetRevenueReportUseCase(reportRepo, recordScopes),
+    new GetClientReportUseCase(reportRepo, recordScopes),
     new GetInventoryReportUseCase(reportRepo),
-    new GetAppointmentReportUseCase(reportRepo),
-    new GetClientTrendUseCase(reportRepo),
+    new GetAppointmentReportUseCase(reportRepo, recordScopes),
+    new GetClientTrendUseCase(reportRepo, recordScopes),
     new GetLowStockReportUseCase(reportRepo),
     new ReportPdfRenderer()
   );

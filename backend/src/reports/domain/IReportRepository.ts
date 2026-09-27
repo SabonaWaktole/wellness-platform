@@ -1,3 +1,5 @@
+import { RecordScope } from '../../access/domain/RecordScope';
+
 export interface MonthlyRevenue {
   month: string; // e.g., '2026-07'
   revenue: number;
@@ -60,14 +62,21 @@ export interface AppointmentReportFilters {
   from?: Date;
   to?: Date;
   assignedUserId?: string;
+  /** The viewer's `calendar.view` reach over the appointment's assignee. */
+  scope?: RecordScope;
 }
 
+/**
+ * `scope` below is the viewer's reach over the company's (or appointment's)
+ * assignee (FR-RBAC-13). Omitted means the whole tenant. Inventory has no
+ * per-user owner, so its reports take none.
+ */
 export interface IReportRepository {
-  getMonthlyRevenue(tenantId: string, limitMonths?: number): Promise<MonthlyRevenue[]>;
-  getClientStatusDistribution(tenantId: string): Promise<ClientStatusCount[]>;
+  getMonthlyRevenue(tenantId: string, limitMonths?: number, scope?: RecordScope): Promise<MonthlyRevenue[]>;
+  getClientStatusDistribution(tenantId: string, scope?: RecordScope): Promise<ClientStatusCount[]>;
   getInventoryValueByWarehouse(tenantId: string): Promise<WarehouseInventoryValue[]>;
 
-  getNewClientsTrend(tenantId: string, limitMonths: number): Promise<NewClientsPoint[]>;
+  getNewClientsTrend(tenantId: string, limitMonths: number, scope?: RecordScope): Promise<NewClientsPoint[]>;
 
   getAppointmentStatusDistribution(
     tenantId: string,
