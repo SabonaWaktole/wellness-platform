@@ -8,7 +8,9 @@
  *
  * See settingsSchemas.ts for the checks themselves.
  */
-export const DATE_FORMATS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'] as const;
+// 'DD.MM.YYYY' is the Albanian convention and Wellness Albania's workspace
+// default (FR-LNG-04). Mirrored in the frontend's utils/dateFormatPattern.ts.
+export const DATE_FORMATS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'DD.MM.YYYY', 'YYYY-MM-DD'] as const;
 export type DateFormat = (typeof DATE_FORMATS)[number];
 
 /**

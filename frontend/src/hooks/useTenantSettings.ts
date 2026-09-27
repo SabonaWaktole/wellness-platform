@@ -4,7 +4,7 @@ import { apiClient } from '../api';
 import { extractApiErrorMessage } from '../utils/apiError';
 import type { Language } from '../i18n/config';
 
-export const DATE_FORMATS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'] as const;
+export const DATE_FORMATS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'DD.MM.YYYY', 'YYYY-MM-DD'] as const;
 export type DateFormat = (typeof DATE_FORMATS)[number];
 
 // Mirrors the backend's Tenant.SUPPORTED_LOCALES. This is a FORMATTING locale

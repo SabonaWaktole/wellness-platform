@@ -33,6 +33,11 @@ describe('PlatformSettings', () => {
       );
     });
 
+    it('FR-LNG-04 accepts the Albanian date format as a platform default', () => {
+      const next = PlatformSettings.defaults().withPatch({ dateFormat: 'DD.MM.YYYY' });
+      expect(next.dateFormat).toBe('DD.MM.YYYY');
+    });
+
     it('rejects an unsupported date format', () => {
       expect(() => PlatformSettings.defaults().withPatch({ dateFormat: 'not-a-format' })).toThrow(
         InvalidPlatformSettingsError

@@ -11,7 +11,7 @@
  * fed from the auth store) and on the public quotation page, which has no auth
  * store and gets the tenant's format handed to it in the API response instead.
  */
-export const DATE_FORMAT_PATTERNS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'] as const;
+export const DATE_FORMAT_PATTERNS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'DD.MM.YYYY', 'YYYY-MM-DD'] as const;
 export type DateFormatPattern = (typeof DATE_FORMAT_PATTERNS)[number];
 
 export const FALLBACK_DATE_FORMAT: DateFormatPattern = 'MM/DD/YYYY';
@@ -50,6 +50,9 @@ export function formatDatePattern(
   switch (pattern as DateFormatPattern) {
     case 'DD/MM/YYYY':
       return `${day}/${month}/${year}`;
+    // The Albanian convention, and Wellness Albania's workspace default.
+    case 'DD.MM.YYYY':
+      return `${day}.${month}.${year}`;
     case 'YYYY-MM-DD':
       return `${year}-${month}-${day}`;
     case 'MM/DD/YYYY':
@@ -79,6 +82,7 @@ export function formatDateMediumPattern(
 
   switch (pattern as DateFormatPattern) {
     case 'DD/MM/YYYY':
+    case 'DD.MM.YYYY':
       return `${day} ${month} ${year}`;
     case 'YYYY-MM-DD':
       return `${year} ${month} ${day}`;

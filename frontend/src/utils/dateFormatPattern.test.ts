@@ -20,6 +20,12 @@ describe('formatDatePattern', () => {
     expect(formatDatePattern(date, 'en-US', 'YYYY-MM-DD', 'UTC')).toBe('2026-08-13');
   });
 
+  it('FR-LNG-04 writes the Albanian day.month.year order', () => {
+    expect(formatDatePattern(date, 'sq-AL', 'DD.MM.YYYY', 'UTC')).toBe('13.08.2026');
+    // The pattern, not the locale, owns the order and the separator.
+    expect(formatDatePattern(date, 'en-US', 'DD.MM.YYYY', 'UTC')).toBe('13.08.2026');
+  });
+
   it('keeps the pattern authoritative even when the locale disagrees', () => {
     // en-GB would natively render 13/08/2026. The workspace asked for
     // month-first, so month-first is what it gets — this is the case the old
@@ -47,6 +53,7 @@ describe('formatDateMediumPattern', () => {
     expect(formatDateMediumPattern(date, 'en-US', 'MM/DD/YYYY', 'UTC')).toBe('Aug 13, 2026');
     expect(formatDateMediumPattern(date, 'en-US', 'DD/MM/YYYY', 'UTC')).toBe('13 Aug 2026');
     expect(formatDateMediumPattern(date, 'en-US', 'YYYY-MM-DD', 'UTC')).toBe('2026 Aug 13');
+    expect(formatDateMediumPattern(date, 'sq-AL', 'DD.MM.YYYY', 'UTC')).toBe('13 gush 2026');
   });
 
   it('still takes the month NAME from the locale', () => {

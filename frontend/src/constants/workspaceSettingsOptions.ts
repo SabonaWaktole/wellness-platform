@@ -73,5 +73,6 @@ export const LOCALE_LABELS: Record<(typeof SUPPORTED_LOCALES)[number], string> =
 export const DATE_FORMAT_LABELS: Record<(typeof DATE_FORMATS)[number], string> = {
   'MM/DD/YYYY': 'MM/DD/YYYY — 08/13/2026',
   'DD/MM/YYYY': 'DD/MM/YYYY — 13/08/2026',
+  'DD.MM.YYYY': 'DD.MM.YYYY — 13.08.2026',
   'YYYY-MM-DD': 'YYYY-MM-DD — 2026-08-13',
 };

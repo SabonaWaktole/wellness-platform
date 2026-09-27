@@ -182,6 +182,13 @@ describe('Tenant settings', () => {
       await put(ownerToken, { dateFormat: 'YYYY/DD/MM' }).expect(400);
     });
 
+    it('FR-LNG-04 accepts the Albanian date format, day.month.year', async () => {
+      await put(ownerToken, { dateFormat: 'DD.MM.YYYY' }).expect(200);
+
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+      expect(tenant?.dateFormat).toBe('DD.MM.YYYY');
+    });
+
     it('rejects a malformed contact email', async () => {
       await put(ownerToken, { contactEmail: 'not-an-email' }).expect(400);
     });
