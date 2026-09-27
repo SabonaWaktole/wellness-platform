@@ -32,7 +32,6 @@ import {
   useRestoreClient,
   useClientRelatedCounts,
 } from '../../hooks/useClients';
-import { useAuthStore } from '../../store/useAuthStore';
 import { usePermission } from '../../hooks/usePermission';
 import type { Client } from '../../types/client';
 import { useTeam } from '../../hooks/useTeam';
@@ -55,13 +54,10 @@ export const ClientListContent: React.FC = () => {
    * Whatever goes wrong next, it says so.
    */
   const { clients, total, isLoading, error: loadError, fetchClients } = useClients();
-  const { user } = useAuthStore();
-  /* Archiving is Business-Owner-only on the backend (ArchiveClientUseCase).
+  /* Archiving needs companies.delete on the backend (ArchiveClientUseCase).
    * Hiding the action for everyone else keeps the UI honest rather than
    * offering a button that always 403s — the backend stays the enforcement
-   * point either way. */
-  // companies.delete (FR-RBAC-07) — SUPER_ADMIN still gets it via
-  // platformOperator() while impersonating, same reach as before.
+   * point either way (FR-RBAC-07). */
   const canArchive = usePermission('companies.delete');
   const { archiveClient } = useArchiveClient();
   const { restoreClient } = useRestoreClient();
