@@ -1,5 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { assertReachesQuotation } from './quotationAccess';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationWriteTransaction } from '../ports/IQuotationWriteTransaction';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
@@ -27,7 +28,7 @@ export class MarkQuotationRejectedUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string | null;
-    actingUserRole: string | null;
+    access: AccessContext | null;
     note?: string | null;
   }) {
     return runWithPostCommitEmail(this.writeTx, this.emailDispatcher, async (repos, notify) => {
@@ -36,9 +37,7 @@ export class MarkQuotationRejectedUseCase {
         throw new Error('Quotation not found');
       }
 
-      if (input.actingUserRole === UserRole.STAFF && quotation.createdByUserId !== input.actingUserId) {
-        throw new Error('Unauthorized: Staff can only act on their own quotations');
-      }
+      assertReachesQuotation(quotation, input.access);
 
       const fromStatus = quotation.status;
       quotation.reject();

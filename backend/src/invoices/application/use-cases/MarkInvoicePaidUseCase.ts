@@ -1,5 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { InvoiceStatusHistory } from '../../domain/InvoiceStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IInvoiceWriteTransaction } from '../ports/IInvoiceWriteTransaction';
 
 export class MarkInvoicePaidUseCase {
@@ -9,7 +10,7 @@ export class MarkInvoicePaidUseCase {
     tenantId: string;
     invoiceId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const invoice = await repos.invoiceRepo.findById(input.tenantId, input.invoiceId);
@@ -17,8 +18,8 @@ export class MarkInvoicePaidUseCase {
         throw new Error('Invoice not found');
       }
 
-      if (input.actingUserRole === UserRole.STAFF && invoice.createdByUserId !== input.actingUserId) {
-        throw new Error('Unauthorized: Staff can only act on their own invoices');
+      if (!input.access.reaches('invoices.manage', [invoice.createdByUserId])) {
+        throw new PermissionDeniedError('invoices.manage', 'Unauthorized: you can only act on your own invoices');
       }
 
       const fromStatus = invoice.status;

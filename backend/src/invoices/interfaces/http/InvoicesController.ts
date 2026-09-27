@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
 import { ConvertQuotationToInvoiceUseCase } from '../../application/use-cases/ConvertQuotationToInvoiceUseCase';
@@ -56,14 +57,14 @@ export class InvoicesController {
         tenantId,
         quotationId,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined
       });
       res.status(201).json(result.invoice);
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -76,12 +77,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result.invoice);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -94,12 +95,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result.invoice);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -112,12 +113,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result.invoice);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -130,7 +131,7 @@ export class InvoicesController {
       const result = await this.searchInvoicesUseCase.execute({
         tenantId,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         params: {
           query: validatedQuery.query,
           status: validatedQuery.status,
@@ -154,12 +155,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -181,7 +182,7 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
 
       const view = await this.getInvoicePdfViewUseCase.execute(tenantId, id);
@@ -198,7 +199,7 @@ export class InvoicesController {
       res.send(pdf);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }

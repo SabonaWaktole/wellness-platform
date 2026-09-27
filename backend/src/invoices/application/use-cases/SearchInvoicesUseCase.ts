@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IInvoiceRepository } from '../../domain/IInvoiceRepository';
 import { InvoiceStatus } from '../../domain/Invoice';
 
@@ -7,7 +8,7 @@ export class SearchInvoicesUseCase {
   async execute(input: {
     tenantId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
     params: {
       query?: string;
       status?: InvoiceStatus;

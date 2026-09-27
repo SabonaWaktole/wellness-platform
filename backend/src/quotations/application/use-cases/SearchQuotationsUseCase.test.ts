@@ -2,7 +2,7 @@ import { SearchQuotationsUseCase } from './SearchQuotationsUseCase';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../tests/support/access';
 
 describe('SearchQuotationsUseCase', () => {
   let useCase: SearchQuotationsUseCase;
@@ -25,7 +25,7 @@ describe('SearchQuotationsUseCase', () => {
     const result = await useCase.execute({
       tenantId: 'tenant-1',
       actingUserId: 'owner-1',
-      actingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator({ userId: 'owner-1' }),
       params: {
         query: 'search term',
         status: QuotationStatus.Sent,
@@ -54,7 +54,7 @@ describe('SearchQuotationsUseCase', () => {
     await useCase.execute({
       tenantId: 'tenant-1',
       actingUserId: 'staff-1',
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: 'staff-1' }),
       params: {}
     });
 
@@ -75,7 +75,7 @@ describe('SearchQuotationsUseCase', () => {
     await useCase.execute({
       tenantId: 'tenant-1',
       actingUserId: 'owner-1',
-      actingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator({ userId: 'owner-1' }),
       params: {}
     });
 

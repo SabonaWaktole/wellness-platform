@@ -3,8 +3,9 @@ import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatusHistoryRepository';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('ReturnQuotationToDraftUseCase', () => {
   let useCase: ReturnQuotationToDraftUseCase;
@@ -40,7 +41,7 @@ describe('ReturnQuotationToDraftUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'owner-1',
-      actingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator({ userId: 'owner-1' }),
       reason: 'Needs adjustment'
     });
 
@@ -54,8 +55,8 @@ describe('ReturnQuotationToDraftUseCase', () => {
 
   it('should reject STAFF role', async () => {
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF
-    })).rejects.toThrow('Unauthorized: Only Business Owners can return quotations');
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should reject if not in PendingApproval status', async () => {
@@ -63,7 +64,7 @@ describe('ReturnQuotationToDraftUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Invalid state transition');
   });
 
@@ -75,7 +76,7 @@ describe('ReturnQuotationToDraftUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'owner-1',
-      actingUserRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'owner-1' })
     });
 
     const historySaveCall = historyRepo.save.mock.calls[0][0];

@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import multer from 'multer';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
@@ -136,7 +137,7 @@ export class ContractsController {
     if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
     const message = String(error?.message ?? 'Unexpected error');
     if (message.includes('not found')) return res.status(404).json({ error: message });
-    if (message.includes('Unauthorized')) return res.status(403).json({ error: message });
+    if (error instanceof PermissionDeniedError) return res.status(403).json({ error: message });
     return res.status(400).json({ error: message });
   }
 

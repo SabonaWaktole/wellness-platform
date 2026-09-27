@@ -5,9 +5,10 @@ import { IProductRepository, IWarehouseRepository, IStockLevelRepository } from 
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationDeliveryService } from '../QuotationDeliveryService';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('UpdateQuotationUseCase', () => {
   let useCase: UpdateQuotationUseCase;
@@ -58,7 +59,7 @@ describe('UpdateQuotationUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'user-1',
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: 'user-1' }),
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
     });
 
@@ -74,7 +75,7 @@ describe('UpdateQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(null);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, lineItems: []
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), lineItems: []
     })).rejects.toThrow('Quotation not found');
   });
 
@@ -83,7 +84,7 @@ describe('UpdateQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
     })).rejects.toThrow('Only Draft or Rejected quotations can be updated');
   });
 
@@ -92,8 +93,8 @@ describe('UpdateQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
-    })).rejects.toThrow('Unauthorized: Staff can only act on their own quotations');
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should allow Business Owner to update any quotation in Draft', async () => {
@@ -103,7 +104,7 @@ describe('UpdateQuotationUseCase', () => {
     warehouseRepo.findById.mockResolvedValue({ id: 'w1', tenantId: 'tenant-1' } as any);
 
     const result = await useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER, lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' }), lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
     });
     
     expect(result.quotation.id).toBe('q1');
@@ -114,7 +115,7 @@ describe('UpdateQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, lineItems: []
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), lineItems: []
     })).rejects.toThrow('A quotation must have at least one line item');
   });
 
@@ -125,7 +126,7 @@ describe('UpdateQuotationUseCase', () => {
     warehouseRepo.findById.mockResolvedValue({ id: 'w1', tenantId: 'tenant-2' } as any);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
     })).rejects.toThrow('Warehouse w1 does not belong to this tenant');
   });
 
@@ -140,7 +141,7 @@ describe('UpdateQuotationUseCase', () => {
         tenantId: 'tenant-1',
         quotationId: 'q1',
         actingUserId: 'user-1',
-        actingUserRole: UserRole.STAFF,
+        access: salesUser({ userId: 'user-1' }),
         lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
       });
 
@@ -164,7 +165,7 @@ describe('UpdateQuotationUseCase', () => {
       warehouseRepo.findById.mockResolvedValue({ id: 'w1', tenantId: 'tenant-1' } as any);
 
       await useCase.execute({
-        tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF,
+        tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }),
         lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
       });
 
@@ -183,7 +184,7 @@ describe('UpdateQuotationUseCase', () => {
       );
 
       await expect(useCase.execute({
-        tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF,
+        tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }),
         lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
       })).rejects.toThrow('Insufficient stock for product p1 at warehouse w1');
 

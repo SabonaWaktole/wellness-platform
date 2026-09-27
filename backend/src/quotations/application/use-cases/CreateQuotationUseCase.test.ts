@@ -5,7 +5,8 @@ import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatus
 import { IClientRepository } from '../../../clients/domain/repositories/IClientRepository';
 import { IProductRepository, IWarehouseRepository } from '../../../inventory/domain/repositories';
 import { QuotationStatus } from '../../domain/Quotation';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { PermissionDeniedError } from '../../../access/domain/errors';
+import { administrator, reception } from '../../../../tests/support/access';
 
 describe('CreateQuotationUseCase', () => {
   let useCase: CreateQuotationUseCase;
@@ -42,7 +43,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 5, unitPrice: 100 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     });
 
     expect(result.quotation.status).toBe(QuotationStatus.Draft);
@@ -60,7 +61,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('Client not found');
   });
 
@@ -72,7 +73,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('Client does not belong to this tenant');
   });
 
@@ -85,7 +86,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('Product p1 not found');
   });
 
@@ -99,7 +100,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('Warehouse w1 does not belong to this tenant');
   });
 
@@ -111,18 +112,18 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('A quotation must have at least one line item');
   });
 
-  it('should reject SUPER_ADMIN role', async () => {
+  it('FR-RBAC-05 rejects a caller without quotations.manage', async () => {
     await expect(useCase.execute({
       tenantId: 'tenant-1',
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 }],
-      authorRole: UserRole.SUPER_ADMIN
-    })).rejects.toThrow('Unauthorized');
+      access: reception({ userId: 'user-1' })
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should reject line item with quantity 0', async () => {
@@ -135,7 +136,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 0, unitPrice: 10 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('Quantity must be greater than zero');
   });
 
@@ -149,7 +150,7 @@ describe('CreateQuotationUseCase', () => {
       clientId: 'c1',
       createdByUserId: 'user-1',
       lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: -5 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'user-1' })
     })).rejects.toThrow('Unit price cannot be negative');
   });
 });

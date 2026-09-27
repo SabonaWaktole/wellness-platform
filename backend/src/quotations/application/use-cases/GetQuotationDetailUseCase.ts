@@ -1,8 +1,9 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatusHistoryRepository';
 import { IInvoiceRepository } from '../../../invoices/domain/IInvoiceRepository';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { QuotationStatus } from '../../domain/Quotation';
 
 export class GetQuotationDetailUseCase {
@@ -20,47 +21,41 @@ export class GetQuotationDetailUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     const quotation = await this.quotationRepo.findById(input.tenantId, input.quotationId);
     if (!quotation) {
       throw new Error('Quotation not found');
     }
 
-    if (input.actingUserRole === UserRole.STAFF && quotation.createdByUserId !== input.actingUserId) {
-      throw new Error('Unauthorized: Staff can only view their own quotations');
+    if (!input.access.reaches('quotations.manage', [quotation.createdByUserId])) {
+      throw new PermissionDeniedError('quotations.manage', 'Unauthorized: you can only view your own quotations');
     }
 
     const lineItems = await this.lineItemRepo.findByQuotationId(input.tenantId, input.quotationId);
     const history = await this.historyRepo.findByQuotationId(input.tenantId, input.quotationId);
 
+    // Reaching the quotation (checked above) is what acting on it needs;
+    // approving it takes quotations.approve on top.
+    const canApprove = input.access.can('quotations.approve');
     const permittedActions: string[] = [];
-    const isOwner = input.actingUserRole === UserRole.BUSINESS_OWNER;
-    const isCreator = quotation.createdByUserId === input.actingUserId;
-    const canAct = isOwner || (input.actingUserRole === UserRole.STAFF && isCreator);
 
     switch (quotation.status) {
       case QuotationStatus.Draft:
-        if (canAct) {
-          permittedActions.push('EDIT', 'SUBMIT');
-        }
+        permittedActions.push('EDIT', 'SUBMIT');
         break;
       case QuotationStatus.PendingApproval:
-        if (isOwner) {
+        if (canApprove) {
           permittedActions.push('APPROVE', 'RETURN_TO_DRAFT');
         }
         break;
       case QuotationStatus.Sent:
-        if (canAct) {
-          permittedActions.push('MARK_ACCEPTED', 'MARK_REJECTED', 'EXPIRE');
-        }
+        permittedActions.push('MARK_ACCEPTED', 'MARK_REJECTED', 'EXPIRE');
         break;
       case QuotationStatus.Rejected:
         // Revising a Rejected quotation and saving it resends it — see
         // UpdateQuotationUseCase.
-        if (canAct) {
-          permittedActions.push('EDIT');
-        }
+        permittedActions.push('EDIT');
         break;
     }
 

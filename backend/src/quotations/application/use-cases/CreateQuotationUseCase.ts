@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatusHistoryRepository';
@@ -6,7 +7,6 @@ import { IProductRepository, IWarehouseRepository } from '../../../inventory/dom
 import { Quotation } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export class CreateQuotationUseCase {
   constructor(
@@ -23,11 +23,9 @@ export class CreateQuotationUseCase {
     clientId: string;
     createdByUserId: string;
     lineItems: Array<{ productId: string; warehouseId: string; quantity: number; unitPrice: number }>;
-    authorRole: string;
+    access: AccessContext;
   }) {
-    if (input.authorRole === UserRole.SUPER_ADMIN) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can create quotations.');
-    }
+    input.access.ensure('quotations.manage');
 
     const client = await this.clientRepo.findById(input.tenantId, input.clientId);
     if (!client) {

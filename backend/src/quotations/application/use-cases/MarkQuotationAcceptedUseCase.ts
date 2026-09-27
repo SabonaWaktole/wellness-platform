@@ -1,10 +1,11 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { assertReachesQuotation } from './quotationAccess';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatusHistoryRepository';
 import { IStockLevelRepository, IStockTransactionManager } from '../../../inventory/domain/repositories';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
 import { StockMovement, StockMovementType } from '../../../inventory/domain/StockMovement';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationWriteTransaction } from '../ports/IQuotationWriteTransaction';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
@@ -37,16 +38,14 @@ export class MarkQuotationAcceptedUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string | null;
-    actingUserRole: string | null;
+    access: AccessContext | null;
   }) {
     const quotation = await this.quotationRepo.findById(input.tenantId, input.quotationId);
     if (!quotation) {
       throw new Error('Quotation not found');
     }
 
-    if (input.actingUserRole === UserRole.STAFF && quotation.createdByUserId !== input.actingUserId) {
-      throw new Error('Unauthorized: Staff can only act on their own quotations');
-    }
+    assertReachesQuotation(quotation, input.access);
 
     const stockActorId = input.actingUserId ?? quotation.createdByUserId;
 
