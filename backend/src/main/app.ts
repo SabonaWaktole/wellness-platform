@@ -526,7 +526,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     archiveUnusedCategoriesUseCase: new ArchiveUnusedCategoriesUseCase(categoryRepo),
   });
 
-  const inventoryRoutes = createInventoryRouter(inventoryController, tokenService, tenantRepository);
+  const inventoryRoutes = createInventoryRouter(inventoryController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/inventory', inventoryRoutes);
 
   // Quotations Routes

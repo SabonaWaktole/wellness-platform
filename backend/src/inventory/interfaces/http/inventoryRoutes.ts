@@ -5,8 +5,10 @@ import { ITokenService } from '../../../auth/application/ports/ITokenService';
 import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRepository';
 import { authenticate } from '../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../main/interfaces/http/middlewares/resolveTenant';
-import { authorize } from '../../../main/interfaces/http/middlewares/authorize';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { loadAccess } from '../../../main/interfaces/http/middlewares/loadAccess';
+import { requirePermission, requireScope } from '../../../main/interfaces/http/middlewares/requirePermission';
+import { ResolveAccessContextUseCase } from '../../../access/application/use-cases/ResolveAccessContextUseCase';
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { ACCEPTED_MIME, MAX_UPLOAD_BYTES } from '../../../media/MediaService';
 import { MAX_IMAGES_PER_PRODUCT } from '../../application/use-cases/ManageProductImagesUseCase';
 
@@ -59,46 +61,88 @@ const receiveImages = (req: Request, res: Response, next: NextFunction) => {
 export const createInventoryRouter = (
   controller: InventoryController,
   tokenService: ITokenService,
-  tenantRepository: ITenantRepository
+  tenantRepository: ITenantRepository,
+  resolveAccessContext: ResolveAccessContextUseCase
 ) => {
   const router = Router({ mergeParams: true });
 
   // Apply authentication and tenant scoping to all inventory routes
   router.use(authenticate(tokenService));
   router.use(resolveTenant(tenantRepository));
+  router.use(loadAccess(resolveAccessContext));
 
-  // Products
-  router.get('/products', controller.searchProducts);
+  // inventory.manage: Sales User holds it at OWN (their own warehouse,
+  // matching today's behaviour for these routes — see the doc comment on
+  // DEFAULT_ROLE_MATRIX's Sales User entry), Administrator at ALL. Routes
+  // that were BUSINESS_OWNER-only require ALL specifically via requireScope.
+  router.get('/products', requirePermission('inventory.manage'), controller.searchProducts);
   // Registered before '/products/:id' so 'facets' and 'bulk' are never read
   // as product ids.
-  router.get('/products/facets', controller.getProductFacets);
-  router.post('/products', controller.createProduct);
-  router.post('/products/bulk', authorize([UserRole.BUSINESS_OWNER]), controller.bulkUpdateProducts);
-  router.get('/products/:id', controller.getProduct);
-  router.put('/products/:id', controller.updateProduct);
-  router.delete('/products/:id', authorize([UserRole.BUSINESS_OWNER]), controller.deleteProduct);
-  router.get('/products/:id/stock-breakdown', controller.getProductBreakdown);
-  router.post('/products/:id/adjust', controller.adjustStock);
-  router.post('/products/:id/transfer', controller.transferStock);
+  router.get('/products/facets', requirePermission('inventory.manage'), controller.getProductFacets);
+  router.post('/products', requirePermission('inventory.manage'), controller.createProduct);
+  router.post(
+    '/products/bulk',
+    requireScope('inventory.manage', PermissionScope.All),
+    controller.bulkUpdateProducts
+  );
+  router.get('/products/:id', requirePermission('inventory.manage'), controller.getProduct);
+  router.put('/products/:id', requirePermission('inventory.manage'), controller.updateProduct);
+  router.delete('/products/:id', requireScope('inventory.manage', PermissionScope.All), controller.deleteProduct);
+  router.get(
+    '/products/:id/stock-breakdown',
+    requirePermission('inventory.manage'),
+    controller.getProductBreakdown
+  );
+  router.post('/products/:id/adjust', requirePermission('inventory.manage'), controller.adjustStock);
+  router.post('/products/:id/transfer', requirePermission('inventory.manage'), controller.transferStock);
 
   // Product images
-  router.post('/products/:id/images', receiveImages, controller.uploadProductImages);
-  router.put('/products/:id/images/order', controller.reorderProductImages);
-  router.delete('/products/:id/images/:imageId', controller.deleteProductImage);
+  router.post(
+    '/products/:id/images',
+    requirePermission('inventory.manage'),
+    receiveImages,
+    controller.uploadProductImages
+  );
+  router.put(
+    '/products/:id/images/order',
+    requirePermission('inventory.manage'),
+    controller.reorderProductImages
+  );
+  router.delete(
+    '/products/:id/images/:imageId',
+    requirePermission('inventory.manage'),
+    controller.deleteProductImage
+  );
 
   // Warehouses
-  router.get('/warehouses', authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF]), controller.getWarehouses);
-  router.post('/warehouses', authorize([UserRole.BUSINESS_OWNER]), controller.createWarehouse);
-  router.put('/warehouses/:id', authorize([UserRole.BUSINESS_OWNER]), controller.updateWarehouse);
-  router.delete('/warehouses/:id', authorize([UserRole.BUSINESS_OWNER]), controller.deleteWarehouse);
+  router.get('/warehouses', requirePermission('inventory.manage'), controller.getWarehouses);
+  router.post('/warehouses', requireScope('inventory.manage', PermissionScope.All), controller.createWarehouse);
+  router.put('/warehouses/:id', requireScope('inventory.manage', PermissionScope.All), controller.updateWarehouse);
+  router.delete(
+    '/warehouses/:id',
+    requireScope('inventory.manage', PermissionScope.All),
+    controller.deleteWarehouse
+  );
 
   // Categories
-  router.get('/categories', authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF]), controller.getCategories);
-  router.post('/categories', authorize([UserRole.BUSINESS_OWNER]), controller.createCategory);
-  router.get('/categories/cleanup/preview', authorize([UserRole.BUSINESS_OWNER]), controller.previewCategoryCleanup);
-  router.post('/categories/cleanup', authorize([UserRole.BUSINESS_OWNER]), controller.cleanupCategories);
-  router.put('/categories/:id', authorize([UserRole.BUSINESS_OWNER]), controller.updateCategory);
-  router.delete('/categories/:id', authorize([UserRole.BUSINESS_OWNER]), controller.deleteCategory);
+  router.get('/categories', requirePermission('inventory.manage'), controller.getCategories);
+  router.post('/categories', requireScope('inventory.manage', PermissionScope.All), controller.createCategory);
+  router.get(
+    '/categories/cleanup/preview',
+    requireScope('inventory.manage', PermissionScope.All),
+    controller.previewCategoryCleanup
+  );
+  router.post(
+    '/categories/cleanup',
+    requireScope('inventory.manage', PermissionScope.All),
+    controller.cleanupCategories
+  );
+  router.put('/categories/:id', requireScope('inventory.manage', PermissionScope.All), controller.updateCategory);
+  router.delete(
+    '/categories/:id',
+    requireScope('inventory.manage', PermissionScope.All),
+    controller.deleteCategory
+  );
 
   return router;
 };

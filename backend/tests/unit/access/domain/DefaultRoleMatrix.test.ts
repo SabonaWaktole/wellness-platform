@@ -57,7 +57,7 @@ describe('DEFAULT_ROLE_MATRIX (SRS §4.2)', () => {
   });
 
   it('D8: module permissions default to the Administrator only', () => {
-    for (const roleKey of [RoleKey.SalesUser, RoleKey.SalesManager, RoleKey.Reception, RoleKey.Ceo]) {
+    for (const roleKey of [RoleKey.SalesManager, RoleKey.Reception, RoleKey.Ceo]) {
       const grants = DEFAULT_ROLE_MATRIX[roleKey];
       expect(grants['inventory.manage']).toBeUndefined();
       expect(grants['forms.manage']).toBeUndefined();
@@ -65,5 +65,13 @@ describe('DEFAULT_ROLE_MATRIX (SRS §4.2)', () => {
       expect(grants['reports.view']).toBeUndefined();
     }
     expect(DEFAULT_ROLE_MATRIX[RoleKey.Administrator]['inventory.manage']).toBe(PermissionScope.All);
+  });
+
+  it('deviation: Sales User keeps inventory.manage at OWN, so legacy STAFF do not lose inventory on rollout', () => {
+    expect(DEFAULT_ROLE_MATRIX[RoleKey.SalesUser]['inventory.manage']).toBe(PermissionScope.Own);
+    // Still Admin-only for the other D8 module keys.
+    expect(DEFAULT_ROLE_MATRIX[RoleKey.SalesUser]['forms.manage']).toBeUndefined();
+    expect(DEFAULT_ROLE_MATRIX[RoleKey.SalesUser]['integrations.manage']).toBeUndefined();
+    expect(DEFAULT_ROLE_MATRIX[RoleKey.SalesUser]['reports.view']).toBeUndefined();
   });
 });

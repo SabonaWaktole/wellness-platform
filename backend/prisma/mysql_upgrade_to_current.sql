@@ -535,6 +535,8 @@ JOIN (
   UNION ALL
   SELECT 'SALES_USER' AS rolekey, 'contracts.validity.view' AS permissionkey, 'OWN' AS scope
   UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'inventory.manage' AS permissionkey, 'OWN' AS scope
+  UNION ALL
   SELECT 'SALES_USER' AS rolekey, 'invoices.manage' AS permissionkey, 'OWN' AS scope
   UNION ALL
   SELECT 'SALES_USER' AS rolekey, 'notes.add' AS permissionkey, 'OWN' AS scope

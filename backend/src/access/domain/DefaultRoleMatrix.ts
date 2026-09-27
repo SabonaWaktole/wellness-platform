@@ -47,6 +47,19 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'commercial.view': Own,
     'payments.view': Own,
     'performance.view': Own,
+    // Deviation from D8's "Administrator only by default": D8's single
+    // coarse inventory.manage key covers reads, creates and stock
+    // adjustments too, not just deletes and bulk edits — today those are
+    // open to every tenant user (scoped to the caller's own warehouse
+    // inside the use cases). Seeding Administrator-only here would take
+    // inventory away from every legacy STAFF user with no self-service fix
+    // until Slice 6 — the same regression `calendar.view` would have been
+    // for BUSINESS_OWNER, confirmed with the user for this key too. OWN
+    // reads as "their own warehouse" (SearchProducts, AdjustStock,
+    // TransferStock, GetWarehouses already scope this way); routes that
+    // were BUSINESS_OWNER-only (bulk update, delete, warehouse/category
+    // management) require ALL specifically — see inventoryRoutes.ts.
+    'inventory.manage': Own,
   },
   [RoleKey.SalesManager]: {
     'companies.view': Team,

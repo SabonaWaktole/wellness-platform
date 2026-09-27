@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { PermissionScope, scopeAtLeast } from '../../../../access/domain/PermissionScope';
 
 /**
  * A `requirePermission`-built middleware, tagged with the key it checks so
@@ -55,5 +56,29 @@ export function requireAnyPermission(keys: string[]): PermissionCheckingMiddlewa
     next();
   };
   middleware.permissionKey = keys.join('|');
+  return middleware;
+}
+
+/**
+ * Requires `key` at least at `minScope` (e.g. `PermissionScope.All`) — for a
+ * route that a plain `can(key)` would open too widely. Used where a single
+ * coarse permission (D8's module keys) covers both a broad grant (e.g.
+ * `inventory.manage: OWN` for Sales User, scoped to their own warehouse) and
+ * an administrator-only action on the same key (bulk edit, delete, warehouse
+ * management) — see inventoryRoutes.ts.
+ */
+export function requireScope(key: string, minScope: PermissionScope): PermissionCheckingMiddleware {
+  const middleware = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.access) {
+      return next(new Error(`requireScope('${key}'): req.access is not set — is loadAccess mounted first?`));
+    }
+    const scope = req.access.scopeOf(key);
+    const granted = scope !== null ? scopeAtLeast(scope, minScope) : req.access.can(key);
+    if (!granted) {
+      return res.status(403).json({ error: 'Forbidden. Insufficient permissions.' });
+    }
+    next();
+  };
+  middleware.permissionKey = key;
   return middleware;
 }
