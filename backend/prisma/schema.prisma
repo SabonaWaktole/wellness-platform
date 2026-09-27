@@ -130,6 +130,9 @@ model Tenant {
 
   // Integrations
   integrations Integration[]
+
+  // Slice 3: RBAC
+  roles Role[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -218,6 +221,13 @@ model User {
   lastName       String?
   phone          String?
   role           String // 'SUPER_ADMIN', 'BUSINESS_OWNER', 'STAFF'
+  // Slice 3: the permission-bearing role. NULL for every user created before
+  // this migration and for SUPER_ADMIN, which sits outside the role table
+  // (D2 in the Milestone 1 plan) — ResolveAccessContextUseCase falls back to
+  // LegacyRoleMapping (keyed on `role` above) whenever this is NULL, so the
+  // rollback path (dropping this column) stays safe. `role` itself is kept,
+  // unchanged, for that same rollback and because SUPER_ADMIN has no row here.
+  roleId         String?
   // Soft off-boarding. A hard delete is impossible: seven non-nullable columns
   // reference User (Quotation.createdByUserId, Appointment.assignedUserId,
   // Client.lastUpdatedByUserId, ...), so RESTRICT blocks it and cascading would
@@ -260,6 +270,54 @@ model User {
   sentInvitations                   Invitation[]             @relation("InvitationSender")
   ownershipTransfersAsOriginalOwner OwnershipTransfer[]      @relation("OwnershipTransferOriginalOwner")
   ownershipTransfersAsActingOwner   OwnershipTransfer[]      @relation("OwnershipTransferActingOwner")
+
+  assignedRole Role? @relation(fields: [roleId], references: [id])
+
+  @@index([roleId])
+}
+
+/// Slice 3 (FR-RBAC-01, 02): one of a tenant's five system roles, or a custom
+/// role created by copying one (FR-RBAC-04, Slice 6). A role IS a set of
+/// permissions — the permissions themselves are `RolePermission` rows, never
+/// hard-coded per role name, so granting or revoking one needs no deployment
+/// (FR-RBAC-02's acceptance criterion). `key` is the stable identifier code
+/// checks against (`SALES_USER`, `SALES_MANAGER`, `RECEPTION`,
+/// `ADMINISTRATOR`, `CEO` for system roles); `nameSq`/`nameEn` are what the
+/// Roles admin screen (Slice 6) shows. `isSystem` roles cannot be deleted and
+/// their `key` cannot change, but their permissions can (FR-RBAC-03).
+model Role {
+  id        String   @id
+  tenantId  String
+  key       String
+  nameSq    String
+  nameEn    String
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+/// One permission grant on a `Role` (FR-RBAC-02). `permissionKey` is a key
+/// from the in-code `PermissionCatalogue` (`src/access/domain`), never
+/// validated by a foreign key — the catalogue is code, not data, per
+/// FR-RBAC-02. `scope` is OWN/TEAM/ALL for a scoped permission
+/// (`PermissionCatalogue` entries marked `supportsScope`), and NULL for a
+/// plain capability (e.g. `users.manage`), where holding the row at all is
+/// the grant.
+model RolePermission {
+  roleId        String
+  permissionKey String
+  scope         String?
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
 }
 
 /// Records a temporary Business-Owner promotion created when a Platform Admin
