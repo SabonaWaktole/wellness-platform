@@ -12,3 +12,17 @@ export class UserNotAccessibleError extends DomainError {
     super('This user is deactivated or no longer exists.');
   }
 }
+
+/**
+ * Thrown by a use case whose caller lacks the permission it needs
+ * (FR-RBAC-05) — the in-use-case half of the check `requirePermission`
+ * makes at the route. Controllers map it to 403 by type, never by message.
+ */
+export class PermissionDeniedError extends DomainError {
+  constructor(
+    readonly permissionKey: string,
+    message = 'You do not have permission to do this.'
+  ) {
+    super(message);
+  }
+}

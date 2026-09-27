@@ -1,6 +1,7 @@
 import { DefineOutcomeCategoryUseCase } from '../../../../../src/clients/application/use-cases/DefineOutcomeCategoryUseCase';
 import { IOutcomeCategoryRepository } from '../../../../../src/clients/domain/repositories/IOutcomeCategoryRepository';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('DefineOutcomeCategoryUseCase', () => {
   let useCase: DefineOutcomeCategoryUseCase;
@@ -14,7 +15,7 @@ describe('DefineOutcomeCategoryUseCase', () => {
   it('allows BUSINESS_OWNER to create a category', async () => {
     const result = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       label: 'Closed Won',
     });
 
@@ -25,8 +26,8 @@ describe('DefineOutcomeCategoryUseCase', () => {
   it('rejects STAFF from creating a category', async () => {
     await expect(useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.STAFF,
+      access: salesUser(),
       label: 'Closed Won',
-    })).rejects.toThrow('Only Business Owners can define outcome categories');
+    })).rejects.toThrow(PermissionDeniedError);
   });
 });

@@ -7,7 +7,8 @@ import { ICustomFieldDefinitionRepository } from '../../../../../src/clients/dom
 import { IClientRepository } from '../../../../../src/clients/domain/repositories/IClientRepository';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 /**
  * Runs `work` against the SAME mock repos every time, with no real
@@ -71,15 +72,13 @@ describe('UpdateCustomFieldUseCase', () => {
   const run = (dto: Partial<Parameters<UpdateCustomFieldUseCase['execute']>[0]> = {}) =>
     useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       fieldId: 'f1',
       ...dto,
     });
 
   it('refuses a non-owner, non-admin caller', async () => {
-    await expect(run({ requestingUserRole: UserRole.STAFF })).rejects.toThrow(
-      'Only Business Owners can edit custom fields'
-    );
+    await expect(run({ access: salesUser() })).rejects.toThrow(PermissionDeniedError);
     expect(customFieldRepo.update).not.toHaveBeenCalled();
   });
 

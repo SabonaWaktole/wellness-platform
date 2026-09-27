@@ -1,7 +1,7 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../domain/enums/FieldType';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 import { defineCustomFieldSchema } from '../../interfaces/http/schemas/clientSchemas';
 import { ParsedSheet } from '../../infrastructure/excel/sheet';
@@ -22,7 +22,7 @@ export interface ImportCustomFieldsResult {
 
 interface ImportCustomFieldsDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   sheet: ParsedSheet;
 }
 
@@ -37,12 +37,7 @@ export class ImportCustomFieldsUseCase {
   constructor(private customFieldRepo: ICustomFieldDefinitionRepository) {}
 
   async execute(dto: ImportCustomFieldsDTO): Promise<ImportCustomFieldsResult> {
-    if (
-      dto.requestingUserRole !== UserRole.BUSINESS_OWNER &&
-      dto.requestingUserRole !== UserRole.SUPER_ADMIN
-    ) {
-      throw new DomainError('Only Business Owners can define custom fields');
-    }
+    dto.access.ensure('settings.manage');
 
     const existing = await this.customFieldRepo.findByTenantId(dto.tenantId);
     // Names already taken this run are tracked alongside the stored ones, since

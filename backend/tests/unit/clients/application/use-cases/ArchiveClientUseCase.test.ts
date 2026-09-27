@@ -2,7 +2,8 @@ import { ArchiveClientUseCase } from '../../../../../src/clients/application/use
 import { RestoreClientUseCase } from '../../../../../src/clients/application/use-cases/RestoreClientUseCase';
 import { IClientRepository } from '../../../../../src/clients/domain/repositories/IClientRepository';
 import { Client } from '../../../../../src/clients/domain/entities/Client';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { accessWith, administrator, platformOperator, salesManager, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 const client = (deletedAt: Date | null = null) =>
   Client.reconstitute({
@@ -34,7 +35,7 @@ describe('ArchiveClientUseCase', () => {
     restore = new RestoreClientUseCase(repo);
   });
 
-  const owner = { tenantId: 't1', requestingUserRole: UserRole.BUSINESS_OWNER, requestingUserId: 'u1', clientId: 'c1' };
+  const owner = { tenantId: 't1', access: administrator(), requestingUserId: 'u1', clientId: 'c1' };
 
   it('archives the client and reports what was preserved', async () => {
     const result = await archive.execute(owner);
@@ -45,13 +46,25 @@ describe('ArchiveClientUseCase', () => {
   });
 
   it('refuses staff', async () => {
-    await expect(archive.execute({ ...owner, requestingUserRole: UserRole.STAFF }))
-      .rejects.toThrow('Only Business Owners can delete clients');
+    await expect(archive.execute({ ...owner, access: salesUser() }))
+      .rejects.toThrow(PermissionDeniedError);
     expect(repo.archive).not.toHaveBeenCalled();
   });
 
+  it('FR-RBAC-05 allows any role holding companies.delete, not just the Administrator', async () => {
+    await archive.execute({ ...owner, access: salesManager() });
+    expect(repo.archive).toHaveBeenCalled();
+  });
+
+  it('FR-RBAC-05 refuses an Administrator whose role no longer holds companies.delete', async () => {
+    await expect(archive.execute({ ...owner, access: administrator({ revoke: ['companies.delete'] }) }))
+      .rejects.toThrow(PermissionDeniedError);
+    await expect(restore.execute({ ...owner, access: accessWith({ 'companies.view': 'ALL' as any }) }))
+      .rejects.toThrow(PermissionDeniedError);
+  });
+
   it('allows super admin', async () => {
-    await archive.execute({ ...owner, requestingUserRole: UserRole.SUPER_ADMIN });
+    await archive.execute({ ...owner, access: platformOperator() });
     expect(repo.archive).toHaveBeenCalled();
   });
 
@@ -83,8 +96,8 @@ describe('ArchiveClientUseCase', () => {
 
     it('refuses staff', async () => {
       repo.findById.mockResolvedValue(client(new Date()));
-      await expect(restore.execute({ ...owner, requestingUserRole: UserRole.STAFF }))
-        .rejects.toThrow('Only Business Owners can restore clients');
+      await expect(restore.execute({ ...owner, access: salesUser() }))
+        .rejects.toThrow(PermissionDeniedError);
     });
   });
 });

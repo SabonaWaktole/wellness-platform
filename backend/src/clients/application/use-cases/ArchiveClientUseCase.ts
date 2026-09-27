@@ -1,10 +1,10 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IClientRepository, ClientRelatedCounts } from '../../domain/repositories/IClientRepository';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface ArchiveClientDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   requestingUserId: string;
   clientId: string;
 }
@@ -28,9 +28,7 @@ export class ArchiveClientUseCase {
   constructor(private clientRepo: IClientRepository) {}
 
   async execute(dto: ArchiveClientDTO): Promise<ArchiveClientResult> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
-      throw new DomainError('Only Business Owners can delete clients');
-    }
+    dto.access.ensure('companies.delete');
 
     // Not includeArchived: archiving an already-archived client is a no-op the
     // caller should hear about, not a silent success.

@@ -2,6 +2,7 @@ import { AccessContext } from '../../../../src/access/domain/AccessContext';
 import { PermissionScope } from '../../../../src/access/domain/PermissionScope';
 import { PERMISSION_CATALOGUE } from '../../../../src/access/domain/PermissionCatalogue';
 import { RoleKey } from '../../../../src/access/domain/RoleKey';
+import { PermissionDeniedError } from '../../../../src/access/domain/errors';
 
 describe('AccessContext', () => {
   it('FR-RBAC-05 can() is true only for a held key', () => {
@@ -91,5 +92,43 @@ describe('AccessContext', () => {
     });
 
     expect(access.toJSON()).toEqual({ 'users.manage': true, 'companies.view': PermissionScope.All });
+  });
+
+  describe('ensure()', () => {
+    const access = new AccessContext({
+      userId: 'u1',
+      tenantId: 't1',
+      roleKey: RoleKey.SalesUser,
+      permissions: { 'companies.view': PermissionScope.Own },
+      isPlatformOperator: false,
+    });
+
+    it('FR-RBAC-05 returns quietly when the key is held, at any scope', () => {
+      expect(() => access.ensure('companies.view')).not.toThrow();
+    });
+
+    it('FR-RBAC-05 throws PermissionDeniedError naming the key when it is not held', () => {
+      expect(() => access.ensure('companies.delete')).toThrow(PermissionDeniedError);
+      try {
+        access.ensure('companies.delete');
+      } catch (err) {
+        expect((err as PermissionDeniedError).permissionKey).toBe('companies.delete');
+      }
+    });
+  });
+
+  it('FR-RBAC-11 ownOnly() is true only for a key held at OWN', () => {
+    const access = new AccessContext({
+      userId: 'u1',
+      tenantId: 't1',
+      roleKey: RoleKey.SalesUser,
+      permissions: { 'quotations.manage': PermissionScope.Own, 'companies.view': PermissionScope.Team, 'users.manage': true },
+      isPlatformOperator: false,
+    });
+
+    expect(access.ownOnly('quotations.manage')).toBe(true);
+    expect(access.ownOnly('companies.view')).toBe(false);
+    expect(access.ownOnly('users.manage')).toBe(false);
+    expect(access.ownOnly('invoices.manage')).toBe(false);
   });
 });

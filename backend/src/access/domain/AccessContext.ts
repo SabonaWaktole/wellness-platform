@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { PermissionGrant } from './DefaultRoleMatrix';
 import { PermissionScope } from './PermissionScope';
 import { PERMISSION_CATALOGUE } from './PermissionCatalogue';
+import { PermissionDeniedError } from './errors';
 
 export interface AccessContextProps {
   userId: string;
@@ -47,6 +48,26 @@ export class AccessContext {
   scopeOf(key: string): PermissionScope | null {
     const grant = this.permissions[key];
     return grant === true || grant === undefined ? null : grant;
+  }
+
+  /**
+   * Throws `PermissionDeniedError` unless `key` is held at any scope. The
+   * one-line guard a use case opens with, in place of the role-name
+   * comparisons FR-RBAC-05 retires.
+   */
+  ensure(key: string, message?: string): void {
+    if (!this.can(key)) {
+      throw new PermissionDeniedError(key, message);
+    }
+  }
+
+  /**
+   * True when `key` is held at `OWN` exactly — the caller may only touch
+   * records they created or are assigned. What the legacy `role === STAFF`
+   * checks meant.
+   */
+  ownOnly(key: string): boolean {
+    return this.scopeOf(key) === PermissionScope.Own;
   }
 
   /**
