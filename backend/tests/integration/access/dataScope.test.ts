@@ -36,6 +36,7 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
     ofA: `a-scope-a-${randomUUID()}`,
     ofB: `a-scope-b-${randomUUID()}`,
   };
+  const contractOfB = `k-scope-b-${randomUUID()}`;
   const tokens = {} as Record<keyof typeof users, string>;
   let app: express.Express;
 
@@ -74,6 +75,23 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
       ],
     });
 
+    await prisma.contract.create({
+      data: {
+        id: contractOfB, tenantId, clientId: clients.ofB, planName: 'Gold', amount: 250, billingPeriod: 'MONTHLY',
+        status: 'ACTIVE', startsAt: new Date('2026-01-01'), endsAt: new Date('2026-12-31'),
+        assignedUserId: users.salesB, createdByUserId: users.salesB, notes: 'Discount 10%',
+        payments: {
+          create: [{ id: `p-${contractOfB}`, tenantId, periodIndex: 1, dueDate: new Date('2026-01-01'), amount: 250, status: 'PAID', paidAmount: 250 }],
+        },
+      },
+    });
+    await prisma.interaction.createMany({
+      data: [
+        { id: `i-note-${contractOfB}`, tenantId, clientId: clients.ofB, authorUserId: users.salesB, content: 'Prefers mornings', channel: 'NOTE' },
+        { id: `i-call-${contractOfB}`, tenantId, clientId: clients.ofB, authorUserId: users.salesB, content: 'Discussed renewal price', channel: 'CALL' },
+      ],
+    });
+
     const tomorrow = new Date(Date.now() + 24 * 60 * 60_000);
     await prisma.appointment.createMany({
       data: [
@@ -88,6 +106,9 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
     // client fields among them — or the tenant row survives and trips the
     // unscoped wipes of other suites in this worker (TD-001).
     await prisma.appointment.deleteMany({ where: { tenantId } });
+    await prisma.contractPayment.deleteMany({ where: { tenantId } });
+    await prisma.contractStatusHistory.deleteMany({ where: { tenantId } });
+    await prisma.contract.deleteMany({ where: { tenantId } });
     await prisma.interaction.deleteMany({ where: { tenantId } });
     await prisma.client.deleteMany({ where: { tenantId } });
     await prisma.customFieldDefinition.deleteMany({ where: { tenantId } });
@@ -195,6 +216,53 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
 
       expect(await upcoming('salesA')).toBe(1);
       expect(await upcoming('manager')).toBe(2);
+    });
+  });
+
+  describe('field redaction for Reception (FR-RBAC-06, UAT-1)', () => {
+    /** Every key anywhere in a JSON body. */
+    const keysOf = (value: unknown): string[] => {
+      if (Array.isArray(value)) return value.flatMap(keysOf);
+      if (value && typeof value === 'object') {
+        return Object.entries(value).flatMap(([key, child]) => [key, ...keysOf(child)]);
+      }
+      return [];
+    };
+    const moneyKeys = (body: unknown) => keysOf(body).filter((key) => /amount|price|payment/i.test(key));
+
+    it('the company, its contracts and its timeline carry no amount, price or payment field', async () => {
+      const responses = await Promise.all([
+        get('reception', `/clients/${clients.ofB}`),
+        get('reception', '/contracts'),
+        get('reception', `/contracts/${contractOfB}`),
+        get('reception', `/contracts/client/${clients.ofB}`),
+        get('reception', `/clients/${clients.ofB}/history`),
+      ]);
+
+      for (const res of responses) {
+        expect(res.status).toBe(200);
+        expect(moneyKeys(res.body)).toEqual([]);
+      }
+    });
+
+    it('Reception still sees contract validity', async () => {
+      const res = await get('reception', `/contracts/${contractOfB}`);
+      expect(res.body.contract).toMatchObject({ status: 'ACTIVE', planName: 'Gold' });
+      expect(res.body.contract.endsAt).toBeDefined();
+    });
+
+    it('D3 Reception\'s timeline shows the note and not the call', async () => {
+      const res = await get('reception', `/clients/${clients.ofB}/history`);
+      const contents = res.body.timeline.map((entry: any) => entry.content ?? entry.description ?? entry.title);
+      expect(JSON.stringify(res.body)).toContain('Prefers mornings');
+      expect(JSON.stringify(res.body)).not.toContain('Discussed renewal price');
+      expect(contents.length).toBe(1);
+    });
+
+    it('the Administrator gets the same contract with its money', async () => {
+      const res = await get('admin', `/contracts/${contractOfB}`);
+      expect(res.body.contract.amount).toBe(250);
+      expect(res.body.payments).toHaveLength(1);
     });
   });
 });

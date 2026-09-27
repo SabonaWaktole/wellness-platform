@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { redactFields } from '../../../access/domain/redactFields';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
@@ -60,7 +61,7 @@ export class InvoicesController {
         access: req.access!,
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined
       });
-      res.status(201).json(result.invoice);
+      res.status(201).json(redactFields(result.invoice, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
@@ -79,7 +80,7 @@ export class InvoicesController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result.invoice);
+      res.json(redactFields(result.invoice, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -97,7 +98,7 @@ export class InvoicesController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result.invoice);
+      res.json(redactFields(result.invoice, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -115,7 +116,7 @@ export class InvoicesController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result.invoice);
+      res.json(redactFields(result.invoice, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -140,7 +141,7 @@ export class InvoicesController {
           limit: validatedQuery.limit
         }
       });
-      res.json(result);
+      res.json(redactFields(result, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       res.status(400).json({ error: error.message });
@@ -157,7 +158,7 @@ export class InvoicesController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result);
+      res.json(redactFields(result, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -185,7 +186,7 @@ export class InvoicesController {
         access: req.access!,
       });
 
-      const view = await this.getInvoicePdfViewUseCase.execute(tenantId, id);
+      const view = await this.getInvoicePdfViewUseCase.execute(tenantId, id, req.access!);
       if (!view) return res.status(404).json({ error: 'Invoice not found' });
 
       const pdf = await this.pdfRenderer.render(view);

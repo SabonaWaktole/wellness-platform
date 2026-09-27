@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { presentClientContracts, presentContract, presentContractDetail, presentContracts } from '../../application/presentContract';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import multer from 'multer';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
@@ -157,7 +158,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.status(201).json(result.contract);
+      res.status(201).json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -179,7 +180,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json({ contract: result.contract, scheduleNeedsReview: result.scheduleNeedsReview });
+      res.json({ contract: presentContract(result.contract, req.access!), scheduleNeedsReview: result.scheduleNeedsReview });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -193,7 +194,10 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json({ contract: result.contract, generatedPayments: result.generatedPayments });
+      res.json({
+        contract: presentContract(result.contract, req.access!),
+        ...(req.access!.can('payments.view') ? { generatedPayments: result.generatedPayments } : {}),
+      });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -209,7 +213,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result.contract);
+      res.json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -230,7 +234,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.status(201).json(result.contract);
+      res.status(201).json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -245,7 +249,7 @@ export class ContractsController {
         access: req.access!,
         params,
       });
-      res.json(result);
+      res.json({ ...result, data: presentContracts(result.data, req.access!) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -259,7 +263,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result);
+      res.json(presentContractDetail(result, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -273,7 +277,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result);
+      res.json(presentClientContracts(result, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -294,7 +298,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json({ payment: result.payment, contract: result.contract });
+      res.json({ payment: result.payment, contract: presentContract(result.contract, req.access!) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -313,7 +317,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.status(201).json({ payment: result.payment, contract: result.contract });
+      res.status(201).json({ payment: result.payment, contract: presentContract(result.contract, req.access!) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -333,7 +337,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json({ payment: result.payment, contract: result.contract });
+      res.json({ payment: result.payment, contract: presentContract(result.contract, req.access!) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -348,7 +352,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json({ contract: result.contract });
+      res.json({ contract: presentContract(result.contract, req.access!) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -366,7 +370,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result.contract);
+      res.json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -380,7 +384,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(result.contract);
+      res.json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }

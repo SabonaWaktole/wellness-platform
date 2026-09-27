@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { redactFields } from '../../../access/domain/redactFields';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { ZodError } from 'zod';
@@ -72,7 +73,7 @@ export class QuotationsController {
         access: req.access!,
         lineItems: validatedData.lineItems
       });
-      res.status(201).json(result.quotation);
+      res.status(201).json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -92,7 +93,7 @@ export class QuotationsController {
         access: req.access!,
         lineItems: validatedData.lineItems
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
@@ -115,7 +116,7 @@ export class QuotationsController {
         access: req.access!,
         requiresQuotationApproval: requiresApproval
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -133,7 +134,7 @@ export class QuotationsController {
         actingUserId: req.user!.userId,
         access: req.access!
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -153,7 +154,7 @@ export class QuotationsController {
         access: req.access!,
         reason
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -172,7 +173,7 @@ export class QuotationsController {
         actingUserId: req.user!.userId,
         access: req.access!
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
@@ -193,7 +194,7 @@ export class QuotationsController {
         access: req.access!,
         note: validatedData.note
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
@@ -212,7 +213,7 @@ export class QuotationsController {
         actingUserId: req.user!.userId,
         access: req.access!
       });
-      res.json(result.quotation);
+      res.json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
@@ -237,7 +238,7 @@ export class QuotationsController {
           limit: validatedQuery.limit
         }
       });
-      res.json(result);
+      res.json(redactFields(result, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       res.status(400).json({ error: error.message });
@@ -251,7 +252,7 @@ export class QuotationsController {
         tenantId,
         access: req.access!
       });
-      res.json(result.quotations);
+      res.json(redactFields(result.quotations, req.access!));
     } catch (error: any) {
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
@@ -292,7 +293,7 @@ export class QuotationsController {
        * Safe to expose here: this endpoint already required authentication,
        * tenant resolution and — for STAFF — ownership of the quotation.
        */
-      res.json({ ...result, shareUrl, shareToken: result.quotation.shareToken });
+      res.json(redactFields({ ...result, shareUrl, shareToken: result.quotation.shareToken }, req.access!));
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
