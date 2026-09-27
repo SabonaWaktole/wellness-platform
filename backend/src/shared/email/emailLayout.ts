@@ -1,5 +1,7 @@
+import { PRODUCT_NAME, EMAIL_LOGO_SIZE, emailLogoUrl } from './brand';
+
 /**
- * Shared HTML skeleton for all outgoing NevaCRM email.
+ * Shared HTML skeleton for all outgoing Wellness Albania email (FR-BR-01).
  *
  * Table-based rather than div/flex based: many mail clients (Outlook desktop
  * in particular) strip modern CSS layout and only render tables reliably.
@@ -12,22 +14,30 @@
  * them to `bodyHtml`.
  */
 
-const INDIGO = '#4F46E5';
-const VIOLET = '#7C3AED';
-const GRADIENT = `linear-gradient(135deg, ${INDIGO} 0%, ${VIOLET} 100%)`;
-const TEXT_COLOR = '#1a1d29';
-const MUTED_COLOR = '#6b7280';
-const FAINT_COLOR = '#9ca3af';
-const PAGE_BG = '#f0f1f6';
+/*
+ * The Wellness Plus palette, as in the frontend's tokens.css. The button is the
+ * darker teal step because white text on the logo teal itself is 3.1:1, under
+ * WCAG AA; the logo teal and green only appear in the decorative accent bar.
+ */
+const TEAL = '#047a68';
+const ACCENT_GRADIENT = 'linear-gradient(90deg, #04a68c 0%, #3daa6c 100%)';
+const HEADING_COLOR = '#0b2b42';
+const TEXT_COLOR = '#3d4152';
+const MUTED_COLOR = '#5f6873';
+const PAGE_BG = '#f1f4f6';
 const CARD_BG = '#ffffff';
-const BORDER_COLOR = '#eceef3';
-const EYEBROW_BG = '#eef0ff';
-const EYEBROW_COLOR = '#4338ca';
+const BORDER_COLOR = '#e6ebee';
+const EYEBROW_BG = '#e3f4f0';
+const EYEBROW_COLOR = '#035e50';
 
-const DEFAULT_FOOTER_NOTE =
-  "This is an automated message from NevaCRM — please don't reply to this email.";
+const DEFAULT_FOOTER_NOTE = `This is an automated message from ${PRODUCT_NAME} — please don't reply to this email.`;
 
 export function renderEmailLayout(params: {
+  /**
+   * The frontend's public URL (FRONTEND_URL). The logo is served from there,
+   * so every caller passes the URL it already builds its links from.
+   */
+  appUrl: string;
   preheader?: string;
   /** Short uppercase context pill above the heading, e.g. "PASSWORD RESET". */
   eyebrow?: string;
@@ -36,7 +46,7 @@ export function renderEmailLayout(params: {
   cta?: { label: string; url: string };
   footerNote?: string;
 }): string {
-  const { preheader, eyebrow, heading, bodyHtml, cta, footerNote } = params;
+  const { appUrl, preheader, eyebrow, heading, bodyHtml, cta, footerNote } = params;
   const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
@@ -58,24 +68,11 @@ export function renderEmailLayout(params: {
       <tr>
         <td align="center" style="padding: 40px 16px;">
 
-          <!-- Brand mark -->
+          <!-- Logo. Clients that block images show the alt text in the style set here. -->
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; max-width:100%; margin-bottom: 20px;">
             <tr>
               <td align="center">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td valign="middle" style="padding-right: 10px;">
-                      <table role="presentation" width="28" height="28" cellpadding="0" cellspacing="0" border="0" style="width:28px; height:28px; border-radius:8px; background-color:${INDIGO}; background:${GRADIENT};">
-                        <tr>
-                          <td align="center" valign="middle" style="width:28px; height:28px; font-size:14px; font-weight:700; color:#ffffff; line-height:28px;">N</td>
-                        </tr>
-                      </table>
-                    </td>
-                    <td valign="middle">
-                      <span style="font-size:16px; font-weight:700; color:${TEXT_COLOR}; letter-spacing:-0.01em;">NevaCRM</span>
-                    </td>
-                  </tr>
-                </table>
+                <img src="${emailLogoUrl(appUrl)}" width="${EMAIL_LOGO_SIZE.width}" height="${EMAIL_LOGO_SIZE.height}" alt="${PRODUCT_NAME}" style="display:block; width:${EMAIL_LOGO_SIZE.width}px; height:${EMAIL_LOGO_SIZE.height}px; border:0; outline:none; text-decoration:none; font-size:18px; font-weight:700; color:${HEADING_COLOR};" />
               </td>
             </tr>
           </table>
@@ -83,7 +80,7 @@ export function renderEmailLayout(params: {
           <!-- Card -->
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; max-width:100%; background-color:${CARD_BG}; border:1px solid ${BORDER_COLOR}; border-radius:16px;">
             <tr>
-              <td style="background-color:${INDIGO}; background:${GRADIENT}; height:4px; line-height:4px; font-size:0; border-radius:16px 16px 0 0;">&nbsp;</td>
+              <td style="background-color:${TEAL}; background:${ACCENT_GRADIENT}; height:4px; line-height:4px; font-size:0; border-radius:16px 16px 0 0;">&nbsp;</td>
             </tr>
             <tr>
               <td style="padding: 36px 40px 4px 40px;">
@@ -92,8 +89,8 @@ export function renderEmailLayout(params: {
                     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 16px;"><tr><td style="background-color:${EYEBROW_BG}; border-radius:999px; padding: 4px 12px;"><span style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:${EYEBROW_COLOR}; text-transform:uppercase;">${eyebrow}</span></td></tr></table>`
                     : ''
                 }
-                <h1 style="margin:0 0 18px 0; font-size:22px; line-height:30px; font-weight:700; color:${TEXT_COLOR}; letter-spacing:-0.01em;">${heading}</h1>
-                <div style="font-size:15px; line-height:24px; color:#3d4152;">
+                <h1 style="margin:0 0 18px 0; font-size:22px; line-height:30px; font-weight:700; color:${HEADING_COLOR}; letter-spacing:-0.01em;">${heading}</h1>
+                <div style="font-size:15px; line-height:24px; color:${TEXT_COLOR};">
                   ${bodyHtml}
                 </div>
               </td>
@@ -104,7 +101,7 @@ export function renderEmailLayout(params: {
               <td style="padding: 12px 40px 8px 40px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td align="center" style="border-radius:8px; background-color:${INDIGO}; background:${GRADIENT};">
+                    <td align="center" style="border-radius:8px; background-color:${TEAL};">
                       <a href="${cta.url}" target="_blank" style="display:inline-block; padding: 13px 26px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">${cta.label}</a>
                     </td>
                   </tr>
@@ -113,9 +110,9 @@ export function renderEmailLayout(params: {
             </tr>
             <tr>
               <td style="padding: 14px 40px 32px 40px;">
-                <p style="margin:0; font-size:12px; line-height:18px; color:${FAINT_COLOR};">
+                <p style="margin:0; font-size:12px; line-height:18px; color:${MUTED_COLOR};">
                   Or copy and paste this link into your browser:<br />
-                  <a href="${cta.url}" target="_blank" style="color:${INDIGO}; word-break:break-all;">${cta.url}</a>
+                  <a href="${cta.url}" target="_blank" style="color:${TEAL}; word-break:break-all;">${cta.url}</a>
                 </p>
               </td>
             </tr>`
@@ -132,8 +129,7 @@ export function renderEmailLayout(params: {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; max-width:100%; margin-top: 24px;">
             <tr>
               <td align="center">
-                <p style="margin:0; font-size:12px; line-height:18px; color:${FAINT_COLOR};">NevaCRM &middot; CRM built for service businesses</p>
-                <p style="margin:4px 0 0 0; font-size:12px; color:${FAINT_COLOR};">&copy; ${year} NevaCRM. All rights reserved.</p>
+                <p style="margin:0; font-size:12px; line-height:18px; color:${MUTED_COLOR};">&copy; ${year} ${PRODUCT_NAME}. All rights reserved.</p>
               </td>
             </tr>
           </table>

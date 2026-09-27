@@ -1,5 +1,6 @@
 import { NotificationType, NotificationParams } from '../domain/NotificationType';
 import { renderEmailLayout, escapeHtml as esc } from '../../shared/email/emailLayout';
+import { PRODUCT_NAME } from '../../shared/email/brand';
 
 export interface ComposedEmail {
   subject: string;
@@ -170,11 +171,12 @@ export class NotificationEmailComposer {
     entityType: string | null
   ): string {
     return renderEmailLayout({
+      appUrl: this.appUrl,
       preheader: heading,
       eyebrow: this.eyebrowFor(entityType),
       heading: esc(heading),
       bodyHtml: `<p>${body}</p>`,
-      cta: link ? { label: 'Open in NevaCRM', url: link } : undefined,
+      cta: link ? { label: `Open in ${PRODUCT_NAME}`, url: link } : undefined,
       footerNote: `You are receiving this because notification email is switched on for ${esc(tenantName)}. A Business Owner can change that under Settings → Notifications.`,
     });
   }
