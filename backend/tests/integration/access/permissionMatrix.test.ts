@@ -12,23 +12,13 @@ const prisma = new PrismaClient();
 const tokenService = new JwtTokenService();
 
 /**
- * The legacy `role` string each test user's JWT carries alongside its real
- * `roleId`. Every route this test exercises is gated by `requirePermission`
- * (the Slice 3 mechanism under test), but a few use cases still make an
- * additional *internal* check keyed on this legacy string — untouched by
- * Slice 3, since no user existing today can have `roleId` and legacy `role`
- * disagree (see the migration's D2 backfill) and updating them is Slice 5/6
- * follow-on work. Administrator plays BUSINESS_OWNER here for that reason;
- * every other role plays STAFF, which is what a real migrated tenant looks
- * like until a Slice 5/6 admin screen can assign a role independently of it.
+ * Every test user — the Administrator included — carries the legacy `role`
+ * string STAFF, in the database and in its JWT. Nothing may read it any more
+ * (FR-RBAC-05: "role names are never compared"): what each user can do comes
+ * from its `roleId` alone. If a use case still branched on BUSINESS_OWNER,
+ * the Administrator rows below would fail.
  */
-const LEGACY_ROLE_FOR: Record<RoleKey, 'BUSINESS_OWNER' | 'STAFF'> = {
-  [RoleKey.SalesUser]: 'STAFF',
-  [RoleKey.SalesManager]: 'STAFF',
-  [RoleKey.Reception]: 'STAFF',
-  [RoleKey.Administrator]: 'BUSINESS_OWNER',
-  [RoleKey.Ceo]: 'STAFF',
-};
+const LEGACY_ROLE = 'STAFF';
 
 /**
  * FR-RBAC-01, 05, 09; NFR-SEC-01. For each of the five system roles, exactly
@@ -51,8 +41,8 @@ describe('Permission matrix (SRS §4.2)', () => {
 
     await prisma.tenant.create({ data: { id: tenantId, name: 'Matrix Tenant', urlSlug: tenantSlug } });
 
-    // SearchProductsUseCase still requires a legacy-STAFF caller to carry a
-    // warehouseId (untouched by Slice 3 — see LEGACY_ROLE_FOR above).
+    // SearchProductsUseCase pins an OWN-scoped inventory.manage caller to
+    // their own warehouse, so every test user is given one.
     const warehouseId = `wh-matrix-${randomUUID()}`;
     await prisma.warehouse.create({ data: { id: warehouseId, tenantId, name: 'Matrix Warehouse' } });
 
@@ -83,8 +73,8 @@ describe('Permission matrix (SRS §4.2)', () => {
         },
       });
 
-      const legacyRole = LEGACY_ROLE_FOR[roleKey];
-      const assignedWarehouseId = legacyRole === 'STAFF' ? warehouseId : null;
+      const legacyRole = LEGACY_ROLE;
+      const assignedWarehouseId = warehouseId;
 
       await prisma.user.create({
         data: {
@@ -113,15 +103,20 @@ describe('Permission matrix (SRS §4.2)', () => {
     await prisma.user.deleteMany({ where: { tenantId } });
     await prisma.rolePermission.deleteMany({ where: { roleId: { in: Object.values(roleIds) } } });
     await prisma.role.deleteMany({ where: { tenantId } });
+    await prisma.outcomeCategory.deleteMany({ where: { tenantId } });
     await prisma.warehouse.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
     await prisma.$disconnect();
   });
 
-  /** True when `DEFAULT_ROLE_MATRIX[roleKey]` holds `permissionKey` at all. */
+  /**
+   * True when `DEFAULT_ROLE_MATRIX[roleKey]` holds `permissionKey` at all, or
+   * — for `key:SCOPE` — holds it at exactly that scope.
+   */
   function matrixAllows(roleKey: RoleKey, permissionKey: string): boolean {
     const grants = DEFAULT_ROLE_MATRIX[roleKey] as Readonly<Record<string, PermissionGrant>>;
-    return grants[permissionKey] !== undefined;
+    const [key, scope] = permissionKey.split(':');
+    return scope ? grants[key] === scope : grants[key] !== undefined;
   }
 
   const CASES: Array<{ label: string; permissionKey: string; request: (t: string) => request.Test }> = [
@@ -163,6 +158,24 @@ describe('Permission matrix (SRS §4.2)', () => {
       label: 'reports.view — GET /reports/revenue',
       permissionKey: 'reports.view',
       request: (t) => request(app).get(`/api/${tenantSlug}/reports/revenue`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'inventory.manage at ALL — POST /inventory/warehouses',
+      permissionKey: 'inventory.manage:ALL',
+      request: (t) =>
+        request(app)
+          .post(`/api/${tenantSlug}/inventory/warehouses`)
+          .set('Authorization', `Bearer ${t}`)
+          .send({ name: `Matrix WH ${randomUUID()}` }),
+    },
+    {
+      label: 'settings.manage — POST /clients/settings/outcome-categories (checked in the use case too)',
+      permissionKey: 'settings.manage',
+      request: (t) =>
+        request(app)
+          .post(`/api/${tenantSlug}/clients/settings/outcome-categories`)
+          .set('Authorization', `Bearer ${t}`)
+          .send({ name: `Matrix outcome ${randomUUID()}` }),
     },
     {
       label: 'invoices.manage — GET /invoices',
