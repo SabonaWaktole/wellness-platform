@@ -624,7 +624,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     )
   );
 
-  const quotationRoutes = createQuotationRouter(quotationsController, tokenService, tenantRepository);
+  const quotationRoutes = createQuotationRouter(quotationsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/quotations', quotationRoutes);
 
   // Invoices Routes

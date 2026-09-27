@@ -13,6 +13,7 @@ import { SearchQuotationsUseCase } from '../../application/use-cases/SearchQuota
 import { GetQuotationDetailUseCase } from '../../application/use-cases/GetQuotationDetailUseCase';
 import { GetPendingApprovalsUseCase } from '../../application/use-cases/GetPendingApprovalsUseCase';
 import { SettingsService } from '../../../settings/SettingsService';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 import {
   createQuotationSchema,
   updateQuotationSchema,
@@ -42,17 +43,21 @@ export class QuotationsController {
   }
 
   private initializeRoutes() {
-    this.router.post('/', this.createQuotation.bind(this));
-    this.router.get('/', this.searchQuotations.bind(this));
-    this.router.get('/pending-approvals', this.getPendingApprovals.bind(this));
-    this.router.get('/:id', this.getQuotationDetail.bind(this));
-    this.router.put('/:id', this.updateQuotation.bind(this));
-    this.router.post('/:id/submit', this.submitQuotation.bind(this));
-    this.router.post('/:id/approve', this.approveQuotation.bind(this));
-    this.router.post('/:id/return-to-draft', this.returnToDraft.bind(this));
-    this.router.post('/:id/mark-accepted', this.markAccepted.bind(this));
-    this.router.post('/:id/mark-rejected', this.markRejected.bind(this));
-    this.router.post('/:id/expire', this.expireQuotation.bind(this));
+    // quotations.manage (scoped OWN/TEAM/ALL): the creator-only ("OWN") check
+    // stays inside each use case — see SearchQuotationsUseCase and friends —
+    // this only screens out someone with no quotations right at all.
+    // quotations.approve: Administrator only, per SRS §4.2.
+    this.router.post('/', requirePermission('quotations.manage'), this.createQuotation.bind(this));
+    this.router.get('/', requirePermission('quotations.manage'), this.searchQuotations.bind(this));
+    this.router.get('/pending-approvals', requirePermission('quotations.approve'), this.getPendingApprovals.bind(this));
+    this.router.get('/:id', requirePermission('quotations.manage'), this.getQuotationDetail.bind(this));
+    this.router.put('/:id', requirePermission('quotations.manage'), this.updateQuotation.bind(this));
+    this.router.post('/:id/submit', requirePermission('quotations.manage'), this.submitQuotation.bind(this));
+    this.router.post('/:id/approve', requirePermission('quotations.approve'), this.approveQuotation.bind(this));
+    this.router.post('/:id/return-to-draft', requirePermission('quotations.approve'), this.returnToDraft.bind(this));
+    this.router.post('/:id/mark-accepted', requirePermission('quotations.manage'), this.markAccepted.bind(this));
+    this.router.post('/:id/mark-rejected', requirePermission('quotations.manage'), this.markRejected.bind(this));
+    this.router.post('/:id/expire', requirePermission('quotations.manage'), this.expireQuotation.bind(this));
   }
 
   private async createQuotation(req: Request, res: Response) {
