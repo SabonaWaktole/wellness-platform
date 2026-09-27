@@ -1,12 +1,15 @@
 import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
+import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 
 /** The repositories a contract write goes through, all on one connection. */
 export interface ContractWriteRepos {
   contractRepo: IContractRepository;
   paymentRepo: IContractPaymentRepository;
   historyRepo: IContractStatusHistoryRepository;
+  /** Same connection as the other three — see IAuditTrail for the pattern. */
+  auditTrail: IAuditTrail;
 }
 
 /**

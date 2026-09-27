@@ -1,5 +1,8 @@
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { actionFor, diff } from '../../../audit/domain/diff';
+import { PAYMENT_AUDIT_FIELDS, paymentLabel, paymentSnapshot } from './contractAudit';
 
 /**
  * Marks an instalment paid, part-paid, waived, or back to unpaid.
@@ -40,6 +43,8 @@ export class RecordContractPaymentUseCase {
         throw new Error('Payment not found');
       }
 
+      const before = paymentSnapshot(payment);
+
       switch (input.action) {
         case 'PAY':
           payment.recordPayment({
@@ -58,6 +63,18 @@ export class RecordContractPaymentUseCase {
       }
 
       await repos.paymentRepo.save(payment);
+
+      const changes = diff(before, paymentSnapshot(payment), [...PAYMENT_AUDIT_FIELDS]);
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.actingUserRole,
+        action: actionFor(changes, AuditAction.Update),
+        entityType: 'ContractPayment',
+        entityId: payment.id,
+        entityLabel: paymentLabel(contract, payment),
+        changes,
+      });
 
       // Re-read so the caller gets a contract whose rollup reflects the write
       // it just made, rather than the totals from before it.
