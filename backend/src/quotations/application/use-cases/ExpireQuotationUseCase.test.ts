@@ -4,7 +4,7 @@ import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatus
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
-import { administrator, salesUser } from '../../../../tests/support/access';
+import { administrator, salesUser, scopeResolver } from '../../../../tests/support/access';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('ExpireQuotationUseCase', () => {
@@ -21,7 +21,7 @@ describe('ExpireQuotationUseCase', () => {
     writeTx = harness.writeTx;
     userRepo = harness.userRepo;
 
-    useCase = new ExpireQuotationUseCase(writeTx, userRepo);
+    useCase = new ExpireQuotationUseCase(writeTx, userRepo, scopeResolver());
   });
 
   function makeQuotation(status: QuotationStatus, createdByUserId: string): Quotation {
@@ -29,7 +29,7 @@ describe('ExpireQuotationUseCase', () => {
       id: 'li1', tenantId: 'tenant-1', quotationId: 'q1', productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10
     });
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, lineItems: [li], status
+      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, clientAssignedUserId: createdByUserId, lineItems: [li], status
     });
   }
 
@@ -55,7 +55,7 @@ describe('ExpireQuotationUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
-    })).rejects.toThrow(PermissionDeniedError);
+    })).rejects.toThrow('Quotation not found');
   });
 
   it('should allow Business Owner to expire any quotation', async () => {

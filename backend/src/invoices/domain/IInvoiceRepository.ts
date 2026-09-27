@@ -1,3 +1,4 @@
+import { RecordScope } from '../../access/domain/RecordScope';
 import { Invoice } from './Invoice';
 
 export interface InvoiceFilters {
@@ -5,6 +6,8 @@ export interface InvoiceFilters {
   query?: string;
   status?: string;
   clientId?: string;
+  /** Reach over the invoice's company's assignee (FR-RBAC-11..13). Omitted means every invoice. */
+  scope?: RecordScope;
   page?: number;
   limit?: number;
 }

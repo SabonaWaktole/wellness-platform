@@ -1,3 +1,4 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractRepository } from '../../domain/IContractRepository';
 import { ContractStatus } from '../../domain/Contract';
@@ -5,12 +6,16 @@ import { ContractStatus } from '../../domain/Contract';
 /**
  * The contracts list, and the renewals worklist behind the same endpoint.
  *
- * Staff are narrowed to their own accounts here rather than being filtered out
- * after the fact, so pagination counts stay honest — a page of ten showing
+ * The viewer is narrowed to the contracts of the companies in their
+ * `contracts.validity.view` scope (FR-RBAC-11) in the query rather than
+ * being filtered after the fact, so pagination counts stay honest — a page of ten showing
  * three rows because seven were dropped post-query is the bug this avoids.
  */
 export class SearchContractsUseCase {
-  constructor(private contractRepo: IContractRepository) {}
+  constructor(
+    private contractRepo: IContractRepository,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -26,17 +31,15 @@ export class SearchContractsUseCase {
       limit?: number;
     };
   }) {
-    const assignedUserId =
-      input.access.ownOnly('contracts.validity.view')
-        ? input.access.userId
-        : input.params.assignedUserId;
+    const scope = await this.scopes.resolve(input.access, 'contracts.validity.view');
 
     return this.contractRepo.search({
+      scope,
       tenantId: input.tenantId,
       query: input.params.query,
       status: input.params.status,
       clientId: input.params.clientId,
-      assignedUserId,
+      assignedUserId: input.params.assignedUserId,
       expiringWithinDays: input.params.expiringWithinDays,
       page: input.params.page || 1,
       limit: input.params.limit || 10,

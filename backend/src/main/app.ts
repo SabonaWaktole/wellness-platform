@@ -587,24 +587,24 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // responds from the public link (RespondToPublicQuotationUseCase below), so
   // both callers share the one instance instead of each holding its own
   // wiring of the same dependencies.
-  const markQuotationAcceptedUseCase = new MarkQuotationAcceptedUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, stockLevelRepo, stockTxManager, quotationWriteTx, userRepository, notificationEmailDispatcher);
-  const markQuotationRejectedUseCase = new MarkQuotationRejectedUseCase(quotationWriteTx, userRepository, notificationEmailDispatcher);
+  const markQuotationAcceptedUseCase = new MarkQuotationAcceptedUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, stockLevelRepo, stockTxManager, quotationWriteTx, userRepository, recordScopes, notificationEmailDispatcher);
+  const markQuotationRejectedUseCase = new MarkQuotationRejectedUseCase(quotationWriteTx, userRepository, recordScopes, notificationEmailDispatcher);
 
   const quotationsController = new QuotationsController(
-    new CreateQuotationUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, prismaClientRepository, productRepo, warehouseRepo),
-    new UpdateQuotationUseCase(quotationRepo, quotationLineItemRepo, productRepo, warehouseRepo, stockLevelRepo, quotationWriteTx, quotationDelivery),
+    new CreateQuotationUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, prismaClientRepository, productRepo, warehouseRepo, recordScopes),
+    new UpdateQuotationUseCase(quotationRepo, quotationLineItemRepo, productRepo, warehouseRepo, stockLevelRepo, quotationWriteTx, recordScopes, quotationDelivery),
     // Each transition takes the email dispatcher so it can send AFTER its
     // transaction commits — see runWithPostCommitEmail.
     // Submit and Approve are the two routes into SENT, so they are the two
     // that deliver to the customer.
-    new SubmitQuotationUseCase(quotationWriteTx, userRepository, quotationLineItemRepo, stockLevelRepo, notificationEmailDispatcher, quotationDelivery),
+    new SubmitQuotationUseCase(quotationWriteTx, userRepository, quotationLineItemRepo, stockLevelRepo, recordScopes, notificationEmailDispatcher, quotationDelivery),
     new ApproveQuotationUseCase(quotationWriteTx, userRepository, quotationLineItemRepo, stockLevelRepo, notificationEmailDispatcher, quotationDelivery),
     new ReturnQuotationToDraftUseCase(quotationWriteTx, userRepository, notificationEmailDispatcher),
     markQuotationAcceptedUseCase,
     markQuotationRejectedUseCase,
-    new ExpireQuotationUseCase(quotationWriteTx, userRepository, notificationEmailDispatcher),
-    new SearchQuotationsUseCase(quotationRepo),
-    new GetQuotationDetailUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, invoiceRepoForQuotationDetail),
+    new ExpireQuotationUseCase(quotationWriteTx, userRepository, recordScopes, notificationEmailDispatcher),
+    new SearchQuotationsUseCase(quotationRepo, recordScopes),
+    new GetQuotationDetailUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, recordScopes, invoiceRepoForQuotationDetail),
     new GetPendingApprovalsUseCase(quotationRepo),
     settingsService
   );
@@ -663,12 +663,12 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const invoicePdfReader = new PrismaInvoicePdfReader(prisma);
 
   const invoicesController = new InvoicesController(
-    new ConvertQuotationToInvoiceUseCase(quotationRepo, quotationLineItemRepo, invoiceRepo, invoiceWriteTx),
-    new SendInvoiceUseCase(invoiceWriteTx),
-    new MarkInvoicePaidUseCase(invoiceWriteTx),
-    new VoidInvoiceUseCase(invoiceWriteTx),
-    new SearchInvoicesUseCase(invoiceRepo),
-    new GetInvoiceDetailUseCase(invoiceRepo, invoiceLineItemRepo, invoiceHistoryRepo),
+    new ConvertQuotationToInvoiceUseCase(quotationRepo, quotationLineItemRepo, invoiceRepo, invoiceWriteTx, recordScopes),
+    new SendInvoiceUseCase(invoiceWriteTx, recordScopes),
+    new MarkInvoicePaidUseCase(invoiceWriteTx, recordScopes),
+    new VoidInvoiceUseCase(invoiceWriteTx, recordScopes),
+    new SearchInvoicesUseCase(invoiceRepo, recordScopes),
+    new GetInvoiceDetailUseCase(invoiceRepo, invoiceLineItemRepo, invoiceHistoryRepo, recordScopes),
     new GetInvoicePdfViewUseCase(invoicePdfReader),
     new InvoicePdfRenderer()
   );
@@ -711,19 +711,19 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const contractDocumentStore = new ContractDocumentStore();
 
   const contractsController = new ContractsController(
-    new CreateContractUseCase(contractWriteTx, prismaClientRepository),
-    new UpdateContractUseCase(contractWriteTx),
-    new ActivateContractUseCase(contractWriteTx),
-    new CancelContractUseCase(contractWriteTx),
-    new RenewContractUseCase(contractWriteTx),
-    new SearchContractsUseCase(contractRepo),
-    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo),
-    new GetClientContractsUseCase(contractRepo),
-    new RecordContractPaymentUseCase(contractWriteTx),
-    new AddContractPaymentUseCase(contractWriteTx),
-    new UpdateContractPaymentUseCase(contractWriteTx),
-    new DeleteContractPaymentUseCase(contractWriteTx),
-    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore)
+    new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes),
+    new UpdateContractUseCase(contractWriteTx, recordScopes),
+    new ActivateContractUseCase(contractWriteTx, recordScopes),
+    new CancelContractUseCase(contractWriteTx, recordScopes),
+    new RenewContractUseCase(contractWriteTx, recordScopes),
+    new SearchContractsUseCase(contractRepo, recordScopes),
+    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, recordScopes),
+    new GetClientContractsUseCase(contractRepo, recordScopes),
+    new RecordContractPaymentUseCase(contractWriteTx, recordScopes),
+    new AddContractPaymentUseCase(contractWriteTx, recordScopes),
+    new UpdateContractPaymentUseCase(contractWriteTx, recordScopes),
+    new DeleteContractPaymentUseCase(contractWriteTx, recordScopes),
+    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes)
   );
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);

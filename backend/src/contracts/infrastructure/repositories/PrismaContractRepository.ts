@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { ALL_RECORDS, RecordScope } from '../../../access/domain/RecordScope';
+import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import {
   IContractRepository,
   ContractFilters,
@@ -61,6 +63,7 @@ export class PrismaContractRepository implements IContractRepository {
       tenantId: raw.tenantId,
       clientId: raw.clientId,
       clientName: raw.client?.name ?? undefined,
+      clientAssignedUserId: raw.client ? raw.client.assignedUserId : undefined,
       assignedUserId: raw.assignedUserId,
       planName: raw.planName,
       status: raw.status as ContractStatus,
@@ -87,7 +90,7 @@ export class PrismaContractRepository implements IContractRepository {
   async findById(tenantId: string, id: string): Promise<Contract | null> {
     const raw = await this.prisma.contract.findUnique({
       where: { id },
-      include: { client: { select: { name: true } }, payments: PAYMENT_ROLLUP_SELECT },
+      include: { client: { select: { name: true, assignedUserId: true } }, payments: PAYMENT_ROLLUP_SELECT },
     });
 
     if (!raw || raw.tenantId !== tenantId) {
@@ -97,10 +100,10 @@ export class PrismaContractRepository implements IContractRepository {
     return this.toDomain(raw);
   }
 
-  async findByClientId(tenantId: string, clientId: string): Promise<Contract[]> {
+  async findByClientId(tenantId: string, clientId: string, scope: RecordScope = ALL_RECORDS): Promise<Contract[]> {
     const rows = await this.prisma.contract.findMany({
-      where: { tenantId, clientId },
-      include: { client: { select: { name: true } }, payments: PAYMENT_ROLLUP_SELECT },
+      where: { tenantId, clientId, client: ownerWhere(scope, 'assignedUserId') },
+      include: { client: { select: { name: true, assignedUserId: true } }, payments: PAYMENT_ROLLUP_SELECT },
       // Newest term first: the current one is what somebody opening a client
       // is nearly always looking for, and history reads downward from it.
       orderBy: { startsAt: 'desc' },
@@ -114,7 +117,7 @@ export class PrismaContractRepository implements IContractRepository {
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId: filters.tenantId };
+    const where: any = { tenantId: filters.tenantId, client: ownerWhere(filters.scope ?? ALL_RECORDS, 'assignedUserId') };
 
     if (filters.status) where.status = filters.status;
     if (filters.clientId) where.clientId = filters.clientId;
@@ -140,7 +143,7 @@ export class PrismaContractRepository implements IContractRepository {
       this.prisma.contract.count({ where }),
       this.prisma.contract.findMany({
         where,
-        include: { client: { select: { name: true } }, payments: PAYMENT_ROLLUP_SELECT },
+        include: { client: { select: { name: true, assignedUserId: true } }, payments: PAYMENT_ROLLUP_SELECT },
         skip,
         take: limit,
         // Soonest expiry first when that is what was asked for — the renewals

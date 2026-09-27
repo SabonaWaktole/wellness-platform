@@ -55,6 +55,9 @@ beforeAll(async () => {
       id: 'client-q-e2e',
       tenantId,
       name: 'Client Q E2E',
+      // The Sales User's own company: quotations and invoices follow their
+      // company (FR-RBAC-11), so staff can only quote for companies they hold.
+      assignedUserId: staff.id,
       status: 'ACTIVE',
       customFieldValues: {},
       lastUpdatedByUserId: owner.id

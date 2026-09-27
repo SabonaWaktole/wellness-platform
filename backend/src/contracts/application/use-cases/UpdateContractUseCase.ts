@@ -3,7 +3,8 @@ import { randomUUID } from 'crypto';
 import { BillingPeriod, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Edits a contract's terms.
@@ -21,7 +22,10 @@ import { assertCanAccessContract } from './contractAccess';
  * mismatch so the UI can offer to fix the remaining instalments explicitly.
  */
 export class UpdateContractUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -36,13 +40,10 @@ export class UpdateContractUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
-      const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!contract) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(contract, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       if (contract.status === ContractStatus.Expired || contract.status === ContractStatus.Cancelled) {
         throw new Error(`A ${contract.status} contract can no longer be edited`);

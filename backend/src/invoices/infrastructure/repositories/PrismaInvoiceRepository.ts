@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { ALL_RECORDS } from '../../../access/domain/RecordScope';
+import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import { IInvoiceRepository, InvoiceFilters, PaginatedInvoices } from '../../domain/IInvoiceRepository';
 import { Invoice, InvoiceStatus } from '../../domain/Invoice';
 import { InvoiceLineItem } from '../../domain/InvoiceLineItem';
@@ -25,6 +27,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
       tenantId: raw.tenantId,
       clientId: raw.clientId,
       clientName: raw.client?.name,
+      clientAssignedUserId: raw.client ? raw.client.assignedUserId : undefined,
       quotationId: raw.quotationId,
       createdByUserId: raw.createdByUserId,
       status: raw.status as InvoiceStatus,
@@ -39,7 +42,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
   async findById(tenantId: string, id: string): Promise<Invoice | null> {
     const raw = await this.prisma.invoice.findUnique({
       where: { id },
-      include: { lineItems: true, client: { select: { name: true } } }
+      include: { lineItems: true, client: { select: { name: true, assignedUserId: true } } }
     });
 
     if (!raw || raw.tenantId !== tenantId) {
@@ -52,7 +55,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
   async findByQuotationId(tenantId: string, quotationId: string): Promise<Invoice | null> {
     const raw = await this.prisma.invoice.findUnique({
       where: { quotationId },
-      include: { lineItems: true, client: { select: { name: true } } }
+      include: { lineItems: true, client: { select: { name: true, assignedUserId: true } } }
     });
 
     if (!raw || raw.tenantId !== tenantId) {
@@ -67,7 +70,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
 
-    const where: any = { tenantId: filters.tenantId };
+    const where: any = { tenantId: filters.tenantId, client: ownerWhere(filters.scope ?? ALL_RECORDS, 'assignedUserId') };
 
     if (filters.status) where.status = filters.status;
     if (filters.clientId) where.clientId = filters.clientId;
@@ -82,7 +85,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
       this.prisma.invoice.count({ where }),
       this.prisma.invoice.findMany({
         where,
-        include: { lineItems: true, client: { select: { name: true } } },
+        include: { lineItems: true, client: { select: { name: true, assignedUserId: true } } },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' }

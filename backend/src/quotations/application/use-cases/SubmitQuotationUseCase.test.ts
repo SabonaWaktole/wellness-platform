@@ -7,7 +7,7 @@ import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
-import { administrator, salesUser } from '../../../../tests/support/access';
+import { administrator, salesUser, scopeResolver } from '../../../../tests/support/access';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('SubmitQuotationUseCase', () => {
@@ -38,7 +38,7 @@ describe('SubmitQuotationUseCase', () => {
       StockLevel.create({ id: 'sl1', tenantId: 'tenant-1', productId: 'p1', productTenantId: 'tenant-1', warehouseId: 'w1', warehouseTenantId: 'tenant-1', quantity: 10 })
     );
 
-    useCase = new SubmitQuotationUseCase(writeTx, userRepo, lineItemRepo, stockLevelRepo);
+    useCase = new SubmitQuotationUseCase(writeTx, userRepo, lineItemRepo, stockLevelRepo, scopeResolver());
   });
 
   function makeQuotation(status: QuotationStatus, createdByUserId: string): Quotation {
@@ -46,7 +46,7 @@ describe('SubmitQuotationUseCase', () => {
       id: 'li1', tenantId: 'tenant-1', quotationId: 'q1', productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10
     });
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, lineItems: [li], status
+      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, clientAssignedUserId: createdByUserId, lineItems: [li], status
     });
   }
 
@@ -99,7 +99,7 @@ describe('SubmitQuotationUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), requiresQuotationApproval: true
-    })).rejects.toThrow(PermissionDeniedError);
+    })).rejects.toThrow('Quotation not found');
   });
 
   it('should allow Business Owner to submit any quotation', async () => {

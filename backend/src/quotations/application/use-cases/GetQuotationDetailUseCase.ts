@@ -1,5 +1,6 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { PermissionDeniedError } from '../../../access/domain/errors';
+import { reachableQuotation } from './quotationAccess';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatusHistoryRepository';
@@ -11,6 +12,7 @@ export class GetQuotationDetailUseCase {
     private quotationRepo: IQuotationRepository,
     private lineItemRepo: IQuotationLineItemRepository,
     private historyRepo: IQuotationStatusHistoryRepository,
+    private scopes: RecordScopeResolver,
     // Optional: existing callers (and tests) that construct this use case
     // without an invoice repository still work, just with `invoiceId` always
     // null. Only the real HTTP wiring needs to pass one.
@@ -28,9 +30,7 @@ export class GetQuotationDetailUseCase {
       throw new Error('Quotation not found');
     }
 
-    if (!input.access.reaches('quotations.manage', [quotation.createdByUserId])) {
-      throw new PermissionDeniedError('quotations.manage', 'Unauthorized: you can only view your own quotations');
-    }
+    reachableQuotation(quotation, await this.scopes.resolve(input.access, 'quotations.manage'));
 
     const lineItems = await this.lineItemRepo.findByQuotationId(input.tenantId, input.quotationId);
     const history = await this.historyRepo.findByQuotationId(input.tenantId, input.quotationId);

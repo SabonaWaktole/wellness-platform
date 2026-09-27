@@ -2,7 +2,7 @@ import { SearchQuotationsUseCase } from './SearchQuotationsUseCase';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
-import { administrator, salesUser } from '../../../../tests/support/access';
+import { administrator, salesUser, scopeResolver } from '../../../../tests/support/access';
 
 describe('SearchQuotationsUseCase', () => {
   let useCase: SearchQuotationsUseCase;
@@ -10,12 +10,12 @@ describe('SearchQuotationsUseCase', () => {
 
   beforeEach(() => {
     quotationRepo = { findById: jest.fn(), findPendingApprovals: jest.fn(), search: jest.fn(), save: jest.fn() };
-    useCase = new SearchQuotationsUseCase(quotationRepo);
+    useCase = new SearchQuotationsUseCase(quotationRepo, scopeResolver());
   });
 
   function makeQuotation(status: QuotationStatus, createdByUserId: string, clientId: string): Quotation {
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId, createdByUserId, lineItems: [], status
+      id: 'q1', tenantId: 'tenant-1', clientId, createdByUserId, clientAssignedUserId: createdByUserId, lineItems: [], status
     });
   }
 
@@ -40,7 +40,7 @@ describe('SearchQuotationsUseCase', () => {
       query: 'search term',
       status: QuotationStatus.Sent,
       clientId: 'c1',
-      createdByUserId: undefined, // Owner sees all
+      scope: { kind: 'all' }, // Owner sees all
       page: 2,
       limit: 15
     } as any);
@@ -48,7 +48,7 @@ describe('SearchQuotationsUseCase', () => {
     expect(result.total).toBe(0);
   });
 
-  it('should restrict Staff to their own quotations', async () => {
+  it('should restrict Staff to the quotations of their own companies', async () => {
     quotationRepo.search.mockResolvedValue({ data: [], total: 0 });
 
     await useCase.execute({
@@ -63,7 +63,8 @@ describe('SearchQuotationsUseCase', () => {
       query: undefined,
       status: undefined,
       clientId: undefined,
-      createdByUserId: 'staff-1', // Staff restricted
+      // Staff restricted to their own companies' quotations (FR-RBAC-11)
+      scope: { kind: 'owners', userIds: ['staff-1'], includeUnowned: false },
       page: 1, // default
       limit: 10 // default
     } as any);
@@ -84,7 +85,7 @@ describe('SearchQuotationsUseCase', () => {
       query: undefined,
       status: undefined,
       clientId: undefined,
-      createdByUserId: undefined,
+      scope: { kind: 'all' },
       page: 1,
       limit: 10
     } as any);

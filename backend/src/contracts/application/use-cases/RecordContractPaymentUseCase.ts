@@ -1,6 +1,7 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Marks an instalment paid, part-paid, waived, or back to unpaid.
@@ -11,7 +12,10 @@ import { assertCanAccessContract } from './contractAccess';
  * correcting a mistake cheap rather than to guard an irreversible ledger.
  */
 export class RecordContractPaymentUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -25,13 +29,10 @@ export class RecordContractPaymentUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
-      const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!contract) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(contract, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       const payment = await repos.paymentRepo.findById(input.tenantId, input.paymentId);
       // The parent check is not redundant with this one: without it, a payment

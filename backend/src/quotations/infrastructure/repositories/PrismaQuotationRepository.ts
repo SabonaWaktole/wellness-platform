@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { ALL_RECORDS } from '../../../access/domain/RecordScope';
+import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import { IQuotationRepository, QuotationFilters, PaginatedQuotations } from '../../domain/IQuotationRepository';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
@@ -12,7 +14,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       where: { id },
       include: {
         lineItems: true,
-        client: { select: { name: true } }
+        client: { select: { name: true, assignedUserId: true } }
       }
     });
 
@@ -35,6 +37,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       tenantId: raw.tenantId,
       clientId: raw.clientId,
       clientName: raw.client?.name ?? undefined,
+      clientAssignedUserId: raw.client ? raw.client.assignedUserId : undefined,
       createdByUserId: raw.createdByUserId,
       status: raw.status as QuotationStatus,
       createdAt: raw.createdAt,
@@ -54,7 +57,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       },
       include: {
         lineItems: true,
-        client: { select: { name: true } }
+        client: { select: { name: true, assignedUserId: true } }
       },
       orderBy: {
         createdAt: 'desc'
@@ -77,6 +80,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         tenantId: raw.tenantId,
         clientId: raw.clientId,
         clientName: raw.client?.name ?? undefined,
+        clientAssignedUserId: raw.client ? raw.client.assignedUserId : undefined,
         createdByUserId: raw.createdByUserId,
         status: raw.status as QuotationStatus,
         createdAt: raw.createdAt,
@@ -96,6 +100,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
     const where: any = {
       tenantId: filters.tenantId,
+      client: ownerWhere(filters.scope ?? ALL_RECORDS, 'assignedUserId'),
     };
 
     if (filters.status) {
@@ -129,7 +134,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         where,
         include: {
           lineItems: true,
-          client: { select: { name: true } }
+          client: { select: { name: true, assignedUserId: true } }
         },
         skip,
         take: limit,
@@ -155,6 +160,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         tenantId: raw.tenantId,
         clientId: raw.clientId,
         clientName: raw.client?.name ?? undefined,
+        clientAssignedUserId: raw.client ? raw.client.assignedUserId : undefined,
         createdByUserId: raw.createdByUserId,
         status: raw.status as QuotationStatus,
         createdAt: raw.createdAt,

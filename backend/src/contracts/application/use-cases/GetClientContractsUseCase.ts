@@ -1,7 +1,7 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractRepository } from '../../domain/IContractRepository';
 import { ContractStatus } from '../../domain/Contract';
-import { canAccessContract } from './contractAccess';
 
 /**
  * Every term for one client, plus the answer to the question the client page
@@ -13,7 +13,10 @@ import { canAccessContract } from './contractAccess';
  * arrears left behind by a term that has already ended.
  */
 export class GetClientContractsUseCase {
-  constructor(private contractRepo: IContractRepository) {}
+  constructor(
+    private contractRepo: IContractRepository,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -21,10 +24,9 @@ export class GetClientContractsUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
-    const all = await this.contractRepo.findByClientId(input.tenantId, input.clientId);
-    const contracts = all.filter((contract) =>
-      canAccessContract(contract, input.access, 'contracts.validity.view')
-    );
+    // Filtered in the query: the company's contracts only when the company is in scope (FR-RBAC-11).
+    const scope = await this.scopes.resolve(input.access, 'contracts.validity.view');
+    const contracts = await this.contractRepo.findByClientId(input.tenantId, input.clientId, scope);
 
     const active = contracts.find((contract) => contract.status === ContractStatus.Active) ?? null;
 

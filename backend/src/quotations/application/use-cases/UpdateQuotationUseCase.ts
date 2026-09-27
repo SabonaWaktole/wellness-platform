@@ -1,5 +1,6 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { assertReachesQuotation } from './quotationAccess';
+import { reachableQuotation } from './quotationAccess';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IProductRepository, IWarehouseRepository, IStockLevelRepository } from '../../../inventory/domain/repositories';
@@ -18,6 +19,7 @@ export class UpdateQuotationUseCase {
     private warehouseRepo: IWarehouseRepository,
     private stockLevelRepo: IStockLevelRepository,
     private writeTx: IQuotationWriteTransaction,
+    private scopes: RecordScopeResolver,
     private delivery?: IQuotationDeliveryService
   ) {}
 
@@ -28,12 +30,13 @@ export class UpdateQuotationUseCase {
     access: AccessContext;
     lineItems: Array<{ productId: string; warehouseId: string; quantity: number; unitPrice: number }>;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'quotations.manage');
     const quotation = await this.quotationRepo.findById(input.tenantId, input.quotationId);
     if (!quotation) {
       throw new Error('Quotation not found');
     }
 
-    assertReachesQuotation(quotation, input.access);
+    reachableQuotation(quotation, scope);
 
     /*
      * Rejected is editable too, on top of Draft — the client said no to

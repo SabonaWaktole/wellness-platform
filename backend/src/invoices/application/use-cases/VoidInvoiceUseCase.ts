@@ -1,10 +1,14 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { PermissionDeniedError } from '../../../access/domain/errors';
+import { reachableInvoice } from './invoiceAccess';
 import { InvoiceStatusHistory } from '../../domain/InvoiceStatusHistory';
 import { IInvoiceWriteTransaction } from '../ports/IInvoiceWriteTransaction';
 
 export class VoidInvoiceUseCase {
-  constructor(private writeTx: IInvoiceWriteTransaction) {}
+  constructor(
+    private writeTx: IInvoiceWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -12,15 +16,14 @@ export class VoidInvoiceUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'invoices.manage');
     return this.writeTx.run(async (repos) => {
       const invoice = await repos.invoiceRepo.findById(input.tenantId, input.invoiceId);
       if (!invoice) {
         throw new Error('Invoice not found');
       }
 
-      if (!input.access.reaches('invoices.manage', [invoice.createdByUserId])) {
-        throw new PermissionDeniedError('invoices.manage', 'Unauthorized: you can only act on your own invoices');
-      }
+      reachableInvoice(invoice, scope);
 
       const fromStatus = invoice.status;
       invoice.void();

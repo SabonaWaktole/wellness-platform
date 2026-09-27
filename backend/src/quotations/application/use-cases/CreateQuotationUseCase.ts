@@ -1,3 +1,4 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
@@ -15,7 +16,8 @@ export class CreateQuotationUseCase {
     private historyRepo: IQuotationStatusHistoryRepository,
     private clientRepo: IClientRepository,
     private productRepo: IProductRepository,
-    private warehouseRepo: IWarehouseRepository
+    private warehouseRepo: IWarehouseRepository,
+    private scopes: RecordScopeResolver
   ) {}
 
   async execute(input: {
@@ -27,7 +29,10 @@ export class CreateQuotationUseCase {
   }) {
     input.access.ensure('quotations.manage');
 
-    const client = await this.clientRepo.findById(input.tenantId, input.clientId);
+    // Only for a company inside the viewer's scope (FR-RBAC-11); outside it
+    // the company is not found.
+    const scope = await this.scopes.resolve(input.access, 'quotations.manage');
+    const client = await this.clientRepo.findById(input.tenantId, input.clientId, { scope });
     if (!client) {
       throw new Error('Client not found');
     }

@@ -2,7 +2,8 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { ContractPayment } from '../../domain/ContractPayment';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Adds a payment row the generated schedule did not anticipate — a setup fee,
@@ -14,7 +15,10 @@ import { assertCanAccessContract } from './contractAccess';
  * like everything else.
  */
 export class AddContractPaymentUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -26,13 +30,10 @@ export class AddContractPaymentUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
-      const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!contract) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(contract, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       const existing = await repos.paymentRepo.findByContractId(input.tenantId, input.contractId);
       const nextIndex = existing.reduce((max, p) => Math.max(max, p.periodIndex), 0) + 1;

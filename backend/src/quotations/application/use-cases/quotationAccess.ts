@@ -1,17 +1,19 @@
-import { AccessContext } from '../../../access/domain/AccessContext';
-import { PermissionDeniedError } from '../../../access/domain/errors';
+import { admits, RecordScope } from '../../../access/domain/RecordScope';
 
 /**
- * The quotation-level half of `quotations.manage` (FR-RBAC-11): at OWN scope
- * a caller reaches only quotations they created. `access` is `null` for a
- * system actor — the expiry job, or a client answering through the public
- * link — which acts on any quotation.
+ * A quotation belongs to whoever its company belongs to (FR-RBAC-11: "Own"
+ * is the user's companies and, later, their offers). One outside the
+ * viewer's `quotations.manage` scope is "not found", like one that does not
+ * exist (FR-RBAC-05: 404, not 403). `scope` is `null` for a system actor —
+ * the expiry job, or a client answering through the public link — which acts
+ * on any quotation.
  */
-export const assertReachesQuotation = (
-  quotation: { createdByUserId: string },
-  access: AccessContext | null
-): void => {
-  if (access && !access.reaches('quotations.manage', [quotation.createdByUserId])) {
-    throw new PermissionDeniedError('quotations.manage', 'Unauthorized: you can only act on your own quotations');
+export const reachableQuotation = <Q extends { clientAssignedUserId?: string | null }>(
+  quotation: Q | null,
+  scope: RecordScope | null
+): Q => {
+  if (!quotation || (scope && !admits(scope, quotation.clientAssignedUserId))) {
+    throw new Error('Quotation not found');
   }
+  return quotation;
 };

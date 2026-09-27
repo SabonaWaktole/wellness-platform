@@ -4,7 +4,8 @@ import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { ContractPayment } from '../../domain/ContractPayment';
 import { buildPaymentSchedule } from '../../domain/paymentSchedule';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Puts a contract in force and lays out what the client is expected to pay.
@@ -16,7 +17,10 @@ import { assertCanAccessContract } from './contractAccess';
  * twice for the same months.
  */
 export class ActivateContractUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -24,13 +28,10 @@ export class ActivateContractUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
-      const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!contract) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(contract, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       const fromStatus = contract.status;
       contract.activate();

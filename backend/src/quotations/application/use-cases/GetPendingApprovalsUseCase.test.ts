@@ -17,7 +17,7 @@ describe('GetPendingApprovalsUseCase', () => {
   function makeQuotation(): Quotation {
     const li = QuotationLineItem.create({ id: 'li1', tenantId: 'tenant-1', quotationId: 'q1', productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 });
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId: 'user-1', lineItems: [li], status: QuotationStatus.PendingApproval
+      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId: 'user-1', clientAssignedUserId: 'user-1', lineItems: [li], status: QuotationStatus.PendingApproval
     });
   }
 

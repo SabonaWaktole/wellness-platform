@@ -1,6 +1,7 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Removes an instalment from the schedule.
@@ -11,7 +12,10 @@ import { assertCanAccessContract } from './contractAccess';
  * destroy — reverse it to UNPAID first, which is a deliberate second step.
  */
 export class DeleteContractPaymentUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -20,13 +24,10 @@ export class DeleteContractPaymentUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
-      const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!contract) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(contract, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       const payment = await repos.paymentRepo.findById(input.tenantId, input.paymentId);
       if (!payment || payment.contractId !== input.contractId) {

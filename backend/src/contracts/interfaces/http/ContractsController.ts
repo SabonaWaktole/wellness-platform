@@ -155,6 +155,7 @@ export class ContractsController {
         assignedUserId: data.assignedUserId,
         notes: data.notes,
         actingUserId: req.user!.userId,
+        access: req.access!,
       });
       res.status(201).json(result.contract);
     } catch (error: any) {

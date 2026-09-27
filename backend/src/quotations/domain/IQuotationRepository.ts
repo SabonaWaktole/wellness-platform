@@ -1,3 +1,4 @@
+import { RecordScope } from '../../access/domain/RecordScope';
 import { Quotation } from './Quotation';
 
 export interface QuotationFilters {
@@ -6,6 +7,8 @@ export interface QuotationFilters {
   status?: string;
   clientId?: string;
   createdByUserId?: string;
+  /** Reach over the quotation's company's assignee (FR-RBAC-11..13). Omitted means every quotation. */
+  scope?: RecordScope;
   startDate?: Date;
   endDate?: Date;
   page?: number;

@@ -3,7 +3,8 @@ import { randomUUID } from 'crypto';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /** One day, for stepping the new term off the end of the previous one. */
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -22,7 +23,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * the moment a price changes.
  */
 export class RenewContractUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private scopes: RecordScopeResolver
+  ) {}
 
   async execute(input: {
     tenantId: string;
@@ -36,13 +40,10 @@ export class RenewContractUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
-      const previous = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!previous) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(previous, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const previous = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       if (!previous.canRenew()) {
         throw new Error(

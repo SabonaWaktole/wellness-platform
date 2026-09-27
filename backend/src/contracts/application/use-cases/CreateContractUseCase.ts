@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { randomUUID } from 'crypto';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
@@ -16,7 +18,8 @@ import { IClientRepository } from '../../../clients/domain/repositories/IClientR
 export class CreateContractUseCase {
   constructor(
     private writeTx: IContractWriteTransaction,
-    private clientRepo: IClientRepository
+    private clientRepo: IClientRepository,
+    private scopes: RecordScopeResolver
   ) {}
 
   async execute(input: {
@@ -30,11 +33,15 @@ export class CreateContractUseCase {
     assignedUserId?: string | null;
     notes?: string | null;
     actingUserId: string;
+    access: AccessContext;
   }) {
     // The client is checked through its own repository, which already filters
     // soft-deleted rows — a raw FK insert would happily attach a contract to a
     // deleted client and it would then be invisible everywhere it mattered.
-    const client = await this.clientRepo.findById(input.tenantId, input.clientId);
+    // A contract can only be written for a company inside the viewer's
+    // contracts.manage scope (FR-RBAC-11); outside it the company is not found.
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
+    const client = await this.clientRepo.findById(input.tenantId, input.clientId, { scope });
     if (!client) {
       throw new Error('Client not found');
     }
