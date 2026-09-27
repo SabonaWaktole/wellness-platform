@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
@@ -45,7 +45,6 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { RoleGuard } from './RoleGuard';
 import { TenantGuard } from './TenantGuard';
 
-import { LandingPage } from '../pages/landing/LandingPage';
 
 // Temporary dashboard wrapper that chooses the right shell based on role
 // We will refine this as we build out the AppShell properly
@@ -60,10 +59,15 @@ const DashboardSelector = () => {
   return <StaffShell />;
 };
 
-export const router = createBrowserRouter([
+export const routes: RouteObject[] = [
+  /*
+   * The root goes straight to sign-in (FR-BR-05). This edition has no public
+   * marketing page: the SaaS landing page it inherited was removed, and the
+   * only people who arrive here have an account or a link someone sent them.
+   */
   {
     path: '/',
-    element: <LandingPage />,
+    element: <Navigate to="/login" replace />,
   },
   /*
    * /register-business is gone along with public self-signup. A workspace now
@@ -531,4 +535,6 @@ export const router = createBrowserRouter([
     path: '*',
     element: <StatusPage variant="404" />,
   },
-]);
+];
+
+export const router = createBrowserRouter(routes);

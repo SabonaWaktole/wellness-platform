@@ -488,7 +488,7 @@ describe('Auth Integration Tests', () => {
   // caller. What remains here is the guarantee that the public route is gone.
   // -----------------------------------------------------------------------
   describe('POST /api/auth/register', () => {
-    it('no longer exists â€” workspaces are provisioned by a platform admin only', async () => {
+    it('FR-BR-05 no longer exists — workspaces are provisioned by a platform admin only', async () => {
       await request(app)
         .post('/api/auth/register')
         .send({
