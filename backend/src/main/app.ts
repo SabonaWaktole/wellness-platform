@@ -807,7 +807,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new ReportPdfRenderer()
   );
 
-  const reportRoutes = createReportRouter(reportsController, tokenService, tenantRepository);
+  const reportRoutes = createReportRouter(reportsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/reports', reportRoutes);
 
   // Notifications
