@@ -1,0 +1,13 @@
+/* Sized by height so the lockup and the square symbol line up on one baseline
+   whichever the browser picks; the width is left to the artwork. */
+.logo {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: var(--brand-logo-height, 32px);
+}
+
+.image {
+  display: block;
+  height: 100%;
+  width: auto;
+}

@@ -212,7 +212,6 @@ export const EditAppointmentPage: React.FC = () => {
   };
 
   const userName = getUserDisplayName(user, 'Business Owner');
-  const roleName = user?.role === 'STAFF' ? 'Sales Representative' : 'Enterprise Tier';
 
   return (
     <AppLayout
@@ -221,8 +220,6 @@ export const EditAppointmentPage: React.FC = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar 
-          orgName={tenantSlug || 'Workspace'} 
-          orgTier={roleName} 
           navItems={navItems} 
           onLogoutClick={handleLogout}
           onNavItemClick={(id) => navigate(`/${tenantSlug || ''}/${id === 'dashboard' ? '' : id}`)}

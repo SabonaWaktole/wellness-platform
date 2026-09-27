@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {} from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AuthLayout } from '../../components/layout/AuthLayout/AuthLayout';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { PasswordInput } from '../../components/ui/PasswordInput/PasswordInput';
 import { Button } from '../../components/ui/Button/Button';
 import { useLogin } from '../../hooks/useLogin';
-import styles from './LoginPage.module.css';
+import styles from './AuthForm.module.css';
 
 export const LoginPage = () => {
   const { t } = useTranslation('auth');
@@ -32,11 +31,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <AuthLayout
-      title={t('login.title')}
-      subtitle={t('login.subtitle')}
-      showBrand
-    >
+    <AuthLayout title={t('login.title')} subtitle={t('login.subtitle')}>
       <form className={styles.form} onSubmit={handleSubmit}>
         {error && (
           <div className={styles.errorBanner} role="alert">
@@ -74,7 +69,7 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        <div className={styles.submitRow}>
+        <div className={styles.actions}>
           <Button fullWidth variant="primary" type="submit" isLoading={isLoading}>
             {t('login.submit')}
           </Button>

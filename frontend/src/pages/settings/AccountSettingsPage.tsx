@@ -171,12 +171,6 @@ export const AccountSettingsPage = () => {
   };
 
   const userName = getUserDisplayName(user, 'Settings User');
-  const roleName =
-    user?.role === 'SUPER_ADMIN'
-      ? 'Super Admin'
-      : user?.role === 'BUSINESS_OWNER'
-        ? 'Business Owner'
-        : 'Staff';
 
   const handleNavClick = (id: string) => {
     navigate(`/${tenantSlug || ''}/${id === 'dashboard' ? '' : id}`);
@@ -189,8 +183,6 @@ export const AccountSettingsPage = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar
-          orgName={tenantSlug || 'Workspace'}
-          orgTier={roleName}
           navItems={mockNavItems}
           onLogoutClick={handleLogout}
           onNavItemClick={handleNavClick}

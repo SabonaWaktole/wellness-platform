@@ -68,6 +68,25 @@ jobs:
       - name: Test (serial)
         run: npm test -- --runInBand
 
+  # FR-BR-04: nothing a Wellness Albania user can reach, and no email the
+  # system sends, may name Neva CRM, the SaaS product this edition was forked
+  # from. Case-insensitive, so "NevaCRM", "Neva CRM" and "nevacrm.eu" all fail;
+  # -I skips binary files such as images. Tests are excluded because they name
+  # Neva to assert it is absent, and app.ts because its CORS allowlist is
+  # deployment configuration, not text anyone reads.
+  brand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No Neva branding in the app or its email (FR-BR-04)
+        run: |
+          if grep -rniI 'neva' \
+              --exclude='*.test.ts' --exclude='*.test.tsx' --exclude='app.ts' \
+              frontend/index.html frontend/public frontend/src backend/src; then
+            echo "::error::Neva branding found above (FR-BR-04). This repository is the Wellness Albania edition."
+            exit 1
+          fi
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -93,6 +112,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Fails when Albanian, the default language, is missing a key, or when
+      # any catalogue keeps a key English no longer has (FR-LNG-02,
+      # NFR-I18N-01). The native-review gate is `--strict`, a release check.
       - name: Translation catalogues
         run: npm run check:translations
 

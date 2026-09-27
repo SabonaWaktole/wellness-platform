@@ -10,3 +10,6 @@ frontend/design/
 # Deployment archives — rebuilt from source by deploy/package.py, never a
 # source of truth themselves.
 deploy/*.zip
+
+# Client documents (kept locally, not versioned)
+/docs/

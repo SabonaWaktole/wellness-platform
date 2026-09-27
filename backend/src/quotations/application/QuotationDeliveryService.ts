@@ -49,6 +49,7 @@ export class QuotationDeliveryService implements IQuotationDeliveryService {
         <p>You can view it, and download it as a PDF, using the link below.</p>
       `;
       const html = renderEmailLayout({
+        appUrl: this.appUrl,
         preheader: `${view.companyName} sent you quotation ${view.reference}`,
         eyebrow: 'Quotation',
         heading: `Quotation ${escapeHtml(view.reference)}`,

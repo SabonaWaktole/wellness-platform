@@ -513,7 +513,6 @@ export const InventoryList: React.FC = () => {
   };
 
   const userName = getUserDisplayName(user, 'Business Owner');
-  const roleName = user?.role === 'STAFF' ? 'Sales Representative' : 'Enterprise Tier';
 
   return (
     <AppLayout
@@ -522,8 +521,6 @@ export const InventoryList: React.FC = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar
-          orgName={tenantSlug || 'Workspace'}
-          orgTier={roleName}
           navItems={navItems}
           onLogoutClick={handleLogout}
           onNavItemClick={(id) => navigate(`/${tenantSlug || ''}/${id === 'dashboard' ? '' : id}`)}

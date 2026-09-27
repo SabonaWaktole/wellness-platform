@@ -37,7 +37,7 @@
   margin-left: auto;
   background: var(--color-primary);
   border: none;
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .title {

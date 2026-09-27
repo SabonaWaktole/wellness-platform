@@ -136,8 +136,6 @@ export const NotificationSettingsPage = () => {
 
   const sidebar = (
     <Sidebar
-      orgName={tenantSlug || 'Workspace'}
-      orgTier={user?.role ?? ''}
       navItems={navItems}
       onNavItemClick={(id) => navigate(`/${tenantSlug}/${id === 'dashboard' ? '' : id}`)}
       onLogoutClick={handleLogout}

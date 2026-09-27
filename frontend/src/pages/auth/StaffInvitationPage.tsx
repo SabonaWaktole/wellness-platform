@@ -39,7 +39,7 @@ export const StaffInvitationPage = () => {
     <AuthLayout
       title={t('staffInvitation.title')}
       subtitle={t('staffInvitation.subtitle')}
-      logoIcon={<Handshake size={32} color="var(--color-primary)" />}
+      icon={<Handshake size={24} aria-hidden="true" />}
     >
       {isSuccess ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', alignItems: 'center', textAlign: 'center' }}>

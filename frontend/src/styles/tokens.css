@@ -1,5 +1,5 @@
 /* ============================================================================
- * Neva CRM — Design Tokens
+ * Wellness Albania — Design Tokens
  * ----------------------------------------------------------------------------
  * A single source of truth for colour, type, space, radius, elevation and
  * motion. Every token name that existed before is preserved so the 60+ CSS
@@ -33,16 +33,34 @@
   --gray-950: #101012;
 
   /* ---------------------------------------------------------------------
-   * Accent — a single confident blue, used sparingly.
+   * Brand — the Wellness Plus palette (SRS §3.1), taken from the logo until
+   * Wellness Albania's brand guidelines arrive (FR-BR-02).
+   *
+   * The logo colours are too light to carry white text at WCAG AA — white
+   * on the teal is 3.1:1, on the green 2.9:1 — so each has darker steps for
+   * text and filled controls. The logo colours themselves are for artwork,
+   * focus rings and washes, which need 3:1 rather than 4.5:1.
+   * tokens.contrast.test.ts checks every text pair below in both themes.
    * ------------------------------------------------------------------ */
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-400: #60a5fa;
-  --blue-500: #2b7fff;
-  --blue-600: #0071e3;
-  --blue-700: #0059b3;
-  --blue-800: #00408a;
+  --brand-navy: #0b2b42;
+  --brand-teal: #04a68c;
+  --brand-blue-teal: #048e9c;
+  --brand-green: #3daa6c;
+
+  --teal-50: #e3f4f0;
+  --teal-700: #047a68;
+  --teal-800: #036b5c;
+  --teal-900: #035e50;
+  --teal-950: #024a3f;
+
+  --blue-teal-50: #e1f2f4;
+  --blue-teal-700: #03727e;
+  --blue-teal-900: #035a63;
+  --blue-teal-950: #02464d;
+
+  --green-50: #e6f4ec;
+  --green-700: #1f7a48;
+  --green-900: #16603a;
 
   /* ===================================================================
    * SEMANTIC — Surfaces
@@ -50,10 +68,10 @@
   /* The app canvas sits a touch below pure white so raised cards read as
      genuinely raised without needing heavy shadows. */
   --color-background: #f7f7f8;
-  --color-on-background: #1d1d20;
+  --color-on-background: var(--brand-navy);
 
   --color-surface: #ffffff;
-  --color-on-surface: #1d1d20;
+  --color-on-surface: var(--brand-navy);
   --color-surface-variant: var(--gray-100);
   --color-on-surface-variant: #6b6b75;
 
@@ -63,8 +81,9 @@
   --color-surface-container-high: var(--gray-150);
   --color-surface-container-highest: var(--gray-200);
 
-  /* Text ramp — use these directly for typographic hierarchy. */
-  --text-primary: #1d1d20;
+  /* Text ramp — use these directly for typographic hierarchy. Primary text
+     and headings are the brand navy (SRS §3.1). */
+  --text-primary: var(--brand-navy);
   --text-secondary: #6b6b75;
   --text-tertiary: #8a8a94;
   --text-quaternary: #b0b0ba;
@@ -83,31 +102,36 @@
   /* ===================================================================
    * SEMANTIC — Accent / status
    * ================================================================ */
-  --color-primary: #0071e3;
+  /* Primary is the brand teal, one step darker so white text on it passes
+     AA. Hover and press go darker still rather than lighter, which would
+     drop below AA. */
+  --color-primary: var(--teal-700);
   --color-on-primary: #ffffff;
-  --color-primary-hover: #0077ed;
-  --color-primary-active: #0059b3;
-  --color-primary-container: #eaf3ff;
-  --color-on-primary-container: #0059b3;
-  --color-primary-fixed: #eaf3ff;
-  --color-on-primary-fixed: #00408a;
-  --color-on-primary-fixed-variant: #0059b3;
-  /* Tinted washes for focus rings and soft fills. */
-  --color-primary-a10: rgba(0, 113, 227, 0.1);
-  --color-primary-a20: rgba(0, 113, 227, 0.2);
+  --color-primary-hover: var(--teal-800);
+  --color-primary-active: var(--teal-900);
+  --color-primary-container: var(--teal-50);
+  --color-on-primary-container: var(--teal-900);
+  --color-primary-fixed: var(--teal-50);
+  --color-on-primary-fixed: var(--teal-950);
+  --color-on-primary-fixed-variant: var(--teal-900);
+  /* Tinted washes for focus rings and soft fills, in the logo teal itself. */
+  --color-primary-a10: rgba(4, 166, 140, 0.1);
+  --color-primary-a20: rgba(4, 166, 140, 0.22);
 
-  --color-secondary: #6039d0;
+  /* Secondary is the logo's blue-teal (the left leaf). */
+  --color-secondary: var(--blue-teal-700);
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #f1ecff;
-  --color-on-secondary-container: #4c2ca8;
-  --color-secondary-fixed: #f1ecff;
-  --color-on-secondary-fixed: #3a1f85;
-  --color-on-secondary-fixed-variant: #4c2ca8;
+  --color-secondary-container: var(--blue-teal-50);
+  --color-on-secondary-container: var(--blue-teal-900);
+  --color-secondary-fixed: var(--blue-teal-50);
+  --color-on-secondary-fixed: var(--blue-teal-950);
+  --color-on-secondary-fixed-variant: var(--blue-teal-900);
 
-  --color-success: #12864a;
+  /* Success is the logo's green (the right leaf). */
+  --color-success: var(--green-700);
   --color-on-success: #ffffff;
-  --color-success-container: #e7f8ee;
-  --color-on-success-container: #0c6338;
+  --color-success-container: var(--green-50);
+  --color-on-success-container: var(--green-900);
 
   --color-warning: #b45309;
   --color-on-warning: #ffffff;
@@ -119,9 +143,9 @@
   --color-error-container: #fdeded;
   --color-on-error-container: #a11d1d;
 
-  --color-inverse-surface: #1d1d20;
+  --color-inverse-surface: var(--brand-navy);
   --color-inverse-on-surface: #f7f7f8;
-  --color-inverse-primary: #9ecbff;
+  --color-inverse-primary: #8ee3cf;
 
   /* ===================================================================
    * TYPOGRAPHY
@@ -241,7 +265,7 @@
     0 12px 24px rgba(17, 17, 22, 0.07),
     0 44px 88px rgba(17, 17, 22, 0.18);
   /* A tinted lift for accent-coloured buttons. */
-  --shadow-accent: 0 1px 2px rgba(0, 60, 120, 0.24), 0 4px 12px rgba(0, 113, 227, 0.2);
+  --shadow-accent: 0 1px 2px rgba(2, 74, 63, 0.24), 0 4px 12px rgba(4, 122, 104, 0.22);
 
   /* Back-compat aliases — resting surfaces should use --shadow-xs/sm. */
   --elevation-1: var(--shadow-xs);
@@ -391,30 +415,32 @@
   --border-subtle: rgba(255, 255, 255, 0.11);
   --border-strong: rgba(255, 255, 255, 0.2);
 
-  --color-primary: #0a84ff;
-  --color-on-primary: #ffffff;
-  --color-primary-hover: #3d9bff;
-  --color-primary-active: #0071e3;
-  --color-primary-container: #10243d;
-  --color-on-primary-container: #a8d3ff;
-  --color-primary-fixed: #10243d;
-  --color-on-primary-fixed: #cfe6ff;
-  --color-on-primary-fixed-variant: #a8d3ff;
-  --color-primary-a10: rgba(10, 132, 255, 0.14);
-  --color-primary-a20: rgba(10, 132, 255, 0.32);
+  /* On a dark surface the brand colours go lighter instead, and text on a
+     filled control turns dark: white on a light teal would fail AA. */
+  --color-primary: #2ec4a5;
+  --color-on-primary: #04241d;
+  --color-primary-hover: #52d3b8;
+  --color-primary-active: #22a88d;
+  --color-primary-container: #0b2e28;
+  --color-on-primary-container: #9ce8d6;
+  --color-primary-fixed: #0b2e28;
+  --color-on-primary-fixed: #c9f3e8;
+  --color-on-primary-fixed-variant: #9ce8d6;
+  --color-primary-a10: rgba(46, 196, 165, 0.14);
+  --color-primary-a20: rgba(46, 196, 165, 0.32);
 
-  --color-secondary: #a78bfa;
-  --color-on-secondary: #21103f;
-  --color-secondary-container: #241a45;
-  --color-on-secondary-container: #ddd0ff;
-  --color-secondary-fixed: #241a45;
-  --color-on-secondary-fixed: #ede7ff;
-  --color-on-secondary-fixed-variant: #ddd0ff;
+  --color-secondary: #4fc0cc;
+  --color-on-secondary: #062a2e;
+  --color-secondary-container: #0c2a2f;
+  --color-on-secondary-container: #a6e3ea;
+  --color-secondary-fixed: #0c2a2f;
+  --color-on-secondary-fixed: #d2f1f4;
+  --color-on-secondary-fixed-variant: #a6e3ea;
 
-  --color-success: #30d158;
-  --color-on-success: #04240f;
-  --color-success-container: #0e2c1a;
-  --color-on-success-container: #9ff0b6;
+  --color-success: #5cc98a;
+  --color-on-success: #062414;
+  --color-success-container: #0f2c1c;
+  --color-on-success-container: #a6ebc2;
 
   --color-warning: #ff9f0a;
   --color-on-warning: #2a1802;
@@ -428,7 +454,7 @@
 
   --color-inverse-surface: #f2f2f4;
   --color-inverse-on-surface: #1d1d20;
-  --color-inverse-primary: #0071e3;
+  --color-inverse-primary: var(--teal-700);
 
   /* Dark shadows lean on opacity, not spread — plus a top highlight ring
      is applied per-component to fake a lit edge. */
@@ -438,7 +464,7 @@
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.55);
   --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.45), 0 28px 56px rgba(0, 0, 0, 0.6);
   --shadow-2xl: 0 12px 24px rgba(0, 0, 0, 0.5), 0 44px 88px rgba(0, 0, 0, 0.7);
-  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(10, 132, 255, 0.35);
+  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(46, 196, 165, 0.3);
 
   --glass-bg: rgba(19, 19, 22, 0.72);
   --glass-bg-strong: rgba(19, 19, 22, 0.88);

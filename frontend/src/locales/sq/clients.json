@@ -123,6 +123,7 @@
     "phonePlaceholderClient": "(068) 123-4567",
     "emailPlaceholderClient": "kontakt@shembull.com",
     "customFieldsSection": "Fusha të personalizuara",
+    "fieldRequired": "Kjo fushë është e detyrueshme",
     "internalNotes": "Paragraf",
     "notesLabel": "Paragrafi",
     "saveClient": "Ruaj klientin",

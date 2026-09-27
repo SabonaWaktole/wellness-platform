@@ -30,8 +30,6 @@ export const StaffShell = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar 
-          orgName="My Workspace" 
-          orgTier="Sales Representative" 
           navItems={navItemsWithActiveState} 
           onNavItemClick={(id) => navigate(`/${tenantSlug}/${id}`)}
           onLogoutClick={handleLogout}

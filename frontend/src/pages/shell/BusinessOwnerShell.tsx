@@ -30,8 +30,6 @@ export const BusinessOwnerShell = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar 
-          orgName="My Workspace" 
-          orgTier="Enterprise Tier" 
           navItems={navItemsWithActiveState} 
           onNavItemClick={(id) => navigate(`/${tenantSlug}/${id}`)}
           onLogoutClick={handleLogout}

@@ -15,13 +15,23 @@
  *      reviewed?" should be a command, not somebody's recollection.
  *
  * Usage:
- *   node scripts/check-translations.mjs             report only, always exit 0
- *   node scripts/check-translations.mjs --strict    exit 1 if anything is
- *                                                   missing or unreviewed
+ *   node scripts/check-translations.mjs             the BUILD gate, run in CI:
+ *                                                   exit 1 if Albanian is
+ *                                                   missing a key or any
+ *                                                   catalogue has an orphan
+ *   node scripts/check-translations.mjs --strict    the RELEASE gate: exit 1 if
+ *                                                   anything is missing,
+ *                                                   orphaned or unreviewed
  *
- * --strict is a RELEASE gate, not a build gate. It is expected to fail until a
- * native review happens, so wiring it into CI as a blocking step today would
- * just paint the build red for a known, accepted state. See TD-019.
+ * The build gate is FR-LNG-02 / NFR-I18N-01: Albanian is the default language,
+ * so a key it lacks shows English to every user who has not switched. Greek and
+ * Italian may lag and fall back to English; what they lack is listed, not
+ * failed. An orphan fails in any language: it is a translation of text that no
+ * longer exists, and it comes back to life if the key is ever reused.
+ *
+ * --strict is expected to fail until a native review happens, so it is not a
+ * CI step — that would paint the build red for a known, accepted state. See
+ * TD-019.
  */
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -29,6 +39,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'locales');
 const SOURCE_LANGUAGE = 'en';
+
+/** Languages the build gate requires to be complete. Mirrors DEFAULT_LANGUAGE. */
+const REQUIRED_LANGUAGES = ['sq'];
 
 const strict = process.argv.includes('--strict');
 
@@ -73,6 +86,7 @@ const sourceKeys = Object.keys(source).sort();
 console.log(`Source language: ${SOURCE_LANGUAGE} (${sourceKeys.length} keys)\n`);
 
 let failed = false;
+let blocking = false;
 
 for (const language of languages) {
   if (language === SOURCE_LANGUAGE) continue;
@@ -95,14 +109,19 @@ for (const language of languages) {
 
   if (missing.length) {
     failed = true;
-    console.log(`   MISSING (${missing.length}) — these fall back to English:`);
+    const required = REQUIRED_LANGUAGES.includes(language);
+    if (required) blocking = true;
+    console.log(
+      `   MISSING (${missing.length}) — these fall back to English${required ? ' [blocks the build]' : ''}:`
+    );
     for (const key of missing.slice(0, 15)) console.log(`     - ${key}`);
     if (missing.length > 15) console.log(`     … and ${missing.length - 15} more`);
   }
 
   if (extra.length) {
     failed = true;
-    console.log(`   ORPHANED (${extra.length}) — no longer in ${SOURCE_LANGUAGE}:`);
+    blocking = true;
+    console.log(`   ORPHANED (${extra.length}) — no longer in ${SOURCE_LANGUAGE} [blocks the build]:`);
     for (const key of extra.slice(0, 15)) console.log(`     - ${key}`);
     if (extra.length > 15) console.log(`     … and ${extra.length - 15} more`);
   }
@@ -121,6 +140,15 @@ if (failed && strict) {
   process.exit(1);
 }
 
+if (blocking) {
+  console.error(
+    `FAIL: ${REQUIRED_LANGUAGES.join(', ')} must hold every ${SOURCE_LANGUAGE} key, and no catalogue may keep keys ${SOURCE_LANGUAGE} no longer has (FR-LNG-02).`
+  );
+  process.exit(1);
+}
+
 if (failed) {
-  console.log('Reporting only (pass --strict to fail on the above).');
+  console.log('Build gate passed. The rest above is reported only (--strict fails on it).');
+} else {
+  console.log('All catalogues complete.');
 }

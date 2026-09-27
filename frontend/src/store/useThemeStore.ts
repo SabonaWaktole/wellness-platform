@@ -4,7 +4,7 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 
 /** Shared with the inline boot script in index.html — keep both in sync. */
-export const THEME_STORAGE_KEY = 'nevacrm-theme';
+export const THEME_STORAGE_KEY = 'wellness-theme';
 
 const prefersDark = (): boolean =>
   typeof window !== 'undefined' &&

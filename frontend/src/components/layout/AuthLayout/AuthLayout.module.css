@@ -1,141 +1,215 @@
 /* ============================================================================
- * AuthLayout
- * A single centred card on a quietly graded canvas. The ambient wash gives the
- * screen depth without competing with the form, which stays the only sharp,
- * high-contrast object on the page.
+ * AuthLayout — the frame around every signed-out screen (FR-BR-03).
+ *
+ * Phone first: the form column alone, logo on top. From 960px the brand
+ * panel takes the left-hand column. The panel is navy in both themes — it is
+ * the brand's own surface, not a theme surface — and it is where a login
+ * photograph goes if Wellness Albania supplies one.
  * ========================================================================= */
 
-.container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
-  padding: var(--spacing-lg) var(--spacing-md);
+  min-height: 100dvh;
   background-color: var(--color-background);
   color: var(--text-primary);
-  overflow: hidden;
-  isolation: isolate;
 }
 
-/* Two soft accent blooms, well below the content in contrast. */
-.container::before,
-.container::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(80px);
+.brandPanel {
+  display: none;
 }
 
-.container::before {
-  width: 640px;
-  height: 640px;
-  top: -280px;
-  left: -180px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--color-primary) 16%, transparent),
-    transparent 70%
-  );
-}
-
-.container::after {
-  width: 560px;
-  height: 560px;
-  bottom: -260px;
-  right: -160px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--color-secondary) 13%, transparent),
-    transparent 70%
-  );
-}
-
-/* Auth screens are a single centered card, so the toggle sits in the corner. */
-.themeToggleSlot {
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
-  z-index: 1;
-}
-
-.mainCard {
-  width: 100%;
-  max-width: 400px;
+.formColumn {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  padding: var(--spacing-md);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--spacing-md) 0 var(--spacing-xl);
   animation: authIn var(--duration-slower) var(--ease-out) both;
 }
 
 @keyframes authIn {
-  from { opacity: 0; transform: translateY(12px) scale(0.99); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.logo {
+  --brand-logo-height: 36px;
+  align-self: flex-start;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--spacing-md);
-  padding-top: var(--spacing-sm);
-}
-
-.logoWrapper {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-2xl);
-  overflow: hidden;
-  border: none;
-  background-color: var(--color-surface-container-lowest);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow:
-    var(--shadow-md),
-    inset 0 0 0 1px var(--border-hairline);
-}
-
-.logoImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* The full wordmark, height-constrained so it stays crisp regardless of the
-   source aspect ratio (matches the landing page nav treatment). */
-.brandLogo {
-  display: block;
-  height: 40px;
-  width: auto;
-}
-
-.titleWrapper {
-  display: flex;
-  flex-direction: column;
   gap: 6px;
 }
 
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--spacing-sm);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
 .title {
-  font-family: var(--font-family-display);
-  font-size: var(--font-size-headline-lg);
-  font-weight: var(--font-weight-headline-lg);
-  line-height: var(--font-line-height-headline-lg);
-  letter-spacing: var(--font-letter-spacing-headline-lg);
-  color: var(--text-primary);
   margin: 0;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg-mobile);
+  font-weight: var(--font-weight-headline-lg-mobile);
+  line-height: var(--font-line-height-headline-lg-mobile);
+  letter-spacing: var(--font-letter-spacing-headline-lg-mobile);
+  color: var(--text-primary);
 }
 
 .subtitle {
+  margin: 0;
+  max-width: 40ch;
   font-family: var(--font-family-base);
   font-size: var(--font-size-body-md);
-  font-weight: var(--font-weight-body-md);
   line-height: var(--font-line-height-body-md);
   color: var(--text-secondary);
+}
+
+.card {
+  width: 100%;
+}
+
+.footer {
+  padding-top: var(--spacing-md);
+  text-align: center;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-sm);
+  line-height: var(--font-line-height-body-sm);
+  color: var(--text-tertiary);
+}
+
+@media (min-width: 768px) {
+  .logo {
+    --brand-logo-height: 40px;
+  }
+
+  .title {
+    font-size: var(--font-size-headline-lg);
+    font-weight: var(--font-weight-headline-lg);
+    line-height: var(--font-line-height-headline-lg);
+    letter-spacing: var(--font-letter-spacing-headline-lg);
+  }
+}
+
+/* ---------------------------------------------------------- brand panel */
+
+@media (min-width: 960px) {
+  .page {
+    grid-template-columns: minmax(360px, 5fr) 7fr;
+  }
+
+  .formColumn {
+    padding: var(--spacing-lg) var(--spacing-2xl);
+  }
+
+  .brandPanel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--spacing-2xl);
+    overflow: hidden;
+    isolation: isolate;
+    background-color: var(--brand-navy);
+    background-image:
+      radial-gradient(
+        circle at 20% 10%,
+        color-mix(in srgb, var(--brand-teal) 34%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at 95% 90%,
+        color-mix(in srgb, var(--brand-green) 26%, transparent),
+        transparent 50%
+      );
+  }
+}
+
+/* The logo's figure, drawn large: a leaf either side of a head. Two
+   opposite corners fully rounded is what turns a box into a leaf. */
+.art {
+  position: absolute;
+  z-index: -1;
+  top: 14%;
+  left: 50%;
+  width: min(72%, 440px);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.leafLeft,
+.leafRight,
+.head {
+  position: absolute;
+  display: block;
+}
+
+.leafLeft {
+  left: 0;
+  top: 24%;
+  width: 46%;
+  height: 70%;
+  border-radius: 0 100% 0 100%;
+  background-image: linear-gradient(
+    200deg,
+    var(--brand-blue-teal),
+    color-mix(in srgb, var(--brand-blue-teal) 55%, var(--brand-navy))
+  );
+}
+
+.leafRight {
+  right: 0;
+  top: 14%;
+  width: 46%;
+  height: 80%;
+  border-radius: 100% 0 100% 0;
+  background-image: linear-gradient(160deg, var(--brand-green), var(--brand-teal));
+}
+
+.head {
+  top: 0;
+  left: 38%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background-color: var(--brand-teal);
+}
+
+.tagline {
+  max-width: 18ch;
   margin: 0;
-  max-width: 34ch;
+  font-family: var(--font-family-display);
+  font-size: 28px;
+  font-weight: 640;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: #ffffff;
 }

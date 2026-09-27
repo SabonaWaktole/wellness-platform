@@ -96,7 +96,7 @@
   border: none;
   border-radius: var(--radius-md);
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;

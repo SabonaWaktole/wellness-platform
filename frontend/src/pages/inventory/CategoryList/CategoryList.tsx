@@ -315,8 +315,6 @@ export const CategoryList: React.FC = () => {
       onSettingsClick={() => navigate(`/${tenantSlug}/settings/profile`)}
       sidebar={
         <Sidebar
-          orgName={tenantSlug || 'Workspace'}
-          orgTier={user?.role ?? ''}
           navItems={navItems}
           onNavItemClick={(id) => navigate(`/${tenantSlug}/${id === 'dashboard' ? '' : id}`)}
           onLogoutClick={handleLogout}

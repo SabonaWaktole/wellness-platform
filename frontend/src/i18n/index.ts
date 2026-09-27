@@ -3,11 +3,13 @@ import { initReactI18next } from 'react-i18next';
 import {
   SUPPORTED_LANGUAGES,
   DEFAULT_LANGUAGE,
+  SOURCE_LANGUAGE,
   DEFAULT_NAMESPACE,
   NAMESPACES,
   isSupportedLanguage,
   type Language,
 } from './config';
+import { PRODUCT_NAME } from '../constants/brand';
 
 import enCommon from '../locales/en/common.json';
 import enAuth from '../locales/en/auth.json';
@@ -135,13 +137,16 @@ i18n.use(initReactI18next).init({
   // English backs every other language: a key not yet translated renders the
   // English text rather than the raw key. A half-translated interface is
   // usable; one showing `settings:company.profile.title` is not.
-  fallbackLng: DEFAULT_LANGUAGE,
+  fallbackLng: SOURCE_LANGUAGE,
   supportedLngs: [...SUPPORTED_LANGUAGES],
   ns: [...NAMESPACES],
   defaultNS: DEFAULT_NAMESPACE,
   interpolation: {
     // React escapes on render already; escaping here would double-encode.
     escapeValue: false,
+    // Any string may say {{appName}} without its caller passing it, so the
+    // product name is defined once, in constants/brand.ts (FR-BR-04).
+    defaultVariables: { appName: PRODUCT_NAME },
   },
   returnNull: false,
 });

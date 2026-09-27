@@ -10,8 +10,15 @@ import { handlers } from './mocks/handlers';
  * in tests whose import graph happens not to reach the i18n module, so the
  * failure looks arbitrary and file-specific rather than like a missing global.
  * Importing it here means tests assert on real English text, as a user sees it.
+ *
+ * Production starts in Albanian (FR-LNG-01), but the component tests are
+ * written against the English source catalogue, so the run is moved to English
+ * here. The Albanian default has its own test: i18n/defaultLanguage.test.tsx.
+ * Resources are bundled, so the switch is synchronous and done before any test.
  */
-import './i18n';
+import i18n from './i18n';
+
+void i18n.changeLanguage('en');
 
 /**
  * jsdom doesn't implement the pointer-capture trio of the Pointer Events API,

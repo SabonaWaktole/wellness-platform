@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Network } from 'lucide-react';
 import { AuthLayout } from './AuthLayout';
 import { TextInput } from '../../ui/TextInput/TextInput';
 import { PasswordInput } from '../../ui/PasswordInput/PasswordInput';
@@ -9,7 +8,7 @@ const meta = {
   title: 'Layout/AuthLayout',
   component: AuthLayout,
   parameters: {
-    layout: 'fullscreen', // AuthLayout uses min-height: 100vh
+    layout: 'fullscreen', // AuthLayout fills the viewport
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof AuthLayout>;
@@ -19,9 +18,8 @@ type Story = StoryObj<typeof meta>;
 
 export const LoginExample: Story = {
   args: {
-    title: 'Neva CRM',
-    subtitle: 'Sign in to your workspace',
-    logoIcon: <Network size={32} color="var(--color-primary)" />,
+    title: 'Welcome back',
+    subtitle: 'Sign in to your Wellness Albania account',
     children: (
       <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={(e) => e.preventDefault()}>
         <TextInput label="Email" placeholder="name@company.com" />
