@@ -83,6 +83,9 @@ describe('AccountSettingsPage write-back to the auth store', () => {
         tenantLocale: 'en-US',
         tenantDefaultLanguage: 'en',
         userLanguage: null,
+        // settings.manage (D2's BUSINESS_OWNER -> Administrator mapping) is
+        // what the page actually gates on now (FR-RBAC-07).
+        permissions: { 'settings.manage': true },
       } as any,
       isAuthenticated: true,
     });

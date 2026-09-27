@@ -17,6 +17,7 @@ import { SettingsLayout } from '../../../components/layout/SettingsLayout/Settin
 import { ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useLogout } from '../../../hooks/useLogout';
+import { usePermissionScope } from '../../../hooks/usePermission';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { getUserDisplayName } from '../../../utils/userUtils';
 
@@ -77,8 +78,10 @@ const WarehouseListContent: React.FC = () => {
     address: w.address ?? null,
   }));
 
-  const { user } = useAuthStore();
-  const isBusinessOwner = user?.role === 'BUSINESS_OWNER';
+  // Creating/editing a warehouse needs inventory.manage at ALL, not merely a
+  // grant — Sales User holds it at OWN (their own warehouse), which reads
+  // products but not this management screen (FR-RBAC-07).
+  const isBusinessOwner = usePermissionScope('inventory.manage') === 'ALL';
 
   return (
     <div className={styles.pageContainer}>

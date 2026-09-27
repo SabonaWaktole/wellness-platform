@@ -212,7 +212,14 @@ describe('ClientListContent', () => {
   describe('archiving a client', () => {
     const asOwner = () => {
       useAuthStore.setState({
-        user: { id: 'u1', email: 'owner@example.com', role: 'BUSINESS_OWNER' },
+        user: {
+          id: 'u1',
+          email: 'owner@example.com',
+          role: 'BUSINESS_OWNER',
+          // companies.delete (D2's BUSINESS_OWNER -> Administrator mapping)
+          // is what the page actually gates on now (FR-RBAC-07).
+          permissions: { 'companies.delete': 'ALL' },
+        } as any,
         isAuthenticated: true,
         isInitializing: false,
       });

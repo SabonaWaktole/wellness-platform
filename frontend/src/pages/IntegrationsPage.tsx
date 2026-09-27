@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useIntegrations } from '../hooks/useIntegrations';
 import { useAuthStore } from '../store/useAuthStore';
 import { useLogout } from '../hooks/useLogout';
+import { usePermission } from '../hooks/usePermission';
 import { useNavigation } from '../hooks/useNavigation';
 import { AppLayout } from '../components/layout/AppLayout/AppLayout';
 import { Sidebar } from '../components/layout/Sidebar/Sidebar';
@@ -44,7 +45,9 @@ export const IntegrationsPage: React.FC = () => {
     },
   ];
 
-  const isBusinessOwner = user?.role === 'BUSINESS_OWNER';
+  // integrations.manage (FR-RBAC-07), not the BUSINESS_OWNER role — the whole
+  // route is already gated the same way in routes/index.tsx.
+  const isBusinessOwner = usePermission('integrations.manage');
   const userName = getUserDisplayName(user, 'Settings User');
 
   const handleLogout = async () => {

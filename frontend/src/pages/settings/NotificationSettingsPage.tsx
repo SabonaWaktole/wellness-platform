@@ -11,6 +11,7 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useLogout } from '../../hooks/useLogout';
 import { useNavigation } from '../../hooks/useNavigation';
+import { usePermission } from '../../hooks/usePermission';
 import { getUserDisplayName } from '../../utils/userUtils';
 import {
   notificationSettingsService,
@@ -63,7 +64,9 @@ export const NotificationSettingsPage = () => {
   const { t } = useTranslation('settings');
   const { t: tc } = useTranslation('common');
 
-  const isBusinessOwner = user?.role === 'BUSINESS_OWNER';
+  // Named for the reader, not the source: still gates the whole page, now on
+  // settings.manage (FR-RBAC-07) rather than the BUSINESS_OWNER role.
+  const isBusinessOwner = usePermission('settings.manage');
 
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [form, setForm] = useState<FormState | null>(null);

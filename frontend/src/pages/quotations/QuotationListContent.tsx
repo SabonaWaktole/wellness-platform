@@ -20,6 +20,7 @@ import styles from './QuotationListContent.module.css';
 import { useQuotations, usePendingApprovals } from '../../hooks/useQuotations';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useAuthStore } from '../../store/useAuthStore';
+import { usePermission } from '../../hooks/usePermission';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useDateFormat } from '../../hooks/useDateFormat';
@@ -35,8 +36,9 @@ export const QuotationListContent: React.FC = () => {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  
-  const isOwner = user?.role === 'BUSINESS_OWNER';
+
+  // quotations.approve (FR-RBAC-07), not the BUSINESS_OWNER role.
+  const isOwner = usePermission('quotations.approve');
 
   const { fetchQuotations, loading: loadingAll } = useQuotations();
   const { fetchPendingApprovals, loading: loadingPending } = usePendingApprovals();

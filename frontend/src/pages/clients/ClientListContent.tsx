@@ -33,6 +33,7 @@ import {
   useClientRelatedCounts,
 } from '../../hooks/useClients';
 import { useAuthStore } from '../../store/useAuthStore';
+import { usePermission } from '../../hooks/usePermission';
 import type { Client } from '../../types/client';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName, getStaffInitials } from '../../utils/userUtils';
@@ -59,7 +60,9 @@ export const ClientListContent: React.FC = () => {
    * Hiding the action for everyone else keeps the UI honest rather than
    * offering a button that always 403s — the backend stays the enforcement
    * point either way. */
-  const canArchive = user?.role === 'BUSINESS_OWNER' || user?.role === 'SUPER_ADMIN';
+  // companies.delete (FR-RBAC-07) — SUPER_ADMIN still gets it via
+  // platformOperator() while impersonating, same reach as before.
+  const canArchive = usePermission('companies.delete');
   const { archiveClient } = useArchiveClient();
   const { restoreClient } = useRestoreClient();
   const { counts, fetchRelatedCounts } = useClientRelatedCounts();

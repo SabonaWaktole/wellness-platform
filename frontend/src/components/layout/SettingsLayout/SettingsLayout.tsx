@@ -16,6 +16,10 @@ interface NavItem {
   id: string;
   label: string;
   icon: LucideIcon;
+  /** Undefined means always shown to a tenant user (the profile page). */
+  permission?: string;
+  /** When set, the permission must be held at this scope, not merely held (see `warehouses`/`categories`). */
+  minScope?: 'ALL';
 }
 
 export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
@@ -25,29 +29,41 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
   const { tenantSlug } = useParams();
   const { user } = useAuthStore();
   const { t } = useTranslation('settings');
-  const isStaff = user?.role === 'STAFF';
+  const permissions = user?.permissions ?? {};
 
   const navItems: NavItem[] = [
     { id: 'profile', label: t('nav.profile'), icon: User },
-    { id: 'company', label: t('nav.company'), icon: Building2 },
-    { id: 'client-management', label: t('nav.clientManagement'), icon: Sliders },
+    { id: 'company', label: t('nav.company'), icon: Building2, permission: 'settings.manage' },
+    { id: 'client-management', label: t('nav.clientManagement'), icon: Sliders, permission: 'settings.manage' },
     // Next to Company because it is workspace-wide policy, not a personal
-    // preference — the page itself is Business Owner-only for the same reason.
-    { id: 'notifications', label: t('nav.notifications'), icon: Bell },
-    { id: 'team', label: t('nav.team'), icon: UsersRound },
-    { id: 'integrations', label: t('nav.integrations'), icon: Puzzle },
-    { id: 'warehouses', label: t('nav.warehouses'), icon: PackageOpen },
-    { id: 'categories', label: t('nav.categories'), icon: FolderTree },
+    // preference — the page itself requires settings.manage for the same reason.
+    { id: 'notifications', label: t('nav.notifications'), icon: Bell, permission: 'settings.manage' },
+    { id: 'team', label: t('nav.team'), icon: UsersRound, permission: 'users.manage' },
+    { id: 'integrations', label: t('nav.integrations'), icon: Puzzle, permission: 'integrations.manage' },
+    // Creating/editing a warehouse or category needs ALL, not merely a grant —
+    // Sales User holds inventory.manage at OWN (their own warehouse, see the
+    // deviation noted on DEFAULT_ROLE_MATRIX), which reads products but not
+    // this management screen.
+    { id: 'warehouses', label: t('nav.warehouses'), icon: PackageOpen, permission: 'inventory.manage', minScope: 'ALL' },
+    { id: 'categories', label: t('nav.categories'), icon: FolderTree, permission: 'inventory.manage', minScope: 'ALL' },
   ];
+
+  const visibleItems = navItems.filter((item) => {
+    if (!item.permission) return true;
+    const grant = permissions[item.permission];
+    if (grant === undefined) return false;
+    return item.minScope ? grant === item.minScope : true;
+  });
+  const showSidebar = visibleItems.some((item) => item.id !== 'profile');
 
   return (
     <div className={styles.layout}>
       {/* Left Sidebar for Settings (tablet and up) */}
-      {!isStaff && (
+      {showSidebar && (
         <aside className={styles.sidebar}>
           <h2 className={styles.title}>{t('nav.title')}</h2>
           <nav className={styles.nav}>
-            {navItems.map((item) => {
+            {visibleItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeNavId === item.id;
               const itemClasses = [
@@ -71,9 +87,9 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
       )}
 
       {/* Horizontal scrollable tab bar (mobile only) */}
-      {!isStaff && (
+      {showSidebar && (
         <nav className={styles.mobileNav}>
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNavId === item.id;
             const itemClasses = [
