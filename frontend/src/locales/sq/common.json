@@ -139,5 +139,12 @@
     "inReview": "përkthimi në shqyrtim",
     "reviewNoticeOne": "<0>{{languages}}</0> është përkthyer, por nuk është kontrolluar ende nga një folës amtar. Formulimi mund të jetë i pasaktë në disa vende dhe mesazhet e gabimeve të serverit shfaqen ende në anglisht.",
     "reviewNoticeOther": "<0>{{languages}}</0> janë përkthyer, por nuk janë kontrolluar ende nga folës amtarë. Formulimi mund të jetë i pasaktë në disa vende dhe mesazhet e gabimeve të serverit shfaqen ende në anglisht."
+  },
+  "theme": {
+    "menuTitle": "Tema",
+    "light": "E çelët",
+    "dark": "E errët",
+    "system": "Sipas sistemit",
+    "triggerLabel": "Tema: {{current}}. Ndryshoni temën"
   }
 }

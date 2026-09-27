@@ -139,5 +139,12 @@
     "inReview": "traduzione in revisione",
     "reviewNoticeOne": "<0>{{languages}}</0> è tradotto ma non ancora verificato da un madrelingua. La formulazione potrebbe essere errata in alcuni punti e i messaggi di errore del server sono ancora mostrati in inglese.",
     "reviewNoticeOther": "<0>{{languages}}</0> sono tradotti ma non ancora verificati da madrelingua. La formulazione potrebbe essere errata in alcuni punti e i messaggi di errore del server sono ancora mostrati in inglese."
+  },
+  "theme": {
+    "menuTitle": "Tema",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "system": "Sistema",
+    "triggerLabel": "Tema: {{current}}. Cambia tema"
   }
 }

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {} from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { AuthLayout } from '../../components/layout/AuthLayout/AuthLayout';
 import { PasswordInput } from '../../components/ui/PasswordInput/PasswordInput';
 import { Button } from '../../components/ui/Button/Button';
 import { useResetPassword } from '../../hooks/useResetPassword';
+import styles from './AuthForm.module.css';
 
 export const ResetPasswordPage = () => {
   const { t } = useTranslation('auth');
@@ -34,56 +34,42 @@ export const ResetPasswordPage = () => {
   };
 
   return (
-    <AuthLayout
-      title={t('resetPassword.title')}
-      subtitle={t('resetPassword.subtitle')}
-      showBrand
-    >
+    <AuthLayout title={t('resetPassword.title')} subtitle={t('resetPassword.subtitle')}>
       {isSuccess ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', alignItems: 'center', textAlign: 'center' }}>
-          <CheckCircle2 size={48} color="var(--color-success)" />
-          <p style={{ fontFamily: 'var(--font-family-base)', fontSize: 'var(--font-size-body-md)', color: 'var(--color-on-surface)' }}>
-            {t('resetPassword.success')}
-          </p>
-          <Link
-            to="/login"
-            style={{ 
-              fontFamily: 'var(--font-family-base)', 
-              fontSize: 'var(--font-size-label-md)', 
-              color: 'var(--color-primary)', 
-              textDecoration: 'none'
-            }}
-          >
+        <div className={styles.success}>
+          <CheckCircle2 size={48} className={styles.successIcon} aria-hidden="true" />
+          <p className={styles.successText}>{t('resetPassword.success')}</p>
+          <Link to="/login" className={styles.link}>
             {t('goToLogin')}
           </Link>
         </div>
       ) : (
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit}>
           {(error || localError) && (
-            <div style={{ color: 'var(--color-error)', fontSize: 'var(--font-size-label-sm)', background: 'var(--color-error-container)', padding: 'var(--spacing-sm)', borderRadius: 'var(--radius-default)' }}>
+            <div className={styles.errorBanner} role="alert">
               {error || localError}
             </div>
           )}
-          <PasswordInput 
-            label={t('resetPassword.newPassword')} 
-            placeholder="••••••••" 
+          <PasswordInput
+            label={t('resetPassword.newPassword')}
+            placeholder={t('passwordPlaceholder')}
             id="new-password"
             helperText={t('passwordHelper')}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
           />
-          
-          <PasswordInput 
-            label={t('resetPassword.confirmPassword')} 
-            placeholder="••••••••" 
+
+          <PasswordInput
+            label={t('resetPassword.confirmPassword')}
+            placeholder={t('passwordPlaceholder')}
             id="confirm-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
-          
-          <div style={{ paddingTop: 'var(--spacing-sm)' }}>
+
+          <div className={styles.actions}>
             <Button fullWidth variant="primary" type="submit" isLoading={isLoading}>
               {t('resetPassword.submit')}
             </Button>

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {} from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft } from 'lucide-react';
 import { AuthLayout } from '../../components/layout/AuthLayout/AuthLayout';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { Button } from '../../components/ui/Button/Button';
 import { useForgotPassword } from '../../hooks/useForgotPassword';
+import styles from './AuthForm.module.css';
 
 export const ForgotPasswordPage = () => {
   const { t } = useTranslation('auth');
@@ -22,73 +22,43 @@ export const ForgotPasswordPage = () => {
     }
   };
 
+  const backToLogin = (
+    <Link to="/login" className={styles.backLink}>
+      <ArrowLeft size={18} aria-hidden="true" />
+      {t('backToLogin')}
+    </Link>
+  );
+
   return (
-    <AuthLayout
-      title={t('forgotPassword.title')}
-      subtitle={t('forgotPassword.subtitle')}
-      showBrand
-    >
+    <AuthLayout title={t('forgotPassword.title')} subtitle={t('forgotPassword.subtitle')}>
       {isSuccess ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)', alignItems: 'center', textAlign: 'center' }}>
-          <CheckCircle2 size={48} color="var(--color-success)" />
-          <p style={{ fontFamily: 'var(--font-family-base)', fontSize: 'var(--font-size-body-md)', color: 'var(--color-on-surface)' }}>
-            {t('forgotPassword.sent')}
-          </p>
-          <Link
-            to="/login"
-            style={{ 
-              fontFamily: 'var(--font-family-base)', 
-              fontSize: 'var(--font-size-label-md)', 
-              color: 'var(--color-primary)', 
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--spacing-xs)'
-            }}
-          >
-            <ArrowLeft size={18} />
-            Back to Login
-          </Link>
+        <div className={styles.success}>
+          <CheckCircle2 size={48} className={styles.successIcon} aria-hidden="true" />
+          <p className={styles.successText}>{t('forgotPassword.sent')}</p>
+          {backToLogin}
         </div>
       ) : (
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit}>
           {error && (
-            <div style={{ color: 'var(--color-error)', fontSize: 'var(--font-size-label-sm)', background: 'var(--color-error-container)', padding: 'var(--spacing-sm)', borderRadius: 'var(--radius-default)' }}>
+            <div className={styles.errorBanner} role="alert">
               {error}
             </div>
           )}
-          <TextInput 
-            label={t('forgotPassword.email')} 
-            placeholder={t('emailPlaceholder')} 
+          <TextInput
+            label={t('forgotPassword.email')}
+            placeholder={t('emailPlaceholder')}
             type="email"
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          
-          <div style={{ paddingTop: 'var(--spacing-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+
+          <div className={styles.actions}>
             <Button fullWidth variant="primary" type="submit" isLoading={isLoading}>
               {t('forgotPassword.submit')}
             </Button>
-            
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Link 
-                to="/login"
-                style={{ 
-                  fontFamily: 'var(--font-family-base)', 
-                  fontSize: 'var(--font-size-label-md)', 
-                  color: 'var(--color-on-surface-variant)', 
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--spacing-xs)'
-                }}
-              >
-                <ArrowLeft size={18} />
-                Back to Login
-              </Link>
-            </div>
+            {backToLogin}
           </div>
         </form>
       )}

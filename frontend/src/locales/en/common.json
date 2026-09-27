@@ -139,5 +139,12 @@
     "inReview": "translation in review",
     "reviewNoticeOne": "<0>{{languages}}</0> is translated but not yet checked by a native speaker. Wording may be wrong in places, and server error messages are still shown in English.",
     "reviewNoticeOther": "<0>{{languages}}</0> are translated but not yet checked by a native speaker. Wording may be wrong in places, and server error messages are still shown in English."
+  },
+  "theme": {
+    "menuTitle": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "triggerLabel": "Theme: {{current}}. Change theme"
   }
 }
