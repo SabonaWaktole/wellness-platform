@@ -14,7 +14,8 @@ import {
 } from '../../../../../src/forms/domain/value-objects/FormDocument';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { administrator, platformOperator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 const definition = CustomFieldDefinition.create({
   id: 'f1',
@@ -96,7 +97,7 @@ describe('UpdateClientFormLayoutUseCase', () => {
   const run = (over: Record<string, unknown> = {}) =>
     useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'cf1',
       layout: document([section('s1', [fieldElement])]),
       expectedVersion: 3,
@@ -111,14 +112,12 @@ describe('UpdateClientFormLayoutUseCase', () => {
   });
 
   it('refuses a staff member', async () => {
-    await expect(run({ requestingUserRole: UserRole.STAFF })).rejects.toThrow(
-      'Only Business Owners can edit client forms'
-    );
+    await expect(run({ access: salesUser() })).rejects.toThrow(PermissionDeniedError);
     expect(formRepo.updateWithVersionCheck).not.toHaveBeenCalled();
   });
 
   it('allows a super admin', async () => {
-    await expect(run({ requestingUserRole: UserRole.SUPER_ADMIN })).resolves.toBeDefined();
+    await expect(run({ access: platformOperator() })).resolves.toBeDefined();
   });
 
   it('reports a version conflict rather than overwriting', async () => {

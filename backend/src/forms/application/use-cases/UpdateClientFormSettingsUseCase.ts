@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
 import { FormStatus } from '../../domain/enums/FormStatus';
@@ -7,7 +8,7 @@ import { FormVersionConflictError } from './UpdateClientFormLayoutUseCase';
 
 interface UpdateClientFormSettingsDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   formId: string;
   expectedVersion: number;
   name?: string;
@@ -37,9 +38,7 @@ export class UpdateClientFormSettingsUseCase {
   constructor(private formRepo: IClientFormRepository) {}
 
   async execute(dto: UpdateClientFormSettingsDTO): Promise<ClientForm> {
-    if (!FormPermissions.can(dto.requestingUserRole, 'forms:edit')) {
-      throw new DomainError('Only Business Owners can edit client forms');
-    }
+    FormPermissions.ensure(dto.access, 'forms:edit');
 
     const existing = await this.formRepo.findById(dto.tenantId, dto.formId);
     if (!existing) {

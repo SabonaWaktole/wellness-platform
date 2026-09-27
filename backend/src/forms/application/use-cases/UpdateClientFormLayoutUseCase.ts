@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ICustomFieldDefinitionRepository } from '../../../clients/domain/repositories/ICustomFieldDefinitionRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
@@ -9,7 +10,7 @@ import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface UpdateClientFormLayoutDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   formId: string;
   layout: FormDocument;
   /** The `version` the builder loaded. Rejected if the stored one moved on. */
@@ -34,9 +35,7 @@ export class UpdateClientFormLayoutUseCase {
   ) {}
 
   async execute(dto: UpdateClientFormLayoutDTO): Promise<ClientForm> {
-    if (!FormPermissions.can(dto.requestingUserRole, 'forms:edit')) {
-      throw new DomainError('Only Business Owners can edit client forms');
-    }
+    FormPermissions.ensure(dto.access, 'forms:edit');
 
     const existing = await this.formRepo.findById(dto.tenantId, dto.formId);
     if (!existing) {

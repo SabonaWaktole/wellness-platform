@@ -34,10 +34,13 @@ class NonCryptographicStubTokenService implements ITokenService {
 }
 
 const stubTokenService = new NonCryptographicStubTokenService();
-const tokenFor = (role: UserRole) =>
-  stubTokenService.sign({ userId: USER, role, tenantId: TENANT, tenantSlug: TENANT });
-const ownerToken = tokenFor(UserRole.BUSINESS_OWNER);
-const staffToken = tokenFor(UserRole.STAFF);
+// Staff has its own user: permissions are resolved from the database per
+// request (FR-RBAC-01), not from the token's role claim.
+const STAFF_USER = 'u-formRoutes-staff';
+const tokenFor = (userId: string, role: UserRole) =>
+  stubTokenService.sign({ userId, role, tenantId: TENANT, tenantSlug: TENANT });
+const ownerToken = tokenFor(USER, UserRole.BUSINESS_OWNER);
+const staffToken = tokenFor(STAFF_USER, UserRole.STAFF);
 
 const stubTenantRepo: ITenantRepository = {
   findById: async () => null,
@@ -143,6 +146,11 @@ describe('Form Routes', () => {
       },
       update: {},
     });
+    await prisma.user.upsert({
+      where: { id: STAFF_USER },
+      create: { id: STAFF_USER, email: 'forms-staff@test.test', hashedPassword: 'hash', role: 'STAFF', tenantId: TENANT },
+      update: {},
+    });
     await cleanup();
   });
 
@@ -156,7 +164,7 @@ describe('Form Routes', () => {
 
   afterAll(async () => {
     await cleanup();
-    await prisma.user.deleteMany({ where: { id: USER } });
+    await prisma.user.deleteMany({ where: { id: { in: [USER, STAFF_USER] } } });
     await prisma.tenant.deleteMany({ where: { id: TENANT } });
     await prisma.$disconnect();
   });

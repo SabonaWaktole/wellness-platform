@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { IFormVersionRepository } from '../../domain/repositories/IFormVersionRepository';
@@ -10,7 +11,7 @@ import { generateShareToken } from '../../../quotations/domain/shareToken';
 
 interface PublishFormDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   formId: string;
   /** The `version` the caller loaded — same compare-and-set discipline as
    *  every other form mutation, so a publish can never silently clobber an
@@ -44,9 +45,7 @@ export class PublishFormUseCase {
   ) {}
 
   async execute(dto: PublishFormDTO): Promise<{ form: ClientForm; version: FormVersion }> {
-    if (!FormPermissions.can(dto.requestingUserRole, 'forms:publish')) {
-      throw new DomainError('Only Business Owners can publish client forms');
-    }
+    FormPermissions.ensure(dto.access, 'forms:publish');
 
     const existing = await this.formRepo.findById(dto.tenantId, dto.formId);
     if (!existing) {

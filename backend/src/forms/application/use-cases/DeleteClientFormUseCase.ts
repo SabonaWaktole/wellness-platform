@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
@@ -10,10 +11,8 @@ import { DomainError } from '../../../shared/domain/errors/DomainError';
 export class DeleteClientFormUseCase {
   constructor(private formRepo: IClientFormRepository) {}
 
-  async execute(tenantId: string, requestingUserRole: string, formId: string): Promise<void> {
-    if (!FormPermissions.can(requestingUserRole, 'forms:delete')) {
-      throw new DomainError('Only Business Owners can delete client forms');
-    }
+  async execute(tenantId: string, access: AccessContext, formId: string): Promise<void> {
+    FormPermissions.ensure(access, 'forms:delete');
 
     const form = await this.formRepo.findById(tenantId, formId);
     if (!form) {

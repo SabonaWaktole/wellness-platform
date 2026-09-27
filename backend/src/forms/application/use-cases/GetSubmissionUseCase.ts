@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IFormSubmissionRepository } from '../../domain/repositories/IFormSubmissionRepository';
 import { IFormVersionRepository } from '../../domain/repositories/IFormVersionRepository';
 import { FormSubmission } from '../../domain/entities/FormSubmission';
@@ -23,13 +24,11 @@ export class GetSubmissionUseCase {
 
   async execute(
     tenantId: string,
-    requestingUserRole: string,
+    access: AccessContext,
     formId: string,
     submissionId: string
   ): Promise<SubmissionDetail | null> {
-    if (!FormPermissions.can(requestingUserRole, 'forms:view_submissions')) {
-      throw new DomainError('Only Business Owners can view form submissions');
-    }
+    FormPermissions.ensure(access, 'forms:view_submissions');
     const submission = await this.submissionRepo.findById(tenantId, submissionId);
     if (!submission || submission.formId !== formId) return null;
 

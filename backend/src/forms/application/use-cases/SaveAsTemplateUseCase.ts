@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
@@ -20,13 +21,11 @@ export class SaveAsTemplateUseCase {
 
   async execute(
     tenantId: string,
-    requestingUserRole: string,
+    access: AccessContext,
     formId: string,
     templateName: string
   ): Promise<ClientForm> {
-    if (!FormPermissions.can(requestingUserRole, 'forms:manage_templates')) {
-      throw new DomainError('Only Business Owners can manage form templates');
-    }
+    FormPermissions.ensure(access, 'forms:manage_templates');
 
     const source = await this.formRepo.findById(tenantId, formId);
     if (!source) {

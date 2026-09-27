@@ -1,4 +1,4 @@
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { AccessContext } from '../../../access/domain/AccessContext';
 
 export type FormCapability =
   | 'forms:create'
@@ -8,34 +8,34 @@ export type FormCapability =
   | 'forms:manage_templates'
   | 'forms:view_submissions';
 
-const CAPABILITY_ROLES: Record<FormCapability, ReadonlySet<UserRole>> = {
-  'forms:create': new Set([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
-  'forms:edit': new Set([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
-  'forms:delete': new Set([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
-  'forms:publish': new Set([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
-  'forms:manage_templates': new Set([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
-  'forms:view_submissions': new Set([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
+/**
+ * Every form capability is one catalogue key today (D8: the forms module
+ * sits behind a single coarse `forms.manage`). Kept as a map so a finer
+ * split later — e.g. a key for viewing submissions only — is a one-line
+ * change here, not an audit of every use case.
+ */
+const CAPABILITY_PERMISSION: Record<FormCapability, string> = {
+  'forms:create': 'forms.manage',
+  'forms:edit': 'forms.manage',
+  'forms:delete': 'forms.manage',
+  'forms:publish': 'forms.manage',
+  'forms:manage_templates': 'forms.manage',
+  'forms:view_submissions': 'forms.manage',
 };
 
 /**
- * The single map from role to what it may do with forms (spec §31).
- *
- * Every builder/settings/submissions use case was repeating its own
- * `role !== BUSINESS_OWNER && role !== SUPER_ADMIN` inline — nine copies of
- * the same decision, easy to update eight of and miss the ninth. This is the
- * one place that decision lives now; a future role split (e.g. STAFF may
- * view but not delete) is a one-line change here instead of an audit of
- * every use case.
- *
- * Deliberately just `can()`, no `assert()`: each use case still throws its
- * own `DomainError` with its own message, so wording that already has test
- * coverage (and matches `FormController.statusFor`'s substring matching)
- * does not move. This is the fine-grained layer INSIDE what the route
- * middleware already enforces (STAFF may read, only an owner may write) —
- * not a second, competing permission system (brief §9).
+ * What a caller may do with forms (spec §31), read from their permissions
+ * (FR-RBAC-05). This is the fine-grained layer INSIDE what the route
+ * middleware already enforces — not a second, competing permission system
+ * (brief §9).
  */
 export const FormPermissions = {
-  can(role: string, capability: FormCapability): boolean {
-    return CAPABILITY_ROLES[capability].has(role as UserRole);
+  can(access: AccessContext, capability: FormCapability): boolean {
+    return access.can(CAPABILITY_PERMISSION[capability]);
+  },
+
+  /** Throws `PermissionDeniedError` unless `access` may use `capability`. */
+  ensure(access: AccessContext, capability: FormCapability): void {
+    access.ensure(CAPABILITY_PERMISSION[capability]);
   },
 };

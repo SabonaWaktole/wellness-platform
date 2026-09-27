@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
@@ -8,7 +9,7 @@ import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface CreateClientFormDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   name: string;
   description?: string | null;
 }
@@ -30,9 +31,7 @@ export class CreateClientFormUseCase {
   constructor(private formRepo: IClientFormRepository) {}
 
   async execute(dto: CreateClientFormDTO): Promise<ClientForm> {
-    if (!FormPermissions.can(dto.requestingUserRole, 'forms:create')) {
-      throw new DomainError('Only Business Owners can create client forms');
-    }
+    FormPermissions.ensure(dto.access, 'forms:create');
 
     const form = ClientForm.create({
       id: randomUUID(),

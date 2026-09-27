@@ -5,7 +5,8 @@ import { IFormVersionRepository } from '../../../../../src/forms/domain/reposito
 import { ClientForm } from '../../../../../src/forms/domain/entities/ClientForm';
 import { FormVersion } from '../../../../../src/forms/domain/entities/FormVersion';
 import { FormStatus } from '../../../../../src/forms/domain/enums/FormStatus';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 const mockFormRepo = (): jest.Mocked<IClientFormRepository> => ({
   findByTenantId: jest.fn(),
@@ -47,7 +48,7 @@ describe('PublishFormUseCase', () => {
   it('snapshots the draft as version 1 on first publish and mints a share token', async () => {
     const result = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'f1',
       expectedVersion: 2,
     });
@@ -71,7 +72,7 @@ describe('PublishFormUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'f1',
       expectedVersion: alreadyPublished.version,
     });
@@ -84,22 +85,22 @@ describe('PublishFormUseCase', () => {
   it('404s a form that does not exist', async () => {
     formRepo.findById.mockResolvedValue(null);
     await expect(
-      useCase.execute({ tenantId: 't1', requestingUserRole: UserRole.BUSINESS_OWNER, formId: 'gone', expectedVersion: 1 })
+      useCase.execute({ tenantId: 't1', access: administrator(), formId: 'gone', expectedVersion: 1 })
     ).rejects.toThrow('Form not found');
     expect(versionRepo.save).not.toHaveBeenCalled();
   });
 
   it('refuses a staff member', async () => {
     await expect(
-      useCase.execute({ tenantId: 't1', requestingUserRole: UserRole.STAFF, formId: 'f1', expectedVersion: 2 })
-    ).rejects.toThrow('Only Business Owners can publish');
+      useCase.execute({ tenantId: 't1', access: salesUser(), formId: 'f1', expectedVersion: 2 })
+    ).rejects.toThrow(PermissionDeniedError);
     expect(versionRepo.save).not.toHaveBeenCalled();
   });
 
   it('reports a conflict rather than publishing a stale draft', async () => {
     formRepo.updateWithVersionCheck.mockResolvedValue(false);
     await expect(
-      useCase.execute({ tenantId: 't1', requestingUserRole: UserRole.BUSINESS_OWNER, formId: 'f1', expectedVersion: 2 })
+      useCase.execute({ tenantId: 't1', access: administrator(), formId: 'f1', expectedVersion: 2 })
     ).rejects.toThrow(FormVersionConflictError);
     // The version snapshot was already written by the time the compare-and-set
     // is discovered to have lost the race — this is an accepted, documented

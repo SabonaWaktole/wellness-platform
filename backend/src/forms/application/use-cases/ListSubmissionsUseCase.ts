@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IFormSubmissionRepository } from '../../domain/repositories/IFormSubmissionRepository';
 import { FormSubmission } from '../../domain/entities/FormSubmission';
 import { FormPermissions } from '../../domain/services/FormPermissions';
@@ -15,10 +16,8 @@ import { DomainError } from '../../../shared/domain/errors/DomainError';
 export class ListSubmissionsUseCase {
   constructor(private submissionRepo: IFormSubmissionRepository) {}
 
-  async execute(tenantId: string, requestingUserRole: string, formId: string): Promise<FormSubmission[]> {
-    if (!FormPermissions.can(requestingUserRole, 'forms:view_submissions')) {
-      throw new DomainError('Only Business Owners can view form submissions');
-    }
+  async execute(tenantId: string, access: AccessContext, formId: string): Promise<FormSubmission[]> {
+    FormPermissions.ensure(access, 'forms:view_submissions');
     return this.submissionRepo.listByForm(tenantId, formId);
   }
 }

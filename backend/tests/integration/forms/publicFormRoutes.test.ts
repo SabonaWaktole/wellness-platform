@@ -27,6 +27,7 @@ const prisma = new PrismaClient();
 // A tenant id unique to this suite — see TD-001 (shared per-worker schemas).
 const TENANT = 't-publicFormRoutes';
 const USER = 'u-publicFormRoutes';
+const STAFF_USER = 'u-publicFormRoutes-staff';
 
 class NonCryptographicStubTokenService implements ITokenService {
   sign(payload: any): string {
@@ -106,6 +107,11 @@ describe('Public form routes', () => {
       create: { id: USER, email: 'publicform@test.test', hashedPassword: 'hash', role: 'BUSINESS_OWNER', tenantId: TENANT },
       update: {},
     });
+    await prisma.user.upsert({
+      where: { id: STAFF_USER },
+      create: { id: STAFF_USER, email: 'publicform-staff@test.test', hashedPassword: 'hash', role: 'STAFF', tenantId: TENANT },
+      update: {},
+    });
     await cleanup();
   });
 
@@ -116,7 +122,7 @@ describe('Public form routes', () => {
 
   afterAll(async () => {
     await cleanup();
-    await prisma.user.deleteMany({ where: { id: USER } });
+    await prisma.user.deleteMany({ where: { id: { in: [USER, STAFF_USER] } } });
     await prisma.tenant.deleteMany({ where: { id: TENANT } });
     await prisma.$disconnect();
   });
@@ -270,7 +276,7 @@ describe('Public form routes', () => {
   });
 
   it('refuses submissions and versions to a staff member', async () => {
-    const staffToken = stubTokenService.sign({ userId: USER, role: UserRole.STAFF, tenantId: TENANT, tenantSlug: TENANT });
+    const staffToken = stubTokenService.sign({ userId: STAFF_USER, role: UserRole.STAFF, tenantId: TENANT, tenantSlug: TENANT });
     const { formId } = await createPublishedForm([textField('comment')]);
 
     const res = await request(app)
