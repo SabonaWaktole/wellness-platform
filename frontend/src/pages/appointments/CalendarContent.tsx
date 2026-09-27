@@ -22,6 +22,7 @@ import { useAppointmentsByDateRange, useRescheduleAppointment } from '../../hook
 import { isSameDayInZone } from '../../utils/tenantDay';
 import type { Appointment } from '../../types/appointment';
 import { useDateFormat } from '../../hooks/useDateFormat';
+import { PRODUCT_NAME } from '../../constants/brand';
 
 // Helper to map backend status to UI color tokens
 const getStatusToken = (status: string) => {
@@ -271,7 +272,7 @@ const CalendarMobileAgenda = ({
       {/* Top App Bar */}
       <header className={styles.mobileHeader}>
         <div className={styles.mobileHeaderTop}>
-          <h1 className={styles.mobileTitle}>{t('calendar.appName')}</h1>
+          <h1 className={styles.mobileTitle}>{PRODUCT_NAME}</h1>
           <div className={styles.mobileActions}>
             <button><Bell size={20} /></button>
             <Avatar fallback="AR" size="sm" />

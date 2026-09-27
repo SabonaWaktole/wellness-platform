@@ -10,6 +10,8 @@ import { resolveMediaUrl, srcSetFor } from '../../../services/mediaService';
 import styles from './AppLayout.module.css';
 import { NotificationBell } from '../../notifications/NotificationBell';
 import { ImpersonationBanner } from '../ImpersonationBanner';
+import { BrandLogo } from '../BrandLogo';
+import { usePageTitle } from '../../../hooks/usePageTitle';
 import { useTranslation } from 'react-i18next';
 
 export interface AppLayoutProps {
@@ -17,7 +19,6 @@ export interface AppLayoutProps {
   sidebar?: ReactElement<any>; // Changed to ReactElement to clone
   userAvatarSrc?: string;
   userName?: string;
-  logoText?: string;
   onLogout?: () => void;
   onSettingsClick?: () => void;
 }
@@ -27,11 +28,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   sidebar,
   userAvatarSrc,
   userName = 'User',
-  logoText = 'Neva CRM',
   onLogout,
   onSettingsClick,
 }) => {
   const { t } = useTranslation('common');
+  usePageTitle();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
@@ -72,7 +73,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           >
             <Menu size={24} />
           </button>
-          <span className={styles.logoText}>{logoText}</span>
+          {/* The full lockup does not fit beside the header controls on a phone. */}
+          <BrandLogo collapseBelow={520} className={styles.brand} />
         </div>
         
         <div className={styles.headerCenter}>

@@ -31,14 +31,14 @@ export const ShellWithSidebar: Story = {
     userAvatarSrc: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCUVO_U904UXtp4jWW0TlbxmzPuBGIREJnS7rJvUtLWgv77vYvS4vxvhNtsn7uCPM4v19ncCYsTNjqR9gmBTthGZKxWksFTi3WHzwUACJE3fdYz43ve1_UcjRrGN0DsSAnzWy8bcm_ue3gBSicCHOQXi3nTG59avgqC7yDJvl_xzAPCtNRbIGrfduLtU3kRkzKkv4b6G4JpGzlfYerk5A74tOh2EEID2ccvMJyWClcbv_w3W2yL1Gy2hiSvmpCVC63iIga-3SmPV8Nj',
     sidebar: (
       <Sidebar 
-        orgName="Corporate Modern" 
+        orgName="Wellness Albania" 
         orgTier="Enterprise Tier" 
         navItems={mockNavItems} 
       />
     ),
     children: (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
-        <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '36px', fontWeight: 700, margin: '0 0 16px 0' }}>Welcome to Neva CRM</h1>
+        <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '36px', fontWeight: 700, margin: '0 0 16px 0' }}>Welcome to Wellness Albania</h1>
         <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px', color: '#464555', maxWidth: '600px' }}>
           Your workspace is ready. Let's get things set up so you can start managing your clients and growing your business efficiently.
         </p>

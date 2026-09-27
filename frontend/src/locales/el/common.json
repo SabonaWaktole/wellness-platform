@@ -104,7 +104,7 @@
   },
   "shell": {
     "standardTier": "Τυπικό επίπεδο",
-    "platformName": "Πλατφόρμα Neva CRM",
+    "platformName": "Πλατφόρμα {{appName}}",
     "platformTier": "Καθολική διαχείριση"
   },
   "header": {

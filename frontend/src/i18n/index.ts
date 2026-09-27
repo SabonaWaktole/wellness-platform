@@ -9,6 +9,7 @@ import {
   isSupportedLanguage,
   type Language,
 } from './config';
+import { PRODUCT_NAME } from '../constants/brand';
 
 import enCommon from '../locales/en/common.json';
 import enAuth from '../locales/en/auth.json';
@@ -143,6 +144,9 @@ i18n.use(initReactI18next).init({
   interpolation: {
     // React escapes on render already; escaping here would double-encode.
     escapeValue: false,
+    // Any string may say {{appName}} without its caller passing it, so the
+    // product name is defined once, in constants/brand.ts (FR-BR-04).
+    defaultVariables: { appName: PRODUCT_NAME },
   },
   returnNull: false,
 });

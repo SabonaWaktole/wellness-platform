@@ -104,7 +104,7 @@
   },
   "shell": {
     "standardTier": "Niveli standard",
-    "platformName": "Platforma Neva CRM",
+    "platformName": "Platforma {{appName}}",
     "platformTier": "Administrim global"
   },
   "header": {
