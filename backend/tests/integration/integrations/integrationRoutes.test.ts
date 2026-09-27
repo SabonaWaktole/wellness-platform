@@ -6,6 +6,7 @@ import { UserRole } from '../../../src/auth/domain/enums/UserRole';
 import { IIntegrationRepository } from '../../../src/integrations/domain/repositories/IIntegrationRepository';
 import { Integration } from '../../../src/integrations/domain/entities/Integration';
 import { ITenantRepository } from '../../../src/tenant/domain/repositories/ITenantRepository';
+import { IAccessRepository, AccessRecord } from '../../../src/access/application/ports/IAccessRepository';
 
 // Basic in-memory implementations for the test
 class InMemoryIntegrationRepository implements IIntegrationRepository {
@@ -40,6 +41,34 @@ class InMemoryTenantRepository implements ITenantRepository {
   async setSubscriptionStatus() {}
 }
 
+/**
+ * Slice 3: `loadAccess` resolves `req.access` through `IAccessRepository`,
+ * separately from `IUserRepository` — this test never seeds one, so its
+ * fixture users (u1 = BUSINESS_OWNER, u2 = STAFF) are hard-coded here,
+ * always active and with no `roleId`, resolving through `LegacyRoleMapping`
+ * (D2) exactly as the fake tokens' `role` claim intends.
+ */
+class FakeAccessRepository implements IAccessRepository {
+  private static readonly LEGACY_ROLES: Record<string, string> = { u1: UserRole.BUSINESS_OWNER, u2: UserRole.STAFF };
+
+  async findAccessRecord(tenantId: string, userId: string): Promise<AccessRecord | null> {
+    const legacyRole = FakeAccessRepository.LEGACY_ROLES[userId];
+    if (!legacyRole) {
+      return null;
+    }
+    return {
+      userId,
+      tenantId,
+      legacyRole,
+      roleId: null,
+      roleKey: null,
+      isActive: true,
+      deletedAt: null,
+      grants: {},
+    };
+  }
+}
+
 const fakeTokenService = {
   sign: (payload: any) => Buffer.from(JSON.stringify(payload)).toString('base64'),
   verify: (token: string) => {
@@ -70,7 +99,8 @@ describe('Integration Routes', () => {
     app = createApp({
       tenantRepository: tenantRepo,
       tokenService: fakeTokenService as any,
-      integrationRepository: integrationRepo
+      integrationRepository: integrationRepo,
+      accessRepository: new FakeAccessRepository(),
     });
 
     ownerToken = fakeTokenService.sign({ userId: 'u1', role: UserRole.BUSINESS_OWNER, tenantId, tenantSlug: 't1-slug' });

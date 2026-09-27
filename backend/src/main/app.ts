@@ -780,7 +780,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DisconnectIntegrationUseCase(integrationRepo)
   );
 
-  const integrationRoutes = createIntegrationRouter(integrationsController, tokenService, tenantRepository);
+  const integrationRoutes = createIntegrationRouter(integrationsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/integrations', integrationRoutes);
 
   // Report Routes
