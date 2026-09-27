@@ -123,6 +123,7 @@
     "phonePlaceholderClient": "210 123 4567",
     "emailPlaceholderClient": "contact@example.com",
     "customFieldsSection": "Προσαρμοσμένα πεδία",
+    "fieldRequired": "Αυτό το πεδίο είναι υποχρεωτικό",
     "internalNotes": "Παράγραφος",
     "notesLabel": "Παράγραφος",
     "saveClient": "Αποθήκευση πελάτη",
