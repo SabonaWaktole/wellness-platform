@@ -6,6 +6,7 @@ import { Card } from '../ui/Card/Card';
 import { Badge } from '../ui/Badge/Badge';
 import type { BadgeProps } from '../ui/Badge/Badge';
 import { Button } from '../ui/Button/Button';
+import { Can } from '../auth/Can';
 import { useContracts } from '../../hooks/useContracts';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
@@ -62,13 +63,15 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
     <Card padding="lg">
       <div className={styles.header}>
         <h2 className={styles.title}>{t('clientTab.title')}</h2>
-        <Button
-          variant="primary"
-          icon={<Plus size={16} />}
-          onClick={() => navigate(`/${tenantSlug}/contracts/new?clientId=${clientId}`)}
-        >
-          {t('clientTab.newContract')}
-        </Button>
+        <Can permission="contracts.manage">
+          <Button
+            variant="primary"
+            icon={<Plus size={16} />}
+            onClick={() => navigate(`/${tenantSlug}/contracts/new?clientId=${clientId}`)}
+          >
+            {t('clientTab.newContract')}
+          </Button>
+        </Can>
       </div>
 
       {summary && (
@@ -84,17 +87,20 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
                 : t('clientTab.notSubscribed')}
             </span>
           </div>
-          <span
-            className={`${styles.summarySecondary} ${
-              summary.overdueCount > 0 ? styles.summaryAlert : ''
-            }`}
-          >
-            {summary.outstanding > 0
-              ? t('clientTab.outstanding', { amount: formatMoney(summary.outstanding) })
-              : t('clientTab.allSettled')}
-            {summary.overdueCount > 0 &&
-              ` · ${t('clientTab.overdue', { count: summary.overdueCount })}`}
-          </span>
+          {/* Only sent to a viewer holding payments.view (FR-RBAC-06). */}
+          {summary.outstanding !== undefined && (
+            <span
+              className={`${styles.summarySecondary} ${
+                (summary.overdueCount ?? 0) > 0 ? styles.summaryAlert : ''
+              }`}
+            >
+              {summary.outstanding > 0
+                ? t('clientTab.outstanding', { amount: formatMoney(summary.outstanding) })
+                : t('clientTab.allSettled')}
+              {(summary.overdueCount ?? 0) > 0 &&
+                ` · ${t('clientTab.overdue', { count: summary.overdueCount })}`}
+            </span>
+          )}
         </div>
       )}
 
@@ -118,9 +124,14 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
                 <span className={styles.rowReference}>{contractReference(contract.id)}</span>
               </span>
               <span className={styles.rowTerm}>
-                {dates.date(contract.startsAt)} – {dates.date(contract.endsAt)} ·{' '}
-                {formatMoney(contract.amount)} /{' '}
-                {statusLabel.billingPeriod(contract.billingPeriod)}
+                {dates.date(contract.startsAt)} – {dates.date(contract.endsAt)}
+                {/* The price is only sent with commercial.view (FR-RBAC-06). */}
+                {contract.amount !== undefined && contract.billingPeriod && (
+                  <>
+                    {' · '}
+                    {formatMoney(contract.amount)} / {statusLabel.billingPeriod(contract.billingPeriod)}
+                  </>
+                )}
               </span>
             </div>
             <div className={styles.rowSide}>

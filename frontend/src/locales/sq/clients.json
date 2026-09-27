@@ -41,7 +41,10 @@
     "emptyArchived": "Asnjë klient i arkivuar",
     "emptyArchivedDescription": "Klientët që fshini shfaqen këtu dhe mund të rikthehen.",
     "archiveFailed": "Klienti nuk u fshi dot. Provoni sërish.",
-    "restoreFailed": "Klienti nuk u rikthye dot. Provoni sërish."
+    "restoreFailed": "Klienti nuk u rikthye dot. Provoni sërish.",
+    "reachMine": "Të miat",
+    "reachTeam": "Ekipi",
+    "reachAll": "Të gjitha"
   },
   "detail": {
     "loading": "Duke ngarkuar klientin...",

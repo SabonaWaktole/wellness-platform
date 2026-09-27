@@ -41,7 +41,10 @@
     "emptyArchived": "Nessun cliente archiviato",
     "emptyArchivedDescription": "I clienti eliminati compaiono qui e possono essere ripristinati.",
     "archiveFailed": "Impossibile eliminare questo cliente. Riprova.",
-    "restoreFailed": "Impossibile ripristinare questo cliente. Riprova."
+    "restoreFailed": "Impossibile ripristinare questo cliente. Riprova.",
+    "reachMine": "Mie",
+    "reachTeam": "Team",
+    "reachAll": "Tutte"
   },
   "detail": {
     "loading": "Caricamento cliente...",

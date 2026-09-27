@@ -32,8 +32,9 @@ import {
   useRestoreClient,
   useClientRelatedCounts,
 } from '../../hooks/useClients';
-import { usePermission } from '../../hooks/usePermission';
+import { usePermission, usePermissionScope } from '../../hooks/usePermission';
 import type { Client } from '../../types/client';
+import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName, getStaffInitials } from '../../utils/userUtils';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -64,6 +65,11 @@ export const ClientListContent: React.FC = () => {
   const { counts, fetchRelatedCounts } = useClientRelatedCounts();
   /** Which side of the soft-delete line the list is showing. */
   const [showArchived, setShowArchived] = useState(false);
+  /* FR-RBAC-11..13: the list's "mine / team / all" filter. It narrows the
+   * viewer's companies.view scope and never widens it — offered only when
+   * there is something to narrow (TEAM or ALL). */
+  const companiesScope = usePermissionScope('companies.view');
+  const [reach, setReach] = useState<'OWN' | 'TEAM' | 'ALL' | ''>('');
   const [archivingClient, setArchivingClient] = useState<Client | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -89,10 +95,11 @@ export const ClientListContent: React.FC = () => {
 
   useEffect(() => {
     // One box, matched across name / email / phone — SRS §6.2.
-    fetchClients({ search: debouncedSearchTerm, archived: showArchived });
-  }, [fetchClients, debouncedSearchTerm, showArchived]);
+    fetchClients({ search: debouncedSearchTerm, archived: showArchived, reach: reach || undefined });
+  }, [fetchClients, debouncedSearchTerm, showArchived, reach]);
 
-  const refresh = () => fetchClients({ search: debouncedSearchTerm, archived: showArchived });
+  const refresh = () =>
+    fetchClients({ search: debouncedSearchTerm, archived: showArchived, reach: reach || undefined });
 
   /* Counts are fetched when the dialog opens rather than per row: the list
    * endpoint does not carry them, and four COUNT queries per row would be a
@@ -284,6 +291,20 @@ export const ClientListContent: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          {/* The mine/team/all filter only makes sense above OWN scope: an
+              OWN-scoped viewer has nothing wider to narrow from or to. */}
+          {(companiesScope === 'TEAM' || companiesScope === 'ALL') && (
+            <SelectInput
+              aria-label={t('list.filter')}
+              value={reach}
+              onChange={(e) => setReach(e.target.value as typeof reach)}
+            >
+              <option value="">{t('list.filter')}</option>
+              <option value="OWN">{t('list.reachMine')}</option>
+              {companiesScope === 'ALL' && <option value="TEAM">{t('list.reachTeam')}</option>}
+              <option value="ALL">{t('list.reachAll')}</option>
+            </SelectInput>
+          )}
           {/* Owners need somewhere to see and undo archives; without this the
               archived clients would be unreachable from the UI entirely. */}
           {canArchive && (

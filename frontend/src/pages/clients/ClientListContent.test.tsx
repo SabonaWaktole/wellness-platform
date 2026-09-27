@@ -311,5 +311,44 @@ describe('ClientListContent', () => {
     });
   });
 
+  describe('the mine/team/all filter (FR-RBAC-11..13)', () => {
+    const signInWithScope = (scope: 'OWN' | 'TEAM' | 'ALL') => {
+      useAuthStore.setState({
+        user: {
+          id: 'u1',
+          email: 'someone@example.com',
+          role: 'STAFF',
+          permissions: { 'companies.view': scope },
+        } as any,
+        isAuthenticated: true,
+        isInitializing: false,
+      });
+    };
+
+    it('is not offered to an OWN-scoped viewer, who has nothing to narrow', () => {
+      signInWithScope('OWN');
+      renderComponent();
+      expect(screen.queryByLabelText('Filter')).toBeNull();
+    });
+
+    it('offers Mine and All to a TEAM-scoped viewer, but not Team itself', () => {
+      signInWithScope('TEAM');
+      renderComponent();
+      const select = screen.getByLabelText('Filter') as HTMLSelectElement;
+      const values = Array.from(select.options).map((o) => o.value);
+      expect(values).toEqual(['', 'OWN', 'ALL']);
+    });
+
+    it('offers Mine, Team and All to an ALL-scoped viewer, and narrows the search on selection', () => {
+      signInWithScope('ALL');
+      renderComponent();
+      const select = screen.getByLabelText('Filter') as HTMLSelectElement;
+      expect(Array.from(select.options).map((o) => o.value)).toEqual(['', 'OWN', 'TEAM', 'ALL']);
+
+      fireEvent.change(select, { target: { value: 'TEAM' } });
+      expect(mockFetchClients).toHaveBeenLastCalledWith({ search: '', archived: false, reach: 'TEAM' });
+    });
+  });
+
 });
 // @ts-nocheck

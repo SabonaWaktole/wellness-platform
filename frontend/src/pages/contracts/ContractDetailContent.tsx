@@ -17,6 +17,7 @@ import { Card } from '../../components/ui/Card/Card';
 import { Badge } from '../../components/ui/Badge/Badge';
 import type { BadgeProps } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
+import { Can } from '../../components/auth/Can';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
@@ -327,16 +328,21 @@ export const ContractDetailContent: React.FC = () => {
                 <dt className={styles.termLabel}>{t('detail.plan')}</dt>
                 <dd className={styles.termValue}>{contract.planName}</dd>
               </div>
-              <div className={styles.termRow}>
-                <dt className={styles.termLabel}>{t('detail.billingPeriod')}</dt>
-                <dd className={styles.termValue}>
-                  {statusLabel.billingPeriod(contract.billingPeriod)}
-                </dd>
-              </div>
-              <div className={styles.termRow}>
-                <dt className={styles.termLabel}>{t('detail.amount')}</dt>
-                <dd className={styles.termValue}>{formatMoney(contract.amount)}</dd>
-              </div>
+              {/* Absent without commercial.view (FR-RBAC-06). */}
+              {contract.billingPeriod && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.billingPeriod')}</dt>
+                  <dd className={styles.termValue}>
+                    {statusLabel.billingPeriod(contract.billingPeriod)}
+                  </dd>
+                </div>
+              )}
+              {contract.amount !== undefined && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.amount')}</dt>
+                  <dd className={styles.termValue}>{formatMoney(contract.amount)}</dd>
+                </div>
+              )}
               <div className={styles.termRow}>
                 <dt className={styles.termLabel}>{t('detail.startsAt')}</dt>
                 <dd className={styles.termValue}>{dates.dateMedium(contract.startsAt)}</dd>
@@ -427,6 +433,8 @@ export const ContractDetailContent: React.FC = () => {
         </div>
 
         <div className={styles.column}>
+          {/* The whole card needs payments.view; ADD_PAYMENT needs contracts.manage on top (FR-RBAC-06). */}
+          {detail?.payments !== undefined && (
           <Card padding="lg">
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>{t('payments.heading')}</h2>
@@ -566,7 +574,10 @@ export const ContractDetailContent: React.FC = () => {
               </div>
             )}
           </Card>
+          )}
 
+          {/* The status history is a manager's record (FR-RBAC-06). */}
+          <Can permission="contracts.manage">
           <Card padding="lg">
             <h2 className={styles.cardTitle}>{t('detail.history')}</h2>
             <div className={styles.historyList}>
@@ -599,6 +610,7 @@ export const ContractDetailContent: React.FC = () => {
               })}
             </div>
           </Card>
+          </Can>
         </div>
       </div>
 

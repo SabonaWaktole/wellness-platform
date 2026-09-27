@@ -112,6 +112,11 @@ export interface SearchClientsParams {
   customFields?: Record<string, any>;
   /** `true` lists archived clients instead of active ones. */
   archived?: boolean;
+  /**
+   * The list's "mine / team / all" filter (FR-RBAC-11..13). Narrows the
+   * viewer's companies.view scope and never widens it.
+   */
+  reach?: 'OWN' | 'TEAM' | 'ALL';
   skip?: number;
   take?: number;
 }

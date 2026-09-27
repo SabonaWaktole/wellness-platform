@@ -95,7 +95,7 @@ export const ContractFormContent: React.FC = () => {
           clientId: contract.clientId,
           planName: contract.planName,
           amount: String(contract.amount),
-          billingPeriod: contract.billingPeriod,
+          billingPeriod: contract.billingPeriod ?? 'MONTHLY',
           startsAt: toDateInput(contract.startsAt),
           endsAt: toDateInput(contract.endsAt),
           assignedUserId: contract.assignedUserId ?? '',
