@@ -145,6 +145,8 @@ CROSS JOIN (
   UNION ALL
   SELECT 'ADMINISTRATOR' AS rolekey, 'audit.view' AS permissionkey, NULL::TEXT AS scope
   UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'calendar.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
   SELECT 'ADMINISTRATOR' AS rolekey, 'commercial.view' AS permissionkey, 'ALL' AS scope
   UNION ALL
   SELECT 'ADMINISTRATOR' AS rolekey, 'companies.delete' AS permissionkey, 'ALL' AS scope

@@ -10,10 +10,10 @@ export type RoleGrantMap = Readonly<Record<string, PermissionGrant>>;
 const { Own, Team, All } = PermissionScope;
 
 /**
- * The default permission matrix from SRS §4.2 (FR-RBAC-01). Every tenant is
- * seeded with exactly this, and the Administrator edits it from here on
- * (Slice 6) — this table is the *default*, not a live source ResolveAccessContext
- * reads from directly.
+ * The default permission matrix from SRS §4.2 (FR-RBAC-01), with one
+ * deliberate addition. Every tenant is seeded with this, and the
+ * Administrator edits it from here on (Slice 6) — this table is the
+ * *default*, not a live source ResolveAccessContext reads from directly.
  *
  * D3 (notes split): Reception's "notes only" right is `notes.view: ALL` +
  * `notes.add: ALL`, with no `activities.*` and no `commercial.view`/
@@ -21,6 +21,15 @@ const { Own, Team, All } = PermissionScope;
  * (Slice 4) does the rest.
  *
  * D8 (modules the SRS doesn't mention): granted to Administrator only.
+ *
+ * Deviation from the literal §4.2 matrix: the SRS gives the Administrator
+ * no `calendar.view` (only Sales User/Manager and CEO have it). Legacy
+ * BUSINESS_OWNER users map to Administrator (D2), so seeding the matrix
+ * exactly as written would take the Appointments/calendar feature away from
+ * every existing business owner the moment this migration runs, with no
+ * self-service way to grant it back until Slice 6. `calendar.view: ALL` is
+ * added here so nothing already working regresses; flag this to Wellness
+ * Albania to confirm at UAT (see the SRS review note after this table).
  */
 export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
   [RoleKey.SalesUser]: {
@@ -70,6 +79,8 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'companies.reassign': All,
     'activities.view': All,
     'activities.add': All,
+    // Deviation from the literal SRS matrix — see the doc comment above.
+    'calendar.view': All,
     'notes.view': All,
     'notes.add': All,
     'contracts.validity.view': All,

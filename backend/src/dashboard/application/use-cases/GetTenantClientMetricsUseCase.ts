@@ -12,10 +12,17 @@ export interface GetTenantClientMetricsDTO {
    * server host's. See tenantDay.ts for the defect this closes.
    */
   timeZone: string;
-  /** The requesting user. Only used when their role scopes them to own data. */
+  /** The requesting user. Only used when their scope restricts them to own data. */
   userId?: string;
-  /** Requesting user's role. STAFF sees only their own figures. */
+  /** @deprecated pass `scope` instead — kept for callers not yet on Slice 3's AccessContext. */
   role?: string;
+  /**
+   * Slice 3 (FR-RBAC replacing the `role === 'STAFF'` literal): the caller's
+   * `companies.view` scope, from `access.scopeOf('companies.view')`. `OWN`
+   * sees only their own figures; anything else (including unset, for a
+   * caller not yet passing this) is tenant-wide, same as `role` did.
+   */
+  scope?: string | null;
 }
 
 export interface TenantClientMetrics {
@@ -94,7 +101,7 @@ export class GetTenantClientMetricsUseCase {
     // property of the warehouse, not of a person — so the low/out-of-stock
     // counts stay tenant-wide for every role. That is a real limit of the data
     // model, not an oversight: there is nothing to scope those numbers by.
-    const scopedUserId = dto.role === 'STAFF' ? dto.userId : undefined;
+    const scopedUserId = dto.scope === 'OWN' || dto.role === 'STAFF' ? dto.userId : undefined;
 
     // Scoped counts come from search().total, since countByTenant() takes no
     // user filter.

@@ -363,7 +363,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   // Appointment routes
   const { createAppointmentRouter } = require('../appointments/interfaces/http/routes/appointmentRoutes');
-  const appointmentRoutes = createAppointmentRouter(prisma, tokenService, tenantRepository, notificationService);
+  const appointmentRoutes = createAppointmentRouter(prisma, tokenService, tenantRepository, notificationService, resolveAccessContext);
   app.use('/api/:tenantSlug/appointments', appointmentRoutes);
 
   // Tenant Routes
@@ -445,7 +445,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const getTenantActivityFeedUseCase = new GetTenantActivityFeedUseCase(prismaClientRepository, interactionRepository, appointmentRepository, userRepository);
   
   const { createDashboardRouter } = require('../dashboard/interfaces/http/routes/dashboardRoutes');
-  const dashboardRoutes = createDashboardRouter(getTenantClientMetricsUseCase, getTenantActivityFeedUseCase, tokenService, tenantRepository);
+  const dashboardRoutes = createDashboardRouter(getTenantClientMetricsUseCase, getTenantActivityFeedUseCase, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/dashboard', dashboardRoutes);
 
   // Inventory Routes

@@ -201,12 +201,11 @@ export class AppointmentController {
       const validatedData = getUpcomingAppointmentsSchema.parse(req.query);
       const tenantId = requireTenantId(req);
       const userId = req.user!.userId;
-      const role = req.user!.role;
 
       const results = await this.getUpcomingAppointmentsUseCase.execute({
         tenantId,
         userId,
-        role,
+        scope: req.access!.scopeOf('calendar.view'),
         limit: validatedData.limit,
       });
 

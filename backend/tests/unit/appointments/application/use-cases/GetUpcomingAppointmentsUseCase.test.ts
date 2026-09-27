@@ -106,6 +106,22 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     ]);
   });
 
+  it('FR-RBAC-01: scopes to the caller when the calendar.view scope is OWN', async () => {
+    mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
+
+    await useCase.execute({ tenantId: 'tenant-1', userId: 'su-1', scope: 'OWN', limit: 10 });
+
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', 'su-1', 10);
+  });
+
+  it('does not scope for a TEAM/ALL calendar.view scope', async () => {
+    mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
+
+    await useCase.execute({ tenantId: 'tenant-1', userId: 'sm-1', scope: 'TEAM', limit: 10 });
+
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', undefined, 10);
+  });
+
   it('should default limit to 5 when not provided', async () => {
     mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
 

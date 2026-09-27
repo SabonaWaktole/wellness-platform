@@ -68,6 +68,20 @@ describe('GetTenantActivityFeedUseCase', () => {
       expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
     });
 
+    it('FR-RBAC-01: scopes every repository call when the companies.view scope is OWN', async () => {
+      await useCase.execute({ tenantId: 'tenant-a', userId: 'su-1', scope: 'OWN', limit: 10 });
+
+      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'su-1');
+      expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'su-1');
+      expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'su-1');
+    });
+
+    it('does NOT scope for a TEAM/ALL companies.view scope', async () => {
+      await useCase.execute({ tenantId: 'tenant-a', userId: 'sm-1', scope: 'TEAM', limit: 10 });
+
+      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
+    });
+
     it('ignores a supplied userId when the role is not STAFF', async () => {
       // Guards against a caller accidentally narrowing an owner's view.
       await useCase.execute({ tenantId: 'tenant-a', userId: 'owner-1', role: 'BUSINESS_OWNER', limit: 5 });
