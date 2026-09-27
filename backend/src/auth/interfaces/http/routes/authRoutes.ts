@@ -15,9 +15,11 @@ import { ResolveAccessContextUseCase } from '../../../../access/application/use-
 export const createGlobalAuthRoutes = (
   authController: AuthController,
   tokenService: ITokenService,
+  resolveAccessContext: ResolveAccessContextUseCase
 ): Router => {
   const router = Router();
   const authMw = authenticate(tokenService);
+  const loadAccessMw = loadAccess(resolveAccessContext);
   const optionalAuthMw = optionalAuthenticate(tokenService);
   const authLimiter = createAuthRateLimiter();
 
@@ -46,7 +48,10 @@ export const createGlobalAuthRoutes = (
 
   // Profile endpoints
   router.get('/me', optionalAuthMw, authController.getMe);
-  router.put('/me', authMw, validateRequest(authSchemas.updateProfile), authController.updateMe);
+  // loadAccess: changing one's own email takes users.manage (FR-RBAC-05).
+  // It resolves from the token's own tenant, so it works on this slug-less
+  // route, and the platform operator resolves without one.
+  router.put('/me', authMw, loadAccessMw, validateRequest(authSchemas.updateProfile), authController.updateMe);
   router.put('/me/password', authMw, validateRequest(authSchemas.changePassword), authController.changeMyPassword);
 
   return router;

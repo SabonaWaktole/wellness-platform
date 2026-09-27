@@ -295,7 +295,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   // Auth Routes
   const { createGlobalAuthRoutes, createTenantAuthRoutes } = require('@auth/interfaces/http/routes/authRoutes');
-  const globalAuthRoutes = createGlobalAuthRoutes(authController, tokenService);
+  const globalAuthRoutes = createGlobalAuthRoutes(authController, tokenService, resolveAccessContext);
   const tenantAuthRoutes = createTenantAuthRoutes(authController, tokenService, tenantRepository, resolveAccessContext);
   
   app.use('/api/auth', globalAuthRoutes);

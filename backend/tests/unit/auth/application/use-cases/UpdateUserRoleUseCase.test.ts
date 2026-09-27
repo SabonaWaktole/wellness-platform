@@ -3,6 +3,8 @@ import { IUserRepository } from '@auth/domain/repositories/IUserRepository';
 import { User } from '@auth/domain/entities/User';
 import { UserRole } from '@auth/domain/enums/UserRole';
 import { UnauthorizedError } from '@auth/domain/errors';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('UpdateUserRoleUseCase', () => {
   let userRepository: jest.Mocked<IUserRepository>;
@@ -44,7 +46,7 @@ describe('UpdateUserRoleUseCase', () => {
 
   const execute = (over: any = {}) =>
     useCase.execute({
-      invitingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       tenantId: 'tenant1',
       userIdToUpdate: 'u1',
       newRole: UserRole.STAFF,
@@ -53,7 +55,7 @@ describe('UpdateUserRoleUseCase', () => {
     });
 
   it('rejects a non-owner, non-super-admin caller', async () => {
-    await expect(execute({ invitingUserRole: UserRole.STAFF })).rejects.toThrow(UnauthorizedError);
+    await expect(execute({ access: salesUser() })).rejects.toThrow(PermissionDeniedError);
     expect(userRepository.updateRoleAndWarehouse).not.toHaveBeenCalled();
   });
 

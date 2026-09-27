@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { requireTenant, requireTenantId } from "@main/interfaces/http/tenantContext";
 import { authCookieOptions, AUTH_COOKIE_MAX_AGE_MS } from "@main/interfaces/http/authCookie";
 import { LoginUseCase } from '@auth/application/use-cases/LoginUseCase';
@@ -89,7 +90,7 @@ export class AuthController {
   createUser = async (req: Request, res: Response) => {
     try {
       const user = await this.createUserUseCase!.execute({
-        callerRole: req.user!.role,
+        access: req.access!,
         callerTenantId: req.user!.tenantId,
         // The workspace resolved from the URL slug, never req.user.tenantId —
         // the two diverge for an impersonating administrator. See tenantContext.
@@ -104,7 +105,7 @@ export class AuthController {
       });
       res.status(201).json({ user });
     } catch (error: any) {
-      if (error.name === 'UnauthorizedError' || error.message.includes('Unauthorized')) {
+      if (error instanceof PermissionDeniedError || error.name === 'UnauthorizedError' || error.message.includes('Unauthorized')) {
         return res.status(403).json({ error: error.message });
       }
       res.status(400).json({ error: error.message });
@@ -302,7 +303,7 @@ export class AuthController {
       const tenant = await this.tenantRepository.findById(requireTenantId(req));
       const result = await this.inviteStaffUseCase.execute({
         invitingUserId: req.user!.userId,
-        invitingUserRole: req.user!.role,
+        access: req.access!,
         tenantId: requireTenantId(req),
         inviteeEmail: req.body.email,
         role: req.body.role,
@@ -311,6 +312,7 @@ export class AuthController {
       });
       res.status(200).json({ message: 'Invitation sent' });
     } catch (error: any) {
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   };
@@ -318,7 +320,7 @@ export class AuthController {
   updateStaffRole = async (req: Request, res: Response) => {
     try {
       await this.updateUserRoleUseCase.execute({
-        invitingUserRole: req.user!.role as any,
+        access: req.access!,
         tenantId: requireTenantId(req),
         userIdToUpdate: req.params.id as string,
         newRole: req.body.role,
@@ -326,7 +328,9 @@ export class AuthController {
       });
       res.status(200).json({ message: 'User role and permissions updated' });
     } catch (error: any) {
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(400).json({ error: error.message });
     }
   };
@@ -334,13 +338,15 @@ export class AuthController {
   getDeactivationImpact = async (req: Request, res: Response) => {
     try {
       const impact = await this.getDeactivationImpactUseCase!.execute({
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         tenantId: requireTenantId(req),
         userId: req.params.id as string,
       });
       res.status(200).json(impact);
     } catch (error: any) {
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(400).json({ error: error.message });
     }
   };
@@ -348,14 +354,16 @@ export class AuthController {
   deactivateStaff = async (req: Request, res: Response) => {
     try {
       await this.deactivateUserUseCase!.execute({
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         requestingUserId: req.user!.userId,
         tenantId: requireTenantId(req),
         userIdToDeactivate: req.params.id as string,
       });
       res.status(200).json({ message: 'Team member deactivated' });
     } catch (error: any) {
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(400).json({ error: error.message });
     }
   };
@@ -363,13 +371,15 @@ export class AuthController {
   reactivateStaff = async (req: Request, res: Response) => {
     try {
       await this.reactivateUserUseCase!.execute({
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         tenantId: requireTenantId(req),
         userIdToReactivate: req.params.id as string,
       });
       res.status(200).json({ message: 'Team member reactivated' });
     } catch (error: any) {
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(400).json({ error: error.message });
     }
   };
@@ -434,7 +444,7 @@ export class AuthController {
     try {
       const result = await this.getPendingInvitationsUseCase.execute({
         tenantId: requireTenantId(req),
-        requestingUserRole: req.user!.role as UserRole,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -446,7 +456,7 @@ export class AuthController {
       await this.updateUserProfileUseCase.execute({
         userId: req.user!.userId,
         requestingUserId: req.user!.userId,
-        requestingUserRole: req.user!.role as UserRole,
+        access: req.access!,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         phone: req.body.phone,
@@ -455,7 +465,7 @@ export class AuthController {
       });
       res.status(200).json({ message: 'Profile updated successfully' });
     } catch (error: any) {
-      if (error.name === 'UnauthorizedError') {
+      if (error instanceof PermissionDeniedError || error.name === 'UnauthorizedError') {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -472,7 +482,7 @@ export class AuthController {
       });
       res.status(200).json({ message: 'Password changed successfully' });
     } catch (error: any) {
-      if (error.name === 'UnauthorizedError') {
+      if (error instanceof PermissionDeniedError || error.name === 'UnauthorizedError') {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -485,7 +495,7 @@ export class AuthController {
       if (this.cancelInvitationUseCase) {
         await this.cancelInvitationUseCase.execute({
           invitationId: req.params.id as string,
-          requestingUserRole: req.user!.role,
+          access: req.access!,
         });
       }
       res.status(200).json({ message: 'Invitation canceled successfully' });

@@ -1,11 +1,11 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
-import { UserRole } from '../../domain/enums/UserRole';
 import { UnauthorizedError } from '../../domain/errors';
 
 export interface UpdateUserProfileInput {
   userId: string;
   requestingUserId: string;
-  requestingUserRole: UserRole;
+  access: AccessContext;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
@@ -33,14 +33,10 @@ export class UpdateUserProfileUseCase {
       throw new UnauthorizedError('You can only update your own profile');
     }
 
-    // Email change restriction: only BUSINESS_OWNER and SUPER_ADMIN can change email
+    // Email change restriction: an account's email is an identity the
+    // workspace administers, so changing it takes users.manage.
     if (input.email && input.email !== userToUpdate.email) {
-      if (
-        input.requestingUserRole !== UserRole.BUSINESS_OWNER &&
-        input.requestingUserRole !== UserRole.SUPER_ADMIN
-      ) {
-        throw new UnauthorizedError('Only Business Owners can change their email address');
-      }
+      input.access.ensure('users.manage');
 
       // If they are changing their email, ensure the new email is not already taken
       const existingUser = await this.userRepository.findAnyByEmail(input.email);

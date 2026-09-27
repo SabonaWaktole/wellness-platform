@@ -1,5 +1,6 @@
 import { errorHandler } from '@main/interfaces/http/middlewares/errorHandler';
 import { NextFunction, Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../../../../src/access/domain/errors';
 
 describe('errorHandler middleware', () => {
   let res: Partial<Response>;
@@ -28,6 +29,13 @@ describe('errorHandler middleware', () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: 'Internal server error' });
+  });
+
+  it('FR-RBAC-05 answers a PermissionDeniedError with 403 and a fixed body', () => {
+    invoke(new PermissionDeniedError('users.manage'));
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Forbidden. Insufficient permissions.' });
   });
 
   it('never leaks the error message to the client', () => {

@@ -4,6 +4,8 @@ import { UserRole } from '../../domain/enums/UserRole';
 import { User } from '../../domain/entities/User';
 import { UnauthorizedError } from '../../domain/errors';
 import { v4 as uuidv4 } from 'uuid';
+import { administrator, platformOperator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('UpdateUserProfileUseCase', () => {
   let mockUserRepository: jest.Mocked<IUserRepository>;
@@ -38,7 +40,7 @@ describe('UpdateUserProfileUseCase', () => {
     await useCase.execute({
       userId: testUser.id,
       requestingUserId: testUser.id,
-      requestingUserRole: testUser.role,
+      access: administrator(),
       firstName: 'John',
       lastName: 'Doe',
     });
@@ -53,7 +55,7 @@ describe('UpdateUserProfileUseCase', () => {
     await expect(useCase.execute({
       userId: testUser.id,
       requestingUserId: 'different-id',
-      requestingUserRole: testUser.role,
+      access: administrator(),
       firstName: 'John',
     })).rejects.toThrow(UnauthorizedError);
   });
@@ -62,9 +64,9 @@ describe('UpdateUserProfileUseCase', () => {
     await expect(useCase.execute({
       userId: testUser.id,
       requestingUserId: testUser.id,
-      requestingUserRole: UserRole.STAFF,
+      access: salesUser(),
       email: 'new@example.com',
-    })).rejects.toThrow('Only Business Owners can change their email address');
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should allow BUSINESS_OWNER to update email', async () => {
@@ -78,7 +80,7 @@ describe('UpdateUserProfileUseCase', () => {
     await useCase.execute({
       userId: ownerUser.id,
       requestingUserId: ownerUser.id,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       email: 'new@example.com',
     });
 
@@ -99,7 +101,7 @@ describe('UpdateUserProfileUseCase', () => {
     await useCase.execute({
       userId: adminUser.id,
       requestingUserId: adminUser.id,
-      requestingUserRole: UserRole.SUPER_ADMIN,
+      access: platformOperator(),
       email: 'new-admin@example.com',
     });
 
@@ -119,7 +121,7 @@ describe('UpdateUserProfileUseCase', () => {
     await expect(useCase.execute({
       userId: ownerUser.id,
       requestingUserId: ownerUser.id,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       email: 'existing@example.com',
     })).rejects.toThrow('Email is already in use');
   });

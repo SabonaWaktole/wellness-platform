@@ -2,7 +2,8 @@ import { InviteStaffUseCase } from '@auth/application/use-cases/InviteStaffUseCa
 import { IInvitationRepository } from '@auth/domain/repositories/IInvitationRepository';
 import { IEmailSender } from '@auth/application/ports/IEmailSender';
 import { UserRole } from '@auth/domain/enums/UserRole';
-import { UnauthorizedError } from '@auth/domain/errors';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('InviteStaffUseCase', () => {
   let useCase: InviteStaffUseCase;
@@ -34,7 +35,7 @@ describe('InviteStaffUseCase', () => {
 
     const result = await useCase.execute({
       invitingUserId: 'owner-1',
-      invitingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       tenantId: 'tenant-1',
       inviteeEmail: 'staff@example.com',
       role: UserRole.STAFF,
@@ -47,16 +48,16 @@ describe('InviteStaffUseCase', () => {
     expect(result.token).toBeDefined();
   });
 
-  it('should throw UnauthorizedError if inviter is not BUSINESS_OWNER or SUPER_ADMIN', async () => {
+  it('FR-RBAC-05 refuses an inviter without users.manage', async () => {
     await expect(
       useCase.execute({
         invitingUserId: 'staff-1',
-        invitingUserRole: UserRole.STAFF,
+        access: salesUser(),
         tenantId: 'tenant-1',
         inviteeEmail: 'staff2@example.com',
         role: UserRole.STAFF,
         tenantName: 'Acme Corp',
       })
-    ).rejects.toThrow(UnauthorizedError);
+    ).rejects.toThrow(PermissionDeniedError);
   });
 });

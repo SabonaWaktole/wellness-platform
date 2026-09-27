@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { UserRole } from '../../domain/enums/UserRole';
 import { UnauthorizedError } from '../../domain/errors';
@@ -11,15 +12,13 @@ export class UpdateUserRoleUseCase {
   ) {}
 
   async execute(input: {
-    invitingUserRole: UserRole;
+    access: AccessContext;
     tenantId: string;
     userIdToUpdate: string;
     newRole: UserRole;
     newWarehouseId: string | null;
   }) {
-    if (input.invitingUserRole !== UserRole.BUSINESS_OWNER && input.invitingUserRole !== UserRole.SUPER_ADMIN) {
-      throw new UnauthorizedError('Only Business Owners can update staff roles');
-    }
+    input.access.ensure('users.manage');
 
     const userToUpdate = await this.userRepository.findById(input.userIdToUpdate);
     if (!userToUpdate) {

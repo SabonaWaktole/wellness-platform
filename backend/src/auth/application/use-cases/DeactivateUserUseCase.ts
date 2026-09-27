@@ -1,11 +1,10 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { UserRole } from '../../domain/enums/UserRole';
-import { UnauthorizedError } from '../../domain/errors';
 import { IPermissionsChanged } from '../../../access/application/ports/IPermissionsChanged';
 
 export interface DeactivateUserDTO {
-  /** Role of the caller, for authorization. */
-  requestingUserRole: string;
+  access: AccessContext;
   /** Caller's id, so they cannot lock themselves out. */
   requestingUserId: string;
   /** Tenant resolved from the URL — the isolation boundary. */
@@ -35,9 +34,7 @@ export class DeactivateUserUseCase {
   ) {}
 
   async execute(dto: DeactivateUserDTO): Promise<{ userId: string }> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER) {
-      throw new UnauthorizedError('Only Business Owners can deactivate team members.');
-    }
+    dto.access.ensure('users.manage');
 
     if (dto.userIdToDeactivate === dto.requestingUserId) {
       throw new Error('You cannot deactivate your own account.');

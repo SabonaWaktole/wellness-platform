@@ -1,11 +1,9 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
-import { UserRole } from '../../domain/enums/UserRole';
-import { UnauthorizedError } from '../../domain/errors';
 import { IPermissionsChanged } from '../../../access/application/ports/IPermissionsChanged';
 
 export interface ReactivateUserDTO {
-  /** Role of the caller, for authorization. */
-  requestingUserRole: string;
+  access: AccessContext;
   /** Tenant resolved from the URL — the isolation boundary. */
   tenantId: string;
   userIdToReactivate: string;
@@ -37,9 +35,7 @@ export class ReactivateUserUseCase {
   ) {}
 
   async execute(dto: ReactivateUserDTO): Promise<{ userId: string }> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER) {
-      throw new UnauthorizedError('Only Business Owners can reactivate team members.');
-    }
+    dto.access.ensure('users.manage');
 
     const target = await this.userRepository.findById(dto.userIdToReactivate);
     if (!target) {

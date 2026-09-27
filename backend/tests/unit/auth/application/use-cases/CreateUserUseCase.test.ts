@@ -2,7 +2,9 @@ import { CreateUserUseCase } from '@auth/application/use-cases/CreateUserUseCase
 import { IUserRepository } from '@auth/domain/repositories/IUserRepository';
 import { IPasswordHasher } from '@auth/application/ports/IPasswordHasher';
 import { UserRole } from '@auth/domain/enums/UserRole';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 import { UnauthorizedError } from '@auth/domain/errors';
+import { administrator, platformOperator, salesUser } from '../../../../support/access';
 
 describe('CreateUserUseCase', () => {
   let userRepository: jest.Mocked<IUserRepository>;
@@ -47,7 +49,7 @@ describe('CreateUserUseCase', () => {
     it('lets a SUPER_ADMIN create a BUSINESS_OWNER in a workspace they do not belong to', async () => {
       const result = await useCase.execute({
         ...validInput,
-        callerRole: UserRole.SUPER_ADMIN,
+        access: platformOperator(),
         callerTenantId: null,
         role: UserRole.BUSINESS_OWNER,
       });
@@ -60,7 +62,7 @@ describe('CreateUserUseCase', () => {
     it('lets a BUSINESS_OWNER create STAFF in their own workspace', async () => {
       const result = await useCase.execute({
         ...validInput,
-        callerRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         callerTenantId: 'tenant-a',
       });
 
@@ -71,7 +73,7 @@ describe('CreateUserUseCase', () => {
       await expect(
         useCase.execute({
           ...validInput,
-          callerRole: UserRole.BUSINESS_OWNER,
+          access: administrator(),
           callerTenantId: 'tenant-a',
           role: UserRole.BUSINESS_OWNER,
         })
@@ -83,21 +85,21 @@ describe('CreateUserUseCase', () => {
       await expect(
         useCase.execute({
           ...validInput,
-          callerRole: UserRole.BUSINESS_OWNER,
+          access: administrator(),
           callerTenantId: 'tenant-b',
         })
       ).rejects.toThrow(UnauthorizedError);
       expect(userRepository.create).not.toHaveBeenCalled();
     });
 
-    it('stops STAFF creating anyone', async () => {
+    it('FR-RBAC-05 stops a role without users.manage creating anyone', async () => {
       await expect(
         useCase.execute({
           ...validInput,
-          callerRole: UserRole.STAFF,
+          access: salesUser(),
           callerTenantId: 'tenant-a',
         })
-      ).rejects.toThrow(UnauthorizedError);
+      ).rejects.toThrow(PermissionDeniedError);
     });
 
     // The platform role is seeded, never minted through an endpoint: it grants
@@ -107,7 +109,7 @@ describe('CreateUserUseCase', () => {
       await expect(
         useCase.execute({
           ...validInput,
-          callerRole: UserRole.SUPER_ADMIN,
+          access: platformOperator(),
           callerTenantId: null,
           role: UserRole.SUPER_ADMIN,
         })
@@ -120,7 +122,7 @@ describe('CreateUserUseCase', () => {
     it('stores a hash, never the plaintext, and never returns either', async () => {
       const result = await useCase.execute({
         ...validInput,
-        callerRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         callerTenantId: 'tenant-a',
       });
 
@@ -133,7 +135,7 @@ describe('CreateUserUseCase', () => {
     it('creates the account already active, so the password works immediately', async () => {
       const result = await useCase.execute({
         ...validInput,
-        callerRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         callerTenantId: 'tenant-a',
       });
 
@@ -147,7 +149,7 @@ describe('CreateUserUseCase', () => {
     await expect(
       useCase.execute({
         ...validInput,
-        callerRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         callerTenantId: 'tenant-a',
       })
     ).rejects.toThrow(/already exists/i);
@@ -162,7 +164,7 @@ describe('CreateUserUseCase', () => {
       useCase.execute({
         ...validInput,
         tenantId: 'tenant-b',
-        callerRole: UserRole.SUPER_ADMIN,
+        access: platformOperator(),
         callerTenantId: null,
       })
     ).resolves.toMatchObject({ tenantId: 'tenant-b' });

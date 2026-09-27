@@ -1,9 +1,8 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
-import { UserRole } from '../../domain/enums/UserRole';
-import { UnauthorizedError } from '../../domain/errors';
 
 export interface GetDeactivationImpactDTO {
-  requestingUserRole: string;
+  access: AccessContext;
   tenantId: string;
   userId: string;
 }
@@ -18,9 +17,7 @@ export class GetDeactivationImpactUseCase {
   constructor(private userRepository: IUserRepository) {}
 
   async execute(dto: GetDeactivationImpactDTO): Promise<{ clients: number; upcomingAppointments: number }> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER) {
-      throw new UnauthorizedError('Only Business Owners can view deactivation impact.');
-    }
+    dto.access.ensure('users.manage');
 
     const target = await this.userRepository.findById(dto.userId);
     if (!target || target.tenantId !== dto.tenantId) {
