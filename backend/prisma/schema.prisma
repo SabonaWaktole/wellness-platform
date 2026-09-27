@@ -315,6 +315,40 @@ model AuditLog {
   @@index([tenantId])
 }
 
+/// Append-only, tenant-scoped compliance trail (Slice 2: FR-AUD-01). Every
+/// sensitive write in a tenant's workspace — contracts, payments, users,
+/// roles, settings — lands here as one row with the field-level old and new
+/// values, written in the same transaction as the change (FR-AUD-04). No
+/// foreign keys, for the same reason as `AuditLog`: the trail must outlive
+/// the rows it describes. Distinct from `AuditLog`, which stays the record of
+/// platform-operator actions (D5 in the Milestone 1 plan).
+model AuditEntry {
+  id       String   @id
+  tenantId String
+  at       DateTime @default(now())
+
+  /// NULL means a system actor (the scheduler), not a person — `userRole` is
+  /// then `'SYSTEM'`. See `SYSTEM_ACTOR` in `src/audit/domain/AuditEntry.ts`.
+  userId   String?
+  userRole String
+
+  /// CREATE | UPDATE | DELETE | STATUS_CHANGE — see AuditAction in
+  /// src/audit/domain/AuditAction.ts. A String column for the same reason
+  /// every other status here is one.
+  action String
+
+  entityType  String
+  entityId    String
+  entityLabel String?
+
+  /// AuditChange[] — [{field, old, new}], JSON-safe and already redacted for
+  /// secret fields by `diff()` before it ever reaches this column.
+  changes Json
+
+  @@index([tenantId, at])
+  @@index([tenantId, entityType, entityId])
+}
+
 model Invitation {
   id              String    @id
   // Nullable: a Platform Admin invitation belongs to no workspace.
