@@ -4,63 +4,84 @@ import { useNavigation } from './useNavigation';
 import '../i18n';
 
 /**
- * The sidebar duplicates a permission decision that really lives in
- * src/routes/index.tsx. These tests pin the two lists together, because when
- * they drift the symptom is a visible link that dead-ends on /unauthorized.
+ * The sidebar filters by permission (FR-RBAC-07), the same keys
+ * `RequirePermission` gates the matching route with in routes/index.tsx.
+ * These tests pin the two together, because when they drift the symptom is
+ * a visible link that dead-ends on /unauthorized.
  */
 describe('useNavigation', () => {
   /*
-   * `useNavigation` used to be a pure function that these tests could call
-   * directly. It now calls `useTranslation` — the sidebar labels are catalogue
+   * `useNavigation` calls `useTranslation` — the sidebar labels are catalogue
    * lookups rather than hardcoded English — so it needs a renderer.
    *
-   * Every assertion below is about `id`, not `label`: which links a role gets
-   * is a permission question and has nothing to do with language. Rendering is
-   * a mechanical requirement here, not a change of subject.
+   * Every assertion below is about `id`, not `label`: which links a user gets
+   * is a permission question and has nothing to do with language.
    */
   const navFor = (user: any, path = '/acme/dashboard') =>
     renderHook(() => useNavigation(user, path)).result.current;
 
   const idsFor = (user: any) => navFor(user).map((i) => i.id);
 
-  const OWNER = { role: 'BUSINESS_OWNER' };
-  const STAFF = { role: 'STAFF' };
-  const STAFF_WITH_WAREHOUSE = { role: 'STAFF', warehouseId: 'w-1' };
+  const userWith = (permissions: Record<string, unknown>) => ({ role: 'STAFF', permissions });
+
+  // SRS §4.2 defaults, expressed as this frontend sees them.
+  const SALES_USER = userWith({
+    'companies.view': 'OWN',
+    'calendar.view': 'OWN',
+    'inventory.manage': 'OWN',
+    'quotations.manage': 'OWN',
+    'invoices.manage': 'OWN',
+    'contracts.validity.view': 'OWN',
+  });
+  const RECEPTION = userWith({ 'companies.view': 'ALL', 'contracts.validity.view': 'ALL' });
+  const ADMINISTRATOR = userWith({
+    'companies.view': 'ALL',
+    'calendar.view': 'ALL',
+    'inventory.manage': 'ALL',
+    'quotations.manage': 'ALL',
+    'invoices.manage': 'ALL',
+    'contracts.validity.view': 'ALL',
+    'reports.view': true,
+  });
+  const NO_PERMISSIONS = userWith({});
   const SUPER_ADMIN = { role: 'SUPER_ADMIN' };
 
-  describe('role gating matches the route guards', () => {
-    // reports is guarded ['BUSINESS_OWNER', 'SUPER_ADMIN'] in routes/index.tsx.
-    it('never offers Reports to STAFF', () => {
-      expect(idsFor(STAFF)).not.toContain('reports');
+  describe('permission gating matches the route guards', () => {
+    it('offers Reports only to a permissions map holding reports.view', () => {
+      expect(idsFor(ADMINISTRATOR)).toContain('reports');
+      expect(idsFor(SALES_USER)).not.toContain('reports');
+      expect(idsFor(RECEPTION)).not.toContain('reports');
     });
 
-    it('never offers Reports to STAFF who manage a warehouse', () => {
-      // The regression: Reports was pushed alongside inventory behind the
-      // warehouseId check, so warehouse staff saw a link that always 403'd.
-      expect(idsFor(STAFF_WITH_WAREHOUSE)).not.toContain('reports');
+    it('offers Clients to everyone holding companies.view, at any scope', () => {
+      expect(idsFor(SALES_USER)).toContain('clients');
+      expect(idsFor(RECEPTION)).toContain('clients');
+      expect(idsFor(ADMINISTRATOR)).toContain('clients');
     });
 
-    it('still offers Reports to a BUSINESS_OWNER', () => {
-      expect(idsFor(OWNER)).toContain('reports');
+    it('D3: Reception has no calendar.view, so no Appointments link', () => {
+      expect(idsFor(RECEPTION)).not.toContain('appointments');
+      expect(idsFor(SALES_USER)).toContain('appointments');
+    });
+
+    it('offers nothing permission-gated to a user with an empty permissions map', () => {
+      const ids = idsFor(NO_PERMISSIONS);
+      expect(ids).not.toContain('clients');
+      expect(ids).not.toContain('reports');
+      // Always-on items still show.
+      expect(ids).toContain('dashboard');
+      expect(ids).toContain('settings');
     });
   });
 
   /*
    * SUPER_ADMIN is a platform-level role with zero access to any individual
    * tenant's business data — enforced in resolveTenant, which returns 403 for
-   * it on every /:tenantSlug/... endpoint. It used to inherit the owner list
-   * because the hook branched only on `role === 'STAFF'`, so the console
-   * offered six links the backend was designed to refuse. TD-008.
+   * it on every /:tenantSlug/... endpoint. It sits outside the permission
+   * system (D2) and keeps its own fixed list rather than a permissions map.
    */
-  describe('super admin gets a platform list, not the owner one', () => {
+  describe('super admin gets a platform list, not a permission-filtered tenant one', () => {
     it('offers exactly Dashboard, Tenants, People and Settings', () => {
-      // People and Settings both joined the list with the platform console's
-      // cross-workspace features. Like Tenants, both read/write /api/tenants/*
-      // and /api/platform-settings, which carry no :tenantSlug — so they are
-      // genuinely reachable and do not reintroduce the dead tenant-scoped links
-      // below. Note the id is 'setting' (singular) — distinct from the
-      // workspace-scoped 'settings' (plural) id checked two tests below, so the
-      // two links can never collide.
       expect(idsFor(SUPER_ADMIN)).toEqual(['dashboard', 'tenants', 'people', 'setting']);
     });
 
@@ -72,7 +93,7 @@ describe('useNavigation', () => {
     );
 
     it('offers Tenants to nobody else — it is SUPER_ADMIN-only server-side', () => {
-      for (const user of [OWNER, STAFF, STAFF_WITH_WAREHOUSE, null]) {
+      for (const user of [ADMINISTRATOR, SALES_USER, RECEPTION, null]) {
         expect(idsFor(user)).not.toContain('tenants');
       }
     });
@@ -84,9 +105,6 @@ describe('useNavigation', () => {
       .map((i) => i.id);
 
     it('highlights Tenants alone on the tenants page', () => {
-      // The fallback used to be a hand-listed set of exclusions naming only
-      // clients, settings and appointments — so any other page lit up Dashboard
-      // as well as itself.
       expect(activeIdsAt(SUPER_ADMIN, '/admin/tenants')).toEqual(['tenants']);
     });
 
@@ -94,42 +112,32 @@ describe('useNavigation', () => {
       expect(activeIdsAt(SUPER_ADMIN, '/admin/dashboard')).toEqual(['dashboard']);
     });
 
-    it('does not also highlight Dashboard on a deep owner page', () => {
-      expect(activeIdsAt(OWNER, '/acme/inventory')).toEqual(['inventory']);
-    });
-  });
-
-  describe('warehouse-gated inventory', () => {
-    it('hides Products & Stock from staff with no warehouse', () => {
-      expect(idsFor(STAFF)).not.toContain('inventory');
-    });
-
-    it('shows Products & Stock to staff who manage a warehouse', () => {
-      expect(idsFor(STAFF_WITH_WAREHOUSE)).toContain('inventory');
+    it('does not also highlight Dashboard on a deep page', () => {
+      expect(activeIdsAt(ADMINISTRATOR, '/acme/inventory')).toEqual(['inventory']);
     });
   });
 
   describe('no links to features that do not exist', () => {
     // There is no Tasks route, page, model or endpoint anywhere in the project.
-    // The link was a planning leftover that sent staff to a 404.
-    it('never offers My Tasks to any role', () => {
-      for (const user of [OWNER, STAFF, STAFF_WITH_WAREHOUSE, { role: 'SUPER_ADMIN' }]) {
+    it('never offers My Tasks to anyone', () => {
+      for (const user of [ADMINISTRATOR, SALES_USER, RECEPTION, SUPER_ADMIN]) {
         expect(idsFor(user)).not.toContain('tasks');
       }
     });
   });
 
   describe('settings availability', () => {
-    // settings/profile has no RoleGuard, so every staff member can reach it.
-    it('offers Settings to every staff member, warehouse or not', () => {
-      expect(idsFor(STAFF)).toContain('settings');
-      expect(idsFor(STAFF_WITH_WAREHOUSE)).toContain('settings');
+    // settings/profile carries no permission gate, so every tenant user can
+    // reach their own profile.
+    it('offers Settings to every tenant user, permissions map or not', () => {
+      expect(idsFor(SALES_USER)).toContain('settings');
+      expect(idsFor(NO_PERMISSIONS)).toContain('settings');
     });
   });
 
   describe('structural guarantees', () => {
     it('emits no duplicate ids, which would collide as React keys', () => {
-      for (const user of [OWNER, STAFF, STAFF_WITH_WAREHOUSE, { role: 'SUPER_ADMIN' }, null]) {
+      for (const user of [ADMINISTRATOR, SALES_USER, RECEPTION, SUPER_ADMIN, null]) {
         const ids = idsFor(user);
         expect(new Set(ids).size).toBe(ids.length);
       }
@@ -138,19 +146,19 @@ describe('useNavigation', () => {
     it('does not mutate its module-level source arrays across calls', () => {
       // Guards the by-reference return: a push on a shared array would leak
       // into every later render, for every user.
-      const first = idsFor(STAFF_WITH_WAREHOUSE);
-      idsFor(STAFF_WITH_WAREHOUSE);
-      idsFor(OWNER);
-      const afterwards = idsFor(STAFF_WITH_WAREHOUSE);
+      const first = idsFor(SALES_USER);
+      idsFor(SALES_USER);
+      idsFor(ADMINISTRATOR);
+      const afterwards = idsFor(SALES_USER);
 
       expect(afterwards).toEqual(first);
-      expect(idsFor(OWNER)).toEqual([
+      expect(idsFor(ADMINISTRATOR)).toEqual([
         'dashboard', 'clients', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'reports', 'settings',
       ]);
     });
 
     it('returns a fresh array each call', () => {
-      expect(idsFor(OWNER)).not.toBe(idsFor(OWNER));
+      expect(idsFor(ADMINISTRATOR)).not.toBe(idsFor(ADMINISTRATOR));
     });
   });
 });
