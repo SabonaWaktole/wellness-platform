@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import {
   SUPPORTED_LANGUAGES,
   DEFAULT_LANGUAGE,
+  SOURCE_LANGUAGE,
   DEFAULT_NAMESPACE,
   NAMESPACES,
   isSupportedLanguage,
@@ -135,7 +136,7 @@ i18n.use(initReactI18next).init({
   // English backs every other language: a key not yet translated renders the
   // English text rather than the raw key. A half-translated interface is
   // usable; one showing `settings:company.profile.title` is not.
-  fallbackLng: DEFAULT_LANGUAGE,
+  fallbackLng: SOURCE_LANGUAGE,
   supportedLngs: [...SUPPORTED_LANGUAGES],
   ns: [...NAMESPACES],
   defaultNS: DEFAULT_NAMESPACE,

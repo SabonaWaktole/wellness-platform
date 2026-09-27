@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import i18n, { applyLanguage } from './index';
 import { resolveLanguage } from './useLanguage';
-import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS } from './config';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, DEFAULT_LANGUAGE } from './config';
 import { useMoneyFormat } from '../hooks/useMoneyFormat';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -76,7 +76,7 @@ describe('language and formatting are independent', () => {
     setTenant({ tenantLocale: 'en-GB', userLanguage: null, tenantDefaultLanguage: 'sq' });
 
     expect(resolveLanguage(undefined, 'sq')).toBe('sq');
-    expect(resolveLanguage(null, 'en-GB')).toBe('en');
+    expect(resolveLanguage(null, 'en-GB')).toBe(DEFAULT_LANGUAGE);
   });
 });
 
@@ -93,10 +93,10 @@ describe('language resolution precedence', () => {
     expect(resolveLanguage(undefined, 'sq')).toBe('sq');
   });
 
-  it('falls back to English rather than rendering raw keys', () => {
-    expect(resolveLanguage(null, null)).toBe('en');
-    expect(resolveLanguage('klingon', 'elvish')).toBe('en');
-    expect(resolveLanguage('sq-AL', null)).toBe('en');
+  it('falls back to the default language rather than rendering raw keys', () => {
+    expect(resolveLanguage(null, null)).toBe(DEFAULT_LANGUAGE);
+    expect(resolveLanguage('klingon', 'elvish')).toBe(DEFAULT_LANGUAGE);
+    expect(resolveLanguage('sq-AL', null)).toBe(DEFAULT_LANGUAGE);
   });
 });
 

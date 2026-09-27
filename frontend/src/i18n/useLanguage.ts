@@ -7,7 +7,8 @@ import { DEFAULT_LANGUAGE, isSupportedLanguage, type Language } from './config';
 /**
  * Resolves which language the interface should be in.
  *
- * Precedence is `user override -> workspace default -> English`. The user field
+ * Precedence is `user override -> workspace default -> DEFAULT_LANGUAGE`
+ * (Albanian). The user field
  * is nullable precisely so "follow the workspace default" is expressible: a
  * user who has never chosen tracks their tenant's setting, including when the
  * tenant later changes it, while a user who has chosen keeps their choice.

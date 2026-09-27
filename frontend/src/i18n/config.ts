@@ -8,10 +8,24 @@
  * see the regression test in useMoneyFormat.test.ts, which fails if anyone
  * wires the i18n language into an Intl formatter.
  */
-export const SUPPORTED_LANGUAGES = ['en', 'sq', 'el', 'it'] as const;
+export const SUPPORTED_LANGUAGES = ['sq', 'en', 'el', 'it'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
-export const DEFAULT_LANGUAGE: Language = 'en';
+/**
+ * What the interface is in before anyone signs in, and for anyone who has not
+ * chosen a language in a workspace that has not set one (FR-LNG-01). Wellness
+ * Albania works in Albanian; English is the second language.
+ */
+export const DEFAULT_LANGUAGE: Language = 'sq';
+
+/**
+ * The catalogue every other one is written from and checked against
+ * (`scripts/check-translations.mjs`), which makes it the only one guaranteed to
+ * hold every key. That is why a missing key falls back to it rather than to
+ * DEFAULT_LANGUAGE: Greek and Italian may lag behind, and English is the text
+ * they fall back to.
+ */
+export const SOURCE_LANGUAGE: Language = 'en';
 
 /**
  * Endonyms — each language named in itself, which is what someone who cannot
