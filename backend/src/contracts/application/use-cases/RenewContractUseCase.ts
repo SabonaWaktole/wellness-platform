@@ -4,6 +4,9 @@ import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
 /** One day, for stepping the new term off the end of the previous one. */
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -105,7 +108,20 @@ export class RenewContractUseCase {
 
       // Re-read for the hydrated shape, same reason as CreateContractUseCase.
       const saved = await repos.contractRepo.findById(input.tenantId, renewal.id);
-      return { contract: saved ?? renewal, previousContractId: previous.id };
+      const result = saved ?? renewal;
+
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.Create,
+        entityType: 'Contract',
+        entityId: renewal.id,
+        entityLabel: contractLabel(result),
+        changes: diff({} as Record<string, unknown>, contractSnapshot(result), [...CONTRACT_AUDIT_FIELDS]),
+      });
+
+      return { contract: result, previousContractId: previous.id };
     });
   }
 }

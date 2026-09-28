@@ -3,6 +3,9 @@ import { randomUUID } from 'crypto';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
 /**
  * Ends a term early.
@@ -30,7 +33,7 @@ export class CancelContractUseCase {
 
       assertCanAccessContract(contract, input.access);
 
-      const fromStatus = contract.status;
+      const before = contractSnapshot(contract);
       contract.cancel();
 
       await repos.contractRepo.save(contract);
@@ -39,12 +42,27 @@ export class CancelContractUseCase {
           id: randomUUID(),
           tenantId: input.tenantId,
           contractId: contract.id,
-          fromStatus,
+          fromStatus: before.status as string,
           toStatus: contract.status,
           changedByUserId: input.actingUserId,
           note: input.reason ?? null,
         })
       );
+
+      const changes = diff(before, contractSnapshot(contract), [...CONTRACT_AUDIT_FIELDS]);
+      if (input.reason) {
+        changes.push({ field: 'cancelReason', old: null, new: input.reason });
+      }
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.StatusChange,
+        entityType: 'Contract',
+        entityId: contract.id,
+        entityLabel: contractLabel(contract),
+        changes,
+      });
 
       return { contract };
     });

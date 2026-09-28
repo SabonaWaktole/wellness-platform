@@ -312,6 +312,28 @@ model AuditLog {
   @@index([tenantId])
 }
 
+/// Append-only, tenant-scoped compliance trail (Slice 2: FR-AUD-01). See the
+/// Postgres schema for the full rationale; kept identical here.
+model AuditEntry {
+  id       String   @id
+  tenantId String
+  at       DateTime @default(now())
+
+  userId   String?
+  userRole String
+
+  action String
+
+  entityType  String
+  entityId    String
+  entityLabel String?
+
+  changes Json
+
+  @@index([tenantId, at])
+  @@index([tenantId, entityType, entityId])
+}
+
 model Invitation {
   id              String    @id
   // Nullable: a Platform Admin invitation belongs to no workspace.

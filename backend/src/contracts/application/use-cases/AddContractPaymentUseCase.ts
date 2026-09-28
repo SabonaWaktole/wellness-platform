@@ -3,6 +3,9 @@ import { randomUUID } from 'crypto';
 import { ContractPayment } from '../../domain/ContractPayment';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { PAYMENT_AUDIT_FIELDS, paymentLabel, paymentSnapshot } from './contractAudit';
 
 /**
  * Adds a payment row the generated schedule did not anticipate — a setup fee,
@@ -49,6 +52,17 @@ export class AddContractPaymentUseCase {
       });
 
       await repos.paymentRepo.save(payment);
+
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.Create,
+        entityType: 'ContractPayment',
+        entityId: payment.id,
+        entityLabel: paymentLabel(contract, payment),
+        changes: diff({} as Record<string, unknown>, paymentSnapshot(payment), [...PAYMENT_AUDIT_FIELDS]),
+      });
 
       const updated = await repos.contractRepo.findById(input.tenantId, input.contractId);
       return { payment, contract: updated ?? contract };

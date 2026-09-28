@@ -1,6 +1,9 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { PAYMENT_AUDIT_FIELDS, paymentLabel, paymentSnapshot } from './contractAudit';
 
 /**
  * Removes an instalment from the schedule.
@@ -36,6 +39,17 @@ export class DeleteContractPaymentUseCase {
       if (payment.paidAmount > 0) {
         throw new Error('A payment with money recorded against it cannot be deleted; reset it to unpaid first');
       }
+
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.Delete,
+        entityType: 'ContractPayment',
+        entityId: payment.id,
+        entityLabel: paymentLabel(contract, payment),
+        changes: diff(paymentSnapshot(payment), {} as Record<string, unknown>, [...PAYMENT_AUDIT_FIELDS]),
+      });
 
       await repos.paymentRepo.delete(input.tenantId, input.paymentId);
 

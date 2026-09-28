@@ -1,8 +1,12 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { IClientRepository } from '../../../clients/domain/repositories/IClientRepository';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
 /**
  * Draws up a new contract term.
@@ -30,6 +34,7 @@ export class CreateContractUseCase {
     assignedUserId?: string | null;
     notes?: string | null;
     actingUserId: string;
+    access: AccessContext;
   }) {
     // The client is checked through its own repository, which already filters
     // soft-deleted rows — a raw FK insert would happily attach a contract to a
@@ -77,7 +82,20 @@ export class CreateContractUseCase {
       // endpoint returns — `clientName` and the payment rollup come from the
       // repository's joins, and a freshly constructed entity has neither.
       const saved = await repos.contractRepo.findById(input.tenantId, contract.id);
-      return { contract: saved ?? contract };
+      const result = saved ?? contract;
+
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.Create,
+        entityType: 'Contract',
+        entityId: contract.id,
+        entityLabel: contractLabel(result),
+        changes: diff({} as Record<string, unknown>, contractSnapshot(result), [...CONTRACT_AUDIT_FIELDS]),
+      });
+
+      return { contract: result };
     });
   }
 }
