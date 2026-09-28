@@ -1,5 +1,6 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IRoleCatalogue } from '../../../access/application/ports/IRoleCatalogue';
+import { lineageKeyOf } from '../../../access/domain/RoleKey';
 import { legacyRoleFor } from '../../../access/domain/LegacyRoleMapping';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { IEmailSender } from '../ports/IEmailSender';
@@ -41,7 +42,7 @@ export class InviteStaffUseCase {
       tenantId: input.tenantId,
       email: input.inviteeEmail,
       roleId: role.id,
-      role: legacyRoleFor(role.key) as UserRole,
+      role: legacyRoleFor(lineageKeyOf(role)) as UserRole,
       token: crypto.randomBytes(32).toString('hex'),
       expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
       acceptedAt: null,

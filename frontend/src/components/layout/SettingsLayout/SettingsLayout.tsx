@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../../store/useAuthStore';
-import { User, Building2, Sliders, UsersRound, Puzzle, PackageOpen, FolderTree, Bell } from 'lucide-react';
+import { User, Building2, Sliders, UsersRound, ShieldCheck, Puzzle, PackageOpen, FolderTree, Bell } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import styles from './SettingsLayout.module.css';
 
@@ -39,6 +39,7 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
     // preference — the page itself requires settings.manage for the same reason.
     { id: 'notifications', label: t('nav.notifications'), icon: Bell, permission: 'settings.manage' },
     { id: 'team', label: t('nav.team'), icon: UsersRound, permission: 'users.manage' },
+    { id: 'roles', label: t('nav.roles'), icon: ShieldCheck, permission: 'roles.manage' },
     { id: 'integrations', label: t('nav.integrations'), icon: Puzzle, permission: 'integrations.manage' },
     // Creating/editing a warehouse or category needs ALL, not merely a grant —
     // Sales User holds inventory.manage at OWN (their own warehouse, see the

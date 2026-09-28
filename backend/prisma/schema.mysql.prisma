@@ -249,6 +249,10 @@ model Role {
   nameSq    String
   nameEn    String
   isSystem  Boolean  @default(false)
+  /// For a custom role (Slice 6, FR-RBAC-04): the system role key it was
+  /// copied from, directly or through another copy. NULL for a system role.
+  /// Team scope and the legacy `User.role` string follow this lineage.
+  baseKey   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

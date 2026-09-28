@@ -16,6 +16,7 @@ describe('PrismaTeamRoster', () => {
   const manager = id('manager');
   const legacyOwner = id('legacy-owner');
   const otherTenantSales = id('other-sales');
+  const juniorSales = id('junior-sales');
 
   beforeAll(async () => {
     await prisma.tenant.createMany({
@@ -42,6 +43,13 @@ describe('PrismaTeamRoster', () => {
         user(otherTenantSales, otherTenantId, 'STAFF', otherRoles[RoleKey.SalesUser]),
       ],
     });
+
+    // FR-RBAC-04: a custom role copied from Sales User.
+    const juniorRoleId = `role-junior-${randomUUID()}`;
+    await prisma.role.create({
+      data: { id: juniorRoleId, tenantId, key: 'CUSTOM_JUNIOR', baseKey: RoleKey.SalesUser, nameSq: 'Junior', nameEn: 'Junior' },
+    });
+    await prisma.user.create({ data: user(juniorSales, tenantId, 'STAFF', juniorRoleId) });
   });
 
   afterAll(async () => {
@@ -50,9 +58,9 @@ describe('PrismaTeamRoster', () => {
     await prisma.$disconnect();
   });
 
-  it('FR-RBAC-12 lists every Sales User of the tenant, active or not, by role', async () => {
+  it('FR-RBAC-12 FR-RBAC-04 lists every Sales User of the tenant, active or not, by role or by a role copied from it', async () => {
     const ids = await new PrismaTeamRoster(prisma).salesUserIds(tenantId);
 
-    expect(ids.sort()).toEqual([salesUser, inactiveSalesUser, legacyStaff].sort());
+    expect(ids.sort()).toEqual([salesUser, inactiveSalesUser, legacyStaff, juniorSales].sort());
   });
 });

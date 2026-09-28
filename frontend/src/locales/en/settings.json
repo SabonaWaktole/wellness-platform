@@ -7,6 +7,7 @@
     "clientManagement": "Client Management",
     "notifications": "Notifications",
     "team": "Team",
+    "roles": "Roles & Permissions",
     "integrations": "Integrations",
     "warehouses": "Warehouses",
     "categories": "Categories"
@@ -224,6 +225,103 @@
       "REASSIGNMENT_REQUIRED": "This user still has companies. Choose a colleague to take them over.",
       "INVALID_REASSIGNMENT_TARGET": "Choose an active colleague in this workspace.",
       "UNKNOWN_ROLE": "That role no longer exists. Reload the page and choose again."
+    }
+  },
+  "roles": {
+    "breadcrumb": "Roles & Permissions",
+    "title": "Roles & Permissions",
+    "subtitle": "Choose what each role can do and how far it reaches. Changes apply to everyone with the role on their next action.",
+    "loading": "Loading roles...",
+    "loadFailed": "The roles could not be loaded.",
+    "listLabel": "Roles",
+    "systemBadge": "System",
+    "customBadge": "Custom",
+    "users_one": "{{count}} user",
+    "users_other": "{{count}} users",
+    "copy": "Copy role",
+    "rename": "Rename",
+    "delete": "Delete",
+    "save": "Save changes",
+    "discard": "Discard",
+    "saved": "Saved. Everyone with this role has the new permissions on their next action.",
+    "unsaved": "You have unsaved changes.",
+    "discardConfirm": "Discard your unsaved changes to this role?",
+    "systemRoleNote": "A system role keeps its name and cannot be deleted. Copy it to make a role you can rename.",
+    "scopeLabel": "Reach of {{permission}}",
+    "scopes": {
+      "OWN": "Own",
+      "TEAM": "Team",
+      "ALL": "All"
+    },
+    "milestone": {
+      "M2": "Available from Milestone 2",
+      "M3": "Available from Milestone 3"
+    },
+    "groups": {
+      "companies": "Companies & contacts",
+      "activities": "Activities & notes",
+      "contracts": "Contracts",
+      "quotations": "Quotations",
+      "invoices": "Invoices",
+      "commercial": "Commercial terms",
+      "payments": "Payments",
+      "performance": "Performance",
+      "admin": "Administration",
+      "modules": "Other modules"
+    },
+    "permissions": {
+      "companies_view": "View companies",
+      "companies_edit": "Edit companies",
+      "companies_delete": "Delete companies",
+      "companies_reassign": "Reassign companies to another salesperson",
+      "activities_view": "View activities (calls, emails, visits, meetings)",
+      "activities_add": "Log activities",
+      "notes_view": "View notes",
+      "notes_add": "Add notes",
+      "calendar_view": "View calendar and appointments",
+      "contracts_validity_view": "View contract validity",
+      "contracts_manage": "Manage contracts",
+      "quotations_manage": "Manage quotations",
+      "quotations_approve": "Approve quotations",
+      "invoices_manage": "Manage invoices",
+      "commercial_view": "View commercial terms (prices and amounts)",
+      "payments_view": "View payments",
+      "payments_update": "Update payment status",
+      "performance_view": "View sales performance",
+      "users_manage": "Manage users",
+      "roles_manage": "Manage roles & permissions",
+      "pricing_manage": "Manage pricing",
+      "settings_manage": "Manage settings",
+      "audit_view": "View the audit log",
+      "inventory_manage": "Manage inventory",
+      "forms_manage": "Manage forms",
+      "integrations_manage": "Manage integrations",
+      "reports_view": "View reports"
+    },
+    "copyModal": {
+      "title": "Copy {{role}}",
+      "hint": "The new role starts with the same permissions. You can change them afterwards.",
+      "nameSq": "Name in Albanian",
+      "nameEn": "Name in English",
+      "submit": "Create role"
+    },
+    "renameModal": {
+      "title": "Rename role",
+      "submit": "Save name"
+    },
+    "deleteConfirm": {
+      "title": "Delete this role?",
+      "message": "{{role}} will be removed. This cannot be undone; the change is kept in the audit log.",
+      "confirm": "Delete role"
+    },
+    "errors": {
+      "LAST_ROLE_MANAGER": "No one else could manage roles after this change. Give another role or user that permission first.",
+      "ROLE_NAME_TAKEN": "Another role already has this name.",
+      "ROLE_IN_USE": "This role is still assigned. Move its users and invitations to another role first.",
+      "SYSTEM_ROLE_LOCKED": "System roles cannot be renamed or deleted.",
+      "INVALID_PERMISSION_GRANT": "One of the permissions could not be saved. Reload the page and try again.",
+      "ROLE_NOT_FOUND": "This role no longer exists. Reload the page.",
+      "generic": "The change could not be saved."
     }
   },
   "integrations": {

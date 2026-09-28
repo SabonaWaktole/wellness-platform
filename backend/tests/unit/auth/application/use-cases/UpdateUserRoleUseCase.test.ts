@@ -2,16 +2,19 @@ import { UpdateUserRoleUseCase } from '@auth/application/use-cases/UpdateUserRol
 import { UserRole } from '@auth/domain/enums/UserRole';
 import { UnauthorizedError, UnknownRoleError } from '@auth/domain/errors';
 import { administrator, salesUser } from '../../../../support/access';
-import { makeRoleCatalogue, makeUser, makeUserRepository } from '../../../../support/fakeUserAdmin';
+import { makeRoleCatalogue, makeUser, makeUserRepository, systemRoles } from '../../../../support/fakeUserAdmin';
+import { RoleSummary } from '../../../../../src/access/application/ports/IRoleCatalogue';
+import { DEFAULT_ROLE_MATRIX } from '../../../../../src/access/domain/DefaultRoleMatrix';
+import { RoleKey } from '../../../../../src/access/domain/RoleKey';
 import { makeUserAdminHarness } from '../../../../support/fakeUserAdminTransaction';
 import { LastRoleManagerError, PermissionDeniedError } from '../../../../../src/access/domain/errors';
 import { RoleManagementGuard } from '../../../../../src/access/application/RoleManagementGuard';
 import { AuditAction } from '../../../../../src/audit/domain/AuditAction';
 
 describe('UpdateUserRoleUseCase', () => {
-  const setup = (options: { users?: ReturnType<typeof makeUser>[]; roleManagers?: string[] } = {}) => {
+  const setup = (options: { users?: ReturnType<typeof makeUser>[]; roleManagers?: string[]; roles?: RoleSummary[] } = {}) => {
     const userRepository = makeUserRepository(options.users ?? [makeUser()]);
-    const roles = makeRoleCatalogue(undefined, options.roleManagers);
+    const roles = makeRoleCatalogue(options.roles, options.roleManagers);
     const harness = makeUserAdminHarness();
     const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
     const useCase = new UpdateUserRoleUseCase(
@@ -37,6 +40,23 @@ describe('UpdateUserRoleUseCase', () => {
     const { harness, execute } = setup();
     await expect(execute({ access: salesUser() })).rejects.toThrow(PermissionDeniedError);
     expect(harness.staff.setRole).not.toHaveBeenCalled();
+  });
+
+  it('FR-RBAC-04 a custom role copied from Administrator writes the Administrator\'s legacy role string', async () => {
+    const deputy: RoleSummary = {
+      id: 'role-deputy',
+      key: 'CUSTOM_DEPUTY',
+      nameSq: 'Zëvendës',
+      nameEn: 'Deputy',
+      isSystem: false,
+      baseKey: RoleKey.Administrator,
+      grants: DEFAULT_ROLE_MATRIX[RoleKey.Administrator],
+    };
+    const { harness, execute } = setup({ roles: [...systemRoles(), deputy] });
+
+    await execute({ newRoleId: 'role-deputy' });
+
+    expect(harness.staff.setRole).toHaveBeenCalledWith('tenant1', 'u1', expect.objectContaining({ roleId: 'role-deputy', legacyRole: UserRole.BUSINESS_OWNER }));
   });
 
   it('refuses a user outside the caller\'s tenant', async () => {

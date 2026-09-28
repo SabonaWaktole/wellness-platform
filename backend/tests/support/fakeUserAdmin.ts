@@ -46,6 +46,7 @@ export const systemRoles = (): RoleSummary[] =>
     key,
     ...SYSTEM_ROLE_NAMES[key],
     isSystem: true,
+    baseKey: null,
     grants: DEFAULT_ROLE_MATRIX[key],
   }));
 
@@ -59,5 +60,6 @@ export function makeRoleCatalogue(
       tenantId === 'tenant1' ? roles.find((role) => role.id === roleId) ?? null : null
     ),
     activeHolderIds: jest.fn().mockResolvedValue(roleManagers),
+    usage: jest.fn().mockResolvedValue({ users: 0, invitations: 0 }),
   };
 }

@@ -7,6 +7,7 @@
     "clientManagement": "Menaxhimi i klientëve",
     "notifications": "Njoftimet",
     "team": "Ekipi",
+    "roles": "Rolet dhe lejet",
     "integrations": "Integrimet",
     "warehouses": "Magazinat",
     "categories": "Kategoritë"
@@ -224,6 +225,103 @@
       "REASSIGNMENT_REQUIRED": "Ky përdorues ka ende kompani. Zgjidhni një koleg që t'i marrë përsipër.",
       "INVALID_REASSIGNMENT_TARGET": "Zgjidhni një koleg aktiv në këtë hapësirë pune.",
       "UNKNOWN_ROLE": "Ky rol nuk ekziston më. Ringarkoni faqen dhe zgjidhni përsëri."
+    }
+  },
+  "roles": {
+    "breadcrumb": "Rolet dhe lejet",
+    "title": "Rolet dhe lejet",
+    "subtitle": "Zgjidhni çfarë mund të bëjë secili rol dhe sa larg shtrihet. Ndryshimet vlejnë për këdo me këtë rol që në veprimin e tij të radhës.",
+    "loading": "Duke ngarkuar rolet...",
+    "loadFailed": "Rolet nuk u ngarkuan.",
+    "listLabel": "Rolet",
+    "systemBadge": "Sistemi",
+    "customBadge": "I personalizuar",
+    "users_one": "{{count}} përdorues",
+    "users_other": "{{count}} përdorues",
+    "copy": "Kopjo rolin",
+    "rename": "Riemërto",
+    "delete": "Fshi",
+    "save": "Ruaj ndryshimet",
+    "discard": "Anulo",
+    "saved": "U ruajt. Kushdo me këtë rol i ka lejet e reja që në veprimin e tij të radhës.",
+    "unsaved": "Keni ndryshime të paruajtura.",
+    "discardConfirm": "T'i hidhni poshtë ndryshimet e paruajtura për këtë rol?",
+    "systemRoleNote": "Një rol i sistemit e ruan emrin dhe nuk mund të fshihet. Kopjojeni për të krijuar një rol që mund ta riemërtoni.",
+    "scopeLabel": "Shtrirja e lejes: {{permission}}",
+    "scopes": {
+      "OWN": "Të vetat",
+      "TEAM": "Ekipi",
+      "ALL": "Të gjitha"
+    },
+    "milestone": {
+      "M2": "E disponueshme nga Faza 2",
+      "M3": "E disponueshme nga Faza 3"
+    },
+    "groups": {
+      "companies": "Kompanitë dhe kontaktet",
+      "activities": "Aktivitetet dhe shënimet",
+      "contracts": "Kontratat",
+      "quotations": "Ofertat",
+      "invoices": "Faturat",
+      "commercial": "Kushtet tregtare",
+      "payments": "Pagesat",
+      "performance": "Performanca",
+      "admin": "Administrimi",
+      "modules": "Module të tjera"
+    },
+    "permissions": {
+      "companies_view": "Shiko kompanitë",
+      "companies_edit": "Ndrysho kompanitë",
+      "companies_delete": "Fshi kompanitë",
+      "companies_reassign": "Kaloji kompanitë një shitësi tjetër",
+      "activities_view": "Shiko aktivitetet (telefonata, email, vizita, takime)",
+      "activities_add": "Regjistro aktivitete",
+      "notes_view": "Shiko shënimet",
+      "notes_add": "Shto shënime",
+      "calendar_view": "Shiko kalendarin dhe takimet",
+      "contracts_validity_view": "Shiko vlefshmërinë e kontratave",
+      "contracts_manage": "Menaxho kontratat",
+      "quotations_manage": "Menaxho ofertat",
+      "quotations_approve": "Mirato ofertat",
+      "invoices_manage": "Menaxho faturat",
+      "commercial_view": "Shiko kushtet tregtare (çmimet dhe shumat)",
+      "payments_view": "Shiko pagesat",
+      "payments_update": "Përditëso statusin e pagesave",
+      "performance_view": "Shiko performancën e shitjeve",
+      "users_manage": "Menaxho përdoruesit",
+      "roles_manage": "Menaxho rolet dhe lejet",
+      "pricing_manage": "Menaxho çmimet",
+      "settings_manage": "Menaxho cilësimet",
+      "audit_view": "Shiko regjistrin e auditimit",
+      "inventory_manage": "Menaxho inventarin",
+      "forms_manage": "Menaxho formularët",
+      "integrations_manage": "Menaxho integrimet",
+      "reports_view": "Shiko raportet"
+    },
+    "copyModal": {
+      "title": "Kopjo {{role}}",
+      "hint": "Roli i ri fillon me të njëjtat leje. Mund t'i ndryshoni më pas.",
+      "nameSq": "Emri në shqip",
+      "nameEn": "Emri në anglisht",
+      "submit": "Krijo rolin"
+    },
+    "renameModal": {
+      "title": "Riemërto rolin",
+      "submit": "Ruaj emrin"
+    },
+    "deleteConfirm": {
+      "title": "Ta fshini këtë rol?",
+      "message": "{{role}} do të hiqet. Ky veprim nuk kthehet mbrapsht; ndryshimi mbetet në regjistrin e auditimit.",
+      "confirm": "Fshi rolin"
+    },
+    "errors": {
+      "LAST_ROLE_MANAGER": "Pas këtij ndryshimi askush nuk do të mund të menaxhonte rolet. Jepjani më parë këtë leje një roli ose përdoruesi tjetër.",
+      "ROLE_NAME_TAKEN": "Një rol tjetër e ka tashmë këtë emër.",
+      "ROLE_IN_USE": "Ky rol është ende i caktuar. Kalojini më parë përdoruesit dhe ftesat e tij në një rol tjetër.",
+      "SYSTEM_ROLE_LOCKED": "Rolet e sistemit nuk mund të riemërtohen ose të fshihen.",
+      "INVALID_PERMISSION_GRANT": "Një nga lejet nuk u ruajt dot. Ringarkoni faqen dhe provoni përsëri.",
+      "ROLE_NOT_FOUND": "Ky rol nuk ekziston më. Ringarkoni faqen.",
+      "generic": "Ndryshimi nuk u ruajt dot."
     }
   },
   "integrations": {
