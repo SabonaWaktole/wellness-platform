@@ -30,6 +30,10 @@ const listFields: Record<LookupList, z.ZodRawShape> = {
   [LookupList.Cities]: {
     areaId: z.string().min(1),
   },
+  [LookupList.FollowUpIntervals]: {
+    days: z.number().int(),
+  },
+  [LookupList.LostReasons]: {},
 };
 
 export const lookupSchemas = {

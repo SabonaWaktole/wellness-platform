@@ -1,5 +1,5 @@
 import { LookupList } from '../domain/LookupList';
-import { Area, BusinessType, City, LookupRecord, RiskLevel } from '../domain/LookupItem';
+import { Area, BusinessType, City, FollowUpInterval, LookupRecord, RiskLevel } from '../domain/LookupItem';
 import {
   InactiveAreaError,
   InactiveRiskLevelError,
@@ -209,6 +209,56 @@ export class CityRules implements LookupListRules {
   }
 }
 
+const MAX_FOLLOW_UP_DAYS = 365;
+
+/** Follow-up intervals (FR-SET-05): a whole number of days, unique in the workspace. */
+export class FollowUpIntervalRules implements LookupListRules {
+  readonly list = LookupList.FollowUpIntervals;
+  readonly fields = ['days'];
+  readonly auditFields = ['days'];
+  readonly namePeers = defaultNamePeers;
+
+  async validate(_tenantId: string, candidate: LookupRecord, _current: LookupRecord | null, siblings: LookupRecord[]) {
+    const { days } = candidate as FollowUpInterval;
+    if (!Number.isInteger(days) || days < 1 || days > MAX_FOLLOW_UP_DAYS) {
+      throw new InvalidLookupValueError('days', `Days must be a whole number from 1 to ${MAX_FOLLOW_UP_DAYS}.`);
+    }
+    if (siblings.some((other) => other.id !== candidate.id && (other as FollowUpInterval).days === days)) {
+      throw new LookupValueTakenError('days');
+    }
+  }
+
+  async checkDeactivate(): Promise<LookupRecord[]> {
+    return [];
+  }
+
+  async checkReactivate() {}
+
+  async describe(_tenantId: string, item: LookupRecord) {
+    return { days: (item as FollowUpInterval).days };
+  }
+}
+
+/** Lost-deal reasons (FR-SET-06): labels only. */
+export class LostReasonRules implements LookupListRules {
+  readonly list = LookupList.LostReasons;
+  readonly fields: string[] = [];
+  readonly auditFields: string[] = [];
+  readonly namePeers = defaultNamePeers;
+
+  async validate() {}
+
+  async checkDeactivate(): Promise<LookupRecord[]> {
+    return [];
+  }
+
+  async checkReactivate() {}
+
+  async describe(): Promise<Record<string, unknown>> {
+    return {};
+  }
+}
+
 export type LookupRulesRegistry = Record<LookupList, LookupListRules>;
 
 export function createLookupRules(store: ILookupStore): LookupRulesRegistry {
@@ -217,5 +267,7 @@ export function createLookupRules(store: ILookupStore): LookupRulesRegistry {
     [LookupList.BusinessTypes]: new BusinessTypeRules(store),
     [LookupList.Areas]: new AreaRules(store),
     [LookupList.Cities]: new CityRules(store),
+    [LookupList.FollowUpIntervals]: new FollowUpIntervalRules(),
+    [LookupList.LostReasons]: new LostReasonRules(),
   };
 }

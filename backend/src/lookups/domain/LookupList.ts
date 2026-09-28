@@ -1,13 +1,15 @@
 /**
- * The admin-managed lists (Slice 8: FR-SET-01, 02; Slice 9: FR-SET-03, 04).
- * The value is the URL segment: `/api/:tenantSlug/lookups/risk-levels`. Slice
- * 10 adds follow-up intervals and lost-deal reasons here.
+ * The admin-managed lists (Slice 8: FR-SET-01, 02; Slice 9: FR-SET-03, 04;
+ * Slice 10: FR-SET-05, 06). The value is the URL segment:
+ * `/api/:tenantSlug/lookups/risk-levels`.
  */
 export enum LookupList {
   RiskLevels = 'risk-levels',
   BusinessTypes = 'business-types',
   Areas = 'areas',
   Cities = 'cities',
+  FollowUpIntervals = 'follow-up-intervals',
+  LostReasons = 'lost-reasons',
 }
 
 export const LOOKUP_LISTS = Object.values(LookupList) as LookupList[];
@@ -22,4 +24,6 @@ export const LOOKUP_AUDIT_ENTITY: Record<LookupList, string> = {
   [LookupList.BusinessTypes]: 'BusinessType',
   [LookupList.Areas]: 'Area',
   [LookupList.Cities]: 'City',
+  [LookupList.FollowUpIntervals]: 'FollowUpInterval',
+  [LookupList.LostReasons]: 'LostReason',
 };

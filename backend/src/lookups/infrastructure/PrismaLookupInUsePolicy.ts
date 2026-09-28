@@ -23,6 +23,10 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
       case LookupList.Cities:
         // Nothing points at a city until companies do (Slice 11).
         return 0;
+      case LookupList.FollowUpIntervals:
+      case LookupList.LostReasons:
+        // Nothing points at either list until deals do (Milestone 2).
+        return 0;
     }
   }
 }

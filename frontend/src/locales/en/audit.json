@@ -38,7 +38,9 @@
     "RiskLevel": "Risk level",
     "BusinessType": "Business type",
     "Area": "Area",
-    "City": "City"
+    "City": "City",
+    "FollowUpInterval": "Follow-up interval",
+    "LostReason": "Lost-deal reason"
   },
   "actors": {
     "system": "System",
@@ -85,6 +87,7 @@
     "description": "Description",
     "riskLevel": "Risk level",
     "area": "Area",
+    "days": "Days",
     "order": "Order",
     "active": "Active"
   },

@@ -4,10 +4,11 @@
  * §8.3). The Administrator replaces them from Settings → Lists.
  *
  * The migrations `20260928140000_add_lookup_lists` /
- * `mysql_migration_add_lookup_lists.sql` (risk levels, business types) and
- * `mysql_migration_add_areas_cities.sql` (areas, cities) seed the same values
- * for workspaces that already exist; `DefaultLookups.test.ts` keeps them all
- * in step.
+ * `mysql_migration_add_lookup_lists.sql` (risk levels, business types),
+ * `mysql_migration_add_areas_cities.sql` (areas, cities) and
+ * `mysql_migration_add_sales_lists.sql` (follow-up intervals, lost-deal
+ * reasons) seed the same values for workspaces that already exist;
+ * `DefaultLookups.test.ts` keeps them all in step.
  */
 export interface DefaultRiskLevel {
   level: number;
@@ -27,6 +28,17 @@ export interface DefaultArea {
   nameSq: string;
   nameEn: string;
   cities: { nameSq: string; nameEn: string }[];
+}
+
+export interface DefaultFollowUpInterval {
+  days: number;
+  nameSq: string;
+  nameEn: string;
+}
+
+export interface DefaultLostReason {
+  nameSq: string;
+  nameEn: string;
 }
 
 export const DEFAULT_RISK_LEVELS: DefaultRiskLevel[] = [
@@ -61,4 +73,19 @@ export const DEFAULT_AREAS: DefaultArea[] = [
   { nameSq: 'Shkodër', nameEn: 'Shkodër', cities: [{ nameSq: 'Shkodër', nameEn: 'Shkodër' }, { nameSq: 'Koplik', nameEn: 'Koplik' }, { nameSq: 'Vau i Dejës', nameEn: 'Vau i Dejës' }] },
   { nameSq: 'Tiranë', nameEn: 'Tirana', cities: [{ nameSq: 'Tiranë', nameEn: 'Tirana' }, { nameSq: 'Kamëz', nameEn: 'Kamëz' }, { nameSq: 'Kavajë', nameEn: 'Kavajë' }] },
   { nameSq: 'Vlorë', nameEn: 'Vlorë', cities: [{ nameSq: 'Vlorë', nameEn: 'Vlorë' }, { nameSq: 'Sarandë', nameEn: 'Sarandë' }, { nameSq: 'Himarë', nameEn: 'Himarë' }] },
+];
+
+/** FR-SET-05's own defaults: 3, 5 and 7 days. */
+export const DEFAULT_FOLLOW_UP_INTERVALS: DefaultFollowUpInterval[] = [
+  { days: 3, nameSq: '3 ditë', nameEn: '3 days' },
+  { days: 5, nameSq: '5 ditë', nameEn: '5 days' },
+  { days: 7, nameSq: '7 ditë', nameEn: '7 days' },
+];
+
+/** FR-SET-06's own example list. */
+export const DEFAULT_LOST_REASONS: DefaultLostReason[] = [
+  { nameSq: 'Shumë e shtrenjtë', nameEn: 'Too expensive' },
+  { nameSq: 'Ka tashmë një ofrues', nameEn: 'Already has a provider' },
+  { nameSq: 'Pa buxhet', nameEn: 'No budget' },
+  { nameSq: 'Pa përgjigje', nameEn: 'No response' },
 ];
