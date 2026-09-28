@@ -14,6 +14,7 @@ import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { TimelineItem } from '../../components/ui/TimelineItem/TimelineItem';
 import { Tabs } from '../../components/ui/Tabs';
+import { usePermission } from '../../hooks/usePermission';
 import { ClientContractsTab } from '../../components/clients/ClientContractsTab';
 import { getActivityConfig } from '../../utils/activityMapper';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
@@ -80,6 +81,10 @@ export const ClientDetailContent: React.FC = () => {
   const { staff, fetchStaff } = useTeam();
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts'>('timeline');
+  // FR-RBAC-07: a role without contract validity (Reception, once UAT-3 removes
+  // it) gets no tab, rather than one whose request is refused.
+  const canSeeContracts = usePermission('contracts.validity.view');
+  const shownTab = activeTab === 'contracts' && !canSeeContracts ? 'timeline' : activeTab;
   const [isInteractionSlideOverOpen, setIsInteractionSlideOverOpen] = useState(false);
   const [isAppointmentSlideOverOpen, setIsAppointmentSlideOverOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -291,7 +296,7 @@ export const ClientDetailContent: React.FC = () => {
           <Tabs
             className={styles.tabsContainer}
             label={t('detail.sectionsLabel')}
-            activeId={activeTab}
+            activeId={shownTab}
             onChange={setActiveTab}
             tabs={[
               { id: 'timeline', label: t('detail.tabTimeline'), count: history?.timeline.length },
@@ -299,13 +304,13 @@ export const ClientDetailContent: React.FC = () => {
               // No count: the contracts tab loads its own data lazily, and a
               // count here would mean fetching every client's contracts on
               // every client page whether or not anyone opens the tab.
-              { id: 'contracts', label: t('detail.tabContracts') },
+              ...(canSeeContracts ? [{ id: 'contracts' as const, label: t('detail.tabContracts') }] : []),
             ]}
           />
 
-          {activeTab === 'contracts' ? (
+          {shownTab === 'contracts' ? (
             <ClientContractsTab clientId={clientId || ''} />
-          ) : activeTab === 'timeline' ? (
+          ) : shownTab === 'timeline' ? (
             <Card padding="lg" className={styles.timelineCard}>
               <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitle}>{t('detail.interactions')}</h2>

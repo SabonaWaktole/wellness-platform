@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ClientDetailContent } from './ClientDetailContent';
 import * as clientsHooks from '../../hooks/useClients';
+import { useAuthStore } from '../../store/useAuthStore';
 import * as apptHooks from '../../hooks/useAppointments';
 
 // Mock dependencies
@@ -175,5 +176,34 @@ describe('ClientDetailContent Timeline', () => {
       renderWithCustomField(undefined);
       expect(screen.getByText('-')).toBeInTheDocument();
     });
+  });
+});
+
+// FR-RBAC-03, 07 (UAT-3 step 3): once the Administrator removes contract
+// validity from a role, its holders stop seeing the Contracts tab rather than
+// a tab that fails to load.
+describe('ClientDetailContent Contracts tab', () => {
+  const renderAs = (permissions: Record<string, string | true>) => {
+    useAuthStore.setState({ user: { userId: 'me', email: 'me@example.com', role: 'STAFF', tenantId: 't1', permissions } } as any);
+    vi.mocked(clientsHooks.useClientSettings).mockReturnValue({ customFields: [], outcomeCategories: [], isLoading: false, fetchSettings: vi.fn() } as any);
+    vi.mocked(clientsHooks.useAddInteraction).mockReturnValue({ addInteraction: vi.fn(), isLoading: false, error: null });
+    vi.mocked(apptHooks.useClientAppointments).mockReturnValue({
+      appointments: [], total: 0, isLoading: false, error: null, updateAppointmentLocally: vi.fn(), fetchClientAppointments: vi.fn() as any,
+    });
+    vi.mocked(clientsHooks.useClientDetail).mockReturnValue({
+      client: { id: 'client-1', name: 'Test Client', status: 'ACTIVE', contactInfo: {} }, isLoading: false, fetchClient: vi.fn(),
+    } as any);
+    vi.mocked(clientsHooks.useClientHistory).mockReturnValue({ history: { timeline: [] }, isLoading: false, fetchHistory: vi.fn() } as any);
+    render(<ClientDetailContent />);
+  };
+
+  it('shows the Contracts tab to a role that can see contract validity', () => {
+    renderAs({ 'companies.view': 'ALL', 'contracts.validity.view': 'ALL' });
+    expect(screen.getByRole('tab', { name: /Contracts/ })).toBeInTheDocument();
+  });
+
+  it('FR-RBAC-07 hides it from a role without contracts.validity.view', () => {
+    renderAs({ 'companies.view': 'ALL' });
+    expect(screen.queryByRole('tab', { name: /Contracts/ })).not.toBeInTheDocument();
   });
 });
