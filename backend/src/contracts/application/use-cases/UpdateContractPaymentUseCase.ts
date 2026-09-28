@@ -2,6 +2,9 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { reachableContract } from './contractAccess';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { PAYMENT_AUDIT_FIELDS, paymentLabel, paymentSnapshot } from './contractAudit';
 
 /** Corrects an instalment's due date, amount or annotation. */
 export class UpdateContractPaymentUseCase {
@@ -31,6 +34,8 @@ export class UpdateContractPaymentUseCase {
         throw new Error('Payment not found');
       }
 
+      const before = paymentSnapshot(payment);
+
       payment.applyEdits({
         dueDate: input.dueDate,
         amount: input.amount,
@@ -39,6 +44,20 @@ export class UpdateContractPaymentUseCase {
       });
 
       await repos.paymentRepo.save(payment);
+
+      const changes = diff(before, paymentSnapshot(payment), [...PAYMENT_AUDIT_FIELDS]);
+      if (changes.length > 0) {
+        await repos.auditTrail.record({
+          tenantId: input.tenantId,
+          userId: input.actingUserId,
+          userRole: input.access.auditRole,
+          action: AuditAction.Update,
+          entityType: 'ContractPayment',
+          entityId: payment.id,
+          entityLabel: paymentLabel(contract, payment),
+          changes,
+        });
+      }
 
       const updated = await repos.contractRepo.findById(input.tenantId, input.contractId);
       return { payment, contract: updated ?? contract };

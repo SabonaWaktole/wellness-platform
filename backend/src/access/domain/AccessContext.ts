@@ -109,6 +109,11 @@ export class AccessContext {
     return createHash('sha1').update(`${this.roleKey ?? 'PLATFORM_OPERATOR'}|${sorted}`).digest('hex').slice(0, 16);
   }
 
+  /** The role an audit entry records for this actor (FR-AUD-01). */
+  get auditRole(): string {
+    return this.roleKey ?? 'PLATFORM_OPERATOR';
+  }
+
   /** `{ [key]: scope | true }`, as returned by `GET /auth/me`. */
   toJSON(): Record<string, PermissionGrant> {
     return { ...this.permissions };

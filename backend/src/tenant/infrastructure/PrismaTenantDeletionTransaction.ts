@@ -79,6 +79,11 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.integration.deleteMany({ where: { tenantId } });
       await tx.user.deleteMany({ where: { tenantId } });
       await tx.warehouse.deleteMany({ where: { tenantId } });
+      // AuditEntry has no foreign key either (same reason as AuditLog), so
+      // this order is not load-bearing — but unlike AuditLog, AuditEntry IS
+      // this tenant's own data (Slice 2), so deleting the workspace erases
+      // it rather than leaving it behind.
+      await tx.auditEntry.deleteMany({ where: { tenantId } });
 
       // NotificationSettings cascades from this and needs no separate call.
       await tx.tenant.delete({ where: { id: tenantId } });

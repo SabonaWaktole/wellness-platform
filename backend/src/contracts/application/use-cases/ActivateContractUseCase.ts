@@ -6,6 +6,9 @@ import { buildPaymentSchedule } from '../../domain/paymentSchedule';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { reachableContract } from './contractAccess';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
 /**
  * Puts a contract in force and lays out what the client is expected to pay.
@@ -34,6 +37,7 @@ export class ActivateContractUseCase {
       const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       const fromStatus = contract.status;
+      const before = contractSnapshot(contract);
       contract.activate();
 
       const existing = await repos.paymentRepo.findByContractId(input.tenantId, input.contractId);
@@ -74,6 +78,23 @@ export class ActivateContractUseCase {
               : 'Activated',
         })
       );
+
+      // Exactly one entry for the whole activation — the status move and the
+      // schedule it generated are one business event, not two.
+      const changes = diff(before, contractSnapshot(contract), [...CONTRACT_AUDIT_FIELDS]);
+      if (generated.length > 0) {
+        changes.push({ field: 'generatedPayments', old: 0, new: generated.length });
+      }
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.StatusChange,
+        entityType: 'Contract',
+        entityId: contract.id,
+        entityLabel: contractLabel(contract),
+        changes,
+      });
 
       return { contract, generatedPayments: generated.length };
     });

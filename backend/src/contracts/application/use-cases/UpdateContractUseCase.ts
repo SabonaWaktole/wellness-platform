@@ -5,6 +5,9 @@ import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { reachableContract } from './contractAccess';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { diff } from '../../../audit/domain/diff';
+import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
 /**
  * Edits a contract's terms.
@@ -56,6 +59,7 @@ export class UpdateContractUseCase {
         startsAt: contract.startsAt.getTime(),
         endsAt: contract.endsAt.getTime(),
       };
+      const auditBefore = contractSnapshot(contract);
 
       contract.applyEdits({
         planName: input.planName,
@@ -96,6 +100,20 @@ export class UpdateContractUseCase {
       const unsettledAtOldPrice = payments.filter(
         (payment) => payment.outstanding > 0 && payment.amount !== contract.amount
       ).length;
+
+      const auditChanges = diff(auditBefore, contractSnapshot(contract), [...CONTRACT_AUDIT_FIELDS]);
+      if (auditChanges.length > 0) {
+        await repos.auditTrail.record({
+          tenantId: input.tenantId,
+          userId: input.actingUserId,
+          userRole: input.access.auditRole,
+          action: AuditAction.Update,
+          entityType: 'Contract',
+          entityId: contract.id,
+          entityLabel: contractLabel(contract),
+          changes: auditChanges,
+        });
+      }
 
       return { contract, scheduleNeedsReview: priceOrDatesMoved && unsettledAtOldPrice > 0 };
     });
