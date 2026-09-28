@@ -38,7 +38,10 @@
     "RiskLevel": "Nivel rreziku",
     "BusinessType": "Lloj biznesi",
     "Area": "Zonë",
-    "City": "Qytet"
+    "City": "Qytet",
+    "FollowUpInterval": "Interval ndjekjeje",
+    "LostReason": "Arsye humbjeje",
+    "StatusLabel": "Etiketë statusi"
   },
   "actors": {
     "system": "Sistemi",
@@ -85,6 +88,10 @@
     "description": "Përshkrimi",
     "riskLevel": "Niveli i rrezikut",
     "area": "Zona",
+    "days": "Ditët",
+    "labelSq": "Etiketa në shqip",
+    "labelEn": "Etiketa në anglisht",
+    "colour": "Ngjyra",
     "order": "Renditja",
     "active": "Aktive"
   },

@@ -89,6 +89,9 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       // ordering.
       await tx.businessType.deleteMany({ where: { tenantId } });
       await tx.riskLevel.deleteMany({ where: { tenantId } });
+      // Same situation: City holds RESTRICT on its Area.
+      await tx.city.deleteMany({ where: { tenantId } });
+      await tx.area.deleteMany({ where: { tenantId } });
 
       // NotificationSettings cascades from this and needs no separate call.
       await tx.tenant.delete({ where: { id: tenantId } });

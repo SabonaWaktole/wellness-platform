@@ -1,7 +1,9 @@
 /** Mirrors the backend's ContractStatus enum (backend Contract.ts). */
 export const ContractStatus = {
   DRAFT: 'DRAFT',
+  PENDING_SIGNATURE: 'PENDING_SIGNATURE',
   ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
   EXPIRED: 'EXPIRED',
   CANCELLED: 'CANCELLED',
 } as const;
@@ -18,11 +20,18 @@ export const BillingPeriod = {
 
 export type BillingPeriod = (typeof BillingPeriod)[keyof typeof BillingPeriod];
 
-/** Mirrors the backend's PaymentStatus enum (backend ContractPayment.ts). */
+/**
+ * Mirrors the backend's PaymentStatus enum (backend ContractPayment.ts).
+ * WAIVED is the one legacy key (decision D6, Slice 10): existing rows keep
+ * it, but it is not offered for a new payment and has no configurable label.
+ */
 export const PaymentStatus = {
-  UNPAID: 'UNPAID',
+  NOT_INVOICED: 'NOT_INVOICED',
+  INVOICE_ISSUED: 'INVOICE_ISSUED',
+  PAYMENT_PENDING: 'PAYMENT_PENDING',
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
   PAID: 'PAID',
-  PARTIAL: 'PARTIAL',
+  OVERDUE: 'OVERDUE',
   WAIVED: 'WAIVED',
 } as const;
 

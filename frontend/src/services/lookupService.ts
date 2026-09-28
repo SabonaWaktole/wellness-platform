@@ -1,7 +1,7 @@
 import { apiClient as api } from '../api';
 
-/** The admin-managed lists (Slices 8, 9). Slice 10 adds the sales lists. */
-export type LookupListKey = 'risk-levels' | 'business-types' | 'areas' | 'cities';
+/** The admin-managed lists (Slices 8, 9, 10). */
+export type LookupListKey = 'risk-levels' | 'business-types' | 'areas' | 'cities' | 'follow-up-intervals' | 'lost-reasons';
 
 /** What every list value has. Only the Albanian name is required (FR-LNG-03). */
 export interface LookupItem {
@@ -27,11 +27,19 @@ export interface City extends LookupItem {
   areaId: string;
 }
 
+export interface FollowUpInterval extends LookupItem {
+  days: number;
+}
+
+export type LostReason = LookupItem;
+
 export interface LookupItemOf {
   'risk-levels': RiskLevel;
   'business-types': BusinessType;
   areas: Area;
   cities: City;
+  'follow-up-intervals': FollowUpInterval;
+  'lost-reasons': LostReason;
 }
 
 /** The body of a create or update: the labels plus the list's own fields. */

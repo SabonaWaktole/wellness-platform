@@ -1,7 +1,13 @@
 import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { ILookupSeeder } from '../application/ports/ILookupSeeder';
-import { DEFAULT_AREAS, DEFAULT_BUSINESS_TYPES, DEFAULT_RISK_LEVELS } from '../domain/DefaultLookups';
+import {
+  DEFAULT_AREAS,
+  DEFAULT_BUSINESS_TYPES,
+  DEFAULT_FOLLOW_UP_INTERVALS,
+  DEFAULT_LOST_REASONS,
+  DEFAULT_RISK_LEVELS,
+} from '../domain/DefaultLookups';
 
 export class PrismaLookupSeeder implements ILookupSeeder {
   constructor(private readonly prisma: PrismaClient) {}
@@ -47,6 +53,23 @@ export class PrismaLookupSeeder implements ILookupSeeder {
           order: index + 1,
         }))
       ),
+    });
+
+    await this.prisma.followUpInterval.createMany({
+      data: DEFAULT_FOLLOW_UP_INTERVALS.map((interval, index) => ({
+        id: randomUUID(),
+        tenantId,
+        ...interval,
+        order: index + 1,
+      })),
+    });
+    await this.prisma.lostReason.createMany({
+      data: DEFAULT_LOST_REASONS.map((reason, index) => ({
+        id: randomUUID(),
+        tenantId,
+        ...reason,
+        order: index + 1,
+      })),
     });
   }
 }

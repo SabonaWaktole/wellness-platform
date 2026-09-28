@@ -123,6 +123,13 @@ import { SetLookupItemActiveUseCase } from '../lookups/application/use-cases/Set
 import { DeleteLookupItemUseCase } from '../lookups/application/use-cases/DeleteLookupItemUseCase';
 import { LookupsController } from '../lookups/interfaces/http/LookupsController';
 import { createLookupRouter } from '../lookups/interfaces/http/lookupRoutes';
+import { PrismaStatusLabelStore } from '../statuses/infrastructure/PrismaStatusLabelStore';
+import { PrismaStatusLabelWriteTransaction } from '../statuses/infrastructure/PrismaStatusLabelWriteTransaction';
+import { ListStatusLabelsUseCase } from '../statuses/application/use-cases/ListStatusLabelsUseCase';
+import { UpdateStatusLabelUseCase } from '../statuses/application/use-cases/UpdateStatusLabelUseCase';
+import { ReorderStatusLabelsUseCase } from '../statuses/application/use-cases/ReorderStatusLabelsUseCase';
+import { StatusLabelsController } from '../statuses/interfaces/http/StatusLabelsController';
+import { createStatusLabelRouter } from '../statuses/interfaces/http/statusLabelRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -400,6 +407,19 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DeleteLookupItemUseCase(lookupStore, lookupRules, new PrismaLookupInUsePolicy(), lookupWriteTransaction)
   );
   app.use('/api/:tenantSlug/lookups', createLookupRouter(lookupsController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Settings → Statuses: contract and payment status labels (Slice 10: FR-SET-07, 08).
+  const statusLabelStore = new PrismaStatusLabelStore();
+  const statusLabelWriteTransaction = new PrismaStatusLabelWriteTransaction();
+  const statusLabelsController = new StatusLabelsController(
+    new ListStatusLabelsUseCase(statusLabelStore),
+    new UpdateStatusLabelUseCase(statusLabelStore, statusLabelWriteTransaction),
+    new ReorderStatusLabelsUseCase(statusLabelStore, statusLabelWriteTransaction)
+  );
+  app.use(
+    '/api/:tenantSlug/status-labels',
+    createStatusLabelRouter(statusLabelsController, tokenService, tenantRepository, resolveAccessContext)
+  );
 
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');
@@ -858,9 +878,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   
   const { TenantProfileStore } = require('../settings/infrastructure/TenantProfileStore');
   const { UpdateTenantSettingsUseCase } = require('../settings/application/use-cases/UpdateTenantSettingsUseCase');
+  const { PrismaSettingsWriteTransaction } = require('../settings/infrastructure/PrismaSettingsWriteTransaction');
 
   const tenantProfileStore = new TenantProfileStore();
-  const updateTenantSettingsUseCase = new UpdateTenantSettingsUseCase(tenantRepository, tenantProfileStore);
+  const settingsWriteTransaction = new PrismaSettingsWriteTransaction();
+  const updateTenantSettingsUseCase = new UpdateTenantSettingsUseCase(tenantRepository, tenantProfileStore, settingsWriteTransaction);
   const settingsController = new SettingsController(tenantRepository, tenantProfileStore, updateTenantSettingsUseCase);
   const settingsRoutes = createSettingsRouter(settingsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/settings', settingsRoutes);

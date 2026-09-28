@@ -17,6 +17,7 @@ export function lookupErrorMessage(err: any, t: TFunction): string {
   const data = err?.response?.data;
   const code = data?.code;
   if (code === 'LOOKUP_VALUE_TAKEN' && data?.field === 'level') return t('lists.errors.LEVEL_TAKEN');
+  if (code === 'LOOKUP_VALUE_TAKEN' && data?.field === 'days') return t('lists.errors.DAYS_TAKEN');
   if (code === 'RISK_LEVEL_STILL_USED') return t('lists.errors.RISK_LEVEL_STILL_USED', { count: data.activeBusinessTypes });
   if (code === 'AREA_HAS_ACTIVE_CITIES') return t('lists.errors.AREA_HAS_ACTIVE_CITIES', { count: data.activeCities });
   if (KNOWN_CODES.includes(code)) return t(`lists.errors.${code}`);

@@ -20,6 +20,7 @@ import { TeamSettingsPage } from '../pages/settings/team/TeamSettingsPage';
 import { RolesSettingsPage } from '../pages/settings/roles/RolesSettingsPage';
 import { AuditLogSettingsPage } from '../pages/settings/audit/AuditLogSettingsPage';
 import { ListsSettingsPage } from '../pages/settings/lists/ListsSettingsPage';
+import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
 import { InventoryList } from '../pages/inventory/InventoryList';
@@ -180,6 +181,16 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="settings.manage">
               <ListsSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/statuses',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="settings.manage">
+              <StatusesSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

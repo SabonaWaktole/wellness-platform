@@ -38,7 +38,10 @@
     "RiskLevel": "Risk level",
     "BusinessType": "Business type",
     "Area": "Area",
-    "City": "City"
+    "City": "City",
+    "FollowUpInterval": "Follow-up interval",
+    "LostReason": "Lost-deal reason",
+    "StatusLabel": "Status label"
   },
   "actors": {
     "system": "System",
@@ -85,6 +88,10 @@
     "description": "Description",
     "riskLevel": "Risk level",
     "area": "Area",
+    "days": "Days",
+    "labelSq": "Albanian label",
+    "labelEn": "English label",
+    "colour": "Colour",
     "order": "Order",
     "active": "Active"
   },

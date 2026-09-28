@@ -55,4 +55,17 @@ describe('SettingsLayout', () => {
 
     expect(screen.queryByRole('link', { name: 'Lists' })).toBeNull();
   });
+
+  it('FR-SET-07 links to Statuses for a user who manages settings', () => {
+    renderAs({ 'settings.manage': true });
+
+    const links = screen.getAllByRole('link', { name: 'Statuses' });
+    expect(links[0].getAttribute('href')).toBe('/acme/settings/statuses');
+  });
+
+  it('FR-SET-07 hides Statuses from a user who does not', () => {
+    renderAs({ 'users.manage': true, 'audit.view': true });
+
+    expect(screen.queryByRole('link', { name: 'Statuses' })).toBeNull();
+  });
 });

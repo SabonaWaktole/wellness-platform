@@ -83,7 +83,9 @@ export const ContractListContent: React.FC = () => {
   const getStatusBadgeVariant = (status: string): BadgeProps['variant'] => {
     switch (status) {
       case 'DRAFT': return 'secondary';
+      case 'PENDING_SIGNATURE': return 'warning';
       case 'ACTIVE': return 'success';
+      case 'SUSPENDED': return 'error';
       case 'EXPIRED': return 'warning';
       case 'CANCELLED': return 'error';
       default: return 'secondary';

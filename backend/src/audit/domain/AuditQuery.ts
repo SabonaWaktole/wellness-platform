@@ -2,11 +2,11 @@ import { AuditAction } from './AuditAction';
 
 /**
  * Entity types an `AuditEntry` is actually written with today (Slices 2, 5,
- * 6, 8, 9). Not enforced by the domain `AuditEntry` itself — a future slice
- * can audit a new entity by writing a new string, same as any other audited
- * write (FR-AUD-03) — but the viewer's filter and the CSV export validate
- * against this list so a typo in a query string fails loudly instead of
- * silently matching nothing.
+ * 6, 8, 9, 10). Not enforced by the domain `AuditEntry` itself — a future
+ * slice can audit a new entity by writing a new string, same as any other
+ * audited write (FR-AUD-03) — but the viewer's filter and the CSV export
+ * validate against this list so a typo in a query string fails loudly
+ * instead of silently matching nothing.
  */
 export const AUDITED_ENTITY_TYPES = [
   'Contract',
@@ -19,6 +19,10 @@ export const AUDITED_ENTITY_TYPES = [
   'BusinessType',
   'Area',
   'City',
+  'FollowUpInterval',
+  'LostReason',
+  'StatusLabel',
+  'Workspace',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];

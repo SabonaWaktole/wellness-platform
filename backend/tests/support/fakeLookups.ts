@@ -3,7 +3,7 @@ import { ILookupStore } from '../../src/lookups/application/ports/ILookupStore';
 import { ILookupWriteTransaction, ILookupWrites, LookupWriteRepos } from '../../src/lookups/application/ports/ILookupWriteTransaction';
 import { createLookupRules } from '../../src/lookups/application/LookupListRules';
 import { LookupList } from '../../src/lookups/domain/LookupList';
-import { Area, BusinessType, City, LookupRecord, RiskLevel } from '../../src/lookups/domain/LookupItem';
+import { Area, BusinessType, City, FollowUpInterval, LookupRecord, LostReason, RiskLevel } from '../../src/lookups/domain/LookupItem';
 import { IAuditTrail } from '../../src/audit/application/ports/IAuditTrail';
 import { AuditEntry } from '../../src/audit/domain/AuditEntry';
 
@@ -33,6 +33,21 @@ export const area = (overrides: Partial<Area> & { id: string; nameSq: string }):
 });
 
 export const city = (overrides: Partial<City> & { id: string; nameSq: string; areaId: string }): City => ({
+  nameEn: null,
+  order: 1,
+  active: true,
+  ...overrides,
+});
+
+export const followUpInterval = (overrides: Partial<FollowUpInterval> & { id: string; days: number }): FollowUpInterval => ({
+  nameSq: `${overrides.days} ditë`,
+  nameEn: `${overrides.days} days`,
+  order: overrides.days,
+  active: true,
+  ...overrides,
+});
+
+export const lostReason = (overrides: Partial<LostReason> & { id: string; nameSq: string }): LostReason => ({
   nameEn: null,
   order: 1,
   active: true,
@@ -136,5 +151,14 @@ export const standardLists = () => ({
     city({ id: 'c-tirane', nameSq: 'Tiranë', nameEn: 'Tirana', areaId: 'a-tirane', order: 1 }),
     city({ id: 'c-kamez', nameSq: 'Kamëz', nameEn: 'Kamëz', areaId: 'a-tirane', order: 2, active: false }),
     city({ id: 'c-vlore', nameSq: 'Vlorë', nameEn: 'Vlorë', areaId: 'a-vlore', order: 1 }),
+  ],
+  [LookupList.FollowUpIntervals]: [
+    followUpInterval({ id: 'f-3', days: 3, order: 1 }),
+    followUpInterval({ id: 'f-5', days: 5, order: 2 }),
+    followUpInterval({ id: 'f-7', days: 7, order: 3, active: false }),
+  ],
+  [LookupList.LostReasons]: [
+    lostReason({ id: 'lr-price', nameSq: 'Shumë e shtrenjtë', nameEn: 'Too expensive', order: 1 }),
+    lostReason({ id: 'lr-budget', nameSq: 'Pa buxhet', nameEn: 'No budget', order: 2, active: false }),
   ],
 });

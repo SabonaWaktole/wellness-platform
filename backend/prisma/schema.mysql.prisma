@@ -127,6 +127,13 @@ model Tenant {
   // Slice 9: areas and cities
   areas  Area[]
   cities City[]
+
+  // Slice 10: sales lists
+  followUpIntervals FollowUpInterval[]
+  lostReasons       LostReason[]
+
+  // Slice 10: status labels
+  statusLabels StatusLabel[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -1188,7 +1195,7 @@ model ContractPayment {
 
   /// UNPAID | PAID | PARTIAL | WAIVED — see PaymentStatus in
   /// src/contracts/domain/ContractPayment.ts.
-  status String @default("UNPAID")
+  status String @default("PAYMENT_PENDING")
 
   /// How much has actually landed. Equals `amount` for PAID and 0 for UNPAID;
   /// the field exists for PARTIAL, which is the only state where "how much is
@@ -1317,4 +1324,55 @@ model City {
 
   @@unique([tenantId, areaId, nameSq])
   @@index([tenantId, areaId, order])
+}
+
+/// Days after which an unattended deal should resurface (Slice 10:
+/// FR-SET-05). See the Postgres schema for the full rationale.
+model FollowUpInterval {
+  id        String   @id
+  tenantId  String
+  days      Int
+  nameSq    String
+  nameEn    String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, order])
+}
+
+/// Why a deal was marked lost (Slice 10: FR-SET-06). See the Postgres schema.
+model LostReason {
+  id        String   @id
+  tenantId  String
+  nameSq    String
+  nameEn    String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, order])
+}
+
+/// The label, order and colour set for one fixed status key (Slice 10:
+/// FR-SET-07, 08). See the Postgres schema for the full rationale.
+model StatusLabel {
+  tenantId  String
+  domain    String
+  key       String
+  labelSq   String
+  labelEn   String?
+  colour    String
+  order     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, domain, key])
 }

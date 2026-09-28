@@ -162,7 +162,7 @@ describe('Contracts API', () => {
       .set('Authorization', `Bearer ${tokenOwner}`);
 
     expect(detail.body.payments).toHaveLength(12);
-    expect(detail.body.payments.every((p: any) => p.status === PaymentStatus.Unpaid)).toBe(true);
+    expect(detail.body.payments.every((p: any) => p.status === PaymentStatus.PaymentPending)).toBe(true);
     expect(detail.body.contract.paymentSummary.outstanding).toBe(1200);
   });
 
@@ -218,7 +218,7 @@ describe('Contracts API', () => {
         .set('Authorization', `Bearer ${tokenOwner}`)
         .send({ action: 'PAY', amount: 40 });
 
-      expect(res.body.payment.status).toBe(PaymentStatus.Partial);
+      expect(res.body.payment.status).toBe(PaymentStatus.PartiallyPaid);
       expect(res.body.payment.outstanding).toBe(60);
     });
 
@@ -240,7 +240,7 @@ describe('Contracts API', () => {
         .set('Authorization', `Bearer ${tokenOwner}`)
         .send({ action: 'UNPAY' });
 
-      expect(res.body.payment.status).toBe(PaymentStatus.Unpaid);
+      expect(res.body.payment.status).toBe(PaymentStatus.PaymentPending);
       expect(res.body.contract.paymentSummary.paid).toBe(0);
     });
 

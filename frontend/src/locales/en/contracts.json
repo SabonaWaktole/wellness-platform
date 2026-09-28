@@ -1,14 +1,19 @@
 {
   "status": {
     "draft": "Draft",
+    "pendingSignature": "Pending signature",
     "active": "Active",
+    "suspended": "Suspended",
     "expired": "Expired",
     "cancelled": "Cancelled"
   },
   "paymentStatus": {
-    "unpaid": "Unpaid",
+    "notInvoiced": "Not invoiced",
+    "invoiceIssued": "Invoice issued",
+    "paymentPending": "Payment pending",
+    "partiallyPaid": "Partially paid",
     "paid": "Paid",
-    "partial": "Part paid",
+    "overdue": "Overdue",
     "waived": "Waived"
   },
   "billingPeriod": {

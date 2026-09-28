@@ -21,7 +21,7 @@ import { AuditAction } from '../../../../src/audit/domain/AuditAction';
 import { administrator, ceo, salesUser } from '../../../support/access';
 import { makeLookupHarness, standardLists, TENANT } from '../../../support/fakeLookups';
 
-const { RiskLevels, BusinessTypes, Areas, Cities } = LookupList;
+const { RiskLevels, BusinessTypes, Areas, Cities, FollowUpIntervals, LostReasons } = LookupList;
 
 function setup() {
   const h = makeLookupHarness(standardLists());
@@ -434,5 +434,71 @@ describe('Areas and cities', () => {
 
     await expect(remove.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-tirane' })).rejects.toThrow(LookupItemInUseError);
     expect(h.items(Areas)).toHaveLength(2);
+  });
+});
+
+describe('Sales lists', () => {
+  it('FR-SET-05 a follow-up interval needs a whole number of days that no other interval has', async () => {
+    const { h, create } = setup();
+    const values = (days: unknown) => ({ nameSq: `${days} ditë`, days });
+
+    await expect(create.execute({ access: admin(), tenantId: TENANT, list: FollowUpIntervals, values: values(5) })).rejects.toThrow(
+      LookupValueTakenError
+    );
+    await expect(create.execute({ access: admin(), tenantId: TENANT, list: FollowUpIntervals, values: values(0) })).rejects.toThrow(
+      InvalidLookupValueError
+    );
+    await expect(create.execute({ access: admin(), tenantId: TENANT, list: FollowUpIntervals, values: values(1.5) })).rejects.toThrow(
+      InvalidLookupValueError
+    );
+
+    const created = await create.execute({
+      access: admin(),
+      tenantId: TENANT,
+      list: FollowUpIntervals,
+      values: { nameSq: '10 ditë', nameEn: '10 days', days: 10 },
+    });
+    expect(created).toMatchObject({ days: 10, order: 4 });
+    expect(h.audit).toEqual([
+      expect.objectContaining({
+        entityType: 'FollowUpInterval',
+        entityId: created.id,
+        changes: [
+          { field: 'nameSq', old: null, new: '10 ditë' },
+          { field: 'nameEn', old: null, new: '10 days' },
+          { field: 'days', old: null, new: 10 },
+        ],
+      }),
+    ]);
+  });
+
+  it('FR-SET-05 the days of an inactive interval still count against a new one, same as its name', async () => {
+    const { create } = setup();
+
+    // f-7 seeds inactive, but its number is not offered again under a new name.
+    await expect(
+      create.execute({ access: admin(), tenantId: TENANT, list: FollowUpIntervals, values: { nameSq: 'Java e ardhshme', days: 7 } })
+    ).rejects.toThrow(LookupValueTakenError);
+  });
+
+  it('FR-SET-06 a lost-deal reason is labels only, and reorders like any other list', async () => {
+    const { h, create, reorder } = setup();
+
+    const created = await create.execute({ access: admin(), tenantId: TENANT, list: LostReasons, values: { nameSq: 'Konkurrenca' } });
+    expect(created).toMatchObject({ nameSq: 'Konkurrenca', order: 3 });
+    expect(h.audit[0]).toMatchObject({ entityType: 'LostReason', changes: [{ field: 'nameSq', old: null, new: 'Konkurrenca' }, { field: 'nameEn', old: null, new: null }] });
+
+    const reordered = await reorder.execute({ access: admin(), tenantId: TENANT, list: LostReasons, ids: ['lr-budget', 'lr-price', created.id] });
+    expect(reordered.map((r) => r.id)).toEqual(['lr-budget', 'lr-price', created.id]);
+  });
+
+  it('neither sales list is offered to a non-admin reader once inactive', async () => {
+    const { list } = setup();
+
+    const intervals = await list.execute({ access: salesUser(), tenantId: TENANT, list: FollowUpIntervals });
+    expect(intervals.map((i) => i.id)).toEqual(['f-3', 'f-5']); // f-7 seeds inactive
+
+    const reasons = await list.execute({ access: salesUser(), tenantId: TENANT, list: LostReasons });
+    expect(reasons.map((r) => r.id)).toEqual(['lr-price']); // lr-budget seeds inactive
   });
 });

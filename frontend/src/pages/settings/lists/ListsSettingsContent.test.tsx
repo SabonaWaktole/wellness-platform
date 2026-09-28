@@ -25,12 +25,21 @@ const CITIES = [
   { id: 'c1', nameSq: 'Tiranë', nameEn: 'Tirana', areaId: 'a1', order: 1, active: true },
   { id: 'c2', nameSq: 'Sarandë', nameEn: 'Saranda', areaId: 'a2', order: 1, active: true },
 ];
+const FOLLOW_UP_INTERVALS = [
+  { id: 'f3', nameSq: 'Shpejt', nameEn: 'Soon', days: 3, order: 1, active: true },
+  { id: 'f5', nameSq: 'Mesatare', nameEn: 'Medium', days: 5, order: 2, active: true },
+];
+const LOST_REASONS = [
+  { id: 'lr1', nameSq: 'Shumë e shtrenjtë', nameEn: 'Too expensive', order: 1, active: true },
+];
 
 const lists = {
   'risk-levels': { items: RISK_LEVELS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
   'business-types': { items: BUSINESS_TYPES, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
   areas: { items: AREAS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
   cities: { items: CITIES, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
+  'follow-up-intervals': { items: FOLLOW_UP_INTERVALS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
+  'lost-reasons': { items: LOST_REASONS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
 };
 
 const Location = () => <p data-testid="location">{useLocation().pathname}</p>;
@@ -150,6 +159,27 @@ describe('ListsSettingsContent', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Deactivate both' }));
 
     await waitFor(() => expect(lists.areas.setActive).toHaveBeenLastCalledWith('a1', false, true));
+  });
+
+  it('FR-SET-05 Follow-up intervals tab shows each interval\'s days, and creating one sends days as a number', async () => {
+    renderAt('/acme/settings/lists/follow-up-intervals');
+
+    const table = screen.getByRole('table', { name: 'Follow-up intervals' });
+    expect(within(within(table).getByTestId('lookup-row-f5')).getByText('5 days')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add value' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Albanian name' }), { target: { value: '10 ditë' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Days' }), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(lists['follow-up-intervals'].create).toHaveBeenCalledWith({ nameSq: '10 ditë', nameEn: null, days: 10 }));
+  });
+
+  it('FR-SET-06 Lost-deal reasons tab shows labels only', () => {
+    renderAt('/acme/settings/lists/lost-reasons');
+
+    const table = screen.getByRole('table', { name: 'Lost-deal reasons' });
+    expect(within(table).getByTestId('lookup-row-lr1')).toBeDefined();
   });
 });
 

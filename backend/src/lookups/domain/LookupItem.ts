@@ -32,6 +32,12 @@ export type City = LookupItem & {
   areaId: string;
 };
 
+export type FollowUpInterval = LookupItem & {
+  days: number;
+};
+
+export type LostReason = LookupItem;
+
 export interface LookupLabels {
   nameSq: string;
   nameEn: string | null;

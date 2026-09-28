@@ -16,7 +16,7 @@ describe('ContractPayment', () => {
   it('starts unpaid and owing the full amount', () => {
     const payment = makePayment();
 
-    expect(payment.status).toBe(PaymentStatus.Unpaid);
+    expect(payment.status).toBe(PaymentStatus.PaymentPending);
     expect(payment.outstanding).toBe(100);
   });
 
@@ -35,7 +35,7 @@ describe('ContractPayment', () => {
       const payment = makePayment();
       payment.recordPayment({ amount: 40 });
 
-      expect(payment.status).toBe(PaymentStatus.Partial);
+      expect(payment.status).toBe(PaymentStatus.PartiallyPaid);
       expect(payment.outstanding).toBe(60);
     });
 
@@ -79,7 +79,7 @@ describe('ContractPayment', () => {
     payment.recordPayment({});
     payment.markUnpaid();
 
-    expect(payment.status).toBe(PaymentStatus.Unpaid);
+    expect(payment.status).toBe(PaymentStatus.PaymentPending);
     expect(payment.paidAmount).toBe(0);
     expect(payment.paidAt).toBeNull();
     expect(payment.outstanding).toBe(100);
@@ -124,7 +124,7 @@ describe('ContractPayment', () => {
 
       // Price corrected upward: what was settled no longer covers it.
       payment.applyEdits({ amount: 150 });
-      expect(payment.status).toBe(PaymentStatus.Partial);
+      expect(payment.status).toBe(PaymentStatus.PartiallyPaid);
       expect(payment.outstanding).toBe(50);
     });
 
