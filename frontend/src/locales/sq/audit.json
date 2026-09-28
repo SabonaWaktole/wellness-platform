@@ -34,7 +34,9 @@
     "User": "Përdorues",
     "Invitation": "Ftesë",
     "Client": "Kompani",
-    "Role": "Rol"
+    "Role": "Rol",
+    "RiskLevel": "Nivel rreziku",
+    "BusinessType": "Lloj biznesi"
   },
   "actors": {
     "system": "Sistemi",
@@ -76,7 +78,12 @@
     "scopesChanged": "Fusha e ndryshuar",
     "nameSq": "Emri në shqip",
     "nameEn": "Emri në anglisht",
-    "copiedFrom": "Kopjuar nga"
+    "copiedFrom": "Kopjuar nga",
+    "level": "Niveli",
+    "description": "Përshkrimi",
+    "riskLevel": "Niveli i rrezikut",
+    "order": "Renditja",
+    "active": "Aktive"
   },
   "empty": {
     "title": "Asnjë hyrje nuk përputhet me këto filtra",

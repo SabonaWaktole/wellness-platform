@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../../store/useAuthStore';
-import { User, Building2, Sliders, UsersRound, ShieldCheck, Puzzle, PackageOpen, FolderTree, Bell, History } from 'lucide-react';
+import { User, Building2, Sliders, UsersRound, ShieldCheck, Puzzle, PackageOpen, FolderTree, Bell, History, ListChecks } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import styles from './SettingsLayout.module.css';
 
@@ -35,6 +35,7 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
     { id: 'profile', label: t('nav.profile'), icon: User },
     { id: 'company', label: t('nav.company'), icon: Building2, permission: 'settings.manage' },
     { id: 'client-management', label: t('nav.clientManagement'), icon: Sliders, permission: 'settings.manage' },
+    { id: 'lists', label: t('nav.lists'), icon: ListChecks, permission: 'settings.manage' },
     // Next to Company because it is workspace-wide policy, not a personal
     // preference — the page itself requires settings.manage for the same reason.
     { id: 'notifications', label: t('nav.notifications'), icon: Bell, permission: 'settings.manage' },

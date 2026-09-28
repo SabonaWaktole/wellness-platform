@@ -5,6 +5,7 @@
     "profile": "Profile",
     "company": "Company",
     "clientManagement": "Client Management",
+    "lists": "Lists",
     "notifications": "Notifications",
     "team": "Team",
     "roles": "Roles & Permissions",
@@ -554,5 +555,63 @@
     "formattingOneOf": "Formatting one of {{count}} selected objects.",
     "contrastWarningLight": "Hard to read on a light page ({{ratio}}:1). Aim for at least 3:1.",
     "contrastWarningDark": "Hard to read on a dark page ({{ratio}}:1). Aim for at least 3:1."
+  },
+  "lists": {
+    "breadcrumb": "Lists",
+    "title": "Lists",
+    "subtitle": "The values people choose from when they fill in a company. Deactivate a value to stop offering it; records that already use it keep it.",
+    "tabs": {
+      "riskLevels": "Risk levels",
+      "businessTypes": "Business types"
+    },
+    "hints": {
+      "riskLevels": "Each business type belongs to one risk level. A company's risk level follows from its business type.",
+      "businessTypes": "Changing a business type's risk level changes it for every company of that type."
+    },
+    "loading": "Loading…",
+    "loadFailed": "Couldn't load this list.",
+    "empty": "This list has no values yet.",
+    "add": "Add value",
+    "save": "Save",
+    "cancel": "Cancel",
+    "optional": "Optional",
+    "fallsBackToSq": "Uses the Albanian name",
+    "active": "Active",
+    "inactive": "Inactive",
+    "levelBadge": "Level {{level}}",
+    "chooseRiskLevel": "Choose a risk level",
+    "edit": "Edit {{name}}",
+    "deactivate": "Deactivate {{name}}",
+    "reactivate": "Reactivate {{name}}",
+    "delete": "Delete {{name}}",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "columns": {
+      "order": "Order",
+      "nameSq": "Albanian name",
+      "nameEn": "English name",
+      "level": "Level",
+      "description": "Description",
+      "riskLevel": "Risk level",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "deleteConfirm": {
+      "title": "Delete this value?",
+      "message": "\"{{name}}\" will be removed from the list. This cannot be undone.",
+      "confirm": "Delete"
+    },
+    "errors": {
+      "LOOKUP_ITEM_NOT_FOUND": "This value no longer exists. Reload the page.",
+      "INVALID_LOOKUP_VALUE": "Check the values: the Albanian name is required and a level is a whole number from 1 to 99.",
+      "LOOKUP_VALUE_TAKEN": "Another value in this list already has this name.",
+      "LEVEL_TAKEN": "Another risk level already has this level.",
+      "RISK_LEVEL_INACTIVE": "Choose an active risk level.",
+      "LOOKUP_ITEM_IN_USE": "This value is in use, so it can't be deleted. Deactivate it instead.",
+      "RISK_LEVEL_STILL_USED_one": "{{count}} active business type still uses this risk level. Move or deactivate it first.",
+      "RISK_LEVEL_STILL_USED_other": "{{count}} active business types still use this risk level. Move or deactivate them first.",
+      "INVALID_LOOKUP_ORDER": "The list changed while you were reordering it. Reload the page and try again.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }

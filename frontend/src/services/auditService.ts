@@ -2,8 +2,17 @@ import { apiClient as api } from '../api';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE';
 
-/** The entity types Slices 2, 5 and 6 actually write audit entries for. */
-export const AUDITED_ENTITY_TYPES = ['Contract', 'ContractPayment', 'User', 'Invitation', 'Client', 'Role'] as const;
+/** The entity types Slices 2, 5, 6 and 8 actually write audit entries for. */
+export const AUDITED_ENTITY_TYPES = [
+  'Contract',
+  'ContractPayment',
+  'User',
+  'Invitation',
+  'Client',
+  'Role',
+  'RiskLevel',
+  'BusinessType',
+] as const;
 export type AuditEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
 
 export interface AuditChange {
