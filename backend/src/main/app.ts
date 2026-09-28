@@ -878,9 +878,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   
   const { TenantProfileStore } = require('../settings/infrastructure/TenantProfileStore');
   const { UpdateTenantSettingsUseCase } = require('../settings/application/use-cases/UpdateTenantSettingsUseCase');
+  const { PrismaSettingsWriteTransaction } = require('../settings/infrastructure/PrismaSettingsWriteTransaction');
 
   const tenantProfileStore = new TenantProfileStore();
-  const updateTenantSettingsUseCase = new UpdateTenantSettingsUseCase(tenantRepository, tenantProfileStore);
+  const settingsWriteTransaction = new PrismaSettingsWriteTransaction();
+  const updateTenantSettingsUseCase = new UpdateTenantSettingsUseCase(tenantRepository, tenantProfileStore, settingsWriteTransaction);
   const settingsController = new SettingsController(tenantRepository, tenantProfileStore, updateTenantSettingsUseCase);
   const settingsRoutes = createSettingsRouter(settingsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/settings', settingsRoutes);

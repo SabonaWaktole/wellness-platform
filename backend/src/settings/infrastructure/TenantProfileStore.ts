@@ -1,4 +1,5 @@
-import { prisma } from '../../shared/infrastructure/prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 
 /**
  * The tenant's company profile: address, contact details, registration number,
@@ -37,8 +38,10 @@ const PROFILE_FIELDS = [
 ] as const;
 
 export class TenantProfileStore {
+  constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
+
   async get(tenantId: string): Promise<(TenantProfile & TenantBranding) | null> {
-    return prisma.tenant.findUnique({
+    return this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: {
         registrationNumber: true,
@@ -67,6 +70,6 @@ export class TenantProfileStore {
 
     if (Object.keys(data).length === 0) return;
 
-    await prisma.tenant.update({ where: { id: tenantId }, data });
+    await this.prisma.tenant.update({ where: { id: tenantId }, data });
   }
 }

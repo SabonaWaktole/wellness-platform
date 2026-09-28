@@ -22,6 +22,7 @@ export const AUDITED_ENTITY_TYPES = [
   'FollowUpInterval',
   'LostReason',
   'StatusLabel',
+  'Workspace',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
