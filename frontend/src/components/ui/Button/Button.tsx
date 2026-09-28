@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
     .join(' ');
 
   return (
-    <button className={classNames} disabled={isLoading || props.disabled} {...props}>
+    <button {...props} className={classNames} disabled={isLoading || props.disabled}>
       {isLoading ? (
         <>
           <Loader2 size={18} style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />

@@ -5,22 +5,31 @@ import { Button } from '../../../components/ui/Button/Button';
 import { TextInput } from '../../../components/ui/TextInput/TextInput';
 import { SelectInput } from '../../../components/ui/SelectInput/SelectInput';
 import { useWarehouses } from '../../../hooks/useWarehouses';
+import type { Role } from '../../../hooks/useTeam';
+import { roleLabel } from '../../../utils/roleLabel';
 import styles from './MemberModal.module.css';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInvite: (email: string, role: string, warehouseId?: string) => Promise<void>;
+  /** The workspace's roles (FR-USR-02). */
+  roles: Role[];
+  onInvite: (email: string, roleId: string, warehouseId?: string) => Promise<void>;
 }
+
+/** New people most often join sales, so the picker starts there. */
+const defaultRoleId = (roles: Role[]) => (roles.find((r) => r.key === 'SALES_USER') ?? roles[0])?.id ?? '';
 
 export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   isOpen,
   onClose,
+  roles,
   onInvite
 }) => {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
   const { t: tc } = useTranslation('common');
   const [email, setEmail] = useState('');
+  const [roleId, setRoleId] = useState('');
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const { warehouses, fetchWarehouses } = useWarehouses();
@@ -31,14 +40,19 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     }
   }, [isOpen, fetchWarehouses]);
 
+  useEffect(() => {
+    if (isOpen && !roleId) setRoleId(defaultRoleId(roles));
+  }, [isOpen, roles, roleId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !roleId) return;
     setLoading(true);
     try {
-      await onInvite(email, 'STAFF', warehouseId || undefined);
+      await onInvite(email, roleId, warehouseId || undefined);
       onClose();
       setEmail('');
+      setRoleId('');
       setWarehouseId('');
     } catch (err) {
       console.error(err);
@@ -60,8 +74,10 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
           required
         />
 
-        <SelectInput label={t('team.invite.role')} value="STAFF" disabled helperText={t('team.invite.roleStaffOnly')}>
-          <option value="STAFF">{t('team.invite.roleStaff')}</option>
+        <SelectInput label={t('team.invite.role')} value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>{roleLabel(role, i18n.language)}</option>
+          ))}
         </SelectInput>
 
         <SelectInput

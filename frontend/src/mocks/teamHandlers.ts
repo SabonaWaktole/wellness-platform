@@ -16,10 +16,23 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
  * them, and the Team Settings list must show them with a badge, so the default
  * fixture should exercise both rather than only the happy shape.
  */
+export const mockRoles = [
+  { id: 'r-sales', key: 'SALES_USER', nameSq: 'Përdorues Shitjesh', nameEn: 'Sales User', isSystem: true },
+  { id: 'r-manager', key: 'SALES_MANAGER', nameSq: 'Menaxher Shitjesh', nameEn: 'Sales Manager', isSystem: true },
+  { id: 'r-reception', key: 'RECEPTION', nameSq: 'Recepsion', nameEn: 'Reception', isSystem: true },
+  { id: 'r-admin', key: 'ADMINISTRATOR', nameSq: 'Administrator', nameEn: 'Administrator', isSystem: true },
+  { id: 'r-ceo', key: 'CEO', nameSq: 'CEO', nameEn: 'CEO', isSystem: true },
+];
+
+const withRole = (roleId: string) => {
+  const role = mockRoles.find((r) => r.id === roleId)!;
+  return { roleId, roleKey: role.key, roleNameSq: role.nameSq, roleNameEn: role.nameEn };
+};
+
 export const mockStaff = [
-  { id: 'u1', email: 'ada@example.com', role: 'BUSINESS_OWNER', firstName: 'Ada', lastName: 'Lovelace', isActive: true },
-  { id: 'u2', email: 'grace@example.com', role: 'STAFF', firstName: 'Grace', lastName: 'Hopper', isActive: true },
-  { id: 'u3', email: 'alan@example.com', role: 'STAFF', firstName: 'Alan', lastName: 'Turing', isActive: false },
+  { id: 'u1', email: 'ada@example.com', role: 'BUSINESS_OWNER', ...withRole('r-admin'), firstName: 'Ada', lastName: 'Lovelace', isActive: true },
+  { id: 'u2', email: 'grace@example.com', role: 'STAFF', ...withRole('r-sales'), firstName: 'Grace', lastName: 'Hopper', isActive: true },
+  { id: 'u3', email: 'alan@example.com', role: 'STAFF', ...withRole('r-sales'), firstName: 'Alan', lastName: 'Turing', isActive: false },
 ];
 
 export const teamHandlers = [
@@ -28,6 +41,12 @@ export const teamHandlers = [
   ),
 
   http.get(`${API_URL}/:tenantSlug/auth/invitations`, () => HttpResponse.json([])),
+
+  http.get(`${API_URL}/:tenantSlug/auth/roles`, () => HttpResponse.json({ roles: mockRoles })),
+
+  http.get(`${API_URL}/:tenantSlug/auth/staff/:id/deactivation-impact`, () =>
+    HttpResponse.json({ clients: 0, upcomingAppointments: 0, openContracts: 0, companies: [] })
+  ),
 ];
 
 /**

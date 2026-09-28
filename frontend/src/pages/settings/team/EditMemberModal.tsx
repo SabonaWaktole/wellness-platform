@@ -4,30 +4,35 @@ import { Modal } from '../../../components/ui/Modal/Modal';
 import { Button } from '../../../components/ui/Button/Button';
 import { SelectInput } from '../../../components/ui/SelectInput/SelectInput';
 import { useWarehouses } from '../../../hooks/useWarehouses';
-import type { StaffMember } from '../../../hooks/useTeam';
+import type { Role, StaffMember } from '../../../hooks/useTeam';
+import { roleLabel } from '../../../utils/roleLabel';
+import { teamErrorMessage } from './teamErrorMessage';
 import styles from './MemberModal.module.css';
 
 interface EditMemberModalProps {
   member: StaffMember | null;
   onClose: () => void;
-  onUpdate: (userId: string, role: string, warehouseId?: string) => Promise<void>;
+  /** The workspace's roles (FR-USR-03). */
+  roles: Role[];
+  onUpdate: (userId: string, roleId: string, warehouseId?: string) => Promise<void>;
 }
 
 export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   member,
   onClose,
+  roles,
   onUpdate
 }) => {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
   const { t: tc } = useTranslation('common');
-  const [role, setRole] = useState('STAFF');
+  const [roleId, setRoleId] = useState('');
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const { warehouses, fetchWarehouses } = useWarehouses();
 
   useEffect(() => {
     if (member) {
-      setRole(member.role);
+      setRoleId(member.roleId ?? '');
       setWarehouseId(member.warehouseId || '');
       fetchWarehouses();
     }
@@ -38,11 +43,11 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
     if (!member) return;
     setLoading(true);
     try {
-      await onUpdate(member.id, role, warehouseId || undefined);
+      await onUpdate(member.id, roleId, warehouseId || undefined);
       onClose();
     } catch (err) {
       console.error(err);
-      alert(t('team.edit.failed'));
+      alert(teamErrorMessage(err, t, t('team.edit.failed')));
     } finally {
       setLoading(false);
     }
@@ -54,10 +59,12 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
     <Modal isOpen={!!member} onClose={onClose} title={t('team.edit.title')}>
       <p className={styles.subtitle}>{t('team.edit.editing', { email: member.email })}</p>
       <form onSubmit={handleSubmit} className={styles.form}>
-        <SelectInput label={t('team.edit.role')} value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="STAFF">{t('team.invite.roleStaff')}</option>
-          <option value="BUSINESS_OWNER">{t('team.invite.roleOwner')}</option>
+        <SelectInput label={t('team.edit.role')} value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>{roleLabel(role, i18n.language)}</option>
+          ))}
         </SelectInput>
+        <p className={styles.subtitle}>{t('team.edit.roleAppliesNextLoad')}</p>
 
         <SelectInput label={t('team.edit.warehouse')} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
           <option value="">{t('team.invite.noWarehouse')}</option>

@@ -2,10 +2,24 @@ import { useState, useCallback } from 'react';
 import { apiClient as api } from '../api';
 import { useParams } from 'react-router-dom';
 
+/** One of the workspace's roles, as the role picker offers it (FR-USR-02). */
+export interface Role {
+  id: string;
+  key: string;
+  nameSq: string;
+  nameEn: string;
+  isSystem: boolean;
+}
+
 export interface StaffMember {
   id: string;
   email: string;
+  /** Legacy role string ('BUSINESS_OWNER' | 'STAFF'); the role itself is `roleId`. */
   role: string;
+  roleId?: string | null;
+  roleKey?: string | null;
+  roleNameSq?: string | null;
+  roleNameEn?: string | null;
   firstName?: string;
   lastName?: string;
   warehouseId?: string;
@@ -16,12 +30,16 @@ export interface StaffMember {
 export interface DeactivationImpact {
   clients: number;
   upcomingAppointments: number;
+  openContracts: number;
+  /** The first of the member's companies by name; `clients` is the full count. */
+  companies: Array<{ id: string; name: string }>;
 }
 
 export interface PendingInvitation {
   id: string;
   email: string;
   role: string;
+  roleId?: string | null;
   expiresAt: string;
   warehouseId?: string;
 }
@@ -59,10 +77,16 @@ export const useTeam = () => {
     }
   }, [tenantSlug]);
 
-  const inviteStaff = async (email: string, role: string, warehouseId?: string) => {
+  const fetchRoles = useCallback(async (): Promise<Role[]> => {
+    if (!tenantSlug) return [];
+    const response = await api.get(`/${tenantSlug}/auth/roles`);
+    return response.data.roles;
+  }, [tenantSlug]);
+
+  const inviteStaff = async (email: string, roleId: string, warehouseId?: string) => {
     if (!tenantSlug) return;
     try {
-      await api.post(`/${tenantSlug}/auth/invitations`, { email, role, warehouseId });
+      await api.post(`/${tenantSlug}/auth/invitations`, { email, roleId, warehouseId });
       await fetchPendingInvitations();
     } catch (error) {
       console.error('Failed to invite staff', error);
@@ -70,10 +94,10 @@ export const useTeam = () => {
     }
   };
 
-  const updateStaffRole = async (userId: string, role: string, warehouseId?: string) => {
+  const updateStaffRole = async (userId: string, roleId: string, warehouseId?: string) => {
     if (!tenantSlug) return;
     try {
-      await api.put(`/${tenantSlug}/auth/staff/${userId}`, { role, warehouseId });
+      await api.put(`/${tenantSlug}/auth/staff/${userId}`, { roleId, warehouseId: warehouseId ?? null });
       await fetchStaff();
     } catch (error) {
       console.error('Failed to update staff role', error);
@@ -88,10 +112,11 @@ export const useTeam = () => {
     return response.data;
   };
 
-  const deactivateStaff = async (userId: string) => {
+  /** `reassignToUserId` takes over the member's companies and open contracts (FR-USR-05). */
+  const deactivateStaff = async (userId: string, reassignToUserId?: string) => {
     if (!tenantSlug) throw new Error('Missing tenant context');
     try {
-      await api.post(`/${tenantSlug}/auth/staff/${userId}/deactivate`);
+      await api.post(`/${tenantSlug}/auth/staff/${userId}/deactivate`, { reassignToUserId: reassignToUserId ?? null });
       await fetchStaff();
     } catch (error) {
       console.error('Failed to deactivate staff member', error);
@@ -133,6 +158,7 @@ export const useTeam = () => {
     loadingInvitations,
     fetchStaff,
     fetchPendingInvitations,
+    fetchRoles,
     inviteStaff,
     updateStaffRole,
     cancelInvitation,

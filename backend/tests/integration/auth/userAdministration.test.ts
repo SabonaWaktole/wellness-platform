@@ -76,6 +76,8 @@ describe('User administration on the new roles (UAT-5)', () => {
 
     const invitation = await prisma.invitation.findFirstOrThrow({ where: { tenantId, email } });
     expect(invitation.roleId).toBe(roles[RoleKey.Reception]);
+    const pending = await as(adminToken).get(`/api/${slug}/auth/invitations`).expect(200);
+    expect(pending.body.find((i: { email: string }) => i.email === email)).toMatchObject({ roleId: roles[RoleKey.Reception] });
 
     await request(app).post('/api/auth/invitations/accept').send({ token: invitation.token, newPassword: 'Password123' }).expect(200);
 

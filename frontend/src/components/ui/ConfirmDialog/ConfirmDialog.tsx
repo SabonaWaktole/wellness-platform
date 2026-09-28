@@ -20,6 +20,8 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   /** `danger` for anything that destroys data. */
   tone?: 'danger' | 'primary';
+  /** Blocks confirming until the message's own inputs are complete. */
+  confirmDisabled?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmLabel,
   cancelLabel,
   tone = 'danger',
+  confirmDisabled = false,
 }) => {
   const { t } = useTranslation('common');
   const [isPending, setIsPending] = useState(false);
@@ -79,6 +82,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             onClick={handleConfirm}
             isLoading={isPending}
+            disabled={confirmDisabled}
           >
             {confirmLabel ?? t('dialog.confirm')}
           </Button>
