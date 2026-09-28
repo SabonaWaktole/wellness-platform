@@ -29,4 +29,17 @@ describe('SettingsLayout', () => {
     expect(screen.queryByRole('link', { name: 'Roles & Permissions' })).toBeNull();
     expect(screen.getAllByRole('link', { name: 'Team' }).length).toBeGreaterThan(0);
   });
+
+  it('FR-AUD-06 links to Audit log for a user who can view it', () => {
+    renderAs({ 'audit.view': true });
+
+    const links = screen.getAllByRole('link', { name: 'Audit log' });
+    expect(links[0].getAttribute('href')).toBe('/acme/settings/audit');
+  });
+
+  it('FR-AUD-06 hides it from a user who cannot', () => {
+    renderAs({ 'users.manage': true });
+
+    expect(screen.queryByRole('link', { name: 'Audit log' })).toBeNull();
+  });
 });

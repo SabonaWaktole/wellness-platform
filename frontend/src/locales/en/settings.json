@@ -10,7 +10,8 @@
     "roles": "Roles & Permissions",
     "integrations": "Integrations",
     "warehouses": "Warehouses",
-    "categories": "Categories"
+    "categories": "Categories",
+    "audit": "Audit log"
   },
   "company": {
     "title": "Company Settings",

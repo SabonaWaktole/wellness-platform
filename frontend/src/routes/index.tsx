@@ -18,6 +18,7 @@ import { ClientSettingsPage } from '../pages/settings/ClientSettingsPage';
 import { FormBuilderPage } from '../pages/settings/FormBuilderPage';
 import { TeamSettingsPage } from '../pages/settings/team/TeamSettingsPage';
 import { RolesSettingsPage } from '../pages/settings/roles/RolesSettingsPage';
+import { AuditLogSettingsPage } from '../pages/settings/audit/AuditLogSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
 import { InventoryList } from '../pages/inventory/InventoryList';
@@ -168,6 +169,16 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="roles.manage">
               <RolesSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/audit',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="audit.view">
+              <AuditLogSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

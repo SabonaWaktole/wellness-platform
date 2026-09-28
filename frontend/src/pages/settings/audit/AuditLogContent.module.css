@@ -1,0 +1,196 @@
+/* ============================================================================
+ * Audit log viewer (Slice 7). Works from 360px: the filter bar wraps to one
+ * field per row, and the table falls back to cards (DataTable's own
+ * behaviour) below the desktop breakpoint.
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+@media (min-width: 600px) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.headerTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-headline-sm);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* --- Filters -------------------------------------------------------------- */
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-sm);
+}
+
+@media (min-width: 600px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .filters {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: end;
+  }
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xs);
+}
+
+.filterLabel {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dateInput {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-container-lowest);
+  box-shadow: inset 0 0 0 1px var(--border-hairline);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.dateInput:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- Table cells ------------------------------------------------------- */
+
+.userCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xs);
+}
+
+.mutedText {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-tertiary);
+}
+
+.errorText {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--color-error);
+}
+
+/* --- Detail drawer ------------------------------------------------------- */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.detailMeta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-sm);
+  margin: 0;
+}
+
+@media (min-width: 480px) {
+  .detailMeta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.detailMeta dt {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.detailMeta dd {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.changesTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-body-sm);
+}
+
+.changesTable th,
+.changesTable td {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-hairline);
+  overflow-wrap: anywhere;
+}
+
+.changesTable th {
+  color: var(--text-secondary);
+  font-weight: 620;
+}
+
+.dash {
+  color: var(--text-tertiary);
+}
+
+.redacted {
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2xs);
+}
+
+.chip {
+  padding: 2px var(--spacing-xs);
+  border-radius: var(--radius-full, 999px);
+  background-color: var(--color-surface-container-lowest);
+  box-shadow: inset 0 0 0 1px var(--border-hairline);
+  font-size: var(--font-size-label-sm);
+}
+
+.objectLines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.objectLine {
+  font-size: var(--font-size-body-sm);
+}
