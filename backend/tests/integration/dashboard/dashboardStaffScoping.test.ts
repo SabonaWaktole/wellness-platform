@@ -33,6 +33,7 @@ describe('Dashboard role-based data scoping', () => {
   // suites shared this Jest worker. See TD-001.
   let slug = '';
   let staffClientId: string;
+  let otherStaffClientId: string;
 
   const DAY_MS = 24 * 60 * 60_000;
   const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS);
@@ -73,10 +74,11 @@ describe('Dashboard role-based data scoping', () => {
     // 3 clients in the tenant: 1 owned by our staff member, 2 owned by someone
     // else. A correctly scoped staff view sees exactly 1; the owner sees 3.
     staffClientId = uuidv4();
+    otherStaffClientId = uuidv4();
     await prisma.client.createMany({
       data: [
         { id: staffClientId, tenantId, name: 'Staff Own Client', status: ClientStatus.PROSPECT, assignedUserId: staffId, lastUpdatedByUserId: staffId, customFieldValues: {} },
-        { id: uuidv4(), tenantId, name: 'Other Staff Client', status: ClientStatus.PROSPECT, assignedUserId: otherStaffId, lastUpdatedByUserId: otherStaffId, customFieldValues: {} },
+        { id: otherStaffClientId, tenantId, name: 'Other Staff Client', status: ClientStatus.PROSPECT, assignedUserId: otherStaffId, lastUpdatedByUserId: otherStaffId, customFieldValues: {} },
         { id: uuidv4(), tenantId, name: 'Unassigned Client', status: ClientStatus.PROSPECT, lastUpdatedByUserId: ownerId, customFieldValues: {} },
       ],
     });
@@ -188,8 +190,9 @@ describe('Dashboard role-based data scoping', () => {
           { id: uuidv4(), tenantId, clientId: staffClientId, createdByUserId: staffId, status: 'SENT', sentAt: daysAgo(10), respondedAt: daysAgo(9) },
           // Never sent: a draft cannot be waiting on anyone.
           { id: uuidv4(), tenantId, clientId: staffClientId, createdByUserId: staffId, status: 'DRAFT' },
-          // Another rep's stale quotation — visible to the owner, not to staff.
-          stale(otherStaffId, staffClientId),
+          // Another rep's stale quotation on their own company — visible to
+          // the owner, not to staff (FR-RBAC-11: quotations follow their company).
+          stale(otherStaffId, otherStaffClientId),
         ],
       });
     });

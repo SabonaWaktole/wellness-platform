@@ -1,5 +1,6 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { assertReachesQuotation } from './quotationAccess';
+import { reachableQuotation } from './quotationAccess';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
 import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationWriteTransaction } from '../ports/IQuotationWriteTransaction';
@@ -20,6 +21,7 @@ export class SubmitQuotationUseCase {
     private userRepo: IUserRepository,
     private lineItemRepo: IQuotationLineItemRepository,
     private stockLevelRepo: IStockLevelRepository,
+    private scopes: RecordScopeResolver,
     private emailDispatcher?: IPostCommitEmailDispatcher,
     private delivery?: IQuotationDeliveryService
   ) {}
@@ -31,13 +33,14 @@ export class SubmitQuotationUseCase {
     access: AccessContext;
     requiresQuotationApproval: boolean;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'quotations.manage');
     const result = await runWithPostCommitEmail(this.writeTx, this.emailDispatcher, async (repos, notify) => {
       const quotation = await repos.quotationRepo.findById(input.tenantId, input.quotationId);
       if (!quotation) {
         throw new Error('Quotation not found');
       }
 
-      assertReachesQuotation(quotation, input.access);
+      reachableQuotation(quotation, scope);
 
       const fromStatus = quotation.status;
       quotation.submit({ requiresApproval: input.requiresQuotationApproval });

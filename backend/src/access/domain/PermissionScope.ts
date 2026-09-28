@@ -1,10 +1,7 @@
 /**
- * How far a scoped permission reaches (FR-RBAC-03). `OWN` and `TEAM` are
- * interim in Slice 3: every repository still returns unfiltered results for
- * `TEAM` and `ALL` alike until Slice 4 adds the real data-scope filter
- * (FR-RBAC-11..13). `OWN` is enforced from this slice on, because it maps
- * onto filters ("created by me", "assigned to me", "my warehouse") that
- * already exist in the codebase.
+ * How far a scoped permission reaches (FR-RBAC-03, 11..13). `RecordScope`
+ * turns it into a repository filter: OWN is "assigned to me", TEAM is Sales
+ * Users plus me plus unassigned (D4), ALL is no filter.
  */
 export enum PermissionScope {
   Own = 'OWN',

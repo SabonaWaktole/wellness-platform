@@ -1,9 +1,7 @@
 import { BillingPeriod, Contract } from '../../domain/Contract';
-import { PermissionDeniedError } from '../../../access/domain/errors';
-import { accessWith, administrator, salesManager, salesUser } from '../../../../tests/support/access';
-import { assertCanAccessContract, canAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
 
-const contract = (createdByUserId: string, assignedUserId: string | null = null) =>
+const contractOf = (clientAssignedUserId: string | null) =>
   Contract.create({
     id: 'c1',
     tenantId: 't1',
@@ -13,35 +11,29 @@ const contract = (createdByUserId: string, assignedUserId: string | null = null)
     billingPeriod: BillingPeriod.Monthly,
     startsAt: new Date('2026-01-01'),
     endsAt: new Date('2026-12-31'),
-    createdByUserId,
-    assignedUserId,
+    createdByUserId: 'someone',
+    assignedUserId: 'someone',
+    clientAssignedUserId,
   });
 
-describe('contractAccess', () => {
-  it('FR-RBAC-11 an OWN-scoped caller reaches a contract they created or are assigned', () => {
-    const me = salesUser({ userId: 'me' });
-    expect(canAccessContract(contract('me'), me)).toBe(true);
-    expect(canAccessContract(contract('someone', 'me'), me)).toBe(true);
-    expect(canAccessContract(contract('someone', 'other'), me)).toBe(false);
+describe('reachableContract (FR-RBAC-11: a contract follows its company)', () => {
+  const own = { kind: 'owners' as const, userIds: ['me'], includeUnowned: false };
+
+  it('returns a contract whose company is in scope', () => {
+    const contract = contractOf('me');
+    expect(reachableContract(contract, own)).toBe(contract);
   });
 
-  it('FR-RBAC-11 a wider scope reaches every contract', () => {
-    expect(canAccessContract(contract('someone', 'other'), salesManager({ userId: 'me' }))).toBe(true);
-    expect(canAccessContract(contract('someone', 'other'), administrator({ userId: 'me' }))).toBe(true);
+  it('treats a contract whose company is out of scope as not found, whoever created it', () => {
+    expect(() => reachableContract(contractOf('other'), own)).toThrow('Contract not found');
   });
 
-  it('FR-RBAC-05 reads the scope of the key asked for, not the role name', () => {
-    const readsAllWritesOwn = accessWith(
-      { 'contracts.validity.view': 'ALL' as any, 'contracts.manage': 'OWN' as any },
-      { userId: 'me' }
-    );
-    expect(canAccessContract(contract('someone'), readsAllWritesOwn, 'contracts.validity.view')).toBe(true);
-    expect(canAccessContract(contract('someone'), readsAllWritesOwn, 'contracts.manage')).toBe(false);
+  it('treats a missing contract as not found', () => {
+    expect(() => reachableContract(null, { kind: 'all' })).toThrow('Contract not found');
   });
 
-  it('assertCanAccessContract throws PermissionDeniedError outside scope', () => {
-    expect(() => assertCanAccessContract(contract('someone'), salesUser({ userId: 'me' }))).toThrow(
-      PermissionDeniedError
-    );
+  it('TEAM reaches the contracts of unassigned companies', () => {
+    const team = { kind: 'owners' as const, userIds: ['me'], includeUnowned: true };
+    expect(reachableContract(contractOf(null), team)).toBeDefined();
   });
 });

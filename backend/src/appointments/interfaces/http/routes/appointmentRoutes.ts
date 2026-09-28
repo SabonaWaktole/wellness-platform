@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { RecordScopeResolver } from '../../../../access/application/RecordScopeResolver';
+import { PrismaTeamRoster } from '../../../../access/infrastructure/PrismaTeamRoster';
 import { AppointmentController } from '../controllers/AppointmentController';
 import { CreateAppointmentUseCase } from '../../../application/use-cases/CreateAppointmentUseCase';
 import { UpdateAppointmentUseCase } from '../../../application/use-cases/UpdateAppointmentUseCase';
@@ -41,6 +43,7 @@ export const createAppointmentRouter = (
 
   // Repositories
   const appointmentRepo = new PrismaAppointmentRepository(prisma);
+  const scopes = new RecordScopeResolver(new PrismaTeamRoster(prisma));
   const clientRepo = new PrismaClientRepository(prisma);
   const userRepo = new PrismaUserRepository(); // PrismaUserRepository creates its own PrismaClient inside, or we can use it directly depending on implementation
 
@@ -51,14 +54,14 @@ export const createAppointmentRouter = (
     new NotificationService(new PrismaNotificationRepository(prisma), userRepo);
 
   // Use Cases
-  const createAppointmentUseCase = new CreateAppointmentUseCase(appointmentRepo, clientRepo, userRepo, notifications);
-  const updateAppointmentUseCase = new UpdateAppointmentUseCase(appointmentRepo, clientRepo, userRepo);
-  const rescheduleAppointmentUseCase = new RescheduleAppointmentUseCase(appointmentRepo, notifications);
-  const cancelAppointmentUseCase = new CancelAppointmentUseCase(appointmentRepo, notifications);
-  const updateAppointmentStatusUseCase = new UpdateAppointmentStatusUseCase(appointmentRepo);
-  const searchAppointmentsUseCase = new SearchAppointmentsUseCase(appointmentRepo);
-  const getUpcomingAppointmentsUseCase = new GetUpcomingAppointmentsUseCase(appointmentRepo);
-  const getAppointmentHistoryUseCase = new GetAppointmentHistoryUseCase(appointmentRepo);
+  const createAppointmentUseCase = new CreateAppointmentUseCase(appointmentRepo, clientRepo, userRepo, scopes, notifications);
+  const updateAppointmentUseCase = new UpdateAppointmentUseCase(appointmentRepo, scopes, clientRepo, userRepo);
+  const rescheduleAppointmentUseCase = new RescheduleAppointmentUseCase(appointmentRepo, scopes, notifications);
+  const cancelAppointmentUseCase = new CancelAppointmentUseCase(appointmentRepo, scopes, notifications);
+  const updateAppointmentStatusUseCase = new UpdateAppointmentStatusUseCase(appointmentRepo, scopes);
+  const searchAppointmentsUseCase = new SearchAppointmentsUseCase(appointmentRepo, scopes);
+  const getUpcomingAppointmentsUseCase = new GetUpcomingAppointmentsUseCase(appointmentRepo, scopes);
+  const getAppointmentHistoryUseCase = new GetAppointmentHistoryUseCase(appointmentRepo, scopes);
 
   // Controller
   const appointmentController = new AppointmentController(

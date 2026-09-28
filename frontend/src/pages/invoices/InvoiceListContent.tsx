@@ -11,6 +11,7 @@ import styles from './InvoiceListContent.module.css';
 import { useInvoices } from '../../hooks/useInvoices';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
+import { usePermission } from '../../hooks/usePermission';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useDateFormat } from '../../hooks/useDateFormat';
 
@@ -21,6 +22,8 @@ export const InvoiceListContent: React.FC = () => {
   const { t } = useTranslation('invoices');
   const { t: tc } = useTranslation('common');
   const { format: formatMoney } = useMoneyFormat();
+  // FR-RBAC-06: without commercial.view the API sends no totals.
+  const seesValue = usePermission('commercial.view');
   const statusLabel = useStatusLabel();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<InvoiceTab>('ALL');
@@ -112,13 +115,13 @@ export const InvoiceListContent: React.FC = () => {
                   <th>{t('list.columnClient')}</th>
                   <th>{t('list.columnCreated')}</th>
                   <th>{t('list.columnDue')}</th>
-                  <th>{t('list.columnTotal')}</th>
+                  {seesValue && <th>{t('list.columnTotal')}</th>}
                   <th>{t('list.columnStatus')}</th>
                   <th className={styles.tdAction}></th>
                 </tr>
               </thead>
               <tbody>
-                {loading && <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>{tc('state.loading')}</td></tr>}
+                {loading && <tr><td colSpan={seesValue ? 7 : 6} style={{ textAlign: 'center', padding: '20px' }}>{tc('state.loading')}</td></tr>}
                 {!loading && invoices.map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
@@ -135,9 +138,11 @@ export const InvoiceListContent: React.FC = () => {
                     <td>
                       <span className={styles.mutedText}>{dates.date(invoice.dueDate)}</span>
                     </td>
-                    <td>
-                      <span className={styles.amountText}>{formatMoney(invoice.grandTotal ?? 0)}</span>
-                    </td>
+                    {seesValue && (
+                      <td>
+                        <span className={styles.amountText}>{formatMoney(invoice.grandTotal ?? 0)}</span>
+                      </td>
+                    )}
                     <td>
                       <Badge variant={getStatusBadgeVariant(invoice.status)}>
                         {statusLabel.invoice(invoice.status)}

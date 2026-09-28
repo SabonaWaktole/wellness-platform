@@ -1,5 +1,6 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { assertReachesQuotation } from '../../../quotations/application/use-cases/quotationAccess';
+import { reachableQuotation } from '../../../quotations/application/use-cases/quotationAccess';
 import { IQuotationRepository } from '../../../quotations/domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../../quotations/domain/IQuotationLineItemRepository';
 import { QuotationStatus } from '../../../quotations/domain/Quotation';
@@ -33,7 +34,8 @@ export class ConvertQuotationToInvoiceUseCase {
     private quotationRepo: IQuotationRepository,
     private quotationLineItemRepo: IQuotationLineItemRepository,
     private invoiceRepo: IInvoiceRepository,
-    private writeTx: IInvoiceWriteTransaction
+    private writeTx: IInvoiceWriteTransaction,
+    private scopes: RecordScopeResolver
   ) {}
 
   async execute(input: {
@@ -48,7 +50,7 @@ export class ConvertQuotationToInvoiceUseCase {
       throw new Error('Quotation not found');
     }
 
-    assertReachesQuotation(quotation, input.access);
+    reachableQuotation(quotation, await this.scopes.resolve(input.access, 'invoices.manage'));
 
     if (quotation.status !== QuotationStatus.Accepted) {
       throw new Error('Only an accepted quotation can be converted to an invoice');

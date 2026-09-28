@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../domain/enums/FieldType';
 import { FieldRole } from '../../domain/enums/FieldRole';
@@ -26,6 +27,7 @@ export interface ImportClientsResult {
 interface ImportClientsDTO {
   tenantId: string;
   authorUserId: string;
+  access: AccessContext;
   sheet: ParsedSheet;
 }
 
@@ -134,6 +136,7 @@ export class ImportClientsUseCase {
           ...parsed.data,
           tenantId: dto.tenantId,
           authorUserId: dto.authorUserId,
+          access: dto.access,
         });
         result.created += 1;
       } catch (error: any) {

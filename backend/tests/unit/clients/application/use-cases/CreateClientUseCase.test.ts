@@ -6,6 +6,8 @@ import { CustomFieldDefinition } from '../../../../../src/clients/domain/entitie
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
 import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('CreateClientUseCase', () => {
   let useCase: CreateClientUseCase;
@@ -80,6 +82,7 @@ describe('CreateClientUseCase', () => {
         source: 'Referral',
       },
       authorUserId: 'u1',
+      access: administrator(),
     });
 
     expect(result.id).toBeDefined();
@@ -96,8 +99,46 @@ describe('CreateClientUseCase', () => {
         unknownField: 'test',
       },
       authorUserId: 'u1',
+      access: administrator(),
     })).rejects.toThrow('Field "unknownField" is not defined for this tenant.');
 
     expect(clientRepo.save).not.toHaveBeenCalled();
+  });
+
+  describe('FR-RBAC-14 the responsible salesperson', () => {
+    it('assigns a company created by a Sales User to that user by default', async () => {
+      const result = await useCase.execute({
+        tenantId: 't1', customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT },
+        authorUserId: 'sales-a', access: salesUser({ userId: 'sales-a' }),
+      });
+
+      expect(result.assignedUserId).toBe('sales-a');
+    });
+
+    it('leaves a company created by a wider scope unassigned unless told otherwise', async () => {
+      const result = await useCase.execute({
+        tenantId: 't1', customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT },
+        authorUserId: 'adm', access: administrator({ userId: 'adm' }),
+      });
+
+      expect(result.assignedUserId ?? null).toBeNull();
+    });
+
+    it('refuses a Sales User naming someone else as responsible (companies.reassign)', async () => {
+      await expect(useCase.execute({
+        tenantId: 't1', customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT, 'Assigned To': 'sales-b' },
+        authorUserId: 'sales-a', access: salesUser({ userId: 'sales-a' }),
+      })).rejects.toThrow(PermissionDeniedError);
+      expect(clientRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('a public form submission (no signed-in user) is not assigned', async () => {
+      const result = await useCase.execute({
+        tenantId: 't1', customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT },
+        authorUserId: 'owner', access: null,
+      });
+
+      expect(result.assignedUserId ?? null).toBeNull();
+    });
   });
 });

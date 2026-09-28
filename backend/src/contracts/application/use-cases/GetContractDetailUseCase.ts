@@ -3,8 +3,9 @@ import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
 import { ContractStatus } from '../../domain/Contract';
-import { canAccessContract } from './contractAccess';
-import { PermissionDeniedError } from '../../../access/domain/errors';
+import { reachableContract } from './contractAccess';
+import { admits } from '../../../access/domain/RecordScope';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Everything one contract's page needs, including what the viewer is allowed
@@ -19,7 +20,8 @@ export class GetContractDetailUseCase {
   constructor(
     private contractRepo: IContractRepository,
     private paymentRepo: IContractPaymentRepository,
-    private historyRepo: IContractStatusHistoryRepository
+    private historyRepo: IContractStatusHistoryRepository,
+    private scopes: RecordScopeResolver
   ) {}
 
   async execute(input: {
@@ -28,21 +30,18 @@ export class GetContractDetailUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
-    const contract = await this.contractRepo.findById(input.tenantId, input.contractId);
-    if (!contract) {
-      throw new Error('Contract not found');
-    }
-
-    if (!canAccessContract(contract, input.access, 'contracts.validity.view')) {
-      throw new PermissionDeniedError('contracts.validity.view', 'Unauthorized: you can only view your own contracts');
-    }
+    const [readScope, manageScope] = await Promise.all([
+      this.scopes.resolve(input.access, 'contracts.validity.view'),
+      this.scopes.resolve(input.access, 'contracts.manage'),
+    ]);
+    const contract = reachableContract(await this.contractRepo.findById(input.tenantId, input.contractId), readScope);
 
     const payments = await this.paymentRepo.findByContractId(input.tenantId, input.contractId);
     const history = await this.historyRepo.findByContractId(input.tenantId, input.contractId);
 
     // A viewer who may read this contract but not manage it (Reception's
     // validity-only view) is offered no actions at all.
-    const canAct = canAccessContract(contract, input.access, 'contracts.manage');
+    const canAct = admits(manageScope, contract.clientAssignedUserId);
     const permittedActions = canAct ? actionsFor(contract.status) : [];
 
     return { contract, payments, history, permittedActions };

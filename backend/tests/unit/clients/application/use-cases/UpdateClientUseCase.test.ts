@@ -7,6 +7,8 @@ import { CustomFieldDefinition } from '../../../../../src/clients/domain/entitie
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
 import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
+import { administrator, salesManager, salesUser, scopeResolver } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('UpdateClientUseCase', () => {
   let useCase: UpdateClientUseCase;
@@ -59,7 +61,7 @@ describe('UpdateClientUseCase', () => {
       markDefaultsSeeded: jest.fn(),
     };
     ensureDefaultFields = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
-    useCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultFields);
+    useCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultFields, scopeResolver());
   });
 
   it('updates a client and records the updater', async () => {
@@ -82,6 +84,7 @@ describe('UpdateClientUseCase', () => {
       clientId: 'c1',
       customFieldValues: { Name: 'New Name' },
       updatingUserId: 'u2',
+      access: administrator(),
     });
 
     expect(clientRepo.update).toHaveBeenCalledWith('t1', expect.anything());
@@ -109,8 +112,45 @@ describe('UpdateClientUseCase', () => {
       clientId: 'c1',
       customFieldValues: { Name: 'New Name' },
       updatingUserId: 'u2',
+      access: administrator(),
     })).rejects.toThrow('Client not found or access denied');
   });
+  describe('reassigning (companies.reassign)', () => {
+    const assignedTo = (assignee: string) =>
+      Client.create({
+        id: 'c1', tenantId: 't1', name: 'Acme', contactInfo: {}, status: ClientStatus.PROSPECT,
+        customFieldValues: { Name: 'Acme', Status: ClientStatus.PROSPECT, 'Assigned To': assignee },
+        assignedUserId: assignee,
+        lastUpdatedByUserId: 'u1', createdAt: new Date(), updatedAt: new Date(),
+      }, defaultDefinitions);
+
+    it('refuses to move the responsible salesperson without companies.reassign', async () => {
+      clientRepo.findById.mockResolvedValue(assignedTo('sales-a'));
+
+      await expect(useCase.execute({
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'sales-a', access: salesUser({ userId: 'sales-a' }),
+        customFieldValues: { 'Assigned To': 'sales-b' },
+      })).rejects.toThrow(PermissionDeniedError);
+      expect(clientRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('lets a holder of companies.reassign move it, and an edit that keeps it needs nothing extra', async () => {
+      clientRepo.findById.mockResolvedValue(assignedTo('sales-a'));
+      await useCase.execute({
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'mgr', access: salesManager({ userId: 'mgr' }),
+        customFieldValues: { 'Assigned To': 'sales-b' },
+      });
+
+      clientRepo.findById.mockResolvedValue(assignedTo('sales-a'));
+      await useCase.execute({
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'sales-a', access: salesUser({ userId: 'sales-a' }),
+        customFieldValues: { Name: 'Acme Ltd' },
+      });
+
+      expect(clientRepo.update).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('internal notes', () => {
     const withNotes = (notes: string | null) =>
       Client.create({
@@ -130,7 +170,7 @@ describe('UpdateClientUseCase', () => {
       clientRepo.findById.mockResolvedValue(withNotes(null));
 
       const result = await useCase.execute({
-        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2',
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2', access: administrator(),
         notes: 'Prefers email contact. Renewal due in March.',
       });
 
@@ -142,7 +182,7 @@ describe('UpdateClientUseCase', () => {
 
       // An edit that only touches a custom field must not wipe the notes.
       const result = await useCase.execute({
-        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2',
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2', access: administrator(),
         customFieldValues: { Name: 'Acme Renamed' },
       });
 
@@ -153,7 +193,7 @@ describe('UpdateClientUseCase', () => {
       clientRepo.findById.mockResolvedValue(withNotes('Existing note'));
 
       const result = await useCase.execute({
-        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2', notes: '',
+        tenantId: 't1', clientId: 'c1', updatingUserId: 'u2', access: administrator(), notes: '',
       });
 
       expect(result.notes).toBe('');

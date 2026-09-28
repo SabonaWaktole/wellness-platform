@@ -28,6 +28,13 @@ export class Quotation {
   clientName?: string;
 
   /**
+   * The company's responsible salesperson, hydrated from the joined Client row
+   * on read and never persisted from here. Data scope reads it: a quotation
+   * belongs to whoever its company belongs to (FR-RBAC-11).
+   */
+  clientAssignedUserId?: string | null;
+
+  /**
    * Capability token for the customer-facing view.
    *
    * Private with a getter because there is exactly one legitimate way to set
@@ -49,6 +56,7 @@ export class Quotation {
     respondedAt: Date | null;
     lineItems: QuotationLineItem[];
     clientName?: string;
+    clientAssignedUserId?: string | null;
     shareToken?: string | null;
     shareTokenIssuedAt?: Date | null;
   }) {
@@ -62,6 +70,7 @@ export class Quotation {
     this.respondedAt = props.respondedAt;
     this.lineItems = props.lineItems;
     this.clientName = props.clientName;
+    this.clientAssignedUserId = props.clientAssignedUserId;
     this._shareToken = props.shareToken ?? null;
     this._shareTokenIssuedAt = props.shareTokenIssuedAt ?? null;
   }
@@ -143,6 +152,7 @@ export class Quotation {
     sentAt?: Date | null;
     respondedAt?: Date | null;
     clientName?: string;
+    clientAssignedUserId?: string | null;
     shareToken?: string | null;
     shareTokenIssuedAt?: Date | null;
   }): Quotation {
@@ -167,6 +177,7 @@ export class Quotation {
       respondedAt: props.respondedAt ?? null,
       lineItems: props.lineItems,
       clientName: props.clientName,
+      clientAssignedUserId: props.clientAssignedUserId,
       shareToken: props.shareToken ?? null,
       shareTokenIssuedAt: props.shareTokenIssuedAt ?? null
     });

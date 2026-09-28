@@ -1,6 +1,8 @@
 import { CreateAppointmentUseCase } from '../../../../../src/appointments/application/use-cases/CreateAppointmentUseCase';
 import { AppointmentStatus } from '../../../../../src/appointments/domain/enums/AppointmentStatus';
 import { DomainError } from '../../../../../src/shared/domain/errors/DomainError';
+import { administrator, salesUser, scopeResolver } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('CreateAppointmentUseCase', () => {
   let useCase: CreateAppointmentUseCase;
@@ -22,7 +24,8 @@ describe('CreateAppointmentUseCase', () => {
     useCase = new CreateAppointmentUseCase(
       mockAppointmentRepo,
       mockClientRepo,
-      mockUserRepo
+      mockUserRepo,
+      scopeResolver()
     );
   });
 
@@ -35,6 +38,7 @@ describe('CreateAppointmentUseCase', () => {
     // Distinct from assignedUserId so a notification would actually be emitted
     // if one were wired here — self-assignment is dropped by design.
     actingUserId: 'acting-user-1',
+    access: administrator({ userId: 'acting-user-1' }),
   };
 
   it('should successfully create an appointment when all cross-tenant checks pass', async () => {
@@ -79,5 +83,25 @@ describe('CreateAppointmentUseCase', () => {
     await expect(useCase.execute(validDto)).rejects.toThrow(DomainError);
     await expect(useCase.execute(validDto)).rejects.toThrow('Assigned user does not belong to this tenant');
     expect(mockAppointmentRepo.save).not.toHaveBeenCalled();
+  });
+
+  describe('FR-RBAC-11 data scope', () => {
+    it('refuses a Sales User scheduling an appointment for someone else', async () => {
+      await expect(
+        useCase.execute({ ...validDto, assignedUserId: 'user-1', access: salesUser({ userId: 'acting-user-1' }) })
+      ).rejects.toThrow(PermissionDeniedError);
+      expect(mockAppointmentRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('looks the company up within the viewer\'s activities.add scope', async () => {
+      mockClientRepo.findById.mockResolvedValue(null);
+
+      await expect(
+        useCase.execute({ ...validDto, assignedUserId: 'acting-user-1', access: salesUser({ userId: 'acting-user-1' }) })
+      ).rejects.toThrow('Client not found');
+      expect(mockClientRepo.findById).toHaveBeenCalledWith('tenant-1', 'client-1', {
+        scope: { kind: 'owners', userIds: ['acting-user-1'], includeUnowned: false },
+      });
+    });
   });
 });

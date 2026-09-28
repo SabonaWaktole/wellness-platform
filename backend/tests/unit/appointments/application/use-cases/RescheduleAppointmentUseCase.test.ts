@@ -1,4 +1,5 @@
 import { RescheduleAppointmentUseCase } from '../../../../../src/appointments/application/use-cases/RescheduleAppointmentUseCase';
+import { administrator, salesUser, scopeResolver } from '../../../../support/access';
 
 describe('RescheduleAppointmentUseCase', () => {
   let useCase: RescheduleAppointmentUseCase;
@@ -15,7 +16,7 @@ describe('RescheduleAppointmentUseCase', () => {
       update: jest.fn(),
     };
 
-    useCase = new RescheduleAppointmentUseCase(mockAppointmentRepository);
+    useCase = new RescheduleAppointmentUseCase(mockAppointmentRepository, scopeResolver());
   });
 
   it('should reschedule an existing appointment', async () => {
@@ -27,7 +28,7 @@ describe('RescheduleAppointmentUseCase', () => {
     const reason = 'Client request';
     const changedByUserId = 'user-1';
 
-    await useCase.execute({
+    await useCase.execute({ access: administrator(),
       id,
       tenantId,
       newDate,
@@ -46,7 +47,7 @@ describe('RescheduleAppointmentUseCase', () => {
     mockAppointmentRepository.findById.mockResolvedValue(null);
 
     await expect(
-      useCase.execute({
+      useCase.execute({ access: administrator(),
         id: 'apt-owned-by-tenant-A',
         tenantId: 'tenant-B',
         newDate: new Date(),

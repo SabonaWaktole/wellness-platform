@@ -140,6 +140,8 @@ export class SubmitFormUseCase {
         tenantId,
         customFieldValues,
         authorUserId,
+        // A public submission: the system acts, not a signed-in user.
+        access: null,
       });
       return client.id;
     } catch (error) {

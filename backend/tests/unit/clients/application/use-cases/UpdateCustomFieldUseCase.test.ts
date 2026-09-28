@@ -7,6 +7,7 @@ import { ICustomFieldDefinitionRepository } from '../../../../../src/clients/dom
 import { IClientRepository } from '../../../../../src/clients/domain/repositories/IClientRepository';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
+import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
 import { administrator, salesUser } from '../../../../support/access';
 import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
@@ -140,5 +141,30 @@ describe('UpdateCustomFieldUseCase', () => {
     );
     expect(customFieldRepo.update).not.toHaveBeenCalled();
     expect(clientRepo.renameCustomFieldKey).not.toHaveBeenCalled();
+  });
+
+  describe('D7 the responsible-salesperson field is locked', () => {
+    beforeEach(() => {
+      customFieldRepo.findById.mockResolvedValue(
+        CustomFieldDefinition.create({
+          id: 'f1', tenantId: 't1', fieldName: 'Assigned To', fieldType: FieldType.USER_REFERENCE, role: FieldRole.ASSIGNEE,
+        })
+      );
+    });
+
+    it('refuses to take the ASSIGNEE role off it, since data scope reads it', async () => {
+      await expect(run({ role: null })).rejects.toThrow('locked');
+      await expect(run({ role: FieldRole.STATUS })).rejects.toThrow('locked');
+      expect(customFieldRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses to change its type', async () => {
+      await expect(run({ fieldType: FieldType.TEXT })).rejects.toThrow('locked');
+    });
+
+    it('still lets it be renamed', async () => {
+      await run({ fieldName: 'Responsible salesperson' });
+      expect(customFieldRepo.update).toHaveBeenCalled();
+    });
   });
 });

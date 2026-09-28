@@ -27,6 +27,13 @@ export class Invoice {
    */
   clientName?: string;
 
+  /**
+   * The company's responsible salesperson, hydrated from the joined Client row
+   * on read and never persisted from here. Data scope reads it: a invoice
+   * belongs to whoever its company belongs to (FR-RBAC-11).
+   */
+  clientAssignedUserId?: string | null;
+
   private constructor(props: {
     id: string;
     tenantId: string;
@@ -40,6 +47,7 @@ export class Invoice {
     paidAt: Date | null;
     lineItems: InvoiceLineItem[];
     clientName?: string;
+    clientAssignedUserId?: string | null;
   }) {
     this.id = props.id;
     this.tenantId = props.tenantId;
@@ -53,6 +61,7 @@ export class Invoice {
     this.paidAt = props.paidAt;
     this.lineItems = props.lineItems;
     this.clientName = props.clientName;
+    this.clientAssignedUserId = props.clientAssignedUserId;
   }
 
   /**
@@ -96,6 +105,7 @@ export class Invoice {
     sentAt?: Date | null;
     paidAt?: Date | null;
     clientName?: string;
+    clientAssignedUserId?: string | null;
   }): Invoice {
     if (!props.lineItems || props.lineItems.length === 0) {
       throw new Error('An invoice must have at least one line item');
@@ -119,7 +129,8 @@ export class Invoice {
       sentAt: props.sentAt ?? null,
       paidAt: props.paidAt ?? null,
       lineItems: props.lineItems,
-      clientName: props.clientName
+      clientName: props.clientName,
+      clientAssignedUserId: props.clientAssignedUserId
     });
   }
 

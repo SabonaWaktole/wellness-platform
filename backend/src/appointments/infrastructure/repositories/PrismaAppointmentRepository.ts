@@ -2,6 +2,8 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { IAppointmentRepository, SearchAppointmentsFilters } from '../../domain/repositories/IAppointmentRepository';
 import { Appointment, RescheduleLog } from '../../domain/entities/Appointment';
 import { AppointmentStatus } from '../../domain/enums/AppointmentStatus';
+import { ALL_RECORDS, RecordScope } from '../../../access/domain/RecordScope';
+import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 
 export class PrismaAppointmentRepository implements IAppointmentRepository {
   constructor(private prisma: PrismaClient) {}
@@ -78,6 +80,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     if (filters?.clientId) where.clientId = filters.clientId;
     if (filters?.assignedUserId) where.assignedUserId = filters.assignedUserId;
     if (filters?.status) where.status = filters.status;
+    where.AND = [ownerWhere(filters?.scope ?? ALL_RECORDS, 'assignedUserId', { nullable: false })];
 
     const records = await this.prisma.appointment.findMany({
       where,
@@ -92,16 +95,13 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     return records.map(r => this.mapToDomain(r));
   }
 
-  async findUpcoming(tenantId: string, assignedUserId?: string, limit?: number): Promise<Appointment[]> {
+  async findUpcoming(tenantId: string, scope: RecordScope = ALL_RECORDS, limit?: number): Promise<Appointment[]> {
     const where: Prisma.AppointmentWhereInput = {
       tenantId,
       scheduledAt: { gt: new Date() },
-      status: { in: ['SCHEDULED', 'CONFIRMED'] }
+      status: { in: ['SCHEDULED', 'CONFIRMED'] },
+      AND: [ownerWhere(scope, 'assignedUserId', { nullable: false })],
     };
-
-    if (assignedUserId) {
-      where.assignedUserId = assignedUserId;
-    }
 
     const records = await this.prisma.appointment.findMany({
       where,
@@ -117,12 +117,8 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     return records.map(r => this.mapToDomain(r));
   }
 
-  async findRecentByTenant(tenantId: string, limit: number, assignedUserId?: string): Promise<Appointment[]> {
-    const where: Prisma.AppointmentWhereInput = { tenantId };
-
-    if (assignedUserId) {
-      where.assignedUserId = assignedUserId;
-    }
+  async findRecentByTenant(tenantId: string, limit: number, scope: RecordScope = ALL_RECORDS): Promise<Appointment[]> {
+    const where: Prisma.AppointmentWhereInput = { tenantId, AND: [ownerWhere(scope, 'assignedUserId', { nullable: false })] };
 
     const records = await this.prisma.appointment.findMany({
       where,

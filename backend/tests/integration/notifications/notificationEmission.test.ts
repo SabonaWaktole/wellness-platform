@@ -6,7 +6,7 @@ import { PrismaQuotationWriteTransaction } from '../../../src/quotations/infrast
 import { PrismaQuotationLineItemRepository } from '../../../src/quotations/infrastructure/repositories/PrismaQuotationLineItemRepository';
 import { PrismaStockLevelRepository } from '../../../src/inventory/infrastructure/repositories/PrismaStockLevelRepository';
 import { PrismaUserRepository } from '../../../src/auth/infrastructure/repositories/PrismaUserRepository';
-import { administrator, salesUser } from '../../support/access';
+import { administrator, salesUser, scopeResolver } from '../../support/access';
 
 /**
  * Emission through the real transaction, against a real database.
@@ -73,7 +73,7 @@ describe('Notification emission through the quotation write transaction', () => 
 
     clientId = uuidv4();
     await prisma.client.create({
-      data: { id: clientId, tenantId, name: 'Emit Client', status: 'ACTIVE', customFieldValues: {}, lastUpdatedByUserId: ownerAId },
+      data: { id: clientId, tenantId, name: 'Emit Client', status: 'ACTIVE', assignedUserId: staffId, customFieldValues: {}, lastUpdatedByUserId: ownerAId },
     });
 
     quotationId = uuidv4();
@@ -120,7 +120,7 @@ describe('Notification emission through the quotation write transaction', () => 
     prisma.notification.findMany({ where: { tenantId, recipientUserId } });
 
   it('fans out to every ACTIVE Business Owner when a quotation needs approval', async () => {
-    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
+    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo(), scopeResolver()).execute({
       tenantId,
       quotationId,
       actingUserId: staffId,
@@ -133,7 +133,7 @@ describe('Notification emission through the quotation write transaction', () => 
   });
 
   it('does NOT notify a deactivated Business Owner (TD-010)', async () => {
-    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
+    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo(), scopeResolver()).execute({
       tenantId,
       quotationId,
       actingUserId: staffId,
@@ -146,7 +146,7 @@ describe('Notification emission through the quotation write transaction', () => 
 
   it('does not notify anyone when the tenant does not require approval', async () => {
     // The quotation goes straight to SENT; nobody is waiting on anything.
-    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
+    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo(), scopeResolver()).execute({
       tenantId,
       quotationId,
       actingUserId: staffId,
@@ -158,7 +158,7 @@ describe('Notification emission through the quotation write transaction', () => 
   });
 
   it('notifies the creator on approval, and not the approver', async () => {
-    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
+    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo(), scopeResolver()).execute({
       tenantId, quotationId, actingUserId: staffId,
       access: salesUser({ userId: staffId }), requiresQuotationApproval: true,
     });
@@ -176,7 +176,7 @@ describe('Notification emission through the quotation write transaction', () => 
   });
 
   it('stores an i18n key and params, not a rendered sentence', async () => {
-    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
+    await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo(), scopeResolver()).execute({
       tenantId, quotationId, actingUserId: staffId,
       access: salesUser({ userId: staffId }), requiresQuotationApproval: true,
     });

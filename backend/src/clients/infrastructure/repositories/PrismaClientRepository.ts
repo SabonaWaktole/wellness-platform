@@ -1,5 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { IClientRepository, SearchClientsFilters, ClientRelatedCounts } from '../../domain/repositories/IClientRepository';
+import { IClientRepository, SearchClientsFilters, ClientRelatedCounts, FindClientOptions } from '../../domain/repositories/IClientRepository';
+import { RecordScope, admits, ALL_RECORDS } from '../../../access/domain/RecordScope';
+import { ownerSql, ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import { Client } from '../../domain/entities/Client';
 import { FieldRole } from '../../domain/enums/FieldRole';
 import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
@@ -41,16 +43,20 @@ export class PrismaClientRepository implements IClientRepository {
     });
   }
 
-  async findById(tenantId: string, id: string, options?: { includeArchived?: boolean }): Promise<Client | null> {
+  async findById(tenantId: string, id: string, options?: FindClientOptions): Promise<Client | null> {
     const record = await this.prisma.client.findUnique({ where: { id } });
     if (!record || record.tenantId !== tenantId) return null;
     // Archived clients read as "not found" everywhere except the archive and
     // restore paths, which opt in explicitly.
     if (record.deletedAt && !options?.includeArchived) return null;
+    // A single row by primary key: checking its owner here is the same as a
+    // WHERE on it, and keeps the unique lookup.
+    if (!admits(options?.scope ?? ALL_RECORDS, record.assignedUserId)) return null;
     return this.mapToDomain(record);
   }
 
   async search(tenantId: string, filters: SearchClientsFilters, skip: number, take: number): Promise<{ items: Client[]; total: number }> {
+    const scope = filters.scope ?? ALL_RECORDS;
     if (filters.customFields && Object.keys(filters.customFields).length > 0) {
       // Use raw query for custom field containment
       const customFieldsJson = JSON.stringify(filters.customFields);
@@ -77,6 +83,7 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.phone ? Prisma.sql`AND phone LIKE ${like(filters.phone)}` : Prisma.empty}
             ${filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty}
             ${filters.assignedUserId ? Prisma.sql`AND \`assignedUserId\` = ${filters.assignedUserId}` : Prisma.empty}
+            ${ownerSql(scope, Prisma.raw('`assignedUserId`'))}
             AND JSON_CONTAINS(\`customFieldValues\`, CAST(${customFieldsJson} AS JSON))
           `
         // A NULL email/phone yields NULL from ILIKE rather than false, so a
@@ -91,6 +98,7 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.phone ? Prisma.sql`AND phone ILIKE ${like(filters.phone)}` : Prisma.empty}
             ${filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty}
             ${filters.assignedUserId ? Prisma.sql`AND "assignedUserId" = ${filters.assignedUserId}` : Prisma.empty}
+            ${ownerSql(scope, Prisma.raw('"assignedUserId"'))}
             AND "customFieldValues" @> ${customFieldsJson}::jsonb
           `;
 
@@ -138,6 +146,8 @@ export class PrismaClientRepository implements IClientRepository {
       if (filters.phone) where.phone = insensitiveContains(filters.phone);
       if (filters.status) where.status = filters.status;
       if (filters.assignedUserId) where.assignedUserId = filters.assignedUserId;
+      // Its own AND entry: the scope may carry an OR of its own, beside search's.
+      where.AND = [ownerWhere(scope, 'assignedUserId')];
 
       const [records, total] = await Promise.all([
         this.prisma.client.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),
@@ -159,11 +169,8 @@ export class PrismaClientRepository implements IClientRepository {
     return this.prisma.client.count({ where });
   }
 
-  async findRecentByTenant(tenantId: string, limit: number, assignedUserId?: string): Promise<Client[]> {
-    const where: Prisma.ClientWhereInput = { tenantId, deletedAt: null };
-    if (assignedUserId) {
-      where.assignedUserId = assignedUserId;
-    }
+  async findRecentByTenant(tenantId: string, limit: number, scope: RecordScope = ALL_RECORDS): Promise<Client[]> {
+    const where: Prisma.ClientWhereInput = { tenantId, deletedAt: null, AND: [ownerWhere(scope, 'assignedUserId')] };
     const records = await this.prisma.client.findMany({
       where,
       orderBy: { createdAt: 'desc' },

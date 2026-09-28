@@ -4,6 +4,7 @@ import { Client } from '../../../clients/domain/entities/Client';
 import { ClientStatus } from '../../../clients/domain/enums/ClientStatus';
 import { INotificationSettingsRepository } from '../../../notifications/domain/INotificationSettingsRepository';
 import { NotificationSettings } from '../../../notifications/domain/NotificationSettings';
+import { administrator, salesManager, salesUser, scopeResolver } from '../../../../tests/support/access';
 
 describe('GetTenantClientMetricsUseCase', () => {
   let mockClientRepository: jest.Mocked<IClientRepository>;
@@ -33,28 +34,17 @@ describe('GetTenantClientMetricsUseCase', () => {
       listAll: jest.fn(),
     };
 
-    useCase = new GetTenantClientMetricsUseCase(mockClientRepository, mockSettingsRepository);
+    useCase = new GetTenantClientMetricsUseCase(mockClientRepository, mockSettingsRepository, scopeResolver());
   });
 
   it('reports the follow-up threshold the workspace is configured with', async () => {
     mockClientRepository.countByTenant.mockResolvedValue(0);
     mockClientRepository.search.mockResolvedValue({ items: [], total: 0 });
 
-    const result = await useCase.execute({ tenantId: 'tenant-1', timeZone: 'Europe/Tirane' });
+    const result = await useCase.execute({ tenantId: 'tenant-1', timeZone: 'Europe/Tirane', access: administrator() });
 
     expect(mockSettingsRepository.get).toHaveBeenCalledWith('tenant-1');
     expect(result.followUpThresholdDays).toBe(3);
-  });
-
-  it('reports zero assigned clients when the caller is not identified', async () => {
-    mockClientRepository.countByTenant.mockResolvedValue(5);
-    mockClientRepository.search.mockResolvedValue({ items: [], total: 0 });
-
-    // No userId means no personal book of business — the count must not widen
-    // into "every client in the tenant".
-    const result = await useCase.execute({ tenantId: 'tenant-1', timeZone: 'Europe/Tirane' });
-
-    expect(result.assignedClients).toBe(0);
   });
 
   it('should return correct totalClients and totalClientsLastWeek', async () => {
@@ -85,62 +75,49 @@ describe('GetTenantClientMetricsUseCase', () => {
     mockClientRepository.countByTenant.mockResolvedValue(3);
     mockClientRepository.search.mockResolvedValue({ items: mockClients, total: 3 });
 
-    const result = await useCase.execute({ tenantId, timeZone: 'Europe/Tirane', userId: 'u1', scope: 'ALL' });
+    const result = await useCase.execute({ tenantId, timeZone: 'Europe/Tirane', access: administrator({ userId: 'u1' }) });
 
     // Total clients should be 3
     expect(result.totalClients).toBe(3);
     // Last week's clients should be 2 (c1, c2)
     expect(result.totalClientsLastWeek).toBe(2);
 
-    expect(mockClientRepository.countByTenant).toHaveBeenCalledWith(tenantId);
-    expect(mockClientRepository.search).toHaveBeenCalledWith(tenantId, {}, 0, 10000);
+    expect(mockClientRepository.search).toHaveBeenCalledWith(tenantId, { scope: { kind: 'all' } }, 0, 10000);
   });
 
-  describe('scope-based scoping', () => {
+  describe('scope-based scoping (FR-RBAC-13)', () => {
     beforeEach(() => {
-      mockClientRepository.countByTenant.mockResolvedValue(9);
       mockClientRepository.search.mockResolvedValue({ items: [], total: 2 });
     });
 
-    it('scopes client figures to the requesting user when scope is OWN', async () => {
+    it('counts a Sales User\'s companies within their own scope, in the query', async () => {
       const result = await useCase.execute({
-        tenantId: 'tenant-1', timeZone: 'Europe/Tirane',
-        userId: 'staff-1',
-        scope: 'OWN',
+        tenantId: 'tenant-1', timeZone: 'Europe/Tirane', access: salesUser({ userId: 'staff-1' }),
       });
 
       expect(mockClientRepository.search).toHaveBeenCalledWith(
         'tenant-1',
-        { assignedUserId: 'staff-1' },
+        { scope: { kind: 'owners', userIds: ['staff-1'], includeUnowned: false } },
         0,
         10000
       );
-      // Scoped total comes from the filtered search, not the tenant-wide count.
       expect(result.totalClients).toBe(2);
-      expect(mockClientRepository.countByTenant).not.toHaveBeenCalled();
     });
 
-    it('does NOT scope for BUSINESS_OWNER', async () => {
-      const result = await useCase.execute({
-        tenantId: 'tenant-1', timeZone: 'Europe/Tirane',
-        userId: 'owner-1',
-        scope: 'ALL',
-      });
+    it('counts a Sales Manager\'s companies across the team and the unassigned ones', async () => {
+      const withTeam = new GetTenantClientMetricsUseCase(
+        mockClientRepository,
+        mockSettingsRepository,
+        scopeResolver(['su-1', 'su-2'])
+      );
+      await withTeam.execute({ tenantId: 'tenant-1', timeZone: 'Europe/Tirane', access: salesManager({ userId: 'sm-1' }) });
 
-      expect(mockClientRepository.search).toHaveBeenCalledWith('tenant-1', {}, 0, 10000);
-      expect(result.totalClients).toBe(9);
-    });
-
-    it('does not scope when no scope is supplied (defaults to tenant-wide)', async () => {
-      await useCase.execute({ tenantId: 'tenant-1', timeZone: 'Europe/Tirane' });
-
-      expect(mockClientRepository.search).toHaveBeenCalledWith('tenant-1', {}, 0, 10000);
-    });
-
-    it('ignores userId when the scope is not OWN', async () => {
-      await useCase.execute({ tenantId: 'tenant-1', timeZone: 'Europe/Tirane', userId: 'owner-1', scope: 'ALL' });
-
-      expect(mockClientRepository.search).toHaveBeenCalledWith('tenant-1', {}, 0, 10000);
+      expect(mockClientRepository.search).toHaveBeenCalledWith(
+        'tenant-1',
+        { scope: { kind: 'owners', userIds: ['su-1', 'su-2', 'sm-1'], includeUnowned: true } },
+        0,
+        10000
+      );
     });
   });
 
@@ -150,10 +127,9 @@ describe('GetTenantClientMetricsUseCase', () => {
     mockClientRepository.countByTenant.mockResolvedValue(0);
     mockClientRepository.search.mockResolvedValue({ items: [], total: 0 });
 
-    await useCase.execute({ tenantId, timeZone: 'Europe/Tirane', userId: 'u1', scope: 'ALL' });
+    await useCase.execute({ tenantId, timeZone: 'Europe/Tirane', access: administrator({ userId: 'u1' }) });
 
     // Verify the repository is queried ONLY for the requested tenant
-    expect(mockClientRepository.countByTenant).toHaveBeenCalledWith(tenantId);
     expect(mockClientRepository.search).toHaveBeenCalledWith(tenantId, expect.any(Object), expect.any(Number), expect.any(Number));
   });
 });

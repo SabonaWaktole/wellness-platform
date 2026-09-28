@@ -1,5 +1,6 @@
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { assertReachesQuotation } from './quotationAccess';
+import { reachableQuotation } from './quotationAccess';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatusHistoryRepository';
@@ -22,6 +23,7 @@ export class MarkQuotationAcceptedUseCase {
     private transactionManager: IStockTransactionManager,
     private writeTx: IQuotationWriteTransaction,
     private userRepo: IUserRepository,
+    private scopes: RecordScopeResolver,
     private emailDispatcher?: IPostCommitEmailDispatcher
   ) {}
 
@@ -40,12 +42,13 @@ export class MarkQuotationAcceptedUseCase {
     actingUserId: string | null;
     access: AccessContext | null;
   }) {
+    const scope = input.access ? await this.scopes.resolve(input.access, 'quotations.manage') : null;
     const quotation = await this.quotationRepo.findById(input.tenantId, input.quotationId);
     if (!quotation) {
       throw new Error('Quotation not found');
     }
 
-    assertReachesQuotation(quotation, input.access);
+    reachableQuotation(quotation, scope);
 
     const stockActorId = input.actingUserId ?? quotation.createdByUserId;
 

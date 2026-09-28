@@ -400,36 +400,49 @@ describe('Contracts API', () => {
     });
   });
 
-  describe('access control', () => {
-    it('hides another user\'s contract from STAFF', async () => {
-      const contract = await createContract();
+  describe('access control (FR-RBAC-11: a contract follows its company)', () => {
+    /** A company assigned to the Sales User, and one contract on it. */
+    const staffCompanyContract = async () => {
+      const staffClientId = `client-contract-staff-${Date.now()}-${Math.random()}`;
+      await prisma.client.create({
+        data: {
+          id: staffClientId, tenantId, name: 'Staff Co', status: 'ACTIVE',
+          assignedUserId: otherStaffId, customFieldValues: {}, lastUpdatedByUserId: ownerId,
+        },
+      });
+      return createContract({ clientId: staffClientId });
+    };
 
-      const res = await api()
-        .get(`${base()}/${contract.id}`)
-        .set('Authorization', `Bearer ${tokenOtherStaff}`);
-
-      expect(res.status).toBe(403);
-    });
-
-    it('lets STAFF see a contract assigned to them', async () => {
+    it('a contract on another salesperson\'s (or nobody\'s) company is not found for a Sales User', async () => {
+      // Even when the contract names them as its assignee: the company decides.
       const contract = await createContract({ assignedUserId: otherStaffId });
 
       const res = await api()
         .get(`${base()}/${contract.id}`)
         .set('Authorization', `Bearer ${tokenOtherStaff}`);
 
+      expect(res.status).toBe(404);
+    });
+
+    it('lets a Sales User see a contract on a company assigned to them', async () => {
+      const contract = await staffCompanyContract();
+
+      const res = await api()
+        .get(`${base()}/${contract.id}`)
+        .set('Authorization', `Bearer ${tokenOtherStaff}`);
+
       expect(res.status).toBe(200);
     });
 
-    it('scopes the list for STAFF to their own accounts', async () => {
+    it('scopes the list for a Sales User to their own companies\' contracts', async () => {
       await createContract();
-      await createContract({ assignedUserId: otherStaffId });
+      const mine = await staffCompanyContract();
 
       const res = await api().get(base()).set('Authorization', `Bearer ${tokenOtherStaff}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body.data.every((c: any) => c.assignedUserId === otherStaffId)).toBe(true);
+      expect(res.body.data.map((c: any) => c.id)).toContain(mine.id);
+      expect(res.body.data.every((c: any) => c.clientId !== clientId)).toBe(true);
     });
   });
 

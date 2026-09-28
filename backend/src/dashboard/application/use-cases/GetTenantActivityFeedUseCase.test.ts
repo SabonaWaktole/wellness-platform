@@ -8,6 +8,7 @@ import { Appointment } from '../../../appointments/domain/entities/Appointment';
 import { AppointmentStatus } from '../../../appointments/domain/enums/AppointmentStatus';
 import { InteractionChannel } from '../../../clients/domain/enums/InteractionChannel';
 import { ClientStatus } from '../../../clients/domain/enums/ClientStatus';
+import { administrator, reception, salesUser, scopeResolver } from '../../../../tests/support/access';
 
 describe('GetTenantActivityFeedUseCase', () => {
   let useCase: GetTenantActivityFeedUseCase;
@@ -29,64 +30,56 @@ describe('GetTenantActivityFeedUseCase', () => {
     useCase = new GetTenantActivityFeedUseCase(
       mockClientRepo,
       mockInteractionRepo,
-      mockAppointmentRepo
+      mockAppointmentRepo,
+      scopeResolver()
     );
   });
+
+  const ALL = { kind: 'all' };
+  const own = (userId: string) => ({ kind: 'owners', userIds: [userId], includeUnowned: false });
+  const EVERY_CHANNEL = Object.values(InteractionChannel);
 
   it('should enforce tenant isolation across all repository calls', async () => {
     mockClientRepo.findRecentByTenant.mockResolvedValue([]);
     mockInteractionRepo.findRecentByTenant.mockResolvedValue([]);
     mockAppointmentRepo.findRecentByTenant.mockResolvedValue([]);
 
-    await useCase.execute({ tenantId: 'tenant-a', limit: 10 });
+    await useCase.execute({ tenantId: 'tenant-a', access: administrator(), limit: 10 });
 
-    expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
-    expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
-    expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
+    expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, ALL);
+    expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, {
+      scope: ALL,
+      channels: expect.arrayContaining(EVERY_CHANNEL),
+    });
+    expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, ALL);
   });
 
-  describe('scope-based scoping', () => {
+  describe('scope-based scoping (FR-RBAC-11..13)', () => {
     beforeEach(() => {
       mockClientRepo.findRecentByTenant.mockResolvedValue([]);
       mockInteractionRepo.findRecentByTenant.mockResolvedValue([]);
       mockAppointmentRepo.findRecentByTenant.mockResolvedValue([]);
     });
 
-    it('scopes every repository call to the requesting user when scope is OWN', async () => {
-      await useCase.execute({ tenantId: 'tenant-a', userId: 'staff-1', scope: 'OWN', limit: 10 });
+    it('a Sales User sees their own companies, their activity and their appointments', async () => {
+      await useCase.execute({ tenantId: 'tenant-a', access: salesUser({ userId: 'su-1' }), limit: 10 });
 
-      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'staff-1');
-      expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'staff-1');
-      expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'staff-1');
+      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, own('su-1'));
+      expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, {
+        scope: own('su-1'),
+        channels: expect.arrayContaining(EVERY_CHANNEL),
+      });
+      expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, own('su-1'));
     });
 
-    it('does NOT scope for BUSINESS_OWNER, who sees the whole tenant', async () => {
-      await useCase.execute({ tenantId: 'tenant-a', userId: 'owner-1', scope: 'ALL', limit: 10 });
+    it('D3 Reception sees notes only, and no appointments', async () => {
+      await useCase.execute({ tenantId: 'tenant-a', access: reception(), limit: 10 });
 
-      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
-      expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
-      expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
-    });
-
-    it('FR-RBAC-01: scopes every repository call when the companies.view scope is OWN', async () => {
-      await useCase.execute({ tenantId: 'tenant-a', userId: 'su-1', scope: 'OWN', limit: 10 });
-
-      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'su-1');
-      expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'su-1');
-      expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, 'su-1');
-    });
-
-    it('does NOT scope for a TEAM/ALL companies.view scope', async () => {
-      await useCase.execute({ tenantId: 'tenant-a', userId: 'sm-1', scope: 'TEAM', limit: 10 });
-
-      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, undefined);
-    });
-
-    it('ignores a supplied userId when the scope is not OWN', async () => {
-      // Guards against a caller accidentally narrowing an owner's view.
-      await useCase.execute({ tenantId: 'tenant-a', userId: 'owner-1', scope: 'ALL', limit: 5 });
-
-      expect(mockClientRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 5, undefined);
+      expect(mockInteractionRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, {
+        scope: ALL,
+        channels: [InteractionChannel.NOTE],
+      });
+      expect(mockAppointmentRepo.findRecentByTenant).toHaveBeenCalledWith('tenant-a', 10, { kind: 'none' });
     });
   });
 
@@ -124,7 +117,7 @@ describe('GetTenantActivityFeedUseCase', () => {
     mockClientRepo.findRecentByTenant.mockResolvedValue(clients);
     mockAppointmentRepo.findRecentByTenant.mockResolvedValue(appointments);
 
-    const result = await useCase.execute({ tenantId: 'tenant-a', limit: 10 });
+    const result = await useCase.execute({ tenantId: 'tenant-a', access: administrator(), limit: 10 });
 
     expect(result.timeline).toHaveLength(10);
     // The newest should be the appointment, then the 2 clients, then the 7 newest interactions

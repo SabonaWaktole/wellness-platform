@@ -12,8 +12,8 @@ import { AddContractPaymentUseCase } from '../../../src/contracts/application/us
 import { UpdateContractPaymentUseCase } from '../../../src/contracts/application/use-cases/UpdateContractPaymentUseCase';
 import { DeleteContractPaymentUseCase } from '../../../src/contracts/application/use-cases/DeleteContractPaymentUseCase';
 import { makeContractWriteHarness } from '../../support/fakeContractWriteTransaction';
-import { administrator } from '../../support/access';
 import { AuditAction } from '../../../src/audit/domain/AuditAction';
+import { administrator, scopeResolver } from '../../support/access';
 
 const TENANT_ID = 'tenant-1';
 const USER_ID = 'user-1';
@@ -53,7 +53,7 @@ describe('CreateContractUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     harness.contractRepo.findById.mockResolvedValue(draftContract());
     const clientRepo = { findById: jest.fn().mockResolvedValue({ id: 'client-1' }) } as any;
-    const useCase = new CreateContractUseCase(harness.writeTx, clientRepo);
+    const useCase = new CreateContractUseCase(harness.writeTx, clientRepo, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -81,7 +81,7 @@ describe('ActivateContractUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract();
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new ActivateContractUseCase(harness.writeTx);
+    const useCase = new ActivateContractUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -103,7 +103,7 @@ describe('CancelContractUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract({ status: ContractStatus.Active });
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new CancelContractUseCase(harness.writeTx);
+    const useCase = new CancelContractUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -128,7 +128,7 @@ describe('RenewContractUseCase audit trail', () => {
     harness.contractRepo.findById.mockResolvedValueOnce(previous).mockResolvedValueOnce(
       draftContract({ renewedFromContractId: previous.id })
     );
-    const useCase = new RenewContractUseCase(harness.writeTx);
+    const useCase = new RenewContractUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -149,7 +149,7 @@ describe('UpdateContractUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract({ status: ContractStatus.Active });
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new UpdateContractUseCase(harness.writeTx);
+    const useCase = new UpdateContractUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -168,7 +168,7 @@ describe('UpdateContractUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract({ status: ContractStatus.Active });
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new UpdateContractUseCase(harness.writeTx);
+    const useCase = new UpdateContractUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -205,7 +205,7 @@ describe('RecordContractPaymentUseCase audit trail', () => {
     const payment = draftPayment({ contractId: contract.id });
     harness.contractRepo.findById.mockResolvedValue(contract);
     harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new RecordContractPaymentUseCase(harness.writeTx);
+    const useCase = new RecordContractPaymentUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -232,7 +232,7 @@ describe('RecordContractPaymentUseCase audit trail', () => {
     const payment = draftPayment({ contractId: contract.id, status: PaymentStatus.Paid, paidAmount: 100, paidAt: new Date() });
     harness.contractRepo.findById.mockResolvedValue(contract);
     harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new RecordContractPaymentUseCase(harness.writeTx);
+    const useCase = new RecordContractPaymentUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -257,7 +257,7 @@ describe('AddContractPaymentUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract({ status: ContractStatus.Active });
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new AddContractPaymentUseCase(harness.writeTx);
+    const useCase = new AddContractPaymentUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -281,7 +281,7 @@ describe('UpdateContractPaymentUseCase audit trail', () => {
     const payment = draftPayment({ contractId: contract.id });
     harness.contractRepo.findById.mockResolvedValue(contract);
     harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new UpdateContractPaymentUseCase(harness.writeTx);
+    const useCase = new UpdateContractPaymentUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -303,7 +303,7 @@ describe('UpdateContractPaymentUseCase audit trail', () => {
     const payment = draftPayment({ contractId: contract.id });
     harness.contractRepo.findById.mockResolvedValue(contract);
     harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new UpdateContractPaymentUseCase(harness.writeTx);
+    const useCase = new UpdateContractPaymentUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,
@@ -325,7 +325,7 @@ describe('DeleteContractPaymentUseCase audit trail', () => {
     const payment = draftPayment({ contractId: contract.id });
     harness.contractRepo.findById.mockResolvedValue(contract);
     harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new DeleteContractPaymentUseCase(harness.writeTx);
+    const useCase = new DeleteContractPaymentUseCase(harness.writeTx, scopeResolver());
 
     await useCase.execute({
       tenantId: TENANT_ID,

@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import {
   IReportRepository,
   AppointmentStatusCount,
@@ -24,16 +26,25 @@ export interface AppointmentReport {
  * would also mean two chances for the date filters to disagree.
  */
 export class GetAppointmentReportUseCase {
-  constructor(private readonly reportRepository: IReportRepository) {}
+  constructor(
+    private readonly reportRepository: IReportRepository,
+    private readonly scopes: RecordScopeResolver
+  ) {}
 
-  async execute(tenantId: string, filters: AppointmentReportFilters = {}): Promise<AppointmentReport> {
+  /** Over the appointments in the viewer's `calendar.view` scope (FR-RBAC-13). */
+  async execute(
+    tenantId: string,
+    filters: Omit<AppointmentReportFilters, 'scope'>,
+    access: AccessContext
+  ): Promise<AppointmentReport> {
     if (!tenantId) {
       throw new Error('Tenant ID is required');
     }
 
+    const scoped = { ...filters, scope: await this.scopes.resolve(access, 'calendar.view') };
     const [byStatus, byStaff] = await Promise.all([
-      this.reportRepository.getAppointmentStatusDistribution(tenantId, filters),
-      this.reportRepository.getAppointmentsByStaff(tenantId, filters),
+      this.reportRepository.getAppointmentStatusDistribution(tenantId, scoped),
+      this.reportRepository.getAppointmentsByStaff(tenantId, scoped),
     ]);
 
     return {

@@ -1,7 +1,8 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { ContractDocumentStore } from '../../infrastructure/ContractDocumentStore';
-import { assertCanAccessContract } from './contractAccess';
+import { reachableContract } from './contractAccess';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
 /**
  * Attaches (or clears) the signed contract PDF.
@@ -15,7 +16,8 @@ import { assertCanAccessContract } from './contractAccess';
 export class AttachContractDocumentUseCase {
   constructor(
     private writeTx: IContractWriteTransaction,
-    private documentStore: ContractDocumentStore
+    private documentStore: ContractDocumentStore,
+    private scopes: RecordScopeResolver
   ) {}
 
   async execute(input: {
@@ -25,17 +27,14 @@ export class AttachContractDocumentUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     const stored = input.file
       ? await this.documentStore.store(input.tenantId, input.file.originalName, input.file.buffer)
       : null;
 
     const { contract, replacedUrl } = await this.writeTx.run(async (repos) => {
-      const found = await repos.contractRepo.findById(input.tenantId, input.contractId);
-      if (!found) {
-        throw new Error('Contract not found');
-      }
-
-      assertCanAccessContract(found, input.access);
+      // Out of scope reads as not found (FR-RBAC-05, 11).
+      const found = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
 
       const previousUrl = found.documentUrl;
 

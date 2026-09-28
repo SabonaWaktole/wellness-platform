@@ -6,8 +6,8 @@ import { ContractExpiryJob } from '../../../src/scheduler/jobs/ContractExpiryJob
 import { PrismaSchedulerQueries } from '../../../src/scheduler/PrismaSchedulerQueries';
 import { ExpireContractUseCase } from '../../../src/contracts/application/use-cases/ExpireContractUseCase';
 import { ActivateContractUseCase } from '../../../src/contracts/application/use-cases/ActivateContractUseCase';
-import { administrator } from '../../support/access';
 import { PrismaContractWriteTransaction } from '../../../src/contracts/infrastructure/PrismaContractWriteTransaction';
+import { administrator, scopeResolver } from '../../support/access';
 
 let app: any;
 let tokenOwner: string;
@@ -148,7 +148,7 @@ describe('Contract audit trail (Slice 2)', () => {
         throw new Error('audit write failed');
       },
     }));
-    const useCase = new ActivateContractUseCase(failingWriteTx);
+    const useCase = new ActivateContractUseCase(failingWriteTx, scopeResolver());
 
     await expect(
       useCase.execute({

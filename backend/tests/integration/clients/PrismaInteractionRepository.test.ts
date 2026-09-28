@@ -1,3 +1,4 @@
+import { InteractionChannel } from '../../../src/clients/domain/enums/InteractionChannel';
 import { PrismaClient } from '@prisma/client';
 import { PrismaInteractionRepository } from '../../../src/clients/infrastructure/repositories/PrismaInteractionRepository';
 import { Interaction } from '../../../src/clients/domain/entities/Interaction';
@@ -128,41 +129,26 @@ describe('PrismaInteractionRepository Integration', () => {
     }
   });
 
-  it('correctly scopes results when authorUserId is provided', async () => {
-    const otherUserId = 'u-interact-1-other';
-    await prisma.user.create({
-      data: { id: otherUserId, email: 'u1-other@example.com', hashedPassword: 'pwd', role: 'STAFF', tenantId: tenant1Id },
-    });
-    
-    const otherUserInteractionId = randomUUID();
-    await prisma.interaction.create({
-      data: {
-        id: otherUserInteractionId,
-        tenantId: tenant1Id,
-        clientId: client1Id,
-        authorUserId: otherUserId,
-        content: `Tenant 1 Interaction by Other User`,
-        channel: 'NOTE',
-        createdAt: new Date(),
-      }
-    });
-
+  it('FR-RBAC-11 scopes through the company\'s responsible salesperson, not the author', async () => {
+    await prisma.client.update({ where: { id: client1Id }, data: { assignedUserId: user1Id } });
     try {
-      const allT1 = await repo.findRecentByTenant(tenant1Id, 10);
-      expect(allT1.length).toBe(6);
+      const own = (userId: string) => ({ kind: 'owners' as const, userIds: [userId], includeUnowned: false });
 
-      const scopedUser1 = await repo.findRecentByTenant(tenant1Id, 10, user1Id);
-      expect(scopedUser1.length).toBe(5);
-      scopedUser1.forEach((interaction) => {
-        expect(interaction.authorUserId).toBe(user1Id);
-      });
-
-      const scopedOther = await repo.findRecentByTenant(tenant1Id, 10, otherUserId);
-      expect(scopedOther.length).toBe(1);
-      expect(scopedOther[0].authorUserId).toBe(otherUserId);
+      expect(await repo.findRecentByTenant(tenant1Id, 10, { scope: own(user1Id) })).toHaveLength(5);
+      expect(await repo.findRecentByTenant(tenant1Id, 10, { scope: own('someone-else') })).toHaveLength(0);
+      expect(await repo.findRecentByTenant(tenant1Id, 10, { scope: { kind: 'none' } })).toHaveLength(0);
     } finally {
-      await prisma.interaction.delete({ where: { id: otherUserInteractionId } });
-      await prisma.user.delete({ where: { id: otherUserId } });
+      await prisma.client.update({ where: { id: client1Id }, data: { assignedUserId: null } });
     }
+  });
+
+  it('TEAM reaches an unassigned company\'s interactions', async () => {
+    const team = { kind: 'owners' as const, userIds: ['someone-else'], includeUnowned: true };
+    expect(await repo.findRecentByTenant(tenant1Id, 10, { scope: team })).toHaveLength(5);
+  });
+
+  it('D3 returns only the channels asked for', async () => {
+    expect(await repo.findRecentByTenant(tenant1Id, 10, { channels: [InteractionChannel.NOTE] })).toHaveLength(5);
+    expect(await repo.findRecentByTenant(tenant1Id, 10, { channels: [InteractionChannel.CALL] })).toHaveLength(0);
   });
 });

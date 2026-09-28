@@ -29,6 +29,8 @@ export const QuotationListContent: React.FC = () => {
   const { t } = useTranslation('quotations');
   const { t: tc } = useTranslation('common');
   const { format: formatMoney } = useMoneyFormat();
+  // FR-RBAC-06: without commercial.view the API sends no totals.
+  const seesValue = usePermission('commercial.view');
   const statusLabel = useStatusLabel();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | 'DRAFT' | 'PENDING_APPROVAL' | 'SENT' | 'COMPLETED'>('ALL');
@@ -180,13 +182,13 @@ export const QuotationListContent: React.FC = () => {
                   <th>{t('list.columnId')}</th>
                   <th>{t('list.columnClient')}</th>
                   <th>{t('list.columnCreated')}</th>
-                  <th>{t('list.columnTotal')}</th>
+                  {seesValue && <th>{t('list.columnTotal')}</th>}
                   <th>{t('list.columnStatus')}</th>
                   <th className={styles.tdAction}></th>
                 </tr>
               </thead>
               <tbody>
-                {isLoading && <tr><td colSpan={6} style={{textAlign:'center', padding:'20px'}}>{tc('state.loading')}</td></tr>}
+                {isLoading && <tr><td colSpan={seesValue ? 6 : 5} style={{textAlign:'center', padding:'20px'}}>{tc('state.loading')}</td></tr>}
                 {!isLoading && quotations.map((quotation) => {
                   return (
                     <tr key={quotation.id}>
@@ -203,11 +205,13 @@ export const QuotationListContent: React.FC = () => {
                           {dates.date(quotation.createdAt)}
                         </span>
                       </td>
-                      <td>
-                        <span className={styles.amountText}>
-                          {formatMoney(quotation.grandTotal ?? 0)}
-                        </span>
-                      </td>
+                      {seesValue && (
+                        <td>
+                          <span className={styles.amountText}>
+                            {formatMoney(quotation.grandTotal ?? 0)}
+                          </span>
+                        </td>
+                      )}
                       <td>
                         <Badge variant={getStatusBadgeVariant(quotation.status)}>
                           {statusLabel.quotation(quotation.status)}

@@ -5,7 +5,7 @@ import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatus
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { administrator, salesManager, salesUser } from '../../../../tests/support/access';
+import { administrator, salesManager, salesUser, scopeResolver } from '../../../../tests/support/access';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('GetQuotationDetailUseCase', () => {
@@ -19,13 +19,13 @@ describe('GetQuotationDetailUseCase', () => {
     lineItemRepo = { findByQuotationId: jest.fn(), save: jest.fn(), saveMany: jest.fn(), deleteManyByQuotationId: jest.fn() };
     historyRepo = { findByQuotationId: jest.fn(), save: jest.fn() };
 
-    useCase = new GetQuotationDetailUseCase(quotationRepo, lineItemRepo, historyRepo);
+    useCase = new GetQuotationDetailUseCase(quotationRepo, lineItemRepo, historyRepo, scopeResolver(['user-1', 'user-2']));
   });
 
   function makeQuotation(createdByUserId: string): Quotation {
     const li = QuotationLineItem.create({ id: 'li1', tenantId: 'tenant-1', quotationId: 'q1', productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 });
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, lineItems: [li], status: QuotationStatus.Draft
+      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, clientAssignedUserId: createdByUserId, lineItems: [li], status: QuotationStatus.Draft
     });
   }
 
@@ -68,7 +68,7 @@ describe('GetQuotationDetailUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
-    })).rejects.toThrow(PermissionDeniedError);
+    })).rejects.toThrow('Quotation not found');
   });
 
   it('FR-RBAC-11 lets a TEAM-scoped Sales Manager act on a colleague\'s draft', async () => {

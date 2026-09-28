@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { CreateAppointmentUseCase } from '../../../application/use-cases/CreateAppointmentUseCase';
 import { RescheduleAppointmentUseCase } from '../../../application/use-cases/RescheduleAppointmentUseCase';
@@ -54,7 +55,7 @@ export class AppointmentController {
       const tenantId = requireTenantId(req);
 
       const appointment = await this.createAppointmentUseCase.execute({
-        tenantId,
+        tenantId,        access: req.access!,
         ...validatedData,
         // From the token, never the body: the actor is who is calling, and a
         // client must not be able to attribute an appointment to someone else.
@@ -63,7 +64,9 @@ export class AppointmentController {
 
       res.status(201).json(mapToDTO(appointment));
     } catch (error: any) {
-      if (error.message.includes('not found')) {
+      if (error instanceof PermissionDeniedError) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
       } else if (error instanceof DomainError) {
         res.status(400).json({ error: error.message });
@@ -81,13 +84,15 @@ export class AppointmentController {
 
       const appointment = await this.updateAppointmentUseCase.execute({
         id,
-        tenantId,
+        tenantId,        access: req.access!,
         ...validatedData,
       });
 
       res.status(200).json(mapToDTO(appointment));
     } catch (error: any) {
-      if (error.message.includes('not found')) {
+      if (error instanceof PermissionDeniedError) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
       } else if (error instanceof DomainError) {
         res.status(400).json({ error: error.message });
@@ -106,7 +111,7 @@ export class AppointmentController {
 
       const appointment = await this.rescheduleAppointmentUseCase.execute({
         id,
-        tenantId,
+        tenantId,        access: req.access!,
         newDate: validatedData.newDate,
         reason: validatedData.reason,
         changedByUserId,
@@ -114,7 +119,9 @@ export class AppointmentController {
 
       res.status(200).json(mapToDTO(appointment));
     } catch (error: any) {
-      if (error.message.includes('not found')) {
+      if (error instanceof PermissionDeniedError) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
       } else if (error instanceof DomainError) {
         res.status(400).json({ error: error.message });
@@ -133,14 +140,16 @@ export class AppointmentController {
 
       const appointment = await this.cancelAppointmentUseCase.execute({
         id,
-        tenantId,
+        tenantId,        access: req.access!,
         reason: validatedData.reason,
         changedByUserId,
       });
 
       res.status(200).json(mapToDTO(appointment));
     } catch (error: any) {
-      if (error.message.includes('not found')) {
+      if (error instanceof PermissionDeniedError) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
       } else if (error instanceof DomainError) {
         res.status(400).json({ error: error.message });
@@ -158,13 +167,15 @@ export class AppointmentController {
 
       const appointment = await this.updateAppointmentStatusUseCase.execute({
         id,
-        tenantId,
+        tenantId,        access: req.access!,
         status: validatedData.status,
       });
 
       res.status(200).json(mapToDTO(appointment));
     } catch (error: any) {
-      if (error.message.includes('not found')) {
+      if (error instanceof PermissionDeniedError) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
       } else if (error instanceof DomainError) {
         res.status(400).json({ error: error.message });
@@ -180,7 +191,7 @@ export class AppointmentController {
       const tenantId = requireTenantId(req);
 
       const results = await this.searchAppointmentsUseCase.execute({
-        tenantId,
+        tenantId,        access: req.access!,
         startDate: validatedData.startDate,
         endDate: validatedData.endDate,
         filters: {
@@ -203,9 +214,7 @@ export class AppointmentController {
       const userId = req.user!.userId;
 
       const results = await this.getUpcomingAppointmentsUseCase.execute({
-        tenantId,
-        userId,
-        scope: req.access!.scopeOf('calendar.view'),
+        tenantId,        access: req.access!,
         limit: validatedData.limit,
       });
 
@@ -222,12 +231,14 @@ export class AppointmentController {
 
       const history = await this.getAppointmentHistoryUseCase.execute({
         id,
-        tenantId,
+        tenantId,        access: req.access!,
       });
 
       res.status(200).json(history);
     } catch (error: any) {
-      if (error.message.includes('not found')) {
+      if (error instanceof PermissionDeniedError) {
+        res.status(403).json({ error: error.message });
+      } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
       } else if (error instanceof DomainError) {
         res.status(400).json({ error: error.message });

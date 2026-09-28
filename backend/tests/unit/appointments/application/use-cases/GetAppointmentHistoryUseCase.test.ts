@@ -1,4 +1,5 @@
 import { GetAppointmentHistoryUseCase } from '../../../../../src/appointments/application/use-cases/GetAppointmentHistoryUseCase';
+import { administrator, salesUser, scopeResolver } from '../../../../support/access';
 
 describe('GetAppointmentHistoryUseCase', () => {
   let useCase: GetAppointmentHistoryUseCase;
@@ -9,7 +10,7 @@ describe('GetAppointmentHistoryUseCase', () => {
       findById: jest.fn(),
     };
 
-    useCase = new GetAppointmentHistoryUseCase(mockAppointmentRepository);
+    useCase = new GetAppointmentHistoryUseCase(mockAppointmentRepository, scopeResolver());
   });
 
   it('should return the mapped history DTOs for an appointment', async () => {
@@ -42,7 +43,7 @@ describe('GetAppointmentHistoryUseCase', () => {
     const id = 'apt-123';
     const tenantId = 'tenant-1';
 
-    const results = await useCase.execute({ id, tenantId });
+    const results = await useCase.execute({ access: administrator(), id, tenantId });
 
     expect(mockAppointmentRepository.findById).toHaveBeenCalledWith(id, tenantId);
     expect(results).toEqual(mockHistory);
@@ -52,7 +53,7 @@ describe('GetAppointmentHistoryUseCase', () => {
     mockAppointmentRepository.findById.mockResolvedValue(null);
 
     await expect(
-      useCase.execute({ id: 'apt-owned-by-tenant-A', tenantId: 'tenant-B' })
+      useCase.execute({ access: administrator(), id: 'apt-owned-by-tenant-A', tenantId: 'tenant-B' })
     ).rejects.toThrow('Appointment not found');
 
     expect(mockAppointmentRepository.findById).toHaveBeenCalledWith('apt-owned-by-tenant-A', 'tenant-B');

@@ -1,4 +1,6 @@
 import { Scheduler, ScheduledJob } from './Scheduler';
+import { RecordScopeResolver } from '../access/application/RecordScopeResolver';
+import { PrismaTeamRoster } from '../access/infrastructure/PrismaTeamRoster';
 import { PrismaSchedulerQueries } from './PrismaSchedulerQueries';
 import { AppointmentReminderJob } from './jobs/AppointmentReminderJob';
 import { QuotationFollowUpJob } from './jobs/QuotationFollowUpJob';
@@ -59,6 +61,8 @@ export function createScheduler(): Scheduler {
   const expireQuotation = new ExpireQuotationUseCase(
     new PrismaQuotationWriteTransaction(),
     userRepository,
+    // The job acts as the system (access: null), which no scope narrows.
+    new RecordScopeResolver(new PrismaTeamRoster()),
     emailDispatcher
   );
 

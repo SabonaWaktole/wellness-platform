@@ -7,7 +7,7 @@ import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
 import { IQuotationDeliveryService } from '../QuotationDeliveryService';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
-import { administrator, salesUser } from '../../../../tests/support/access';
+import { administrator, salesUser, scopeResolver } from '../../../../tests/support/access';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('UpdateQuotationUseCase', () => {
@@ -37,7 +37,7 @@ describe('UpdateQuotationUseCase', () => {
     harness = makeQuotationWriteHarness();
     delivery = { deliverToClient: jest.fn().mockResolvedValue(undefined) };
 
-    useCase = new UpdateQuotationUseCase(quotationRepo, lineItemRepo, productRepo, warehouseRepo, stockLevelRepo, harness.writeTx, delivery);
+    useCase = new UpdateQuotationUseCase(quotationRepo, lineItemRepo, productRepo, warehouseRepo, stockLevelRepo, harness.writeTx, scopeResolver(), delivery);
   });
 
   function makeQuotation(status: QuotationStatus, createdByUserId: string, shareToken: string | null = null): Quotation {
@@ -45,7 +45,7 @@ describe('UpdateQuotationUseCase', () => {
       id: 'old-li', tenantId: 'tenant-1', quotationId: 'q1', productId: 'p-old', warehouseId: 'w-old', quantity: 1, unitPrice: 10
     });
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, lineItems: [li], status, shareToken
+      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, clientAssignedUserId: createdByUserId, lineItems: [li], status, shareToken
     });
   }
 
@@ -94,7 +94,7 @@ describe('UpdateQuotationUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 2, unitPrice: 50 }]
-    })).rejects.toThrow(PermissionDeniedError);
+    })).rejects.toThrow('Quotation not found');
   });
 
   it('should allow Business Owner to update any quotation in Draft', async () => {

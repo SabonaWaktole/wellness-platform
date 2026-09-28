@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { FieldRole } from '../../domain/enums/FieldRole';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
@@ -17,6 +19,8 @@ interface CreateClientDTO {
   /** Internal notes. A system field, not one of the tenant's custom fields. */
   notes?: string | null;
   authorUserId: string;
+  /** `null` for a system actor (a public form submission), which is bound by neither rule below. */
+  access: AccessContext | null;
 }
 
 export class CreateClientUseCase {
@@ -29,7 +33,7 @@ export class CreateClientUseCase {
 
   async execute(dto: CreateClientDTO): Promise<Client> {
     const definitions = await this.ensureDefaultFields.execute(dto.tenantId);
-    const customFieldValues = dto.customFieldValues || {};
+    const customFieldValues = this.withResponsibleSalesperson(dto, definitions);
 
     const client = Client.create({
       id: randomUUID(),
@@ -66,5 +70,31 @@ export class CreateClientUseCase {
     }
 
     return client;
+  }
+
+  /**
+   * FR-RBAC-14: a company created by someone who only sees their own
+   * companies (a Sales User) is theirs unless they say otherwise — without
+   * this they would create a company and immediately lose sight of it.
+   * Naming anyone other than yourself takes `companies.reassign`, the same
+   * rule UpdateClientUseCase applies to a change of assignee.
+   */
+  private withResponsibleSalesperson(
+    dto: CreateClientDTO,
+    definitions: Awaited<ReturnType<EnsureDefaultClientFieldsUseCase['execute']>>
+  ): Record<string, any> {
+    const values = { ...(dto.customFieldValues || {}) };
+    if (!dto.access) {
+      return values;
+    }
+    const assignee = ClientFieldResolver.resolveAssignedUserId(values, definitions);
+    const assigneeField = ClientFieldResolver.findFieldNameForRole(definitions, FieldRole.ASSIGNEE);
+
+    if (!assignee && assigneeField && dto.access.ownOnly('companies.view')) {
+      values[assigneeField] = dto.authorUserId;
+    } else if (assignee && assignee !== dto.authorUserId) {
+      dto.access.ensure('companies.reassign');
+    }
+    return values;
   }
 }

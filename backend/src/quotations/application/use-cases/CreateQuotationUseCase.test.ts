@@ -6,7 +6,7 @@ import { IClientRepository } from '../../../clients/domain/repositories/IClientR
 import { IProductRepository, IWarehouseRepository } from '../../../inventory/domain/repositories';
 import { QuotationStatus } from '../../domain/Quotation';
 import { PermissionDeniedError } from '../../../access/domain/errors';
-import { administrator, reception } from '../../../../tests/support/access';
+import { administrator, reception, scopeResolver } from '../../../../tests/support/access';
 
 describe('CreateQuotationUseCase', () => {
   let useCase: CreateQuotationUseCase;
@@ -30,7 +30,7 @@ describe('CreateQuotationUseCase', () => {
     };
     warehouseRepo = { findById: jest.fn(), findAllByTenantId: jest.fn(), save: jest.fn(), update: jest.fn(), delete: jest.fn() };
 
-    useCase = new CreateQuotationUseCase(quotationRepo, lineItemRepo, historyRepo, clientRepo, productRepo, warehouseRepo);
+    useCase = new CreateQuotationUseCase(quotationRepo, lineItemRepo, historyRepo, clientRepo, productRepo, warehouseRepo, scopeResolver());
   });
 
   it('should create a quotation in Draft with correct subtotal', async () => {

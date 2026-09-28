@@ -1,3 +1,4 @@
+import { AccessContext } from '../../access/domain/AccessContext';
 export interface InvoicePdfLine {
   description: string;
   quantity: number;
@@ -44,7 +45,13 @@ export interface IInvoicePdfReader {
 export class GetInvoicePdfViewUseCase {
   constructor(private readonly reader: IInvoicePdfReader) {}
 
-  async execute(tenantId: string, invoiceId: string): Promise<InvoicePdfView | null> {
+  /**
+   * An invoice document is its prices, and a PDF cannot have fields removed
+   * from it the way a JSON response can — so without `commercial.view` it is
+   * refused outright (FR-RBAC-06).
+   */
+  async execute(tenantId: string, invoiceId: string, access: AccessContext): Promise<InvoicePdfView | null> {
+    access.ensure('commercial.view');
     return this.reader.findByInvoiceId(tenantId, invoiceId);
   }
 }

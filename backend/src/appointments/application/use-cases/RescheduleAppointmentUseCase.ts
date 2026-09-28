@@ -1,3 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { findReachableAppointment } from './appointmentAccess';
 import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRepository';
 import { Appointment } from '../../domain/entities/Appointment';
 import { NotificationService } from '../../../notifications/application/NotificationService';
@@ -5,6 +8,7 @@ import { NotificationService } from '../../../notifications/application/Notifica
 export interface RescheduleAppointmentDTO {
   id: string;
   tenantId: string;
+  access: AccessContext;
   newDate: Date;
   reason: string;
   changedByUserId: string;
@@ -13,14 +17,19 @@ export interface RescheduleAppointmentDTO {
 export class RescheduleAppointmentUseCase {
   constructor(
     private readonly appointmentRepository: IAppointmentRepository,
+    private readonly scopes: RecordScopeResolver,
     private readonly notifications?: NotificationService
   ) {}
 
   async execute(dto: RescheduleAppointmentDTO): Promise<Appointment> {
-    const appointment = await this.appointmentRepository.findById(dto.id, dto.tenantId);
-    if (!appointment) {
-      throw new Error('Appointment not found');
-    }
+    const appointment = await findReachableAppointment(
+      this.appointmentRepository,
+      this.scopes,
+      dto.access,
+      'activities.add',
+      dto.id,
+      dto.tenantId
+    );
 
     appointment.reschedule(dto.newDate, dto.reason, dto.changedByUserId);
 

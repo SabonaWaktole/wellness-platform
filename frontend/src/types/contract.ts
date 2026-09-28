@@ -43,28 +43,35 @@ export interface ContractPaymentSummary {
   overdueCount: number;
 }
 
+/**
+ * A contract as the API returns it to this viewer (FR-RBAC-06). Without
+ * `contracts.manage` only the validity fields are present (Reception's view);
+ * `amount` needs `commercial.view` and `paymentSummary` needs `payments.view`.
+ * Everything a viewer might not be sent is optional — absent means "not
+ * yours to see", never zero.
+ */
 export interface Contract {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   clientId: string;
   clientName?: string;
-  assignedUserId: string | null;
+  assignedUserId?: string | null;
   planName: string;
   status: ContractStatus;
   /** Price for ONE billing period, not for the whole term. */
-  amount: number;
-  billingPeriod: BillingPeriod;
+  amount?: number;
+  billingPeriod?: BillingPeriod;
   startsAt: string;
   endsAt: string;
-  notes: string | null;
-  documentUrl: string | null;
-  documentName: string | null;
-  renewedFromContractId: string | null;
-  activatedAt: string | null;
-  cancelledAt: string | null;
-  createdByUserId: string;
-  createdAt: string;
-  updatedAt: string;
+  notes?: string | null;
+  documentUrl?: string | null;
+  documentName?: string | null;
+  renewedFromContractId?: string | null;
+  activatedAt?: string | null;
+  cancelledAt?: string | null;
+  createdByUserId?: string;
+  createdAt?: string;
+  updatedAt?: string;
   paymentSummary?: ContractPaymentSummary;
   /** Negative once the term has lapsed. */
   daysUntilExpiry: number;
@@ -105,7 +112,8 @@ export interface ContractStatusHistoryEntry {
  */
 export interface ContractDetail {
   contract: Contract;
-  payments: ContractPayment[];
+  /** Absent without `payments.view` (FR-RBAC-06). */
+  payments?: ContractPayment[];
   history: ContractStatusHistoryEntry[];
   permittedActions: string[];
 }
@@ -120,7 +128,8 @@ export interface ClientContracts {
     activeEndsAt: string | null;
     daysUntilExpiry: number | null;
     totalContracts: number;
-    outstanding: number;
-    overdueCount: number;
+    /** Absent without `payments.view` (FR-RBAC-06). */
+    outstanding?: number;
+    overdueCount?: number;
   };
 }

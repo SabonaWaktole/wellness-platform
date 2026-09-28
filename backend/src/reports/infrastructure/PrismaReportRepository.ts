@@ -11,11 +11,17 @@ import {
   AppointmentReportFilters,
   LowStockItem,
 } from '../domain/IReportRepository';
+import { ALL_RECORDS, RecordScope } from '../../access/domain/RecordScope';
+import { ownerSql, ownerWhere } from '../../access/infrastructure/prismaRecordScope';
 
 export class PrismaReportRepository implements IReportRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async getMonthlyRevenue(tenantId: string, limitMonths: number = 12): Promise<MonthlyRevenue[]> {
+  async getMonthlyRevenue(
+    tenantId: string,
+    limitMonths: number = 12,
+    scope: RecordScope = ALL_RECORDS
+  ): Promise<MonthlyRevenue[]> {
     const d = new Date();
     d.setMonth(d.getMonth() - limitMonths);
 
@@ -26,7 +32,8 @@ export class PrismaReportRepository implements IReportRepository {
       where: {
         tenantId,
         status: { in: ['ACCEPTED', 'WON'] },
-        createdAt: { gte: d }
+        createdAt: { gte: d },
+        client: ownerWhere(scope, 'assignedUserId'),
       },
       include: {
         lineItems: true
@@ -69,12 +76,12 @@ export class PrismaReportRepository implements IReportRepository {
     return result;
   }
 
-  async getClientStatusDistribution(tenantId: string): Promise<ClientStatusCount[]> {
+  async getClientStatusDistribution(tenantId: string, scope: RecordScope = ALL_RECORDS): Promise<ClientStatusCount[]> {
     const counts = await this.prisma.client.groupBy({
       by: ['status'],
       // Archived clients are excluded: they are hidden from the Clients page,
       // so counting them here would make the chart disagree with the list.
-      where: { tenantId, deletedAt: null },
+      where: { tenantId, deletedAt: null, AND: [ownerWhere(scope, 'assignedUserId')] },
       _count: {
         id: true
       }
@@ -142,7 +149,11 @@ export class PrismaReportRepository implements IReportRepository {
    * Months with no signups are filled in below rather than omitted, so the
    * chart shows a flat stretch instead of silently compressing time.
    */
-  async getNewClientsTrend(tenantId: string, limitMonths: number): Promise<NewClientsPoint[]> {
+  async getNewClientsTrend(
+    tenantId: string,
+    limitMonths: number,
+    scope: RecordScope = ALL_RECORDS
+  ): Promise<NewClientsPoint[]> {
     const start = startOfMonthsAgo(limitMonths - 1);
 
     const query = IS_MYSQL
@@ -152,6 +163,7 @@ export class PrismaReportRepository implements IReportRepository {
           FROM \`Client\`
           WHERE \`tenantId\` = ${tenantId}
             AND \`createdAt\` >= ${start}
+            ${ownerSql(scope, Prisma.raw('`assignedUserId`'))}
           GROUP BY 1
           ORDER BY 1
         `
@@ -161,6 +173,7 @@ export class PrismaReportRepository implements IReportRepository {
           FROM "Client"
           WHERE "tenantId" = ${tenantId}
             AND "createdAt" >= ${start}
+            ${ownerSql(scope, Prisma.raw('"assignedUserId"'))}
           GROUP BY 1
           ORDER BY 1
         `;
@@ -297,6 +310,7 @@ export class PrismaReportRepository implements IReportRepository {
       };
     }
     if (filters.assignedUserId) where.assignedUserId = filters.assignedUserId;
+    where.AND = [ownerWhere(filters.scope ?? ALL_RECORDS, 'assignedUserId', { nullable: false })];
 
     return where;
   }

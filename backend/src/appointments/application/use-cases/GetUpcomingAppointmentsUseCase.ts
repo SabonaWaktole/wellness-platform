@@ -1,25 +1,25 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRepository';
 
 export interface GetUpcomingAppointmentsDTO {
   tenantId: string;
-  userId: string;
-  /** Slice 3: the caller's `calendar.view` scope. `OWN` sees only their own appointments. */
-  scope?: string | null;
+  access: AccessContext;
   limit?: number;
 }
 
 export class GetUpcomingAppointmentsUseCase {
-  constructor(private readonly appointmentRepository: IAppointmentRepository) {}
+  constructor(
+    private readonly appointmentRepository: IAppointmentRepository,
+    private readonly scopes: RecordScopeResolver
+  ) {}
 
+  /** Upcoming appointments within the viewer's `calendar.view` scope (FR-RBAC-11..13). */
   async execute(dto: GetUpcomingAppointmentsDTO) {
-    const assignedUserId = dto.scope === 'OWN' ? dto.userId : undefined;
+    const scope = await this.scopes.resolve(dto.access, 'calendar.view');
     const limit = dto.limit ?? 5;
 
-    const appointments = await this.appointmentRepository.findUpcoming(
-      dto.tenantId,
-      assignedUserId,
-      limit
-    );
+    const appointments = await this.appointmentRepository.findUpcoming(dto.tenantId, scope, limit);
 
     return appointments.map((appt) => ({
       id: appt.id,

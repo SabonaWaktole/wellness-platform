@@ -73,6 +73,14 @@ export class Contract {
   clientName?: string;
 
   /**
+   * The company's responsible salesperson, hydrated from the joined Client
+   * row on read and never persisted from here. Data scope reads it: a
+   * contract belongs to whoever its company belongs to (FR-RBAC-11).
+   * `undefined` when the caller did not join the client.
+   */
+  clientAssignedUserId?: string | null;
+
+  /**
    * Rollup of this contract's payment rows, hydrated on read where the
    * repository joined them. Undefined means "not loaded", which is not the
    * same as "no payments" — list views that skip the join must not render a
@@ -108,6 +116,7 @@ export class Contract {
     createdAt: Date;
     updatedAt: Date;
     clientName?: string;
+    clientAssignedUserId?: string | null;
     paymentSummary?: Contract['paymentSummary'];
   }) {
     this.id = props.id;
@@ -131,6 +140,7 @@ export class Contract {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.clientName = props.clientName;
+    this.clientAssignedUserId = props.clientAssignedUserId;
     this.paymentSummary = props.paymentSummary;
   }
 
@@ -156,6 +166,7 @@ export class Contract {
     createdAt?: Date;
     updatedAt?: Date;
     clientName?: string;
+    clientAssignedUserId?: string | null;
     paymentSummary?: Contract['paymentSummary'];
   }): Contract {
     const planName = props.planName?.trim();
@@ -197,6 +208,7 @@ export class Contract {
       createdAt: props.createdAt ?? new Date(),
       updatedAt: props.updatedAt ?? new Date(),
       clientName: props.clientName,
+      clientAssignedUserId: props.clientAssignedUserId,
       paymentSummary: props.paymentSummary,
     });
   }

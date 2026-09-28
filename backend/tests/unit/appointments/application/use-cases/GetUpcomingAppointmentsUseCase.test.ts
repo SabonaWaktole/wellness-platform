@@ -1,5 +1,6 @@
 import { GetUpcomingAppointmentsUseCase } from '../../../../../src/appointments/application/use-cases/GetUpcomingAppointmentsUseCase';
 import { AppointmentStatus } from '../../../../../src/appointments/domain/enums/AppointmentStatus';
+import { administrator, salesManager, salesUser, scopeResolver } from '../../../../support/access';
 
 describe('GetUpcomingAppointmentsUseCase', () => {
   let useCase: GetUpcomingAppointmentsUseCase;
@@ -10,7 +11,7 @@ describe('GetUpcomingAppointmentsUseCase', () => {
       findUpcoming: jest.fn(),
     };
 
-    useCase = new GetUpcomingAppointmentsUseCase(mockAppointmentRepository);
+    useCase = new GetUpcomingAppointmentsUseCase(mockAppointmentRepository, scopeResolver());
   });
 
   it('STAFF: should pass userId to repo, filtering to only their own appointments', async () => {
@@ -27,15 +28,17 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     ];
     mockAppointmentRepository.findUpcoming.mockResolvedValue(staffOnlyAppointments);
 
-    const results = await useCase.execute({
+    const results = await useCase.execute({ access: salesUser({ userId: 'staff-1' }),
       tenantId: 'tenant-1',
-      userId: 'staff-1',
-      scope: 'OWN',
       limit: 10,
     });
 
-    // Critical assertion: the repo receives the staff userId, so it can filter
-    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', 'staff-1', 10);
+    // Critical assertion: the repo receives the staff member's own scope, so it can filter
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith(
+      'tenant-1',
+      { kind: 'owners', userIds: ['staff-1'], includeUnowned: false },
+      10
+    );
     expect(results).toHaveLength(1);
     expect(results[0]).toEqual({
       id: 'apt-1',
@@ -71,15 +74,13 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     ];
     mockAppointmentRepository.findUpcoming.mockResolvedValue(companyWideAppointments);
 
-    const results = await useCase.execute({
+    const results = await useCase.execute({ access: administrator(),
       tenantId: 'tenant-1',
-      userId: 'owner-1',
-      scope: 'ALL',
       limit: 5,
     });
 
-    // Critical assertion: undefined means "all staff" — no userId filter
-    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', undefined, 5);
+    // Critical assertion: an ALL scope means "all staff" — no assignee filter
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', { kind: 'all' }, 5);
     expect(results).toHaveLength(2);
     // Verify appointments from DIFFERENT staff members are both returned
     expect(results[0].assignedUserId).toBe('staff-1');
@@ -106,46 +107,55 @@ describe('GetUpcomingAppointmentsUseCase', () => {
     ]);
   });
 
-  it('FR-RBAC-01: scopes to the caller when the calendar.view scope is OWN', async () => {
+  it('FR-RBAC-11: scopes to the caller when the calendar.view scope is OWN', async () => {
     mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
 
-    await useCase.execute({ tenantId: 'tenant-1', userId: 'su-1', scope: 'OWN', limit: 10 });
+    await useCase.execute({ access: salesUser({ userId: 'su-1' }), tenantId: 'tenant-1', limit: 10 });
 
-    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', 'su-1', 10);
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', { kind: 'owners', userIds: ['su-1'], includeUnowned: false }, 10);
   });
 
-  it('does not scope for a TEAM/ALL calendar.view scope', async () => {
+  it('FR-RBAC-12: a TEAM scope reaches the Sales Users and the caller', async () => {
+    mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
+    const withTeam = new GetUpcomingAppointmentsUseCase(mockAppointmentRepository, scopeResolver(['su-1', 'su-2']));
+
+    await withTeam.execute({ access: salesManager({ userId: 'sm-1' }), tenantId: 'tenant-1', limit: 10 });
+
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith(
+      'tenant-1',
+      { kind: 'owners', userIds: ['su-1', 'su-2', 'sm-1'], includeUnowned: true },
+      10
+    );
+  });
+
+  it('ALL reaches every appointment', async () => {
     mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
 
-    await useCase.execute({ tenantId: 'tenant-1', userId: 'sm-1', scope: 'TEAM', limit: 10 });
+    await useCase.execute({ access: administrator(), tenantId: 'tenant-1', limit: 10 });
 
-    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', undefined, 10);
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', { kind: 'all' }, 10);
   });
 
   it('should default limit to 5 when not provided', async () => {
     mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
 
-    await useCase.execute({
+    await useCase.execute({ access: salesUser({ userId: 'staff-1' }),
       tenantId: 'tenant-1',
-      userId: 'staff-1',
-      scope: 'OWN',
     });
 
-    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', 'staff-1', 5);
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-1', { kind: 'owners', userIds: ['staff-1'], includeUnowned: false }, 5);
   });
 
   it('cross-tenant isolation: tenantId is always forwarded to the repository', async () => {
     mockAppointmentRepository.findUpcoming.mockResolvedValue([]);
 
-    await useCase.execute({
+    await useCase.execute({ access: salesUser({ userId: 'staff-1' }),
       tenantId: 'tenant-A',
-      userId: 'staff-1',
-      scope: 'OWN',
       limit: 3,
     });
 
     // The repo is called with tenant-A, so the infrastructure layer
     // enforces that only tenant-A's data is returned
-    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-A', 'staff-1', 3);
+    expect(mockAppointmentRepository.findUpcoming).toHaveBeenCalledWith('tenant-A', { kind: 'owners', userIds: ['staff-1'], includeUnowned: false }, 3);
   });
 });

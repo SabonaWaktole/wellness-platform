@@ -1,5 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { IInteractionRepository } from '../../domain/repositories/IInteractionRepository';
+import { IInteractionRepository, RecentInteractionsOptions } from '../../domain/repositories/IInteractionRepository';
+import { ALL_RECORDS } from '../../../access/domain/RecordScope';
+import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import { Interaction } from '../../domain/entities/Interaction';
 import { InteractionChannel } from '../../domain/enums/InteractionChannel';
 import { OutcomeCategory } from '../../domain/entities/OutcomeCategory';
@@ -53,10 +55,13 @@ export class PrismaInteractionRepository implements IInteractionRepository {
     });
   }
 
-  async findRecentByTenant(tenantId: string, limit: number, authorUserId?: string): Promise<Interaction[]> {
-    const where: Prisma.InteractionWhereInput = { tenantId };
-    if (authorUserId) {
-      where.authorUserId = authorUserId;
+  async findRecentByTenant(tenantId: string, limit: number, options: RecentInteractionsOptions = {}): Promise<Interaction[]> {
+    const where: Prisma.InteractionWhereInput = {
+      tenantId,
+      client: ownerWhere(options.scope ?? ALL_RECORDS, 'assignedUserId'),
+    };
+    if (options.channels) {
+      where.channel = { in: options.channels };
     }
 
     const records = await this.prisma.interaction.findMany({

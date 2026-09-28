@@ -1,4 +1,5 @@
 import { CancelAppointmentUseCase } from '../../../../../src/appointments/application/use-cases/CancelAppointmentUseCase';
+import { administrator, salesUser, scopeResolver } from '../../../../support/access';
 
 describe('CancelAppointmentUseCase', () => {
   let useCase: CancelAppointmentUseCase;
@@ -15,7 +16,7 @@ describe('CancelAppointmentUseCase', () => {
       update: jest.fn(),
     };
 
-    useCase = new CancelAppointmentUseCase(mockAppointmentRepository);
+    useCase = new CancelAppointmentUseCase(mockAppointmentRepository, scopeResolver());
   });
 
   it('should cancel an existing appointment', async () => {
@@ -26,7 +27,7 @@ describe('CancelAppointmentUseCase', () => {
     const reason = 'Client no-show';
     const changedBy = 'user-1';
 
-    await useCase.execute({ id, tenantId, reason, changedByUserId: changedBy });
+    await useCase.execute({ access: administrator(), id, tenantId, reason, changedByUserId: changedBy });
 
     expect(mockAppointmentRepository.findById).toHaveBeenCalledWith(id, tenantId);
     expect(mockAppointment.cancel).toHaveBeenCalledWith(reason, changedBy);
@@ -37,7 +38,7 @@ describe('CancelAppointmentUseCase', () => {
     mockAppointmentRepository.findById.mockResolvedValue(null);
 
     await expect(
-      useCase.execute({ id: 'apt-owned-by-tenant-A', tenantId: 'tenant-B', reason: 'reason', changedByUserId: 'malicious-user' })
+      useCase.execute({ access: administrator(), id: 'apt-owned-by-tenant-A', tenantId: 'tenant-B', reason: 'reason', changedByUserId: 'malicious-user' })
     ).rejects.toThrow('Appointment not found');
 
     expect(mockAppointmentRepository.findById).toHaveBeenCalledWith('apt-owned-by-tenant-A', 'tenant-B');

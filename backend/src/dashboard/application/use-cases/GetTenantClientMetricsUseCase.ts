@@ -3,6 +3,9 @@ import { INotificationSettingsRepository } from '../../../notifications/domain/I
 import { dayBoundsInZone } from '@shared/domain/time/tenantDay';
 import { Client } from '../../../clients/domain/entities/Client';
 import { prisma } from '../../../shared/infrastructure/prisma/client';
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 
 export interface GetTenantClientMetricsDTO {
   tenantId: string;
@@ -12,14 +15,7 @@ export interface GetTenantClientMetricsDTO {
    * server host's. See tenantDay.ts for the defect this closes.
    */
   timeZone: string;
-  /** The requesting user. Only used when their scope restricts them to own data. */
-  userId?: string;
-  /**
-   * Slice 3 (FR-RBAC replacing the `role === 'STAFF'` literal): the caller's
-   * `companies.view` scope, from `access.scopeOf('companies.view')`. `OWN`
-   * sees only their own figures; anything else is tenant-wide.
-   */
-  scope?: string | null;
+  access: AccessContext;
 }
 
 export interface TenantClientMetrics {
@@ -29,8 +25,7 @@ export interface TenantClientMetrics {
    * Clients whose `assignedUserId` is the requesting user — their own book of
    * business. Always personal, for every role: the card that renders it is
    * titled "My assigned clients", and a tenant-wide figure under that label
-   * would be a different number than the words promise. 0 when the caller is
-   * anonymous (no userId), which no authenticated route produces.
+   * would be a different number than the words promise.
    */
   assignedClients: number;
   /**
@@ -83,36 +78,31 @@ export class GetTenantClientMetricsUseCase {
      * a per-workspace setting, so the dashboard reads the setting rather than
      * hard-coding a second, quietly different threshold.
      */
-    private settingsRepository: INotificationSettingsRepository
+    private settingsRepository: INotificationSettingsRepository,
+    private scopes: RecordScopeResolver
   ) {}
 
   async execute(dto: GetTenantClientMetricsDTO): Promise<TenantClientMetrics> {
     const { tenantId } = dto;
 
-    // Scope-based visibility, matching GetUpcomingAppointmentsUseCase: OWN
-    // sees only figures for records they own, wider scopes see the tenant.
-    //
-    // Ownership differs per entity, so each aggregate below uses its own field:
-    // Client.assignedUserId, Appointment.assignedUserId, Quotation.createdByUserId.
+    // Every figure is counted within the viewer's reach (FR-RBAC-13), each
+    // by the permission that governs its records: companies by
+    // `companies.view` over the assignee, appointments by `calendar.view`
+    // over theirs, quotations by `quotations.manage` through their company
+    // (FR-RBAC-11). A key the viewer does not hold counts nothing.
     // Product and StockLevel have NO user-ownership column at all — stock is a
     // property of the warehouse, not of a person — so the low/out-of-stock
     // counts stay tenant-wide for every role. That is a real limit of the data
     // model, not an oversight: there is nothing to scope those numbers by.
-    const scopedUserId = dto.scope === 'OWN' ? dto.userId : undefined;
+    const [companies, calendar, quotations] = await Promise.all([
+      this.scopes.resolve(dto.access, 'companies.view'),
+      this.scopes.resolve(dto.access, 'calendar.view'),
+      this.scopes.resolve(dto.access, 'quotations.manage'),
+    ]);
 
-    // Scoped counts come from search().total, since countByTenant() takes no
-    // user filter.
-    const result = await this.clientRepository.search(
-      tenantId,
-      scopedUserId ? { assignedUserId: scopedUserId } : {},
-      0,
-      10000
-    );
+    const result = await this.clientRepository.search(tenantId, { scope: companies }, 0, 10000);
     const allClients = result.items;
-
-    const totalClients = scopedUserId
-      ? result.total
-      : await this.clientRepository.countByTenant(tenantId);
+    const totalClients = result.total;
 
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -153,16 +143,11 @@ export class GetTenantClientMetricsUseCase {
       products,
     ] = await Promise.all([
       // Personal for every role — see the field's note on TenantClientMetrics.
-      // Guarded rather than passed straight through: `assignedUserId: undefined`
-      // is not a filter to Prisma, so an anonymous caller would silently get
-      // every client in the tenant under a card titled "My assigned clients".
-      dto.userId
-        ? prisma.client.count({ where: { tenantId, assignedUserId: dto.userId, deletedAt: null } })
-        : Promise.resolve(0),
+      prisma.client.count({ where: { tenantId, assignedUserId: dto.access.userId, deletedAt: null } }),
       prisma.appointment.count({
         where: {
           tenantId,
-          ...(scopedUserId ? { assignedUserId: scopedUserId } : {}),
+          AND: [ownerWhere(calendar, 'assignedUserId', { nullable: false })],
           status: { in: ACTIVE_APPOINTMENT_STATUSES },
           scheduledAt: { gte: today.start, lt: today.end },
         },
@@ -170,7 +155,7 @@ export class GetTenantClientMetricsUseCase {
       prisma.appointment.count({
         where: {
           tenantId,
-          ...(scopedUserId ? { assignedUserId: scopedUserId } : {}),
+          AND: [ownerWhere(calendar, 'assignedUserId', { nullable: false })],
           status: { in: ACTIVE_APPOINTMENT_STATUSES },
           scheduledAt: { gte: yesterday.start, lt: yesterday.end },
         },
@@ -178,7 +163,7 @@ export class GetTenantClientMetricsUseCase {
       prisma.quotation.count({
         where: {
           tenantId,
-          ...(scopedUserId ? { createdByUserId: scopedUserId } : {}),
+          client: ownerWhere(quotations, 'assignedUserId'),
           status: { in: OPEN_QUOTATION_STATUSES },
         },
       }),
@@ -193,7 +178,7 @@ export class GetTenantClientMetricsUseCase {
       prisma.quotation.count({
         where: {
           tenantId,
-          ...(scopedUserId ? { createdByUserId: scopedUserId } : {}),
+          client: ownerWhere(quotations, 'assignedUserId'),
           status: 'SENT',
           respondedAt: null,
           sentAt: { not: null, lte: followUpCutoff },
@@ -202,7 +187,7 @@ export class GetTenantClientMetricsUseCase {
       prisma.quotation.count({
         where: {
           tenantId,
-          ...(scopedUserId ? { createdByUserId: scopedUserId } : {}),
+          client: ownerWhere(quotations, 'assignedUserId'),
           status: 'PENDING_APPROVAL',
         },
       }),

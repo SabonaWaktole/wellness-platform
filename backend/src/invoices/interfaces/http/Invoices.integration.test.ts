@@ -41,6 +41,9 @@ beforeAll(async () => {
       id: 'client-inv-integ',
       tenantId,
       name: 'Client Inv Integration',
+      // The Sales User's own company: quotations and invoices follow their
+      // company (FR-RBAC-11), so staff can only quote for companies they hold.
+      assignedUserId: staff.id,
       status: 'ACTIVE',
       customFieldValues: {},
       lastUpdatedByUserId: staff.id

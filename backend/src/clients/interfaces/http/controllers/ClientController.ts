@@ -123,6 +123,7 @@ export class ClientController {
       const result = await this.importClientsUseCase.execute({
         tenantId,
         authorUserId: req.user!.userId,
+        access: req.access!,
         sheet,
       });
 
@@ -159,7 +160,8 @@ export class ClientController {
       const client = await this.createClientUseCase.execute({
         ...validatedData,
         tenantId,
-        authorUserId
+        authorUserId,
+        access: req.access!,
       });
 
       res.status(201).json(client);
@@ -173,7 +175,7 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const updatingUserId = req.user!.userId;
       const clientId = req.params.clientId as string;
-      const client = await this.getClientUseCase.execute(tenantId, clientId);
+      const client = await this.getClientUseCase.execute(tenantId, clientId, req.access!);
       res.status(200).json({
         id: client.id,
         name: client.name,
@@ -206,6 +208,7 @@ export class ClientController {
         tenantId,
         clientId,
         updatingUserId,
+        access: req.access!,
         ...validatedData
       });
 
@@ -226,6 +229,8 @@ export class ClientController {
 
       const result = await this.searchClientsUseCase.execute({
         tenantId,
+        access: req.access!,
+        reach: validatedData.reach,
         filters: {
           search: validatedData.search,
           name: validatedData.name,
@@ -251,7 +256,7 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const clientId = req.params.clientId as string;
 
-      const result = await this.getClientHistoryUseCase.execute({ tenantId, clientId });
+      const result = await this.getClientHistoryUseCase.execute({ tenantId, clientId, access: req.access! });
       res.status(200).json(result);
     } catch (error: any) {
       res.status(404).json({ error: error.message });
@@ -269,6 +274,7 @@ export class ClientController {
         tenantId,
         clientId,
         authorUserId,
+        access: req.access!,
         ...validatedData
       });
 
@@ -467,7 +473,8 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const counts = await this.getClientRelatedCountsUseCase.execute(
         tenantId,
-        req.params.clientId as string
+        req.params.clientId as string,
+        req.access!
       );
       res.status(200).json(counts);
     } catch (error: any) {

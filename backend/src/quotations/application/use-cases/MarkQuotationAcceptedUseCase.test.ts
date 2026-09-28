@@ -8,7 +8,7 @@ import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
 import { StockMovementType } from '../../../inventory/domain/StockMovement';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
-import { administrator, salesUser } from '../../../../tests/support/access';
+import { administrator, salesUser, scopeResolver } from '../../../../tests/support/access';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('MarkQuotationAcceptedUseCase', () => {
@@ -47,12 +47,12 @@ describe('MarkQuotationAcceptedUseCase', () => {
       }),
     };
 
-    useCase = new MarkQuotationAcceptedUseCase(quotationRepo, lineItemRepo, historyRepo, stockLevelRepo, transactionManager, writeTx, userRepo);
+    useCase = new MarkQuotationAcceptedUseCase(quotationRepo, lineItemRepo, historyRepo, stockLevelRepo, transactionManager, writeTx, userRepo, scopeResolver());
   });
 
   function makeQuotation(status: QuotationStatus, createdByUserId: string): Quotation {
     return Quotation.create({
-      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, 
+      id: 'q1', tenantId: 'tenant-1', clientId: 'c1', createdByUserId, clientAssignedUserId: createdByUserId, 
       lineItems: [
         QuotationLineItem.create({
           id: 'li1', tenantId: 'tenant-1', quotationId: 'q1', productId: 'p1', warehouseId: 'w1', quantity: 5, unitPrice: 10
@@ -175,7 +175,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
-    })).rejects.toThrow(PermissionDeniedError);
+    })).rejects.toThrow('Quotation not found');
   });
 
   it('should allow Staff to accept their own quotation', async () => {

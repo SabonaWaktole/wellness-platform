@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Search, MoreVertical, ChevronLeft, ChevronRight, FileSignature, Plus } from 'lucide-react';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { Button } from '../../components/ui/Button/Button';
+import { Can } from '../../components/auth/Can';
+import { usePermission } from '../../hooks/usePermission';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
 import { Badge } from '../../components/ui/Badge/Badge';
 import type { BadgeProps } from '../../components/ui/Badge/Badge';
@@ -45,6 +47,10 @@ export const ContractListContent: React.FC = () => {
   const { t: tc } = useTranslation('common');
   const { format: formatMoney } = useMoneyFormat();
   const statusLabel = useStatusLabel();
+  // FR-RBAC-06: the API leaves out what this viewer may not see, so the
+  // columns for it go too, rather than rendering a row of blanks.
+  const seesValue = usePermission('commercial.view');
+  const seesPayments = usePermission('payments.view');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<ContractTab>('ALL');
   const { tenantSlug } = useParams();
@@ -140,13 +146,15 @@ export const ContractListContent: React.FC = () => {
           <h1 className={styles.title}>{t('list.title')}</h1>
         </div>
         <div className={styles.headerActions}>
-          <Button
-            variant="primary"
-            icon={<Plus size={16} />}
-            onClick={() => navigate(`/${tenantSlug}/contracts/new`)}
-          >
-            {t('list.newContract')}
-          </Button>
+          <Can permission="contracts.manage">
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={() => navigate(`/${tenantSlug}/contracts/new`)}
+            >
+              {t('list.newContract')}
+            </Button>
+          </Can>
         </div>
       </div>
 
@@ -188,8 +196,8 @@ export const ContractListContent: React.FC = () => {
                   <th>{t('list.columnClient')}</th>
                   <th>{t('list.columnPlan')}</th>
                   <th>{t('list.columnTerm')}</th>
-                  <th>{t('list.columnValue')}</th>
-                  <th>{t('list.columnOwed')}</th>
+                  {seesValue && <th>{t('list.columnValue')}</th>}
+                  {seesPayments && <th>{t('list.columnOwed')}</th>}
                   <th>{t('list.columnStatus')}</th>
                   <th className={styles.tdAction}></th>
                 </tr>
@@ -229,41 +237,45 @@ export const ContractListContent: React.FC = () => {
                           {renderExpiryHint(contract)}
                         </div>
                       </td>
-                      <td>
-                        <span className={styles.amountText}>
-                          {formatMoney(contract.amount)}
-                        </span>
-                        <span className={styles.expiryHint}>
-                          {' '}
-                          / {statusLabel.billingPeriod(contract.billingPeriod)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className={styles.owedCell}>
-                          {contract.paymentSummary ? (
-                            <>
-                              <span
-                                className={
-                                  contract.paymentSummary.outstanding > 0
-                                    ? styles.amountText
-                                    : styles.owedClear
-                                }
-                              >
-                                {formatMoney(contract.paymentSummary.outstanding)}
-                              </span>
-                              {contract.paymentSummary.overdueCount > 0 && (
-                                <span className={styles.overdueChip}>
-                                  {t('list.overdueBadge', {
-                                    count: contract.paymentSummary.overdueCount,
-                                  })}
+                      {seesValue && (
+                        <td>
+                          <span className={styles.amountText}>
+                            {formatMoney(contract.amount)}
+                          </span>
+                          <span className={styles.expiryHint}>
+                            {' '}
+                            / {contract.billingPeriod && statusLabel.billingPeriod(contract.billingPeriod)}
+                          </span>
+                        </td>
+                      )}
+                      {seesPayments && (
+                        <td>
+                          <div className={styles.owedCell}>
+                            {contract.paymentSummary ? (
+                              <>
+                                <span
+                                  className={
+                                    contract.paymentSummary.outstanding > 0
+                                      ? styles.amountText
+                                      : styles.owedClear
+                                  }
+                                >
+                                  {formatMoney(contract.paymentSummary.outstanding)}
                                 </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className={styles.owedClear}>—</span>
-                          )}
-                        </div>
-                      </td>
+                                {contract.paymentSummary.overdueCount > 0 && (
+                                  <span className={styles.overdueChip}>
+                                    {t('list.overdueBadge', {
+                                      count: contract.paymentSummary.overdueCount,
+                                    })}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className={styles.owedClear}>—</span>
+                            )}
+                          </div>
+                        </td>
+                      )}
                       <td>
                         <Badge variant={getStatusBadgeVariant(contract.status)}>
                           {statusLabel.contract(contract.status)}

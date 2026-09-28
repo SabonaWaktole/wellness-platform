@@ -2,7 +2,7 @@ import { ArchiveClientUseCase } from '../../../../../src/clients/application/use
 import { RestoreClientUseCase } from '../../../../../src/clients/application/use-cases/RestoreClientUseCase';
 import { IClientRepository } from '../../../../../src/clients/domain/repositories/IClientRepository';
 import { Client } from '../../../../../src/clients/domain/entities/Client';
-import { accessWith, administrator, platformOperator, salesManager, salesUser } from '../../../../support/access';
+import { accessWith, administrator, platformOperator, salesManager, salesUser, scopeResolver } from '../../../../support/access';
 import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 const client = (deletedAt: Date | null = null) =>
@@ -31,8 +31,8 @@ describe('ArchiveClientUseCase', () => {
       archive: jest.fn(),
       restore: jest.fn(),
     } as any;
-    archive = new ArchiveClientUseCase(repo);
-    restore = new RestoreClientUseCase(repo);
+    archive = new ArchiveClientUseCase(repo, scopeResolver());
+    restore = new RestoreClientUseCase(repo, scopeResolver());
   });
 
   const owner = { tenantId: 't1', access: administrator(), requestingUserId: 'u1', clientId: 'c1' };
@@ -83,7 +83,7 @@ describe('ArchiveClientUseCase', () => {
     it('brings an archived client back', async () => {
       repo.findById.mockResolvedValue(client(new Date()));
       const result = await restore.execute(owner);
-      expect(repo.findById).toHaveBeenCalledWith('t1', 'c1', { includeArchived: true });
+      expect(repo.findById).toHaveBeenCalledWith('t1', 'c1', { includeArchived: true, scope: { kind: 'all' } });
       expect(repo.restore).toHaveBeenCalledWith('t1', 'c1', 'u1');
       expect(result.restoredClientName).toBe('Acme Ltd');
     });

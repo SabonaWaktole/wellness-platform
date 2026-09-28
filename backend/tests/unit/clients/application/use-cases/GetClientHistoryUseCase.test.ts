@@ -5,6 +5,7 @@ import { Client } from '../../../../../src/clients/domain/entities/Client';
 import { Interaction } from '../../../../../src/clients/domain/entities/Interaction';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
 import { InteractionChannel } from '../../../../../src/clients/domain/enums/InteractionChannel';
+import { administrator, reception, salesUser, scopeResolver } from '../../../../support/access';
 
 describe('GetClientHistoryUseCase', () => {
   let useCase: GetClientHistoryUseCase;
@@ -27,7 +28,7 @@ describe('GetClientHistoryUseCase', () => {
       findRecentByTenant: jest.fn(),
       save: jest.fn(),
     } as any;
-    useCase = new GetClientHistoryUseCase(clientRepo, interactionRepo);
+    useCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, scopeResolver());
   });
 
   it('returns a chronological timeline of interactions', async () => {
@@ -54,7 +55,7 @@ describe('GetClientHistoryUseCase', () => {
     // Mock returns in mixed order
     interactionRepo.findByClientId.mockResolvedValue([int2, int1]);
 
-    const result = await useCase.execute({ tenantId: 't1', clientId: 'c1' });
+    const result = await useCase.execute({ tenantId: 't1', clientId: 'c1', access: administrator() });
 
     // Should be sorted by createdAt descending
     expect(result.timeline.length).toBe(2);
@@ -96,7 +97,37 @@ describe('GetClientHistoryUseCase', () => {
       }, [])
     );
 
-    await expect(useCase.execute({ tenantId: 't1', clientId: 'c1' }))
+    await expect(useCase.execute({ tenantId: 't1', clientId: 'c1', access: administrator() }))
       .rejects.toThrow('Client not found or access denied');
+  });
+
+  it('D3 Reception (notes.view, no activities.view) sees notes and no calls, emails or appointments', async () => {
+    clientRepo.findById.mockResolvedValue(
+      Client.create({
+        id: 'c1', tenantId: 't1', name: 'Acme', contactInfo: {},
+        status: ClientStatus.ACTIVE, customFieldValues: {},
+        lastUpdatedByUserId: 'u1', createdAt: new Date(), updatedAt: new Date()
+      }, [])
+    );
+    interactionRepo.findByClientId.mockResolvedValue([
+      Interaction.create({ id: 'n1', tenantId: 't1', clientId: 'c1', authorUserId: 'u1', content: 'Note', channel: InteractionChannel.NOTE, createdAt: new Date() }),
+      Interaction.create({ id: 'k1', tenantId: 't1', clientId: 'c1', authorUserId: 'u1', content: 'Call', channel: InteractionChannel.CALL, createdAt: new Date() }),
+    ]);
+    const appointmentRepo = { findByClientId: jest.fn().mockResolvedValue([]) } as any;
+    const withAppointments = new GetClientHistoryUseCase(clientRepo, interactionRepo, scopeResolver(), appointmentRepo);
+
+    const result = await withAppointments.execute({ tenantId: 't1', clientId: 'c1', access: reception() });
+
+    expect(result.timeline.map((entry: any) => entry.id)).toEqual(['n1']);
+    expect(appointmentRepo.findByClientId).not.toHaveBeenCalled();
+  });
+
+  it('FR-RBAC-11 asks the repository for the company within the viewer\'s scope', async () => {
+    clientRepo.findById.mockResolvedValue(null);
+
+    await expect(useCase.execute({ tenantId: 't1', clientId: 'c1', access: salesUser({ userId: 'me' }) })).rejects.toThrow('not found');
+    expect(clientRepo.findById).toHaveBeenCalledWith('t1', 'c1', {
+      scope: { kind: 'owners', userIds: ['me'], includeUnowned: false },
+    });
   });
 });

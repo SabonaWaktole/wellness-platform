@@ -6,6 +6,8 @@ import { Client } from '../../../../../src/clients/domain/entities/Client';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
 import { InteractionChannel } from '../../../../../src/clients/domain/enums/InteractionChannel';
 import { OutcomeCategory } from '../../../../../src/clients/domain/entities/OutcomeCategory';
+import { administrator, reception, scopeResolver } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('AddInteractionUseCase', () => {
   let useCase: AddInteractionUseCase;
@@ -17,7 +19,7 @@ describe('AddInteractionUseCase', () => {
     clientRepo = { findById: jest.fn(), search: jest.fn(), save: jest.fn(), update: jest.fn(), countByTenant: jest.fn(), findRecentByTenant: jest.fn() } as any;
     interactionRepo = { findByClientId: jest.fn(), save: jest.fn(), findById: jest.fn(), findRecentByTenant: jest.fn() } as any;
     outcomeRepo = { findByTenantId: jest.fn(), findById: jest.fn(), save: jest.fn() } as any;
-    useCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeRepo);
+    useCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeRepo, scopeResolver());
   });
 
   it('adds an interaction successfully', async () => {
@@ -33,6 +35,7 @@ describe('AddInteractionUseCase', () => {
       tenantId: 't1',
       clientId: 'c1',
       authorUserId: 'u1',
+      access: administrator(),
       content: 'Good meeting',
       channel: InteractionChannel.MEETING,
     });
@@ -59,9 +62,38 @@ describe('AddInteractionUseCase', () => {
       tenantId: 't1', // request is for t1
       clientId: 'c1',
       authorUserId: 'u1',
+      access: administrator(),
       content: 'Good meeting',
       channel: InteractionChannel.MEETING,
       outcomeCategoryId: 'out-1',
     })).rejects.toThrow('Outcome category not found or access denied');
+  });
+
+  describe('D3 notes vs activities', () => {
+    beforeEach(() => {
+      clientRepo.findById.mockResolvedValue(
+        Client.create({
+          id: 'c1', tenantId: 't1', name: 'Acme', contactInfo: {},
+          status: ClientStatus.ACTIVE, customFieldValues: {},
+          lastUpdatedByUserId: 'u1', createdAt: new Date(), updatedAt: new Date()
+        }, [])
+      );
+    });
+
+    it('lets Reception add a note (notes.add)', async () => {
+      await useCase.execute({
+        tenantId: 't1', clientId: 'c1', authorUserId: 'r1', content: 'Called in', channel: InteractionChannel.NOTE,
+        access: reception({ userId: 'r1' }),
+      });
+      expect(interactionRepo.save).toHaveBeenCalled();
+    });
+
+    it('refuses Reception a call (activities.add)', async () => {
+      await expect(useCase.execute({
+        tenantId: 't1', clientId: 'c1', authorUserId: 'r1', content: 'Rang them', channel: InteractionChannel.CALL,
+        access: reception({ userId: 'r1' }),
+      })).rejects.toThrow(PermissionDeniedError);
+      expect(interactionRepo.save).not.toHaveBeenCalled();
+    });
   });
 });
