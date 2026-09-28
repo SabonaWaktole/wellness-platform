@@ -84,6 +84,11 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       // this tenant's own data (Slice 2), so deleting the workspace erases
       // it rather than leaving it behind.
       await tx.auditEntry.deleteMany({ where: { tenantId } });
+      // Both cascade from Tenant, but BusinessType holds RESTRICT on its
+      // RiskLevel. Deleting them in order leaves nothing to MySQL's cascade
+      // ordering.
+      await tx.businessType.deleteMany({ where: { tenantId } });
+      await tx.riskLevel.deleteMany({ where: { tenantId } });
 
       // NotificationSettings cascades from this and needs no separate call.
       await tx.tenant.delete({ where: { id: tenantId } });

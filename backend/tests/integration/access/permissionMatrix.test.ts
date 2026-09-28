@@ -207,6 +207,18 @@ describe('Permission matrix (SRS §4.2)', () => {
       permissionKey: 'audit.view',
       request: (t) => request(app).get(`/api/${tenantSlug}/audit/export.csv`).set('Authorization', `Bearer ${t}`),
     },
+    {
+      label: 'settings.manage — POST /lookups/business-types',
+      permissionKey: 'settings.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/lookups/business-types`).set('Authorization', `Bearer ${t}`).send({ nameSq: '', riskLevelId: 'x' }),
+    },
+    {
+      label: 'settings.manage — PATCH /lookups/risk-levels/:id',
+      permissionKey: 'settings.manage',
+      request: (t) =>
+        request(app).patch(`/api/${tenantSlug}/lookups/risk-levels/nonexistent`).set('Authorization', `Bearer ${t}`).send({}),
+    },
   ];
 
   for (const testCase of CASES) {

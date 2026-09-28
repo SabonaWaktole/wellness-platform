@@ -14,7 +14,7 @@
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
 --                                    column can become NOT NULL.
 --
--- It replaces running these ten by hand, in this order (the order matters —
+-- It replaces running these eleven by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql
@@ -27,6 +27,7 @@
 --   8. mysql_migration_add_audit_entries.sql
 --   9. mysql_migration_add_invitation_role.sql
 --  10. mysql_migration_add_role_base_key.sql
+--  11. mysql_migration_add_lookup_lists.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -789,6 +790,107 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 11. Risk levels and business types (Slice 8: FR-SET-01, 02, 10)
+-- ---------------------------------------------------------------
+SELECT 'RiskLevel/BusinessType tables' AS step, NOW() AS at;
+
+-- Tables are created with their final shape; a database that already has
+-- them skips straight to the seed, which is also guarded.
+CREATE TABLE IF NOT EXISTS `RiskLevel` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `level` INTEGER NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `description` TEXT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `RiskLevel_tenantId_order_idx`(`tenantId`, `order`),
+    UNIQUE INDEX `RiskLevel_tenantId_level_key`(`tenantId`, `level`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `BusinessType` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `riskLevelId` VARCHAR(191) NOT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `BusinessType_tenantId_order_idx`(`tenantId`, `order`),
+    INDEX `BusinessType_riskLevelId_idx`(`riskLevelId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RiskLevel' AND CONSTRAINT_NAME = 'RiskLevel_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `RiskLevel` ADD CONSTRAINT `RiskLevel_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: RiskLevel.RiskLevel_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'BusinessType' AND CONSTRAINT_NAME = 'BusinessType_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `BusinessType` ADD CONSTRAINT `BusinessType_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: BusinessType.BusinessType_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'BusinessType' AND CONSTRAINT_NAME = 'BusinessType_riskLevelId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `BusinessType` ADD CONSTRAINT `BusinessType_riskLevelId_fkey` FOREIGN KEY (`riskLevelId`) REFERENCES `RiskLevel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: BusinessType.BusinessType_riskLevelId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- Seed (FR-SET-10): the placeholder lists in src/lookups/domain/DefaultLookups.ts,
+-- for every workspace that has none yet. Same values as the Postgres migration.
+INSERT INTO `RiskLevel` (`id`, `tenantId`, `level`, `nameSq`, `nameEn`, `description`, `order`, `updatedAt`)
+SELECT UUID(), t.id, v.lvl, v.namesq, v.nameen, v.description, v.ord, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT 1 AS lvl, 'Niveli 1' AS namesq, 'Level 1' AS nameen, 'Rrezik i ulët' AS description, 1 AS ord
+  UNION ALL
+  SELECT 2 AS lvl, 'Niveli 2' AS namesq, 'Level 2' AS nameen, 'Rrezik i mesëm' AS description, 2 AS ord
+  UNION ALL
+  SELECT 3 AS lvl, 'Niveli 3' AS namesq, 'Level 3' AS nameen, 'Rrezik i lartë' AS description, 3 AS ord
+) v
+WHERE NOT EXISTS (SELECT 1 FROM `RiskLevel` r WHERE r.tenantId = t.id);
+
+INSERT INTO `BusinessType` (`id`, `tenantId`, `nameSq`, `nameEn`, `riskLevelId`, `order`, `updatedAt`)
+SELECT UUID(), t.id, v.namesq, v.nameen, r.id, v.ord, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT 'Qendër thirrjesh' AS namesq, 'Call center' AS nameen, 1 AS risklevel, 1 AS ord
+  UNION ALL
+  SELECT 'Zyrë' AS namesq, 'Office' AS nameen, 1 AS risklevel, 2 AS ord
+  UNION ALL
+  SELECT 'Kafene' AS namesq, 'Café' AS nameen, 1 AS risklevel, 3 AS ord
+  UNION ALL
+  SELECT 'Dyqan' AS namesq, 'Retail shop' AS nameen, 1 AS risklevel, 4 AS ord
+  UNION ALL
+  SELECT 'Restorant' AS namesq, 'Restaurant' AS nameen, 2 AS risklevel, 5 AS ord
+  UNION ALL
+  SELECT 'Hotel' AS namesq, 'Hotel' AS nameen, 2 AS risklevel, 6 AS ord
+  UNION ALL
+  SELECT 'Magazinë' AS namesq, 'Warehouse' AS nameen, 2 AS risklevel, 7 AS ord
+  UNION ALL
+  SELECT 'Ndërtim' AS namesq, 'Construction' AS nameen, 3 AS risklevel, 8 AS ord
+  UNION ALL
+  SELECT 'Fabrikë' AS namesq, 'Factory' AS nameen, 3 AS risklevel, 9 AS ord
+) v
+JOIN `RiskLevel` r ON r.tenantId = t.id AND r.`level` = v.risklevel
+WHERE NOT EXISTS (SELECT 1 FROM `BusinessType` b WHERE b.tenantId = t.id);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260928140000_add_lookup_lists', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260928140000_add_lookup_lists'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -828,6 +930,10 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Invitation' AND COLUMN_NAME='roleId'
   UNION ALL SELECT 'Role.baseKey', COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Role' AND COLUMN_NAME='baseKey'
+  UNION ALL SELECT 'RiskLevel table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='RiskLevel'
+  UNION ALL SELECT 'BusinessType table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='BusinessType'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

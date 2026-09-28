@@ -34,7 +34,9 @@
     "User": "User",
     "Invitation": "Invitation",
     "Client": "Company",
-    "Role": "Role"
+    "Role": "Role",
+    "RiskLevel": "Risk level",
+    "BusinessType": "Business type"
   },
   "actors": {
     "system": "System",
@@ -76,7 +78,12 @@
     "scopesChanged": "Scope changed",
     "nameSq": "Albanian name",
     "nameEn": "English name",
-    "copiedFrom": "Copied from"
+    "copiedFrom": "Copied from",
+    "level": "Level",
+    "description": "Description",
+    "riskLevel": "Risk level",
+    "order": "Order",
+    "active": "Active"
   },
   "empty": {
     "title": "No entries match these filters",

@@ -119,6 +119,10 @@ model Tenant {
 
   // Slice 3: RBAC
   roles Role[]
+
+  // Slice 8: lookup lists
+  riskLevels    RiskLevel[]
+  businessTypes BusinessType[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -1228,4 +1232,48 @@ model ContractStatusHistory {
   changedBy User?    @relation("ContractStatusChanges", fields: [changedByUserId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, contractId])
+}
+
+/// Admin-managed risk levels (Slice 8: FR-SET-02). See the Postgres schema
+/// for the full rationale; kept identical here.
+model RiskLevel {
+  id          String   @id
+  tenantId    String
+  level       Int
+  nameSq      String
+  /// Optional: labels fall back to Albanian when English is missing (FR-LNG-03).
+  nameEn      String?
+  description String?  @db.Text
+  order       Int      @default(0)
+  /// A deactivated value stays on the records that use it but is not offered
+  /// for new ones. A value in use is never deleted, only deactivated.
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  businessTypes BusinessType[]
+
+  @@unique([tenantId, level])
+  @@index([tenantId, order])
+}
+
+/// Admin-managed business types, each tied to one risk level (Slice 8:
+/// FR-SET-01). See the Postgres schema.
+model BusinessType {
+  id          String   @id
+  tenantId    String
+  nameSq      String
+  nameEn      String?
+  riskLevelId String
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  riskLevel RiskLevel @relation(fields: [riskLevelId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, order])
+  @@index([riskLevelId])
 }

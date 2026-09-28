@@ -42,4 +42,17 @@ describe('SettingsLayout', () => {
 
     expect(screen.queryByRole('link', { name: 'Audit log' })).toBeNull();
   });
+
+  it('FR-SET-01 links to Lists for a user who manages settings', () => {
+    renderAs({ 'settings.manage': true });
+
+    const links = screen.getAllByRole('link', { name: 'Lists' });
+    expect(links[0].getAttribute('href')).toBe('/acme/settings/lists');
+  });
+
+  it('FR-SET-01 hides Lists from a user who does not', () => {
+    renderAs({ 'users.manage': true, 'audit.view': true });
+
+    expect(screen.queryByRole('link', { name: 'Lists' })).toBeNull();
+  });
 });

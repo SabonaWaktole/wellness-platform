@@ -5,6 +5,7 @@
     "profile": "Profili",
     "company": "Kompania",
     "clientManagement": "Menaxhimi i klientëve",
+    "lists": "Listat",
     "notifications": "Njoftimet",
     "team": "Ekipi",
     "roles": "Rolet dhe lejet",
@@ -554,5 +555,63 @@
     "formattingOneOf": "Po formatohet një nga {{count}} objektet e zgjedhura.",
     "contrastWarningLight": "Vështirë për t’u lexuar në faqe të çelët ({{ratio}}:1). Synoni të paktën 3:1.",
     "contrastWarningDark": "Vështirë për t’u lexuar në faqe të errët ({{ratio}}:1). Synoni të paktën 3:1."
+  },
+  "lists": {
+    "breadcrumb": "Listat",
+    "title": "Listat",
+    "subtitle": "Vlerat nga të cilat zgjidhet kur plotësohet një kompani. Çaktivizoni një vlerë që të mos ofrohet më; regjistrat që e përdorin tashmë e mbajnë.",
+    "tabs": {
+      "riskLevels": "Nivelet e rrezikut",
+      "businessTypes": "Llojet e biznesit"
+    },
+    "hints": {
+      "riskLevels": "Çdo lloj biznesi i përket një niveli rreziku. Niveli i rrezikut i një kompanie rrjedh nga lloji i saj i biznesit.",
+      "businessTypes": "Ndryshimi i nivelit të rrezikut të një lloji biznesi e ndryshon atë për çdo kompani të këtij lloji."
+    },
+    "loading": "Duke u ngarkuar…",
+    "loadFailed": "Kjo listë nuk u ngarkua.",
+    "empty": "Kjo listë nuk ka ende vlera.",
+    "add": "Shto vlerë",
+    "save": "Ruaj",
+    "cancel": "Anulo",
+    "optional": "Opsionale",
+    "fallsBackToSq": "Përdor emrin në shqip",
+    "active": "Aktive",
+    "inactive": "Joaktive",
+    "levelBadge": "Niveli {{level}}",
+    "chooseRiskLevel": "Zgjidhni një nivel rreziku",
+    "edit": "Ndrysho {{name}}",
+    "deactivate": "Çaktivizo {{name}}",
+    "reactivate": "Riaktivizo {{name}}",
+    "delete": "Fshi {{name}}",
+    "moveUp": "Lëviz {{name}} lart",
+    "moveDown": "Lëviz {{name}} poshtë",
+    "columns": {
+      "order": "Renditja",
+      "nameSq": "Emri në shqip",
+      "nameEn": "Emri në anglisht",
+      "level": "Niveli",
+      "description": "Përshkrimi",
+      "riskLevel": "Niveli i rrezikut",
+      "status": "Statusi",
+      "actions": "Veprimet"
+    },
+    "deleteConfirm": {
+      "title": "Të fshihet kjo vlerë?",
+      "message": "\"{{name}}\" do të hiqet nga lista. Ky veprim nuk mund të zhbëhet.",
+      "confirm": "Fshi"
+    },
+    "errors": {
+      "LOOKUP_ITEM_NOT_FOUND": "Kjo vlerë nuk ekziston më. Ringarkoni faqen.",
+      "INVALID_LOOKUP_VALUE": "Kontrolloni vlerat: emri në shqip është i detyrueshëm dhe niveli është numër i plotë nga 1 deri në 99.",
+      "LOOKUP_VALUE_TAKEN": "Një vlerë tjetër në këtë listë e ka tashmë këtë emër.",
+      "LEVEL_TAKEN": "Një nivel tjetër rreziku e ka tashmë këtë nivel.",
+      "RISK_LEVEL_INACTIVE": "Zgjidhni një nivel rreziku aktiv.",
+      "LOOKUP_ITEM_IN_USE": "Kjo vlerë është në përdorim, prandaj nuk mund të fshihet. Çaktivizojeni në vend të kësaj.",
+      "RISK_LEVEL_STILL_USED_one": "{{count}} lloj biznesi aktiv e përdor ende këtë nivel rreziku. Zhvendoseni ose çaktivizojeni më parë.",
+      "RISK_LEVEL_STILL_USED_other": "{{count}} lloje biznesi aktive e përdorin ende këtë nivel rreziku. Zhvendosini ose çaktivizojini më parë.",
+      "INVALID_LOOKUP_ORDER": "Lista ndryshoi ndërkohë që po e rendisnit. Ringarkoni faqen dhe provoni përsëri.",
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    }
   }
 }
