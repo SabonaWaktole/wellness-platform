@@ -152,4 +152,22 @@ describe('LookupListEditor', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('failed: LOOKUP_ITEM_IN_USE');
     expect(handlers.onDelete).toHaveBeenCalledWith('rl1');
   });
+
+  it('FR-SET-04 hides the move buttons and drag handles when reorderable is false', () => {
+    render(
+      <LookupListEditor
+        caption="Risk levels"
+        items={LEVELS}
+        columns={[levelColumn]}
+        toValues={(draft) => ({ level: Number(draft.level) })}
+        errorMessage={(err: any) => `failed: ${err.response?.data?.code}`}
+        reorderable={false}
+        {...handlers}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Move .* up/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Move .* down/ })).toBeNull();
+    expect(row('rl1').getAttribute('draggable')).toBe('false');
+  });
 });

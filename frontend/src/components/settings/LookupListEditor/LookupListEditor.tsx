@@ -43,6 +43,12 @@ export interface LookupListEditorProps<T extends LookupItem> {
   onDelete: (id: string) => Promise<void>;
   /** The API's refusal in the user's language. */
   errorMessage: (error: unknown) => string;
+  /**
+   * Hides the drag handles and move buttons (default `true`). Cities are
+   * reorderable only while filtered to one area (FR-SET-04); across "all
+   * areas" a display order would not mean anything.
+   */
+  reorderable?: boolean;
 }
 
 const NEW_ROW = 'new';
@@ -64,6 +70,7 @@ export function LookupListEditor<T extends LookupItem>({
   onSetActive,
   onDelete,
   errorMessage,
+  reorderable: reorderableProp = true,
 }: LookupListEditorProps<T>) {
   const { t, i18n } = useTranslation('settings');
   const [editing, setEditing] = useState<string | null>(null);
@@ -129,7 +136,7 @@ export function LookupListEditor<T extends LookupItem>({
   };
 
   const field = (name: string) => (value: string) => setDraft((current) => ({ ...current, [name]: value }));
-  const reorderable = editing === null && items.length > 1;
+  const reorderable = reorderableProp && editing === null && items.length > 1;
 
   const editCells = (rowId: string) => (
     <>

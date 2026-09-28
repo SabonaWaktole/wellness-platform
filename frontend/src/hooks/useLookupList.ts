@@ -1,15 +1,18 @@
 import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { lookupService, type LookupItemOf, type LookupListKey, type LookupValues } from '../services/lookupService';
+import { lookupService, type LookupFilter, type LookupItemOf, type LookupListKey, type LookupValues } from '../services/lookupService';
 
 const byOrder = <T extends { order: number }>(items: T[]) => [...items].sort((a, b) => a.order - b.order);
 
 /**
  * One list's values for the Settings → Lists editor (Slice 8), inactive ones
- * included. Writes update the local copy from the server's answer, so the
+ * included. `filter` narrows the list by its own fields, e.g. cities of one
+ * area (FR-SET-04); a write reloads the list, so the state stays correct even
+ * when the write moved a value out of the current filter (an area change).
+ * Writes update the local copy from the server's answer otherwise, so the
  * screen always shows what was saved.
  */
-export const useLookupList = <L extends LookupListKey>(list: L) => {
+export const useLookupList = <L extends LookupListKey>(list: L, filter?: LookupFilter) => {
   const { tenantSlug } = useParams();
   const [items, setItems] = useState<LookupItemOf[L][]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,14 +23,16 @@ export const useLookupList = <L extends LookupListKey>(list: L) => {
     setLoading(true);
     setLoadFailed(false);
     try {
-      setItems(await lookupService.list(tenantSlug, list, true));
+      setItems(await lookupService.list(tenantSlug, list, true, filter));
     } catch (error) {
       console.error(`Failed to fetch ${list}`, error);
       setLoadFailed(true);
     } finally {
       setLoading(false);
     }
-  }, [tenantSlug, list]);
+    // `filter`'s values, not its identity, decide when to refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantSlug, list, JSON.stringify(filter ?? {})]);
 
   const replace = (item: LookupItemOf[L]) => setItems((current) => current.map((row) => (row.id === item.id ? item : row)));
 
@@ -36,21 +41,32 @@ export const useLookupList = <L extends LookupListKey>(list: L) => {
     setItems((current) => byOrder([...current, item]));
   };
 
-  const update = async (id: string, values: LookupValues) => replace(await lookupService.update(tenantSlug!, list, id, values));
+  const update = async (id: string, values: LookupValues) => {
+    const item = await lookupService.update(tenantSlug!, list, id, values);
+    // A field the current filter is scoped by (a city's areaId) may have
+    // changed, so the safe move is to reload rather than assume it still
+    // belongs on this screen.
+    if (filter && Object.keys(filter).some((key) => key in values)) {
+      await fetchItems();
+    } else {
+      replace(item);
+    }
+  };
 
   const reorder = async (ids: string[]) => {
     // Show the new order straight away; the server's answer then confirms it.
     const previous = items;
     setItems(ids.map((id, index) => ({ ...previous.find((item) => item.id === id)!, order: index + 1 })));
     try {
-      setItems(await lookupService.reorder(tenantSlug!, list, ids));
+      setItems(await lookupService.reorder(tenantSlug!, list, ids, filter));
     } catch (error) {
       setItems(previous);
       throw error;
     }
   };
 
-  const setActive = async (id: string, active: boolean) => replace(await lookupService.setActive(tenantSlug!, list, id, active));
+  const setActive = async (id: string, active: boolean, cascade = false) =>
+    replace(await lookupService.setActive(tenantSlug!, list, id, active, cascade));
 
   const remove = async (id: string) => {
     await lookupService.remove(tenantSlug!, list, id);

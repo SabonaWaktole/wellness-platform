@@ -1,7 +1,7 @@
 import { apiClient as api } from '../api';
 
-/** The admin-managed lists (Slice 8). Slices 9 and 10 add areas, cities and the sales lists. */
-export type LookupListKey = 'risk-levels' | 'business-types';
+/** The admin-managed lists (Slices 8, 9). Slice 10 adds the sales lists. */
+export type LookupListKey = 'risk-levels' | 'business-types' | 'areas' | 'cities';
 
 /** What every list value has. Only the Albanian name is required (FR-LNG-03). */
 export interface LookupItem {
@@ -21,20 +21,36 @@ export interface BusinessType extends LookupItem {
   riskLevelId: string;
 }
 
+export type Area = LookupItem;
+
+export interface City extends LookupItem {
+  areaId: string;
+}
+
 export interface LookupItemOf {
   'risk-levels': RiskLevel;
   'business-types': BusinessType;
+  areas: Area;
+  cities: City;
 }
 
 /** The body of a create or update: the labels plus the list's own fields. */
 export type LookupValues = Record<string, unknown>;
 
-/** Settings → Lists' client (FR-SET-01, 02). */
+/** Narrows a read or reorder by the list's own fields, e.g. City's `areaId` (FR-SET-04). */
+export type LookupFilter = Record<string, string>;
+
+/** Settings → Lists' client (FR-SET-01, 02, 03, 04). */
 export const lookupService = {
   /** Active values only, unless `includeInactive` and the caller manages the lists. */
-  list: async <L extends LookupListKey>(tenantSlug: string, list: L, includeInactive = false): Promise<LookupItemOf[L][]> => {
+  list: async <L extends LookupListKey>(
+    tenantSlug: string,
+    list: L,
+    includeInactive = false,
+    filter?: LookupFilter
+  ): Promise<LookupItemOf[L][]> => {
     const response = await api.get<{ data: LookupItemOf[L][] }>(`/${tenantSlug}/lookups/${list}`, {
-      params: includeInactive ? { includeInactive: 'true' } : undefined,
+      params: { ...filter, ...(includeInactive ? { includeInactive: 'true' } : undefined) },
     });
     return response.data.data;
   },
@@ -49,14 +65,22 @@ export const lookupService = {
     return response.data.item;
   },
 
-  reorder: async <L extends LookupListKey>(tenantSlug: string, list: L, ids: string[]): Promise<LookupItemOf[L][]> => {
-    const response = await api.put<{ data: LookupItemOf[L][] }>(`/${tenantSlug}/lookups/${list}/order`, { ids });
+  reorder: async <L extends LookupListKey>(tenantSlug: string, list: L, ids: string[], filter?: LookupFilter): Promise<LookupItemOf[L][]> => {
+    const response = await api.put<{ data: LookupItemOf[L][] }>(`/${tenantSlug}/lookups/${list}/order`, { ids }, { params: filter });
     return response.data.data;
   },
 
-  setActive: async <L extends LookupListKey>(tenantSlug: string, list: L, id: string, active: boolean): Promise<LookupItemOf[L]> => {
+  /** `cascade: true` also deactivates an area's active cities (FR-SET-04); refused without it. */
+  setActive: async <L extends LookupListKey>(
+    tenantSlug: string,
+    list: L,
+    id: string,
+    active: boolean,
+    cascade = false
+  ): Promise<LookupItemOf[L]> => {
     const response = await api.post<{ item: LookupItemOf[L] }>(
-      `/${tenantSlug}/lookups/${list}/${id}/${active ? 'reactivate' : 'deactivate'}`
+      `/${tenantSlug}/lookups/${list}/${id}/${active ? 'reactivate' : 'deactivate'}`,
+      active ? undefined : { cascade }
     );
     return response.data.item;
   },

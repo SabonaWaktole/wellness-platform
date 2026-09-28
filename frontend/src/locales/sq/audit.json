@@ -36,7 +36,9 @@
     "Client": "Kompani",
     "Role": "Rol",
     "RiskLevel": "Nivel rreziku",
-    "BusinessType": "Lloj biznesi"
+    "BusinessType": "Lloj biznesi",
+    "Area": "Zonë",
+    "City": "Qytet"
   },
   "actors": {
     "system": "Sistemi",
@@ -82,6 +84,7 @@
     "level": "Niveli",
     "description": "Përshkrimi",
     "riskLevel": "Niveli i rrezikut",
+    "area": "Zona",
     "order": "Renditja",
     "active": "Aktive"
   },
