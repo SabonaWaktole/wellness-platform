@@ -3,6 +3,7 @@ import { PrismaTenantProvisioningTransaction } from '../../../src/tenant/infrast
 import { ITenantProvisioningTransaction } from '../../../src/tenant/application/ports/ITenantProvisioningTransaction';
 import { PrismaTenantRepository } from '../../../src/tenant/infrastructure/repositories/PrismaTenantRepository';
 import { PrismaUserRepository } from '../../../src/auth/infrastructure/repositories/PrismaUserRepository';
+import { PrismaSystemRoleSeeder } from '../../../src/access/infrastructure/PrismaSystemRoleSeeder';
 import { CreateTenantWithOwnerUseCase } from '../../../src/tenant/application/use-cases/CreateTenantWithOwnerUseCase';
 import { IPasswordHasher } from '../../../src/auth/application/ports/IPasswordHasher';
 import { UserRole } from '../../../src/auth/domain/enums/UserRole';
@@ -98,6 +99,24 @@ describe('Tenant provisioning atomicity', () => {
     expect(persistedUsers[0].tenantId).toBe(tenant.id);
   });
 
+  it('FR-RBAC-01 gives the new workspace its five system roles and makes the owner its Administrator', async () => {
+    const slug = track(`atomic-roles-${Date.now()}`);
+    const useCase = new CreateTenantWithOwnerUseCase(
+      new PrismaTenantProvisioningTransaction(prisma),
+      passwordHasher
+    );
+
+    const { tenant, user } = await useCase.execute(validInput(slug));
+
+    const roles = await prisma.role.findMany({ where: { tenantId: tenant.id }, include: { permissions: true } });
+    expect(roles.map((r) => r.key).sort()).toEqual(['ADMINISTRATOR', 'CEO', 'RECEPTION', 'SALES_MANAGER', 'SALES_USER']);
+    const administrator = roles.find((r) => r.key === 'ADMINISTRATOR')!;
+    expect(administrator.permissions.map((p) => p.permissionKey)).toContain('users.manage');
+
+    const owner = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(owner!.roleId).toBe(administrator.id);
+  });
+
   it('leaves NO tenant behind when the owner write fails — proving the transaction is real', async () => {
     const slug = track(`atomic-rollback-${Date.now()}`);
 
@@ -152,6 +171,7 @@ describe('Tenant provisioning atomicity', () => {
           work({
             tenantRepo: new PrismaTenantRepository(),
             userRepo: new PrismaUserRepository(),
+            roleSeeder: new PrismaSystemRoleSeeder(prisma),
           })
         ),
     };

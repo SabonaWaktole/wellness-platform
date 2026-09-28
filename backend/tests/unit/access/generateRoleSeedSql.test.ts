@@ -29,4 +29,11 @@ describe('generate-role-seed-sql (NFR-MNT-01: the matrix and the migration SQL c
     const migrationPath = path.join(__dirname, '../../../prisma/mysql_migration_add_roles_and_permissions.sql');
     expect(generatedBlockOf(migrationPath)).toBe(generateMysqlRoleSeedSql());
   });
+
+  it('the Slice 5 re-seed carries the same blocks, for tenants created after the roles migration', () => {
+    const postgres = path.join(__dirname, '../../../prisma/migrations/20260928090000_add_invitation_role/migration.sql');
+    const mysql = path.join(__dirname, '../../../prisma/mysql_migration_add_invitation_role.sql');
+    expect(generatedBlockOf(postgres)).toBe(generatePostgresRoleSeedSql());
+    expect(generatedBlockOf(mysql)).toBe(generateMysqlRoleSeedSql());
+  });
 });

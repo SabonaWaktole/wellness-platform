@@ -14,7 +14,7 @@
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
 --                                    column can become NOT NULL.
 --
--- It replaces running these eight by hand, in this order (the order matters —
+-- It replaces running these nine by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql
@@ -25,6 +25,7 @@
 --   6. mysql_migration_add_contracts.sql
 --   7. mysql_migration_add_roles_and_permissions.sql
 --   8. mysql_migration_add_audit_entries.sql
+--   9. mysql_migration_add_invitation_role.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -736,6 +737,42 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 9. Invitations carry a role (Slice 5: FR-USR-02)
+-- ---------------------------------------------------------------
+-- Section 7 has just re-run the role seed, so every tenant has its roles.
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Invitation' AND COLUMN_NAME = 'roleId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Invitation` ADD COLUMN `roleId` VARCHAR(191) NULL', 'SELECT ''skip: Invitation.roleId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Invitation' AND INDEX_NAME = 'Invitation_roleId_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Invitation_roleId_idx` ON `Invitation`(`roleId`)', 'SELECT ''skip: Invitation_roleId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Invitation' AND CONSTRAINT_NAME = 'Invitation_roleId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Invitation` ADD CONSTRAINT `Invitation_roleId_fkey` FOREIGN KEY (`roleId`) REFERENCES `Role`(`id`) ON DELETE SET NULL ON UPDATE CASCADE', 'SELECT ''skip: Invitation.Invitation_roleId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- D2 for open invitations: BUSINESS_OWNER -> Administrator, STAFF -> Sales User.
+UPDATE `Invitation` i
+JOIN `Role` r ON r.tenantId = i.tenantId AND r.isSystem = 1
+SET i.roleId = r.id
+WHERE i.roleId IS NULL
+  AND (
+    (i.role = 'BUSINESS_OWNER' AND r.`key` = 'ADMINISTRATOR')
+    OR (i.role = 'STAFF' AND r.`key` = 'SALES_USER')
+  );
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260928090000_add_invitation_role', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260928090000_add_invitation_role'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -771,6 +808,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='RolePermission'
   UNION ALL SELECT 'AuditEntry table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='AuditEntry'
+  UNION ALL SELECT 'Invitation.roleId', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Invitation' AND COLUMN_NAME='roleId'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

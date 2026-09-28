@@ -255,6 +255,7 @@ model Role {
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
   users       User[]
+  invitations Invitation[]
 
   @@unique([tenantId, key])
   @@index([tenantId])
@@ -340,6 +341,9 @@ model Invitation {
   tenantId        String?
   email           String
   role            String
+  // The role the account is created with (Slice 5). Null only for a Platform
+  // Admin invitation, which has no workspace and so no role table.
+  roleId          String?
   token           String    @unique
   expiresAt       DateTime
   acceptedAt      DateTime?
@@ -348,9 +352,12 @@ model Invitation {
   // cannot be attributed retroactively; new ones always carry a sender.
   invitedByUserId String?
 
-  tenant    Tenant?    @relation(fields: [tenantId], references: [id])
-  warehouse Warehouse? @relation("InvitationWarehouse", fields: [warehouseId], references: [id])
-  invitedBy User?      @relation("InvitationSender", fields: [invitedByUserId], references: [id])
+  tenant       Tenant?    @relation(fields: [tenantId], references: [id])
+  warehouse    Warehouse? @relation("InvitationWarehouse", fields: [warehouseId], references: [id])
+  invitedBy    User?      @relation("InvitationSender", fields: [invitedByUserId], references: [id])
+  assignedRole Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@index([roleId])
 }
 
 model PasswordResetToken {

@@ -6,6 +6,7 @@ import { Password } from '../../../auth/domain/value-objects/Password';
 import { SlugAlreadyTakenError } from '../../../auth/domain/errors';
 import { Tenant } from '../../domain/entities/Tenant';
 import { User } from '../../../auth/domain/entities/User';
+import { RoleKey } from '../../../access/domain/RoleKey';
 import { IPlatformSettingsRepository } from '../../../settings/domain/IPlatformSettingsRepository';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -68,7 +69,7 @@ export class CreateTenantWithOwnerUseCase {
     const platformDefaults = await this.platformSettingsRepository?.get();
 
     try {
-      return await this.provisioningTx.run(async ({ tenantRepo, userRepo }) => {
+      return await this.provisioningTx.run(async ({ tenantRepo, userRepo, roleSeeder }) => {
         /*
          * The slug check runs INSIDE the transaction, unlike the original,
          * which checked before opening one. That does not by itself make the
@@ -105,12 +106,14 @@ export class CreateTenantWithOwnerUseCase {
           defaultLanguage: platformDefaults?.defaultLanguage,
         });
         await tenantRepo.create(tenant);
+        const roles = await roleSeeder.seed(tenant.id);
 
         const user = User.create({
           id: uuidv4(),
           email: email.value,
           hashedPassword,
           role: UserRole.BUSINESS_OWNER,
+          roleId: roles[RoleKey.Administrator],
           tenantId: tenant.id,
           createdAt: new Date(),
         });

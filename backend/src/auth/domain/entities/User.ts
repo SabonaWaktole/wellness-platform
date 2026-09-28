@@ -8,6 +8,8 @@ interface UserProps {
   lastName?: string | null;
   phone?: string | null;
   role: UserRole;
+  /** The tenant role (Slice 3). Null for SUPER_ADMIN and for users not yet mapped (D2). */
+  roleId?: string | null;
   tenantId: string | null;
   warehouseId?: string | null;
   /** Defaults to true so existing construction sites keep working. */
@@ -35,6 +37,7 @@ export class User {
   public readonly lastName: string | null;
   public readonly phone: string | null;
   public readonly role: UserRole;
+  public readonly roleId: string | null;
   public readonly tenantId: string | null;
   public warehouseId: string | null;
   /**
@@ -55,6 +58,7 @@ export class User {
     this.lastName = props.lastName || null;
     this.phone = props.phone || null;
     this.role = props.role;
+    this.roleId = props.roleId ?? null;
     this.tenantId = props.tenantId;
     this.warehouseId = props.warehouseId || null;
     this.isActive = props.isActive ?? true;

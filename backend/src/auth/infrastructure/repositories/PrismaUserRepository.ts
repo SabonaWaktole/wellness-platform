@@ -61,6 +61,7 @@ export class PrismaUserRepository implements IUserRepository {
         lastName: user.lastName,
         phone: user.phone,
         role: user.role,
+        roleId: user.roleId,
         tenantId: user.tenantId,
         warehouseId: user.warehouseId,
         createdAt: user.createdAt,

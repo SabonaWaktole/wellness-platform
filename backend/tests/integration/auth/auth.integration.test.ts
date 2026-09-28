@@ -23,6 +23,7 @@ import { Invitation } from '@auth/domain/entities/Invitation';
 import { PasswordResetToken } from '@auth/domain/entities/PasswordResetToken';
 import { UserRole } from '@auth/domain/enums/UserRole';
 import { IAccessRepository, AccessRecord } from '../../../src/access/application/ports/IAccessRepository';
+import { RoleKey } from '../../../src/access/domain/RoleKey';
 
 // ---------------------------------------------------------------------------
 // In-memory implementations of ports â€” lightweight fakes that behave like
@@ -401,7 +402,11 @@ class FakeTenantProvisioningTransaction implements ITenantProvisioningTransactio
   ) {}
 
   async run<T>(work: (repos: TenantProvisioningRepos) => Promise<T>): Promise<T> {
-    return work({ tenantRepo: this.tenantRepo, userRepo: this.userRepo });
+    return work({
+      tenantRepo: this.tenantRepo,
+      userRepo: this.userRepo,
+      roleSeeder: { seed: async () => ({}) as Record<RoleKey, string> },
+    });
   }
 }
 

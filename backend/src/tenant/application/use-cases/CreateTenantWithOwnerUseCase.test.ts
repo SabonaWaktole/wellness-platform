@@ -83,3 +83,26 @@ describe('CreateTenantWithOwnerUseCase — platform defaults', () => {
     expect(tenantRepo.updateSettingsForMany).not.toHaveBeenCalled();
   });
 });
+
+describe('CreateTenantWithOwnerUseCase — roles (FR-RBAC-01, FR-USR-02)', () => {
+  it('FR-RBAC-01 seeds the five system roles for the new workspace', async () => {
+    const { provisioningTx, roleSeeder, tenantRepo } = makeTenantProvisioningHarness();
+    const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);
+
+    await useCase.execute(validInput);
+
+    const created = tenantRepo.create.mock.calls[0][0];
+    expect(roleSeeder.seed).toHaveBeenCalledWith(created.id);
+  });
+
+  it('FR-USR-02 makes the owner an Administrator by role, not only by the legacy string', async () => {
+    const { provisioningTx, userRepo } = makeTenantProvisioningHarness();
+    const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);
+
+    await useCase.execute(validInput);
+
+    const owner = userRepo.create.mock.calls[0][0];
+    expect(owner.roleId).toBe('role-ADMINISTRATOR');
+    expect(owner.role).toBe('BUSINESS_OWNER');
+  });
+});

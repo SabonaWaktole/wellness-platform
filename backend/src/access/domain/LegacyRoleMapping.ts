@@ -19,3 +19,12 @@ export function legacyRoleKeyFor(role: string): RoleKey | null {
   }
   return null;
 }
+
+/**
+ * The legacy `User.role` string written alongside a `roleId` (the reverse of
+ * D2), so the rollback path and code still reading the string stay correct.
+ * Only the Administrator was a BUSINESS_OWNER; every other role was STAFF.
+ */
+export function legacyRoleFor(roleKey: string): 'BUSINESS_OWNER' | 'STAFF' {
+  return roleKey === RoleKey.Administrator ? 'BUSINESS_OWNER' : 'STAFF';
+}
