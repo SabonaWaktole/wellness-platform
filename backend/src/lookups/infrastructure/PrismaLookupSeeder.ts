@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { ILookupSeeder } from '../application/ports/ILookupSeeder';
-import { DEFAULT_BUSINESS_TYPES, DEFAULT_RISK_LEVELS } from '../domain/DefaultLookups';
+import { DEFAULT_AREAS, DEFAULT_BUSINESS_TYPES, DEFAULT_RISK_LEVELS } from '../domain/DefaultLookups';
 
 export class PrismaLookupSeeder implements ILookupSeeder {
   constructor(private readonly prisma: PrismaClient) {}
@@ -24,6 +24,29 @@ export class PrismaLookupSeeder implements ILookupSeeder {
         riskLevelId: riskLevelIds.get(riskLevel)!,
         order: index + 1,
       })),
+    });
+
+    const areaIds = new Map(DEFAULT_AREAS.map((area) => [area.nameSq, randomUUID()]));
+    await this.prisma.area.createMany({
+      data: DEFAULT_AREAS.map((area, index) => ({
+        id: areaIds.get(area.nameSq)!,
+        tenantId,
+        nameSq: area.nameSq,
+        nameEn: area.nameEn,
+        order: index + 1,
+      })),
+    });
+    await this.prisma.city.createMany({
+      data: DEFAULT_AREAS.flatMap((area) =>
+        area.cities.map((city, index) => ({
+          id: randomUUID(),
+          tenantId,
+          areaId: areaIds.get(area.nameSq)!,
+          nameSq: city.nameSq,
+          nameEn: city.nameEn,
+          order: index + 1,
+        }))
+      ),
     });
   }
 }

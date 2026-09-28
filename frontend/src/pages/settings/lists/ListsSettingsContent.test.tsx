@@ -17,10 +17,20 @@ const BUSINESS_TYPES = [
   { id: 'bt-cafe', nameSq: 'Kafene', nameEn: 'Café', riskLevelId: 'rl1', order: 1, active: true },
   { id: 'bt-mine', nameSq: 'Minierë', nameEn: null, riskLevelId: 'rl3', order: 2, active: false },
 ];
+const AREAS = [
+  { id: 'a1', nameSq: 'Tiranë', nameEn: 'Tirana', order: 1, active: true },
+  { id: 'a2', nameSq: 'Vlorë', nameEn: 'Vlorë', order: 2, active: true },
+];
+const CITIES = [
+  { id: 'c1', nameSq: 'Tiranë', nameEn: 'Tirana', areaId: 'a1', order: 1, active: true },
+  { id: 'c2', nameSq: 'Sarandë', nameEn: 'Saranda', areaId: 'a2', order: 1, active: true },
+];
 
 const lists = {
   'risk-levels': { items: RISK_LEVELS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
   'business-types': { items: BUSINESS_TYPES, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
+  areas: { items: AREAS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
+  cities: { items: CITIES, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
 };
 
 const Location = () => <p data-testid="location">{useLocation().pathname}</p>;
@@ -108,6 +118,38 @@ describe('ListsSettingsContent', () => {
     } finally {
       await i18n.changeLanguage('en');
     }
+  });
+
+  it('FR-SET-04 Cities tab shows the area column, and filters by area', () => {
+    renderAt('/acme/settings/lists/cities');
+
+    const table = screen.getByRole('table', { name: 'Cities' });
+    // Each name appears twice per row: the English-name cell and the area badge.
+    expect(within(within(table).getByTestId('lookup-row-c1')).getAllByText('Tirana')).toHaveLength(2);
+    expect(within(within(table).getByTestId('lookup-row-c2')).getByText('Vlorë')).toBeDefined();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Area' }), { target: { value: 'a2' } });
+
+    const cityCalls = (useLookupList as any).mock.calls.filter((args: unknown[]) => args[0] === 'cities');
+    expect(cityCalls[cityCalls.length - 1][1]).toEqual({ areaId: 'a2' });
+  });
+
+  it('FR-SET-04 Areas: offers to cascade-deactivate an area with active cities', async () => {
+    const cascadeError = Object.assign(new Error('AREA_HAS_ACTIVE_CITIES'), {
+      response: { data: { code: 'AREA_HAS_ACTIVE_CITIES', activeCities: 2 } },
+    });
+    lists.areas.setActive.mockReset();
+    lists.areas.setActive.mockRejectedValueOnce(cascadeError).mockResolvedValueOnce(undefined);
+
+    renderAt('/acme/settings/lists/areas');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate Tirana' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/2 active cities/)).toBeDefined();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Deactivate both' }));
+
+    await waitFor(() => expect(lists.areas.setActive).toHaveBeenLastCalledWith('a1', false, true));
   });
 });
 

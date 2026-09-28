@@ -76,3 +76,28 @@ export class InvalidLookupOrderError extends DomainError {
     super('The new order must list every value exactly once.');
   }
 }
+
+/**
+ * A city must point at an active area of the same workspace (FR-SET-04).
+ * Mapped to 400.
+ */
+export class InactiveAreaError extends DomainError {
+  readonly code = 'AREA_INACTIVE';
+  readonly field = 'areaId';
+
+  constructor() {
+    super('Choose an active area.');
+  }
+}
+
+/**
+ * An area with active cities cannot be deactivated unless the caller also
+ * deactivates those cities (FR-SET-04). Mapped to 409.
+ */
+export class AreaHasActiveCitiesError extends DomainError {
+  readonly code = 'AREA_HAS_ACTIVE_CITIES';
+
+  constructor(readonly activeCities: number) {
+    super('This area has active cities. Deactivate them too, or move them first.');
+  }
+}

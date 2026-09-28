@@ -44,7 +44,7 @@ export const createLookupRouter = (
   router.post('/:list', manage, validateFor(lookupSchemas.create), controller.create);
   router.put('/:list/order', manage, validateRequest(lookupSchemas.reorder), controller.reorder);
   router.patch('/:list/:id', manage, validateFor(lookupSchemas.update), controller.update);
-  router.post('/:list/:id/deactivate', manage, controller.deactivate);
+  router.post('/:list/:id/deactivate', manage, validateRequest(lookupSchemas.deactivate), controller.deactivate);
   router.post('/:list/:id/reactivate', manage, controller.reactivate);
   router.delete('/:list/:id', manage, controller.remove);
 

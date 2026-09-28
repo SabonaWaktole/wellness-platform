@@ -8,8 +8,8 @@ import { lookupDelegate, selectFor } from './prismaLookupTables';
 export class PrismaLookupStore implements ILookupStore {
   constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
 
-  async list(tenantId: string, list: LookupList): Promise<LookupRecord[]> {
-    return lookupDelegate(this.prisma, list).findMany({ where: { tenantId }, select: selectFor(list) });
+  async list(tenantId: string, list: LookupList, filter: Record<string, string> = {}): Promise<LookupRecord[]> {
+    return lookupDelegate(this.prisma, list).findMany({ where: { tenantId, ...filter }, select: selectFor(list) });
   }
 
   async findById(tenantId: string, list: LookupList, id: string): Promise<LookupRecord | null> {

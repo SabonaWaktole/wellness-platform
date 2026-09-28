@@ -10,6 +10,8 @@ import { LookupRecord } from '../domain/LookupItem';
 const TABLES: Record<LookupList, { delegate: (prisma: PrismaClient) => any; columns: string[] }> = {
   [LookupList.RiskLevels]: { delegate: (prisma) => prisma.riskLevel, columns: ['level', 'description'] },
   [LookupList.BusinessTypes]: { delegate: (prisma) => prisma.businessType, columns: ['riskLevelId'] },
+  [LookupList.Areas]: { delegate: (prisma) => prisma.area, columns: [] },
+  [LookupList.Cities]: { delegate: (prisma) => prisma.city, columns: ['areaId'] },
 };
 
 const SHARED_COLUMNS = ['id', 'nameSq', 'nameEn', 'order', 'active'];

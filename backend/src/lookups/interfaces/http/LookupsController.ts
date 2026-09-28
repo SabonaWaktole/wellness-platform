@@ -3,6 +3,8 @@ import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { LookupList } from '../../domain/LookupList';
 import {
+  AreaHasActiveCitiesError,
+  InactiveAreaError,
   InactiveRiskLevelError,
   InvalidLookupOrderError,
   InvalidLookupValueError,
@@ -26,7 +28,7 @@ function sendLookupError(res: Response, next: NextFunction, error: unknown) {
   if (error instanceof LookupItemNotFoundError) {
     return res.status(404).json({ error: error.message, code: error.code });
   }
-  if (error instanceof InvalidLookupValueError || error instanceof InactiveRiskLevelError) {
+  if (error instanceof InvalidLookupValueError || error instanceof InactiveRiskLevelError || error instanceof InactiveAreaError) {
     return res.status(400).json({ error: error.message, code: error.code, field: error.field });
   }
   if (error instanceof InvalidLookupOrderError) {
@@ -41,10 +43,19 @@ function sendLookupError(res: Response, next: NextFunction, error: unknown) {
   if (error instanceof RiskLevelStillUsedError) {
     return res.status(409).json({ error: error.message, code: error.code, activeBusinessTypes: error.activeBusinessTypes });
   }
+  if (error instanceof AreaHasActiveCitiesError) {
+    return res.status(409).json({ error: error.message, code: error.code, activeCities: error.activeCities });
+  }
   return next(error);
 }
 
 const listOf = (req: Request) => req.params.list as LookupList;
+
+/** Query params beyond `includeInactive`, e.g. `areaId` (FR-SET-04). Unrecognised keys are dropped by the use case. */
+const filterOf = (req: Request): Record<string, unknown> => {
+  const { includeInactive: _includeInactive, ...filter } = req.query;
+  return filter;
+};
 
 /** Settings → Lists (Slice 8). Parses, calls one use case, maps the result. */
 export class LookupsController {
@@ -64,6 +75,7 @@ export class LookupsController {
         tenantId: requireTenantId(req),
         list: listOf(req),
         includeInactive: req.query.includeInactive === 'true',
+        filter: filterOf(req),
       });
       res.status(200).json({ data });
     } catch (error) {
@@ -97,14 +109,20 @@ export class LookupsController {
 
   reorder = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = await this.reorderItems.execute({ access: req.access!, tenantId: requireTenantId(req), list: listOf(req), ids: req.body.ids });
+      const data = await this.reorderItems.execute({
+        access: req.access!,
+        tenantId: requireTenantId(req),
+        list: listOf(req),
+        ids: req.body.ids,
+        filter: filterOf(req),
+      });
       res.status(200).json({ data });
     } catch (error) {
       sendLookupError(res, next, error);
     }
   };
 
-  deactivate = (req: Request, res: Response, next: NextFunction) => this.setActive(req, res, next, false);
+  deactivate = (req: Request, res: Response, next: NextFunction) => this.setActive(req, res, next, false, req.body.cascade === true);
 
   reactivate = (req: Request, res: Response, next: NextFunction) => this.setActive(req, res, next, true);
 
@@ -117,7 +135,7 @@ export class LookupsController {
     }
   };
 
-  private async setActive(req: Request, res: Response, next: NextFunction, active: boolean) {
+  private async setActive(req: Request, res: Response, next: NextFunction, active: boolean, cascade?: boolean) {
     try {
       const item = await this.setItemActive.execute({
         access: req.access!,
@@ -125,6 +143,7 @@ export class LookupsController {
         list: listOf(req),
         id: req.params.id as string,
         active,
+        cascade,
       });
       res.status(200).json({ item });
     } catch (error) {

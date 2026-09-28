@@ -137,6 +137,10 @@ model Tenant {
   // Slice 8: lookup lists
   riskLevels    RiskLevel[]
   businessTypes BusinessType[]
+
+  // Slice 9: areas and cities
+  areas  Area[]
+  cities City[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -1357,4 +1361,46 @@ model BusinessType {
 
   @@index([tenantId, order])
   @@index([riskLevelId])
+}
+
+/// Predefined regions (Slice 9: FR-SET-03; Q1: Area = qark). Deactivating an
+/// area with active cities is refused unless the caller cascades the
+/// deactivation onto them (FR-SET-04).
+model Area {
+  id        String   @id
+  tenantId  String
+  nameSq    String
+  /// Optional: labels fall back to Albanian when English is missing (FR-LNG-03).
+  nameEn    String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cities City[]
+
+  @@index([tenantId, order])
+}
+
+/// The cities of one area (Slice 9: FR-SET-04). A name is unique within its
+/// area, not across the whole workspace, so "Tiranë" can exist once per area.
+/// `Restrict` on the area: an area a city points at can be deactivated but
+/// not deleted.
+model City {
+  id        String   @id
+  tenantId  String
+  areaId    String
+  nameSq    String
+  nameEn    String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  area   Area   @relation(fields: [areaId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, areaId, nameSq])
+  @@index([tenantId, areaId, order])
 }

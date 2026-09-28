@@ -3,7 +3,7 @@ import { ILookupStore } from '../../src/lookups/application/ports/ILookupStore';
 import { ILookupWriteTransaction, ILookupWrites, LookupWriteRepos } from '../../src/lookups/application/ports/ILookupWriteTransaction';
 import { createLookupRules } from '../../src/lookups/application/LookupListRules';
 import { LookupList } from '../../src/lookups/domain/LookupList';
-import { BusinessType, LookupRecord, RiskLevel } from '../../src/lookups/domain/LookupItem';
+import { Area, BusinessType, City, LookupRecord, RiskLevel } from '../../src/lookups/domain/LookupItem';
 import { IAuditTrail } from '../../src/audit/application/ports/IAuditTrail';
 import { AuditEntry } from '../../src/audit/domain/AuditEntry';
 
@@ -25,6 +25,20 @@ export const businessType = (overrides: Partial<BusinessType> & { id: string; na
   ...overrides,
 });
 
+export const area = (overrides: Partial<Area> & { id: string; nameSq: string }): Area => ({
+  nameEn: null,
+  order: 1,
+  active: true,
+  ...overrides,
+});
+
+export const city = (overrides: Partial<City> & { id: string; nameSq: string; areaId: string }): City => ({
+  nameEn: null,
+  order: 1,
+  active: true,
+  ...overrides,
+});
+
 /**
  * An in-memory workspace of list values behind the lookup ports, for use-case
  * tests. Writes land in the same map reads come from, so a test can assert on
@@ -40,7 +54,12 @@ export function makeLookupHarness(seed: Partial<Record<LookupList, LookupRecord[
   let failAudit = false;
 
   const store: ILookupStore = {
-    list: async (tenantId, list) => (tenantId === TENANT ? data.get(list)!.map((item) => ({ ...item })) : []),
+    list: async (tenantId, list, filter = {}) => {
+      if (tenantId !== TENANT) return [];
+      const rows = data.get(list)!;
+      const matches = (item: LookupRecord) => Object.entries(filter).every(([key, value]) => item[key] === value);
+      return rows.filter(matches).map((item) => ({ ...item }));
+    },
     findById: async (tenantId, list, id) => {
       const item = tenantId === TENANT ? data.get(list)!.find((row) => row.id === id) : undefined;
       return item ? { ...item } : null;
@@ -95,7 +114,10 @@ export function makeLookupHarness(seed: Partial<Record<LookupList, LookupRecord[
   };
 }
 
-/** Three risk levels and two business types, one of them inactive. */
+/**
+ * Three risk levels, two business types (one inactive), two areas and three
+ * cities (one inactive, split across both areas so scoping is exercised).
+ */
 export const standardLists = () => ({
   [LookupList.RiskLevels]: [
     riskLevel({ id: 'rl1', level: 1 }),
@@ -105,5 +127,14 @@ export const standardLists = () => ({
   [LookupList.BusinessTypes]: [
     businessType({ id: 'bt-cafe', nameSq: 'Kafene', nameEn: 'Café', riskLevelId: 'rl1', order: 1 }),
     businessType({ id: 'bt-factory', nameSq: 'Fabrikë', nameEn: 'Factory', riskLevelId: 'rl2', order: 2, active: false }),
+  ],
+  [LookupList.Areas]: [
+    area({ id: 'a-tirane', nameSq: 'Tiranë', nameEn: 'Tirana', order: 1 }),
+    area({ id: 'a-vlore', nameSq: 'Vlorë', nameEn: 'Vlorë', order: 2 }),
+  ],
+  [LookupList.Cities]: [
+    city({ id: 'c-tirane', nameSq: 'Tiranë', nameEn: 'Tirana', areaId: 'a-tirane', order: 1 }),
+    city({ id: 'c-kamez', nameSq: 'Kamëz', nameEn: 'Kamëz', areaId: 'a-tirane', order: 2, active: false }),
+    city({ id: 'c-vlore', nameSq: 'Vlorë', nameEn: 'Vlorë', areaId: 'a-vlore', order: 1 }),
   ],
 });

@@ -6,6 +6,8 @@ import { DeleteLookupItemUseCase } from '../../../../src/lookups/application/use
 import { ListLookupItemsUseCase } from '../../../../src/lookups/application/use-cases/ListLookupItemsUseCase';
 import { LookupList } from '../../../../src/lookups/domain/LookupList';
 import {
+  AreaHasActiveCitiesError,
+  InactiveAreaError,
   InactiveRiskLevelError,
   InvalidLookupOrderError,
   InvalidLookupValueError,
@@ -19,7 +21,7 @@ import { AuditAction } from '../../../../src/audit/domain/AuditAction';
 import { administrator, ceo, salesUser } from '../../../support/access';
 import { makeLookupHarness, standardLists, TENANT } from '../../../support/fakeLookups';
 
-const { RiskLevels, BusinessTypes } = LookupList;
+const { RiskLevels, BusinessTypes, Areas, Cities } = LookupList;
 
 function setup() {
   const h = makeLookupHarness(standardLists());
@@ -27,10 +29,10 @@ function setup() {
     h,
     create: new CreateLookupItemUseCase(h.store, h.rules, h.writeTx),
     update: new UpdateLookupItemUseCase(h.store, h.rules, h.writeTx),
-    reorder: new ReorderLookupItemsUseCase(h.store, h.writeTx),
+    reorder: new ReorderLookupItemsUseCase(h.store, h.rules, h.writeTx),
     setActive: new SetLookupItemActiveUseCase(h.store, h.rules, h.writeTx),
     remove: new DeleteLookupItemUseCase(h.store, h.rules, h.inUse, h.writeTx),
-    list: new ListLookupItemsUseCase(h.store),
+    list: new ListLookupItemsUseCase(h.store, h.rules),
   };
 }
 
@@ -298,5 +300,139 @@ describe('DeleteLookupItemUseCase', () => {
         ],
       }),
     ]);
+  });
+});
+
+// Slice 9 (FR-SET-03, 04): areas and cities, built on the same lookup
+// framework as Slice 8's risk levels and business types.
+describe('Areas and cities', () => {
+  it('FR-SET-04 a city needs an active area', async () => {
+    const { create } = setup();
+
+    await expect(create.execute({ access: admin(), tenantId: TENANT, list: Cities, values: { nameSq: 'Sarandë', areaId: 'nope' } })).rejects.toThrow(
+      InactiveAreaError
+    );
+
+    const created = await create.execute({ access: admin(), tenantId: TENANT, list: Cities, values: { nameSq: 'Sarandë', areaId: 'a-vlore' } });
+    expect(created).toMatchObject({ areaId: 'a-vlore' });
+  });
+
+  it('FR-SET-04 the same city name is refused inside one area, but allowed in another', async () => {
+    const { create } = setup();
+
+    await expect(create.execute({ access: admin(), tenantId: TENANT, list: Cities, values: { nameSq: 'Tiranë', areaId: 'a-tirane' } })).rejects.toThrow(
+      LookupValueTakenError
+    );
+    const created = await create.execute({ access: admin(), tenantId: TENANT, list: Cities, values: { nameSq: 'Tiranë', areaId: 'a-vlore' } });
+    expect(created).toMatchObject({ nameSq: 'Tiranë', areaId: 'a-vlore' });
+  });
+
+  it('a new city is last in order within its own area, not the whole list', async () => {
+    const { h, create } = setup();
+
+    const created = await create.execute({ access: admin(), tenantId: TENANT, list: Cities, values: { nameSq: 'Sarandë', areaId: 'a-vlore' } });
+
+    // a-vlore already has one city at order 1; a-tirane's two do not count.
+    expect(created.order).toBe(2);
+    expect(h.audit[0].changes).toEqual([
+      { field: 'nameSq', old: null, new: 'Sarandë' },
+      { field: 'nameEn', old: null, new: null },
+      { field: 'area', old: null, new: 'Vlorë' },
+    ]);
+  });
+
+  it('moving a city to another area re-checks its name against the new area, not the old one', async () => {
+    const { update } = setup();
+
+    // a-tirane already has a "Tiranë"; moving c-vlore there under that same
+    // name clashes with the TARGET area, even though "Tiranë" never clashed
+    // with c-vlore's old area (a-vlore).
+    await expect(
+      update.execute({ access: admin(), tenantId: TENANT, list: Cities, id: 'c-vlore', values: { areaId: 'a-tirane', nameSq: 'Tiranë' } })
+    ).rejects.toThrow(LookupValueTakenError);
+
+    const moved = await update.execute({ access: admin(), tenantId: TENANT, list: Cities, id: 'c-vlore', values: { areaId: 'a-tirane' } });
+    expect(moved).toMatchObject({ areaId: 'a-tirane', nameSq: 'Vlorë' });
+  });
+
+  it('lists and reorders cities scoped to one area', async () => {
+    const { list, reorder } = setup();
+
+    const tiraneCities = await list.execute({ access: salesUser(), tenantId: TENANT, list: Cities, filter: { areaId: 'a-tirane' } });
+    expect(tiraneCities.map((c) => c.id)).toEqual(['c-tirane']); // c-kamez is inactive
+
+    const allTirane = await list.execute({ access: admin(), tenantId: TENANT, list: Cities, includeInactive: true, filter: { areaId: 'a-tirane' } });
+    expect(allTirane.map((c) => c.id).sort()).toEqual(['c-kamez', 'c-tirane']);
+
+    const reordered = await reorder.execute({
+      access: admin(),
+      tenantId: TENANT,
+      list: Cities,
+      ids: ['c-kamez', 'c-tirane'],
+      filter: { areaId: 'a-tirane' },
+    });
+    expect(reordered.map((c) => c.id)).toEqual(['c-kamez', 'c-tirane']);
+    // a-vlore's own city is untouched and still at order 1.
+    await expect(
+      reorder.execute({ access: admin(), tenantId: TENANT, list: Cities, ids: ['c-kamez', 'c-tirane', 'c-vlore'], filter: { areaId: 'a-tirane' } })
+    ).rejects.toThrow(InvalidLookupOrderError);
+  });
+
+  it('FR-SET-04 an area with active cities cannot be deactivated without cascading, and can with it', async () => {
+    const { h, setActive } = setup();
+
+    await expect(setActive.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-tirane', active: false })).rejects.toThrow(
+      AreaHasActiveCitiesError
+    );
+    expect(h.item(Areas, 'a-tirane')).toMatchObject({ active: true });
+
+    await setActive.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-tirane', active: false, cascade: true });
+
+    expect(h.item(Areas, 'a-tirane')).toMatchObject({ active: false });
+    expect(h.item(Cities, 'c-tirane')).toMatchObject({ active: false });
+    expect(h.item(Cities, 'c-kamez')).toMatchObject({ active: false }); // was already inactive
+    expect(h.audit.filter((e) => e.action === AuditAction.StatusChange)).toEqual([
+      expect.objectContaining({ entityType: 'Area', entityId: 'a-tirane', changes: [{ field: 'active', old: true, new: false }] }),
+      expect.objectContaining({ entityType: 'City', entityId: 'c-tirane', changes: [{ field: 'active', old: true, new: false }] }),
+    ]);
+  });
+
+  it('an area with no active cities deactivates on its own, no cascade needed', async () => {
+    const { h, setActive } = setup();
+
+    // Once its one city is already inactive, a-vlore has none left to cascade.
+    await setActive.execute({ access: admin(), tenantId: TENANT, list: Cities, id: 'c-vlore', active: false });
+    await setActive.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-vlore', active: false });
+
+    expect(h.item(Areas, 'a-vlore')).toMatchObject({ active: false });
+    expect(h.item(Cities, 'c-vlore')).toMatchObject({ active: false });
+  });
+
+  it('FR-AUD-04 a failing audit write rolls back the area and every cascaded city', async () => {
+    const { h, setActive } = setup();
+    h.failAuditWrites();
+
+    await expect(
+      setActive.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-tirane', active: false, cascade: true })
+    ).rejects.toThrow('audit write failed');
+    expect(h.item(Areas, 'a-tirane')).toMatchObject({ active: true });
+    expect(h.item(Cities, 'c-tirane')).toMatchObject({ active: true });
+  });
+
+  it('reactivating a city needs an active area', async () => {
+    const { setActive } = setup();
+    await setActive.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-tirane', active: false, cascade: true });
+
+    await expect(setActive.execute({ access: admin(), tenantId: TENANT, list: Cities, id: 'c-tirane', active: true })).rejects.toThrow(
+      InactiveAreaError
+    );
+  });
+
+  it('deleting an area that has cities is refused, like any value in use', async () => {
+    const { h, remove } = setup();
+    h.setUsages('a-tirane', 2);
+
+    await expect(remove.execute({ access: admin(), tenantId: TENANT, list: Areas, id: 'a-tirane' })).rejects.toThrow(LookupItemInUseError);
+    expect(h.items(Areas)).toHaveLength(2);
   });
 });

@@ -1,4 +1,4 @@
-/* Settings → Lists (Slice 8). The editor inside handles its own narrow layout. */
+/* Settings → Lists (Slices 8, 9). The editor inside handles its own narrow layout. */
 
 .container {
   display: flex;
@@ -48,4 +48,31 @@
 
 .errorText {
   color: var(--color-error);
+}
+
+/* Cities (Slice 9): the area filter above the shared editor. */
+.editorWithFilter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.filterRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-label-sm);
+  color: var(--text-secondary);
+  max-width: 320px;
+}
+
+.filterRow select {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .filterRow {
+    max-width: none;
+  }
 }

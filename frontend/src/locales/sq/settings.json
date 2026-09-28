@@ -562,11 +562,15 @@
     "subtitle": "Vlerat nga të cilat zgjidhet kur plotësohet një kompani. Çaktivizoni një vlerë që të mos ofrohet më; regjistrat që e përdorin tashmë e mbajnë.",
     "tabs": {
       "riskLevels": "Nivelet e rrezikut",
-      "businessTypes": "Llojet e biznesit"
+      "businessTypes": "Llojet e biznesit",
+      "areas": "Zonat",
+      "cities": "Qytetet"
     },
     "hints": {
       "riskLevels": "Çdo lloj biznesi i përket një niveli rreziku. Niveli i rrezikut i një kompanie rrjedh nga lloji i saj i biznesit.",
-      "businessTypes": "Ndryshimi i nivelit të rrezikut të një lloji biznesi e ndryshon atë për çdo kompani të këtij lloji."
+      "businessTypes": "Ndryshimi i nivelit të rrezikut të një lloji biznesi e ndryshon atë për çdo kompani të këtij lloji.",
+      "areas": "Zona të paracaktuara. Çaktivizimi i një zone ofron edhe çaktivizimin e qyteteve të saj.",
+      "cities": "Çdo qytet i përket një zone. Emri i një qyteti duhet të jetë unik vetëm brenda zonës së vet."
     },
     "loading": "Duke u ngarkuar…",
     "loadFailed": "Kjo listë nuk u ngarkua.",
@@ -580,6 +584,8 @@
     "inactive": "Joaktive",
     "levelBadge": "Niveli {{level}}",
     "chooseRiskLevel": "Zgjidhni një nivel rreziku",
+    "allAreas": "Të gjitha zonat",
+    "chooseArea": "Zgjidhni një zonë",
     "edit": "Ndrysho {{name}}",
     "deactivate": "Çaktivizo {{name}}",
     "reactivate": "Riaktivizo {{name}}",
@@ -593,6 +599,7 @@
       "level": "Niveli",
       "description": "Përshkrimi",
       "riskLevel": "Niveli i rrezikut",
+      "area": "Zona",
       "status": "Statusi",
       "actions": "Veprimet"
     },
@@ -600,6 +607,12 @@
       "title": "Të fshihet kjo vlerë?",
       "message": "\"{{name}}\" do të hiqet nga lista. Ky veprim nuk mund të zhbëhet.",
       "confirm": "Fshi"
+    },
+    "cascadeConfirm": {
+      "title": "Të çaktivizohet kjo zonë?",
+      "confirm": "Çaktivizo të dyja",
+      "message_one": "\"{{name}}\" ka {{count}} qytet aktiv. Çaktivizimi i zonës do të çaktivizojë edhe atë qytet.",
+      "message_other": "\"{{name}}\" ka {{count}} qytete aktive. Çaktivizimi i zonës do t'i çaktivizojë edhe ato."
     },
     "errors": {
       "LOOKUP_ITEM_NOT_FOUND": "Kjo vlerë nuk ekziston më. Ringarkoni faqen.",
@@ -611,6 +624,9 @@
       "RISK_LEVEL_STILL_USED_one": "{{count}} lloj biznesi aktiv e përdor ende këtë nivel rreziku. Zhvendoseni ose çaktivizojeni më parë.",
       "RISK_LEVEL_STILL_USED_other": "{{count}} lloje biznesi aktive e përdorin ende këtë nivel rreziku. Zhvendosini ose çaktivizojini më parë.",
       "INVALID_LOOKUP_ORDER": "Lista ndryshoi ndërkohë që po e rendisnit. Ringarkoni faqen dhe provoni përsëri.",
+      "AREA_INACTIVE": "Zgjidhni një zonë aktive.",
+      "AREA_HAS_ACTIVE_CITIES_one": "Kjo zonë ka {{count}} qytet aktiv. Çaktivizojeni edhe atë, ose zhvendoseni më parë.",
+      "AREA_HAS_ACTIVE_CITIES_other": "Kjo zonë ka {{count}} qytete aktive. Çaktivizojini edhe ato, ose zhvendosini më parë.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
     }
   }
