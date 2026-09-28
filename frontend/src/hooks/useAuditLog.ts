@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { auditService, AuditEntry, AuditFilters } from '../services/auditService';
+import { auditService } from '../services/auditService';
+import type { AuditEntry, AuditFilters } from '../services/auditService';
 
 const DEFAULT_LIMIT = 25;
 
