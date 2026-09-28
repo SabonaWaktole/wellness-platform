@@ -37,6 +37,11 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
     ofB: `a-scope-b-${randomUUID()}`,
   };
   const contractOfB = `k-scope-b-${randomUUID()}`;
+  const quotations = {
+    ofA: `q-scope-a-${randomUUID()}`,
+    ofB: `q-scope-b-${randomUUID()}`,
+  };
+  const invoiceOfB = `inv-scope-b-${randomUUID()}`;
   const tokens = {} as Record<keyof typeof users, string>;
   let app: express.Express;
 
@@ -92,6 +97,33 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
       ],
     });
 
+    // Reports are Administrator-only by default (D8). Granting them to the
+    // sales roles here is the Slice 6 customisation the scope must survive.
+    await prisma.rolePermission.createMany({
+      data: [RoleKey.SalesUser, RoleKey.SalesManager].map((key) => ({ roleId: roles[key], permissionKey: 'reports.view', scope: null })),
+    });
+
+    const warehouseId = `w-scope-${randomUUID()}`;
+    const productId = `pr-scope-${randomUUID()}`;
+    await prisma.warehouse.create({ data: { id: warehouseId, tenantId, name: 'Scope WH' } });
+    await prisma.product.create({ data: { id: productId, tenantId, name: 'Scope Plan', description: '', price: 100 } });
+    const quotation = (id: string, clientId: string, createdByUserId: string, unitPrice: number) =>
+      prisma.quotation.create({
+        data: {
+          id, tenantId, clientId, createdByUserId, status: 'ACCEPTED',
+          lineItems: { create: [{ tenantId, productId, warehouseId, quantity: 1, unitPrice }] },
+        },
+      });
+    await quotation(quotations.ofA, clients.ofA, users.salesA, 100);
+    await quotation(quotations.ofB, clients.ofB, users.salesB, 300);
+    await prisma.invoice.create({
+      data: {
+        id: invoiceOfB, tenantId, clientId: clients.ofB, quotationId: quotations.ofB, createdByUserId: users.salesB,
+        status: 'SENT', dueDate: new Date('2026-12-31'),
+        lineItems: { create: [{ tenantId, productId, warehouseId, quantity: 1, unitPrice: 300 }] },
+      },
+    });
+
     const tomorrow = new Date(Date.now() + 24 * 60 * 60_000);
     await prisma.appointment.createMany({
       data: [
@@ -106,6 +138,10 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
     // client fields among them — or the tenant row survives and trips the
     // unscoped wipes of other suites in this worker (TD-001).
     await prisma.appointment.deleteMany({ where: { tenantId } });
+    await prisma.invoice.deleteMany({ where: { tenantId } });
+    await prisma.quotation.deleteMany({ where: { tenantId } });
+    await prisma.product.deleteMany({ where: { tenantId } });
+    await prisma.warehouse.deleteMany({ where: { tenantId } });
     await prisma.contractPayment.deleteMany({ where: { tenantId } });
     await prisma.contractStatusHistory.deleteMany({ where: { tenantId } });
     await prisma.contract.deleteMany({ where: { tenantId } });
@@ -199,6 +235,43 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
     it('FR-RBAC-11 another salesperson\'s appointment is not found', async () => {
       expect((await get('salesA', `/appointments/${appointments.ofB}/history`)).status).toBe(404);
       expect((await get('salesA', `/appointments/${appointments.ofA}/history`)).status).toBe(200);
+    });
+  });
+
+  describe('quotations and invoices (FR-RBAC-11: they follow their company)', () => {
+    it('a Sales User gets 404 for another salesperson\'s quotation and invoice, and 200 for their own', async () => {
+      expect((await get('salesA', `/quotations/${quotations.ofB}`)).status).toBe(404);
+      expect((await get('salesA', `/invoices/${invoiceOfB}`)).status).toBe(404);
+      expect((await get('salesA', `/quotations/${quotations.ofA}`)).status).toBe(200);
+      expect((await get('salesB', `/invoices/${invoiceOfB}`)).status).toBe(200);
+    });
+
+    it('FR-RBAC-13 the quotation and invoice lists hold only what the scope reaches', async () => {
+      const count = async (who: keyof typeof users, path: string) => (await get(who, path)).body.total;
+
+      expect(await count('salesA', '/quotations')).toBe(1);
+      expect(await count('manager', '/quotations')).toBe(2);
+      expect(await count('salesA', '/invoices')).toBe(0);
+      expect(await count('manager', '/invoices')).toBe(1);
+    });
+  });
+
+  describe('reports', () => {
+    const revenue = async (who: keyof typeof users) =>
+      (await get(who, '/reports/revenue')).body.revenue.reduce((sum: number, m: { revenue: number }) => sum + m.revenue, 0);
+    const companies = async (who: keyof typeof users) =>
+      (await get(who, '/reports/clients')).body.clients.reduce((sum: number, c: { count: number }) => sum + c.count, 0);
+
+    it('FR-RBAC-13 revenue follows the viewer\'s scope', async () => {
+      expect(await revenue('salesA')).toBe(100);
+      expect(await revenue('manager')).toBe(400);
+      expect(await revenue('admin')).toBe(400);
+    });
+
+    it('FR-RBAC-13 the company status mix follows the viewer\'s scope', async () => {
+      expect(await companies('salesA')).toBe(1);
+      expect(await companies('manager')).toBe(3);
+      expect(await companies('admin')).toBe(4);
     });
   });
 

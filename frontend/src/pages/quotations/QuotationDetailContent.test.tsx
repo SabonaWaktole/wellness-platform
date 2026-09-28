@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QuotationDetailContent } from './QuotationDetailContent';
 import { useQuotations, useQuotationActions } from '../../hooks/useQuotations';
 import { useTeam } from '../../hooks/useTeam';
+import { useAuthStore } from '../../store/useAuthStore';
 
 vi.mock('../../hooks/useQuotations');
 vi.mock('../../hooks/useTeam');
@@ -162,5 +163,58 @@ describe('QuotationDetailContent status history', () => {
 
     await screen.findByText(/By Unknown user/i);
     expect(screen.getAllByText('Expired').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('QuotationDetailContent money (FR-RBAC-06)', () => {
+  const signIn = (permissions: Record<string, string | true>) =>
+    useAuthStore.setState({
+      isAuthenticated: true,
+      user: { userId: 'u1', email: 'u@example.com', role: 'STAFF', tenantId: 't1', permissions },
+    } as any);
+
+  const renderDetail = async (detail: unknown) => {
+    (useQuotations as any).mockReturnValue({ fetchQuotationDetail: vi.fn().mockResolvedValue(detail), loading: false });
+    (useQuotationActions as any).mockReturnValue({
+      submitQuotation: vi.fn(), approveQuotation: vi.fn(),
+      markQuotationAccepted: vi.fn(), markQuotationRejected: vi.fn(),
+      expireQuotation: vi.fn(), returnQuotationToDraft: vi.fn(),
+      error: null,
+    });
+    (useTeam as any).mockReturnValue({ staff: [], fetchStaff: vi.fn() });
+    render(
+      <MemoryRouter initialEntries={['/acme/quotations/q-abcdef12-0000']}>
+        <Routes>
+          <Route path="/:tenantSlug/quotations/:id" element={<QuotationDetailContent />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByText('Starter plan');
+  };
+
+  const quotation = { id: 'q-abcdef12-0000', clientName: 'Acme', status: 'DRAFT', createdAt: '2026-07-01T10:00:00Z', createdByUserId: 'u1' };
+  const item = { productName: 'Starter plan', warehouseName: 'Main', quantity: 2 };
+
+  it('shows no price, line total or grand total without commercial.view', async () => {
+    signIn({ 'quotations.manage': 'OWN' });
+    await renderDetail({ quotation, lineItems: [item], history: [], permittedActions: [] });
+
+    expect(screen.queryByText('Unit Price')).toBeNull();
+    expect(screen.queryByText('Line Total')).toBeNull();
+    expect(screen.queryByText('Grand Total')).toBeNull();
+    expect(screen.queryByText(/NaN/)).toBeNull();
+  });
+
+  it('shows them with commercial.view', async () => {
+    signIn({ 'quotations.manage': 'OWN', 'commercial.view': 'OWN' });
+    await renderDetail({
+      quotation: { ...quotation, grandTotal: 200 },
+      lineItems: [{ ...item, unitPrice: 100 }],
+      history: [],
+      permittedActions: [],
+    });
+
+    expect(screen.getByText('Unit Price')).toBeInTheDocument();
+    expect(screen.getByText('Grand Total')).toBeInTheDocument();
   });
 });

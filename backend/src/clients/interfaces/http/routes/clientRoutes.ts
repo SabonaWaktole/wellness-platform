@@ -180,8 +180,7 @@ export const createClientRouter = (
   router.get('/:clientId/history', requirePermission('companies.view'), clientController.getHistory);
   // D3: a NOTE is `notes.add`, everything else is `activities.add` — the
   // exact check is body-dependent and lives in AddInteractionUseCase; this
-  // only screens out someone with neither. Full response-side redaction by
-  // permission (which fields/entries a role may even see) is Slice 4.
+  // only screens out someone with neither.
   router.post(
     '/:clientId/interactions',
     requireAnyPermission(['activities.add', 'notes.add']),

@@ -14,6 +14,7 @@ import { useInvoices } from '../../hooks/useInvoices';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName } from '../../utils/userUtils';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
+import { usePermission } from '../../hooks/usePermission';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useDateFormat } from '../../hooks/useDateFormat';
 
@@ -22,6 +23,8 @@ export const QuotationDetailContent: React.FC = () => {
   const { t } = useTranslation('quotations');
   const { t: ti } = useTranslation('invoices');
   const { format: formatMoney } = useMoneyFormat();
+  // FR-RBAC-06: without commercial.view the API sends no prices or totals.
+  const seesValue = usePermission('commercial.view');
   const statusLabel = useStatusLabel();
   const navigate = useNavigate();
   const { tenantSlug, id } = useParams();
@@ -295,8 +298,8 @@ export const QuotationDetailContent: React.FC = () => {
                   <tr>
                     <th>{t('detail.columnProduct')}</th>
                     <th>{t('detail.columnQuantity')}</th>
-                    <th>{t('detail.columnUnitPrice')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('detail.columnLineTotal')}</th>
+                    {seesValue && <th>{t('detail.columnUnitPrice')}</th>}
+                    {seesValue && <th style={{ textAlign: 'right' }}>{t('detail.columnLineTotal')}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -309,27 +312,31 @@ export const QuotationDetailContent: React.FC = () => {
                         </div>
                       </td>
                       <td>{item.quantity}</td>
-                      <td>{formatMoney(item.unitPrice)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 500 }}>
-                        {formatMoney(item.quantity * item.unitPrice)}
-                      </td>
+                      {seesValue && <td>{formatMoney(item.unitPrice)}</td>}
+                      {seesValue && (
+                        <td style={{ textAlign: 'right', fontWeight: 500 }}>
+                          {formatMoney(item.quantity * item.unitPrice)}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className={styles.totalsSection} style={{ padding: 'var(--spacing-lg)' }}>
-              <div className={styles.totalsCard}>
-                <div className={styles.totalRow}>
-                  <span>{t('detail.subtotal')}</span>
-                  <span>{formatMoney(quotation.grandTotal ?? 0)}</span>
-                </div>
-                <div className={styles.grandTotalRow}>
-                  <span>{t('detail.grandTotal')}</span>
-                  <span>{formatMoney(quotation.grandTotal ?? 0)}</span>
+            {seesValue && (
+              <div className={styles.totalsSection} style={{ padding: 'var(--spacing-lg)' }}>
+                <div className={styles.totalsCard}>
+                  <div className={styles.totalRow}>
+                    <span>{t('detail.subtotal')}</span>
+                    <span>{formatMoney(quotation.grandTotal ?? 0)}</span>
+                  </div>
+                  <div className={styles.grandTotalRow}>
+                    <span>{t('detail.grandTotal')}</span>
+                    <span>{formatMoney(quotation.grandTotal ?? 0)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </Card>
         </div>
 
