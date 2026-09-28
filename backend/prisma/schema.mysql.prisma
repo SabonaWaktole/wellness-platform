@@ -410,6 +410,20 @@ model Client {
   /// tenant that deleted the definition would lose the notes with it. This is
   /// a system field, always present, never renameable.
   notes               String?   @db.Text
+  // The Slice 11 company profile (FR-CMP-01, 02, 03). Nullable at the
+  // database level until Slice 14 backfills existing rows; the application
+  // requires all of them for a company created or edited through the
+  // company form. Risk level is deliberately not stored here — it is always
+  // read through businessTypeId (SRS §7.1), so recolouring or reclassifying
+  // a business type updates every company's risk without a migration.
+  businessTypeId      String?
+  employeeCount       Int?
+  areaId              String?
+  cityId              String?
+  streetAddress       String?
+  /// NIPT. Unique per tenant when filled (Q8); many companies have none yet.
+  taxId               String?
+  website             String?
   lastUpdatedByUserId String
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -424,16 +438,22 @@ model Client {
   tenant            Tenant        @relation(fields: [tenantId], references: [id])
   assignedUser      User?         @relation("AssignedClients", fields: [assignedUserId], references: [id])
   lastUpdatedByUser User          @relation("LastUpdatedClients", fields: [lastUpdatedByUserId], references: [id])
+  businessType      BusinessType? @relation(fields: [businessTypeId], references: [id], onDelete: Restrict)
+  area              Area?         @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  city              City?         @relation(fields: [cityId], references: [id], onDelete: Restrict)
   interactions      Interaction[]
   appointments      Appointment[]
   quotations        Quotation[]
   invoices          Invoice[]
   contracts         Contract[]
 
+  @@unique([tenantId, taxId])
   @@index([tenantId, deletedAt])
   @@index([tenantId, status])
   @@index([tenantId, assignedUserId])
   @@index([tenantId, name])
+  @@index([tenantId, businessTypeId])
+  @@index([tenantId, areaId, cityId])
 }
 
 model CustomFieldDefinition {
@@ -1284,6 +1304,7 @@ model BusinessType {
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   riskLevel RiskLevel @relation(fields: [riskLevelId], references: [id], onDelete: Restrict)
+  clients   Client[]
 
   @@index([tenantId, order])
   @@index([riskLevelId])
@@ -1301,8 +1322,9 @@ model Area {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cities City[]
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cities  City[]
+  clients Client[]
 
   @@index([tenantId, order])
 }
@@ -1319,8 +1341,9 @@ model City {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  area   Area   @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  area    Area     @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  clients Client[]
 
   @@unique([tenantId, areaId, nameSq])
   @@index([tenantId, areaId, order])
