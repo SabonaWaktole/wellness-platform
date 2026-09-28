@@ -45,6 +45,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.user.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.businessType.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.riskLevel.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.city.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.area.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     }
     await prisma.$disconnect();
@@ -127,8 +129,9 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       },
     });
 
-    // BusinessType: RESTRICT on its RiskLevel, so the two cannot be left to
-    // race each other down the cascade from Tenant.
+    // BusinessType: RESTRICT on its RiskLevel, and City: RESTRICT on its
+    // Area, so neither pair can be left to race each other down the cascade
+    // from Tenant. The seeder creates both pairs for every tenant.
     await new PrismaLookupSeeder(prisma).seed(tenantId);
 
     const deletionTx = new PrismaTenantDeletionTransaction(prisma);
@@ -144,6 +147,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.user.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.businessType.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.riskLevel.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.city.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.area.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });
