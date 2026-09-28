@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
+import { PrismaLookupSeeder } from '../../../src/lookups/infrastructure/PrismaLookupSeeder';
 
 /**
  * PRODUCTION INCIDENT, SEP 11 2026: deleting ANY tenant failed with
@@ -42,6 +43,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.quotation.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.client.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.user.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.businessType.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.riskLevel.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     }
     await prisma.$disconnect();
@@ -124,6 +127,10 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       },
     });
 
+    // BusinessType: RESTRICT on its RiskLevel, so the two cannot be left to
+    // race each other down the cascade from Tenant.
+    await new PrismaLookupSeeder(prisma).seed(tenantId);
+
     const deletionTx = new PrismaTenantDeletionTransaction(prisma);
 
     await expect(deletionTx.run(tenantId)).resolves.toBeUndefined();
@@ -135,6 +142,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.invoice.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.ownershipTransfer.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.user.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.businessType.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.riskLevel.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });

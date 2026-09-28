@@ -110,6 +110,19 @@ import { GetAuditEntryUseCase } from '../audit/application/use-cases/GetAuditEnt
 import { ExportAuditEntriesUseCase } from '../audit/application/use-cases/ExportAuditEntriesUseCase';
 import { AuditController } from '../audit/interfaces/http/AuditController';
 import { createAuditRouter } from '../audit/interfaces/http/auditRoutes';
+import { ILookupWriteTransaction } from '../lookups/application/ports/ILookupWriteTransaction';
+import { PrismaLookupStore } from '../lookups/infrastructure/PrismaLookupStore';
+import { PrismaLookupWriteTransaction } from '../lookups/infrastructure/PrismaLookupWriteTransaction';
+import { PrismaLookupInUsePolicy } from '../lookups/infrastructure/PrismaLookupInUsePolicy';
+import { createLookupRules } from '../lookups/application/LookupListRules';
+import { ListLookupItemsUseCase } from '../lookups/application/use-cases/ListLookupItemsUseCase';
+import { CreateLookupItemUseCase } from '../lookups/application/use-cases/CreateLookupItemUseCase';
+import { UpdateLookupItemUseCase } from '../lookups/application/use-cases/UpdateLookupItemUseCase';
+import { ReorderLookupItemsUseCase } from '../lookups/application/use-cases/ReorderLookupItemsUseCase';
+import { SetLookupItemActiveUseCase } from '../lookups/application/use-cases/SetLookupItemActiveUseCase';
+import { DeleteLookupItemUseCase } from '../lookups/application/use-cases/DeleteLookupItemUseCase';
+import { LookupsController } from '../lookups/interfaces/http/LookupsController';
+import { createLookupRouter } from '../lookups/interfaces/http/lookupRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -138,6 +151,8 @@ export interface AppDependencies {
   roleAdminTransaction: IRoleAdminTransaction;
   /** Slice 7: the audit log viewer's read side. */
   auditEntryReader: IAuditEntryReader;
+  /** Slice 8: the transaction list writes and their audit entries share. */
+  lookupWriteTransaction: ILookupWriteTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -207,6 +222,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const roleManagementGuard = new RoleManagementGuard(roleCatalogue);
   const roleAdminTransaction = overrides?.roleAdminTransaction ?? new PrismaRoleAdminTransaction();
   const auditEntryReader = overrides?.auditEntryReader ?? new PrismaAuditEntryReader();
+  const lookupWriteTransaction = overrides?.lookupWriteTransaction ?? new PrismaLookupWriteTransaction();
 
   // Use Cases
   //
@@ -370,6 +386,19 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new ExportAuditEntriesUseCase(auditEntryReader)
   );
   app.use('/api/:tenantSlug/audit', createAuditRouter(auditController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Settings → Lists: risk levels and business types (Slice 8: FR-SET-01, 02).
+  const lookupStore = new PrismaLookupStore();
+  const lookupRules = createLookupRules(lookupStore);
+  const lookupsController = new LookupsController(
+    new ListLookupItemsUseCase(lookupStore),
+    new CreateLookupItemUseCase(lookupStore, lookupRules, lookupWriteTransaction),
+    new UpdateLookupItemUseCase(lookupStore, lookupRules, lookupWriteTransaction),
+    new ReorderLookupItemsUseCase(lookupStore, lookupWriteTransaction),
+    new SetLookupItemActiveUseCase(lookupStore, lookupRules, lookupWriteTransaction),
+    new DeleteLookupItemUseCase(lookupStore, lookupRules, new PrismaLookupInUsePolicy(), lookupWriteTransaction)
+  );
+  app.use('/api/:tenantSlug/lookups', createLookupRouter(lookupsController, tokenService, tenantRepository, resolveAccessContext));
 
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');

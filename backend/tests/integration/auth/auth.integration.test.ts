@@ -414,6 +414,7 @@ class FakeTenantProvisioningTransaction implements ITenantProvisioningTransactio
       tenantRepo: this.tenantRepo,
       userRepo: this.userRepo,
       roleSeeder: { seed: async () => ({}) as Record<RoleKey, string> },
+      lookupSeeder: { seed: async () => {} },
     });
   }
 }

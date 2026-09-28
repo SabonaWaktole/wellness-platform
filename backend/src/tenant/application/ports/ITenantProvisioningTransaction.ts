@@ -1,12 +1,14 @@
 import { ITenantRepository } from '../../domain/repositories/ITenantRepository';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
 import { ISystemRoleSeeder } from '../../../access/application/ports/ISystemRoleSeeder';
+import { ILookupSeeder } from '../../../lookups/application/ports/ILookupSeeder';
 
 /** The repositories provisioning a workspace writes through, all on one connection. */
 export interface TenantProvisioningRepos {
   tenantRepo: ITenantRepository;
   userRepo: IUserRepository;
   roleSeeder: ISystemRoleSeeder;
+  lookupSeeder: ILookupSeeder;
 }
 
 /**
