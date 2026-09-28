@@ -2,6 +2,7 @@ import nodemailer, { Transporter } from 'nodemailer';
 import { IEmailSender } from '../application/ports/IEmailSender';
 import { renderEmailLayout, escapeHtml } from '../../shared/email/emailLayout';
 import { PRODUCT_NAME } from '../../shared/email/brand';
+import { emailLanguage, invitationCopy, passwordResetCopy } from './authEmailCopy';
 
 export interface SmtpEmailSenderOptions {
   /**
@@ -19,8 +20,9 @@ export interface SmtpEmailSenderOptions {
  * transporter is created per instance and reused across sends rather than
  * reconnecting per call.
  *
- * The wording is English for now; sending each person's mail in their own
- * language is part of user administration (Milestone 1, slice 5).
+ * Invitations and password resets are written in Albanian or English
+ * (authEmailCopy.ts). The platform-operator emails stay English, because the
+ * platform console is.
  */
 export class SmtpEmailSender implements IEmailSender {
   private readonly transporter: Pick<Transporter, 'sendMail'>;
@@ -91,7 +93,7 @@ export class SmtpEmailSender implements IEmailSender {
     await this.send(to, `Your workspace "${params.companyName}" is ready — ${PRODUCT_NAME}`, html, 'workspace created');
   }
 
-  async sendInvitationEmail(to: string, token: string, tenantName?: string): Promise<void> {
+  async sendInvitationEmail(to: string, token: string, tenantName?: string, language?: string): Promise<void> {
     const inviteLink = `${this.appUrl}/invitations/accept?token=${token}&email=${encodeURIComponent(to)}`;
 
     if (!tenantName) {
@@ -115,48 +117,44 @@ export class SmtpEmailSender implements IEmailSender {
     }
 
     const safeTenantName = escapeHtml(tenantName);
-
+    const lang = emailLanguage(language);
     /*
      * The workspace is named on its own, not as "<workspace> on Wellness
      * Albania": in this edition the workspace IS Wellness Albania, and the
      * product already signs the email in the logo, the sender and the footer.
      */
-    const bodyHtml = `
-      <p>You have been invited to join <strong>${safeTenantName}</strong> as a team member.</p>
-      <p>Click the button below to accept the invitation and set up your account password.</p>
-    `;
+    const copy = invitationCopy(lang, safeTenantName, tenantName);
 
     const html = renderEmailLayout({
       appUrl: this.appUrl,
-      preheader: `You've been invited to join ${tenantName}`,
-      eyebrow: 'Team Invitation',
-      heading: `You're invited to join ${safeTenantName}`,
-      bodyHtml,
-      cta: { label: 'Accept Invitation', url: inviteLink },
-      footerNote: "If you didn't expect this invitation, you can safely ignore this email.",
+      language: lang,
+      preheader: copy.preheader,
+      eyebrow: copy.eyebrow,
+      heading: copy.heading,
+      bodyHtml: copy.paragraphs.map((p) => `<p>${p}</p>`).join('\n'),
+      cta: { label: copy.cta, url: inviteLink },
+      footerNote: copy.footerNote,
     });
 
-    await this.send(to, `You have been invited to join ${tenantName}`, html, 'invitation');
+    await this.send(to, copy.subject, html, 'invitation');
   }
 
-  async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+  async sendPasswordResetEmail(to: string, token: string, language?: string): Promise<void> {
     const resetLink = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(to)}`;
-
-    const bodyHtml = `
-      <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
-      <p>To reset your password, click the button below:</p>
-    `;
+    const lang = emailLanguage(language);
+    const copy = passwordResetCopy(lang);
 
     const html = renderEmailLayout({
       appUrl: this.appUrl,
-      preheader: `Reset your ${PRODUCT_NAME} password`,
-      eyebrow: 'Password Reset',
-      heading: 'Reset your password',
-      bodyHtml,
-      cta: { label: 'Reset Password', url: resetLink },
-      footerNote: 'This link will expire in 1 hour.',
+      language: lang,
+      preheader: copy.preheader,
+      eyebrow: copy.eyebrow,
+      heading: copy.heading,
+      bodyHtml: copy.paragraphs.map((p) => `<p>${p}</p>`).join('\n'),
+      cta: { label: copy.cta, url: resetLink },
+      footerNote: copy.footerNote,
     });
 
-    await this.send(to, `Reset your password — ${PRODUCT_NAME}`, html, 'password reset');
+    await this.send(to, copy.subject, html, 'password reset');
   }
 }

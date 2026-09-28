@@ -17,6 +17,8 @@ export interface InviteStaffInput {
   invitingUserId: string;
   tenantId: string;
   tenantName?: string;
+  /** The workspace's default language, which the invitation email is written in (FR-USR-02). */
+  language?: string;
   inviteeEmail: string;
   /** One of the workspace's roles (FR-USR-02). */
   roleId: string;
@@ -65,7 +67,7 @@ export class InviteStaffUseCase {
     });
 
     // Sent in the background so a slow mail server never holds up the response.
-    this.emailSender.sendInvitationEmail(input.inviteeEmail, invitation.token, input.tenantName).catch((err) => {
+    this.emailSender.sendInvitationEmail(input.inviteeEmail, invitation.token, input.tenantName, input.language).catch((err) => {
       console.error('Failed to send invitation email in background:', err);
     });
 

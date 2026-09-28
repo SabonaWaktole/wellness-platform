@@ -120,4 +120,46 @@ describe('system email branding', () => {
     expect(mail.subject).toContain('Wellness Albania');
     expect(mail.html).toContain(`${appUrl}/invitations/accept?token=`);
   });
+
+  describe('language (FR-USR-01, FR-USR-02, FR-LNG-01)', () => {
+    const useWorkspaceLanguage = (defaultLanguage: string) =>
+      prisma.tenant.update({ where: { id: tenantId }, data: { defaultLanguage } });
+
+    it('FR-USR-02 writes the invitation in the workspace\'s default language, Albanian here', async () => {
+      await useWorkspaceLanguage('sq');
+
+      await request(app)
+        .post(`/api/${slug}/auth/invitations`)
+        .set('Cookie', [`jwt=${ownerToken}`])
+        .send({ email: `invitee-sq-${runId}@wellness.test`, roleId: roles[RoleKey.Reception] })
+        .expect(200);
+
+      const mail = await nextMail();
+      expectWellnessBranding(mail);
+      expect(mail.subject).toBe('Jeni ftuar të bashkoheni me Wellness Albania');
+      expect(mail.html).toContain('<html lang="sq">');
+      expect(mail.html).toContain('Prano ftesën');
+    });
+
+    it('FR-USR-01 writes the reset email in the workspace language when the user never chose one', async () => {
+      await useWorkspaceLanguage('sq');
+
+      await request(app).post(`/api/${slug}/auth/password-reset/request`).send({ email: ownerEmail }).expect(200);
+
+      const mail = await nextMail();
+      expect(mail.subject).toBe('Rivendosni fjalëkalimin — Wellness Albania');
+      expect(mail.html).toContain('Rivendos fjalëkalimin');
+    });
+
+    it('FR-USR-01 writes the reset email in the language the user chose over the workspace\'s', async () => {
+      await useWorkspaceLanguage('sq');
+      await prisma.user.updateMany({ where: { tenantId, email: ownerEmail }, data: { language: 'en' } });
+
+      await request(app).post(`/api/${slug}/auth/password-reset/request`).send({ email: ownerEmail }).expect(200);
+
+      const mail = await nextMail();
+      expect(mail.subject).toBe('Reset your password — Wellness Albania');
+      expect(mail.html).toContain('<html lang="en">');
+    });
+  });
 });

@@ -245,7 +245,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     userAdminTransaction,
     notificationService
   );
-  const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userRepository, prtRepository, emailSender);
+  const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userRepository, prtRepository, emailSender, tenantRepository);
   const resetPasswordUseCase = new ResetPasswordUseCase(prtRepository, userRepository, passwordHasher);
   const getTenantStaffUseCase = new GetTenantStaffUseCase(userRepository, roleCatalogue);
   const listRolesUseCase = new ListRolesUseCase(roleCatalogue);

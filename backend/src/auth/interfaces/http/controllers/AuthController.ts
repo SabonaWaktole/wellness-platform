@@ -341,6 +341,7 @@ export class AuthController {
         roleId: req.body.roleId,
         warehouseId: req.body.warehouseId,
         tenantName: tenant!.name,
+        language: tenant!.defaultLanguage,
       });
       res.status(200).json({ message: 'Invitation sent' });
     } catch (error: any) {

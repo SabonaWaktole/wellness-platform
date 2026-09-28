@@ -24,6 +24,7 @@ describe('InviteStaffUseCase', () => {
         invitingUserId: 'admin',
         tenantId: 'tenant1',
         tenantName: 'Wellness Albania',
+        language: 'sq',
         inviteeEmail: 'new@example.com',
         roleId: 'role-RECEPTION',
         warehouseId: null,
@@ -45,7 +46,8 @@ describe('InviteStaffUseCase', () => {
       role: UserRole.STAFF,
       invitedByUserId: 'admin',
     });
-    expect(emailSender.sendInvitationEmail).toHaveBeenCalledWith('new@example.com', invitation.token, 'Wellness Albania');
+    // FR-USR-02: the invitation goes out in the workspace's default language.
+    expect(emailSender.sendInvitationEmail).toHaveBeenCalledWith('new@example.com', invitation.token, 'Wellness Albania', 'sq');
     expect(result).toEqual({ email: 'new@example.com', token: invitation.token });
   });
 
