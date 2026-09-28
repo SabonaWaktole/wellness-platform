@@ -25,7 +25,7 @@ import { PasswordResetToken } from '@auth/domain/entities/PasswordResetToken';
 import { UserRole } from '@auth/domain/enums/UserRole';
 import { IAccessRepository, AccessRecord } from '../../../src/access/application/ports/IAccessRepository';
 import { RoleKey, SYSTEM_ROLE_NAMES } from '../../../src/access/domain/RoleKey';
-import { IRoleCatalogue, RoleSummary } from '../../../src/access/application/ports/IRoleCatalogue';
+import { IRoleCatalogue, RoleSummary, RoleUsage } from '../../../src/access/application/ports/IRoleCatalogue';
 import { DEFAULT_ROLE_MATRIX } from '../../../src/access/domain/DefaultRoleMatrix';
 import { legacyRoleKeyFor } from '../../../src/access/domain/LegacyRoleMapping';
 import { IUserAdminTransaction, UserAdminRepos } from '../../../src/auth/application/ports/IUserAdminTransaction';
@@ -457,6 +457,7 @@ class InMemoryRoleCatalogue implements IRoleCatalogue {
       key,
       ...SYSTEM_ROLE_NAMES[key],
       isSystem: true,
+      baseKey: null,
       grants: DEFAULT_ROLE_MATRIX[key],
     }));
   }
@@ -475,6 +476,10 @@ class InMemoryRoleCatalogue implements IRoleCatalogue {
         return key !== null && (DEFAULT_ROLE_MATRIX as any)[key]?.[permissionKey] !== undefined;
       })
       .map((u) => u.id);
+  }
+  async usage(tenantId: string, roleId: string): Promise<RoleUsage> {
+    const users = await this.userRepo.findByTenantId(tenantId);
+    return { users: users.filter((u) => u.roleId === roleId).length, invitations: 0 };
   }
 }
 

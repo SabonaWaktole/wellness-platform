@@ -6,6 +6,7 @@ import { User } from '../../domain/entities/User';
 import { UserRole } from '../../domain/enums/UserRole';
 import { UnauthorizedError } from '../../domain/errors';
 import { IRoleCatalogue } from '../../../access/application/ports/IRoleCatalogue';
+import { lineageKeyOf } from '../../../access/domain/RoleKey';
 import { legacyRoleFor } from '../../../access/domain/LegacyRoleMapping';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { IUserAdminTransaction } from '../ports/IUserAdminTransaction';
@@ -82,7 +83,7 @@ export class CreateUserUseCase {
       firstName: input.firstName ?? null,
       lastName: input.lastName ?? null,
       phone: input.phone ?? null,
-      role: legacyRoleFor(role.key) as UserRole,
+      role: legacyRoleFor(lineageKeyOf(role)) as UserRole,
       roleId: role.id,
       tenantId: input.tenantId,
       warehouseId: input.warehouseId ?? null,

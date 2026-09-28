@@ -4,6 +4,7 @@ import { UnauthorizedError } from '../../domain/errors';
 import { IPermissionsChanged } from '../../../access/application/ports/IPermissionsChanged';
 import { IRoleCatalogue } from '../../../access/application/ports/IRoleCatalogue';
 import { RoleManagementGuard } from '../../../access/application/RoleManagementGuard';
+import { lineageKeyOf } from '../../../access/domain/RoleKey';
 import { legacyRoleFor } from '../../../access/domain/LegacyRoleMapping';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { diff } from '../../../audit/domain/diff';
@@ -52,7 +53,7 @@ export class UpdateUserRoleUseCase {
     await this.writeTx.run(async ({ staff, auditTrail }) => {
       await staff.setRole(input.tenantId, user.id, {
         roleId: newRole.id,
-        legacyRole: legacyRoleFor(newRole.key),
+        legacyRole: legacyRoleFor(lineageKeyOf(newRole)),
         warehouseId: input.newWarehouseId,
       });
       const changes = diff(before, after, ['role', 'warehouseId']);

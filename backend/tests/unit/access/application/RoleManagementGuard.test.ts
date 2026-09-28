@@ -23,3 +23,20 @@ describe('RoleManagementGuard (FR-RBAC-08)', () => {
     expect(roles.activeHolderIds).toHaveBeenCalledWith('t1', 'roles.manage');
   });
 });
+
+describe('RoleManagementGuard.ensureRoleKeepsManager (FR-RBAC-08)', () => {
+  it('FR-RBAC-08 refuses to take roles.manage from a role when no one outside it holds roles.manage', async () => {
+    const roles = { activeHolderIds: jest.fn().mockResolvedValue([]) };
+
+    await expect(new RoleManagementGuard(roles).ensureRoleKeepsManager('t1', 'role-admin')).rejects.toBeInstanceOf(
+      LastRoleManagerError
+    );
+    expect(roles.activeHolderIds).toHaveBeenCalledWith('t1', 'roles.manage', { excludingRoleId: 'role-admin' });
+  });
+
+  it('allows it while an active user in another role still holds roles.manage', async () => {
+    const roles = { activeHolderIds: jest.fn().mockResolvedValue(['custom-admin']) };
+
+    await expect(new RoleManagementGuard(roles).ensureRoleKeepsManager('t1', 'role-admin')).resolves.toBeUndefined();
+  });
+});

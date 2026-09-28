@@ -91,6 +91,15 @@ import { IRoleCatalogue } from '../access/application/ports/IRoleCatalogue';
 import { PrismaRoleCatalogue } from '../access/infrastructure/PrismaRoleCatalogue';
 import { RoleManagementGuard } from '../access/application/RoleManagementGuard';
 import { ListRolesUseCase } from '../access/application/use-cases/ListRolesUseCase';
+import { ListRolePermissionsUseCase } from '../access/application/use-cases/ListRolePermissionsUseCase';
+import { UpdateRolePermissionsUseCase } from '../access/application/use-cases/UpdateRolePermissionsUseCase';
+import { CopyRoleUseCase } from '../access/application/use-cases/CopyRoleUseCase';
+import { RenameRoleUseCase } from '../access/application/use-cases/RenameRoleUseCase';
+import { DeleteCustomRoleUseCase } from '../access/application/use-cases/DeleteCustomRoleUseCase';
+import { IRoleAdminTransaction } from '../access/application/ports/IRoleAdminTransaction';
+import { PrismaRoleAdminTransaction } from '../access/infrastructure/PrismaRoleAdminTransaction';
+import { RolesController } from '../access/interfaces/http/RolesController';
+import { createRoleRouter } from '../access/interfaces/http/roleRoutes';
 import { IUserAdminTransaction } from '../auth/application/ports/IUserAdminTransaction';
 import { PrismaUserAdminTransaction } from '../auth/infrastructure/PrismaUserAdminTransaction';
 import { ResolveAccessContextUseCase } from '../access/application/use-cases/ResolveAccessContextUseCase';
@@ -118,6 +127,8 @@ export interface AppDependencies {
   /** Slice 5: the workspace's roles, and the transaction user-admin writes and their audit entries share. */
   roleCatalogue: IRoleCatalogue;
   userAdminTransaction: IUserAdminTransaction;
+  /** Slice 6: the transaction role edits and their audit entries share. */
+  roleAdminTransaction: IRoleAdminTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -185,6 +196,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const roleCatalogue = overrides?.roleCatalogue ?? new PrismaRoleCatalogue();
   const userAdminTransaction = overrides?.userAdminTransaction ?? new PrismaUserAdminTransaction();
   const roleManagementGuard = new RoleManagementGuard(roleCatalogue);
+  const roleAdminTransaction = overrides?.roleAdminTransaction ?? new PrismaRoleAdminTransaction();
 
   // Use Cases
   //
@@ -330,6 +342,16 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   
   app.use('/api/auth', globalAuthRoutes);
   app.use('/api/:tenantSlug/auth', tenantAuthRoutes);
+
+  // Roles & permissions (Slice 6: FR-RBAC-03, 04, 08, 10).
+  const rolesController = new RolesController(
+    new ListRolePermissionsUseCase(roleCatalogue),
+    new UpdateRolePermissionsUseCase(roleCatalogue, roleManagementGuard, roleAdminTransaction, accessCache),
+    new CopyRoleUseCase(roleCatalogue, roleAdminTransaction),
+    new RenameRoleUseCase(roleCatalogue, roleAdminTransaction),
+    new DeleteCustomRoleUseCase(roleCatalogue, roleAdminTransaction)
+  );
+  app.use('/api/:tenantSlug/roles', createRoleRouter(rolesController, tokenService, tenantRepository, resolveAccessContext));
 
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');

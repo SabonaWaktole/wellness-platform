@@ -73,4 +73,42 @@ describe('PrismaRoleCatalogue', () => {
     expect(await catalogue.findById(tenantId, roles[RoleKey.Ceo])).toMatchObject({ key: RoleKey.Ceo });
     expect(await catalogue.findById(otherTenantId, roles[RoleKey.Ceo])).toBeNull();
   });
+
+  it('FR-RBAC-08 leaves out one role\'s holders when asked who else can manage roles', async () => {
+    const others = await catalogue.activeHolderIds(tenantId, 'roles.manage', { excludingRoleId: roles[RoleKey.Administrator] });
+
+    // The legacy owner has no roleId yet, so no role edit can take roles.manage from them.
+    expect(others).toEqual([legacyOwner]);
+  });
+
+  it('lists a system role with no base key', async () => {
+    const list = await catalogue.list(tenantId);
+
+    expect(list.every((role) => role.baseKey === null)).toBe(true);
+  });
+
+  it('counts a role\'s users that are not deleted, and its invitations not yet accepted', async () => {
+    const invitation = (label: string, roleId: string, acceptedAt: Date | null) => ({
+      id: `inv-catalogue-${label}-${randomUUID()}`,
+      tenantId,
+      email: `${label}@example.com`,
+      role: 'STAFF',
+      roleId,
+      token: randomUUID(),
+      expiresAt: new Date(Date.now() + 86_400_000),
+      acceptedAt,
+    });
+    await prisma.invitation.createMany({
+      data: [
+        invitation('pending', roles[RoleKey.Ceo], null),
+        invitation('accepted', roles[RoleKey.Ceo], new Date()),
+      ],
+    });
+
+    expect(await catalogue.usage(tenantId, roles[RoleKey.Administrator])).toEqual({ users: 2, invitations: 0 });
+    expect(await catalogue.usage(tenantId, roles[RoleKey.Ceo])).toEqual({ users: 0, invitations: 1 });
+    expect(await catalogue.usage(otherTenantId, roles[RoleKey.Administrator])).toEqual({ users: 0, invitations: 0 });
+
+    await prisma.invitation.deleteMany({ where: { tenantId } });
+  });
 });

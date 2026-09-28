@@ -139,6 +139,11 @@ describe('Permission matrix (SRS §4.2)', () => {
       request: (t) => request(app).get(`/api/${tenantSlug}/auth/roles`).set('Authorization', `Bearer ${t}`),
     },
     {
+      label: 'roles.manage — GET /roles',
+      permissionKey: 'roles.manage',
+      request: (t) => request(app).get(`/api/${tenantSlug}/roles`).set('Authorization', `Bearer ${t}`),
+    },
+    {
       label: 'settings.manage — PUT /settings',
       permissionKey: 'settings.manage',
       request: (t) => request(app).put(`/api/${tenantSlug}/settings`).set('Authorization', `Bearer ${t}`).send({}),

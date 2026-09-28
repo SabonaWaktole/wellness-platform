@@ -38,3 +38,61 @@ export class LastRoleManagerError extends DomainError {
     super('This is the last active user who can manage roles. Give someone else that permission first.');
   }
 }
+
+/**
+ * FR-RBAC-02, 03: a role edit named a key outside the catalogue, a scoped key
+ * without Own/Team/All, a plain capability with a scope, or one key twice.
+ * Mapped to 400.
+ */
+export class InvalidPermissionGrantError extends DomainError {
+  readonly code = 'INVALID_PERMISSION_GRANT';
+
+  constructor(
+    readonly permissionKey: string,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+/** No role with that id in this workspace. Mapped to 404. */
+export class RoleNotFoundError extends DomainError {
+  readonly code = 'ROLE_NOT_FOUND';
+
+  constructor() {
+    super('Role not found.');
+  }
+}
+
+/**
+ * The five system roles (FR-RBAC-01) keep their names and cannot be deleted;
+ * only their permissions are edited. Mapped to 409.
+ */
+export class SystemRoleLockedError extends DomainError {
+  readonly code = 'SYSTEM_ROLE_LOCKED';
+
+  constructor() {
+    super('System roles cannot be renamed or deleted. Copy the role to make one you can.');
+  }
+}
+
+/** A custom role still held by users or pending invitations cannot be deleted. Mapped to 409. */
+export class RoleInUseError extends DomainError {
+  readonly code = 'ROLE_IN_USE';
+
+  constructor(
+    readonly users: number,
+    readonly invitations: number
+  ) {
+    super('This role is still assigned. Move its users and invitations to another role first.');
+  }
+}
+
+/** Another role in the workspace already has this name, in either language. Mapped to 409. */
+export class RoleNameTakenError extends DomainError {
+  readonly code = 'ROLE_NAME_TAKEN';
+
+  constructor() {
+    super('Another role already has this name.');
+  }
+}

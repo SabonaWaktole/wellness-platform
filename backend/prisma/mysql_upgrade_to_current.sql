@@ -14,7 +14,7 @@
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
 --                                    column can become NOT NULL.
 --
--- It replaces running these nine by hand, in this order (the order matters —
+-- It replaces running these ten by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql
@@ -26,6 +26,7 @@
 --   7. mysql_migration_add_roles_and_permissions.sql
 --   8. mysql_migration_add_audit_entries.sql
 --   9. mysql_migration_add_invitation_role.sql
+--  10. mysql_migration_add_role_base_key.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -773,6 +774,21 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 10. Custom roles remember their system role (Slice 6: FR-RBAC-04)
+-- ---------------------------------------------------------------
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Role' AND COLUMN_NAME = 'baseKey');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Role` ADD COLUMN `baseKey` VARCHAR(191) NULL', 'SELECT ''skip: Role.baseKey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260928120000_add_role_base_key', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260928120000_add_role_base_key'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -810,6 +826,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='AuditEntry'
   UNION ALL SELECT 'Invitation.roleId', COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Invitation' AND COLUMN_NAME='roleId'
+  UNION ALL SELECT 'Role.baseKey', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Role' AND COLUMN_NAME='baseKey'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

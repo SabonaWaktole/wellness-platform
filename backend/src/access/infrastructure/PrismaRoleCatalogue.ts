@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
-import { IRoleCatalogue, RoleSummary } from '../application/ports/IRoleCatalogue';
+import { IRoleCatalogue, RoleSummary, RoleUsage } from '../application/ports/IRoleCatalogue';
 import { DEFAULT_ROLE_MATRIX, PermissionGrant } from '../domain/DefaultRoleMatrix';
 import { legacyRoleKeyFor } from '../domain/LegacyRoleMapping';
 import { PermissionScope } from '../domain/PermissionScope';
@@ -13,6 +13,7 @@ type RoleRow = {
   nameSq: string;
   nameEn: string;
   isSystem: boolean;
+  baseKey: string | null;
   permissions: Array<{ permissionKey: string; scope: string | null }>;
 };
 
@@ -21,7 +22,15 @@ function toSummary(role: RoleRow): RoleSummary {
   for (const permission of role.permissions) {
     grants[permission.permissionKey] = permission.scope ? (permission.scope as PermissionScope) : true;
   }
-  return { id: role.id, key: role.key, nameSq: role.nameSq, nameEn: role.nameEn, isSystem: role.isSystem, grants };
+  return {
+    id: role.id,
+    key: role.key,
+    nameSq: role.nameSq,
+    nameEn: role.nameEn,
+    isSystem: role.isSystem,
+    baseKey: role.baseKey,
+    grants,
+  };
 }
 
 export class PrismaRoleCatalogue implements IRoleCatalogue {
@@ -41,7 +50,7 @@ export class PrismaRoleCatalogue implements IRoleCatalogue {
     return role ? toSummary(role) : null;
   }
 
-  async activeHolderIds(tenantId: string, permissionKey: string): Promise<string[]> {
+  async activeHolderIds(tenantId: string, permissionKey: string, options: { excludingRoleId?: string } = {}): Promise<string[]> {
     const legacyHolders = LEGACY_ROLES.filter((legacy) => {
       const key = legacyRoleKeyFor(legacy);
       return key !== null && DEFAULT_ROLE_MATRIX[key][permissionKey] !== undefined;
@@ -52,12 +61,23 @@ export class PrismaRoleCatalogue implements IRoleCatalogue {
         isActive: true,
         deletedAt: null,
         OR: [
-          { assignedRole: { permissions: { some: { permissionKey } } } },
+          {
+            assignedRole: { permissions: { some: { permissionKey } } },
+            ...(options.excludingRoleId ? { roleId: { not: options.excludingRoleId } } : {}),
+          },
           { roleId: null, role: { in: [...legacyHolders] } },
         ],
       },
       select: { id: true },
     });
     return users.map((user) => user.id);
+  }
+
+  async usage(tenantId: string, roleId: string): Promise<RoleUsage> {
+    const [users, invitations] = await Promise.all([
+      this.prisma.user.count({ where: { tenantId, roleId, deletedAt: null } }),
+      this.prisma.invitation.count({ where: { tenantId, roleId, acceptedAt: null } }),
+    ]);
+    return { users, invitations };
   }
 }
