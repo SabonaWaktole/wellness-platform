@@ -56,26 +56,43 @@ export const INVOICE_STATUS_KEYS: Record<InvoiceStatus, string> = {
 };
 
 /** Mirrors the backend's ContractStatus enum (backend Contract.ts). */
-export const CONTRACT_STATUSES = ['DRAFT', 'ACTIVE', 'EXPIRED', 'CANCELLED'] as const;
+export const CONTRACT_STATUSES = ['DRAFT', 'PENDING_SIGNATURE', 'ACTIVE', 'SUSPENDED', 'EXPIRED', 'CANCELLED'] as const;
 
 export type ContractStatus = (typeof CONTRACT_STATUSES)[number];
 
 export const CONTRACT_STATUS_KEYS: Record<ContractStatus, string> = {
   DRAFT: 'contracts:status.draft',
+  PENDING_SIGNATURE: 'contracts:status.pendingSignature',
   ACTIVE: 'contracts:status.active',
+  SUSPENDED: 'contracts:status.suspended',
   EXPIRED: 'contracts:status.expired',
   CANCELLED: 'contracts:status.cancelled',
 };
 
-/** Mirrors the backend's PaymentStatus enum (backend ContractPayment.ts). */
-export const CONTRACT_PAYMENT_STATUSES = ['UNPAID', 'PAID', 'PARTIAL', 'WAIVED'] as const;
+/**
+ * Mirrors the backend's PaymentStatus enum (backend ContractPayment.ts).
+ * WAIVED is the one legacy key (decision D6, Slice 10): kept only so an
+ * existing row still renders a label.
+ */
+export const CONTRACT_PAYMENT_STATUSES = [
+  'NOT_INVOICED',
+  'INVOICE_ISSUED',
+  'PAYMENT_PENDING',
+  'PARTIALLY_PAID',
+  'PAID',
+  'OVERDUE',
+  'WAIVED',
+] as const;
 
 export type ContractPaymentStatus = (typeof CONTRACT_PAYMENT_STATUSES)[number];
 
 export const CONTRACT_PAYMENT_STATUS_KEYS: Record<ContractPaymentStatus, string> = {
-  UNPAID: 'contracts:paymentStatus.unpaid',
+  NOT_INVOICED: 'contracts:paymentStatus.notInvoiced',
+  INVOICE_ISSUED: 'contracts:paymentStatus.invoiceIssued',
+  PAYMENT_PENDING: 'contracts:paymentStatus.paymentPending',
+  PARTIALLY_PAID: 'contracts:paymentStatus.partiallyPaid',
   PAID: 'contracts:paymentStatus.paid',
-  PARTIAL: 'contracts:paymentStatus.partial',
+  OVERDUE: 'contracts:paymentStatus.overdue',
   WAIVED: 'contracts:paymentStatus.waived',
 };
 

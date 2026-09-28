@@ -39,7 +39,12 @@ export const isBillingPeriod = (value: string): value is BillingPeriod =>
  */
 export enum ContractStatus {
   Draft = 'DRAFT',
+  // Groundwork only (FR-SET-07, Slice 10): no transition assigns PendingSignature
+  // or Suspended in Milestone 1. They exist so the label set is complete and
+  // configurable now; the transitions into them are Milestone 3.
+  PendingSignature = 'PENDING_SIGNATURE',
   Active = 'ACTIVE',
+  Suspended = 'SUSPENDED',
   Expired = 'EXPIRED',
   Cancelled = 'CANCELLED',
 }

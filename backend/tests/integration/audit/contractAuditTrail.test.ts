@@ -134,7 +134,7 @@ describe('Contract audit trail (Slice 2)', () => {
     const changes = entries[0].changes as Array<{ field: string; old: unknown; new: unknown }>;
     expect(changes).toEqual(
       expect.arrayContaining([
-        { field: 'status', old: 'UNPAID', new: 'PAID' },
+        { field: 'status', old: 'PAYMENT_PENDING', new: 'PAID' },
         { field: 'paidAmount', old: 0, new: payment.amount },
       ])
     );

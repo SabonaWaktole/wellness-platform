@@ -7,12 +7,23 @@
  *
  * WAIVED is not PAID with a zero amount: it means the business decided not to
  * collect this instalment (a goodwill month, a negotiated discount), and it
- * must not count toward revenue the way a real payment does.
+ * must not count toward revenue the way a real payment does. It is also the
+ * one legacy key (SRS decision D6, Slice 10) with no equivalent in the SRS
+ * set: existing rows keep it, but it is neither offered for a new payment
+ * nor configurable from Settings → Statuses.
+ *
+ * NOT_INVOICED and INVOICE_ISSUED are groundwork (FR-SET-08): nothing in
+ * Milestone 1 assigns them, the same way `ContractStatus.PendingSignature`
+ * and `.Suspended` are groundwork with no transition into them yet.
  */
 export enum PaymentStatus {
-  Unpaid = 'UNPAID',
+  NotInvoiced = 'NOT_INVOICED',
+  InvoiceIssued = 'INVOICE_ISSUED',
+  PaymentPending = 'PAYMENT_PENDING',
+  PartiallyPaid = 'PARTIALLY_PAID',
   Paid = 'PAID',
-  Partial = 'PARTIAL',
+  Overdue = 'OVERDUE',
+  /** @deprecated Legacy key (D6). Existing rows only; never assigned to a new payment. */
   Waived = 'WAIVED',
 }
 
@@ -95,7 +106,7 @@ export class ContractPayment {
       periodIndex: props.periodIndex,
       dueDate: props.dueDate,
       amount: props.amount,
-      status: props.status ?? PaymentStatus.Unpaid,
+      status: props.status ?? PaymentStatus.PaymentPending,
       paidAmount,
       paidAt: props.paidAt ?? null,
       method: props.method ?? null,
@@ -161,17 +172,17 @@ export class ContractPayment {
     // Floating point: a schedule of 100.00 paid as 33.33 + 33.33 + 33.34 must
     // settle as PAID, so the comparison is on cents rather than on an exact
     // equality that binary doubles cannot promise.
-    this.status = this.paidAmount + 0.005 >= this.amount ? PaymentStatus.Paid : PaymentStatus.Partial;
+    this.status = this.paidAmount + 0.005 >= this.amount ? PaymentStatus.Paid : PaymentStatus.PartiallyPaid;
     this.updatedAt = new Date();
   }
 
   /**
    * Undo — the payment was recorded against the wrong month, or the transfer
-   * bounced. Returns the row to UNPAID rather than deleting it: the instalment
+   * bounced. Returns the row to PAYMENT_PENDING rather than deleting it: the instalment
    * is still owed, and the schedule would be missing a month without it.
    */
   markUnpaid(): void {
-    this.status = PaymentStatus.Unpaid;
+    this.status = PaymentStatus.PaymentPending;
     this.paidAmount = 0;
     this.paidAt = null;
     this.updatedAt = new Date();
@@ -193,8 +204,8 @@ export class ContractPayment {
       // re-derived rather than left describing the old figure. WAIVED is left
       // alone: it is a decision, not a calculation.
       if (this.status !== PaymentStatus.Waived) {
-        if (this.paidAmount <= 0) this.status = PaymentStatus.Unpaid;
-        else this.status = this.paidAmount + 0.005 >= this.amount ? PaymentStatus.Paid : PaymentStatus.Partial;
+        if (this.paidAmount <= 0) this.status = PaymentStatus.PaymentPending;
+        else this.status = this.paidAmount + 0.005 >= this.amount ? PaymentStatus.Paid : PaymentStatus.PartiallyPaid;
       }
     }
     if (edits.dueDate !== undefined) this.dueDate = edits.dueDate;

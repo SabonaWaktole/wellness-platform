@@ -6,9 +6,7 @@
     "cancelled": "Annullato"
   },
   "paymentStatus": {
-    "unpaid": "Non pagato",
     "paid": "Pagato",
-    "partial": "Pagato parzialmente",
     "waived": "Stornato"
   },
   "billingPeriod": {

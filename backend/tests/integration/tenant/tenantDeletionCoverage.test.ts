@@ -47,6 +47,9 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.riskLevel.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.city.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.area.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.followUpInterval.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.lostReason.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.statusLabel.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     }
     await prisma.$disconnect();
@@ -131,8 +134,15 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
 
     // BusinessType: RESTRICT on its RiskLevel, and City: RESTRICT on its
     // Area, so neither pair can be left to race each other down the cascade
-    // from Tenant. The seeder creates both pairs for every tenant.
+    // from Tenant. The seeder creates both pairs, plus follow-up intervals
+    // and lost-deal reasons, for every tenant.
     await new PrismaLookupSeeder(prisma).seed(tenantId);
+
+    // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
+    // covered here so a tenant with an edited status label is proven clean too.
+    await prisma.statusLabel.create({
+      data: { tenantId, domain: 'CONTRACT', key: 'ACTIVE', labelSq: 'Aktive', colour: '#3DAA6C' },
+    });
 
     const deletionTx = new PrismaTenantDeletionTransaction(prisma);
 
@@ -149,6 +159,9 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.riskLevel.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.city.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.area.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.followUpInterval.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.lostReason.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.statusLabel.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });

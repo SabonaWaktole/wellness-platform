@@ -221,7 +221,7 @@ describe('RecordContractPaymentUseCase audit trail', () => {
     expect(entry.action).toBe(AuditAction.StatusChange);
     expect(entry.changes.find((c) => c.field === 'status')).toEqual({
       field: 'status',
-      old: 'UNPAID',
+      old: 'PAYMENT_PENDING',
       new: 'PAID',
     });
   });
@@ -247,7 +247,7 @@ describe('RecordContractPaymentUseCase audit trail', () => {
     expect(entry.changes.find((c) => c.field === 'status')).toEqual({
       field: 'status',
       old: 'PAID',
-      new: 'UNPAID',
+      new: 'PAYMENT_PENDING',
     });
   });
 });

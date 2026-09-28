@@ -219,6 +219,15 @@ describe('Permission matrix (SRS §4.2)', () => {
       request: (t) =>
         request(app).patch(`/api/${tenantSlug}/lookups/risk-levels/nonexistent`).set('Authorization', `Bearer ${t}`).send({}),
     },
+    {
+      label: 'settings.manage — PATCH /status-labels/contract/:key',
+      permissionKey: 'settings.manage',
+      request: (t) =>
+        request(app)
+          .patch(`/api/${tenantSlug}/status-labels/contract/ACTIVE`)
+          .set('Authorization', `Bearer ${t}`)
+          .send({ labelSq: 'Aktive', colour: '#3DAA6C' }),
+    },
   ];
 
   for (const testCase of CASES) {

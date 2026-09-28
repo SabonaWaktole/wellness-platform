@@ -39,7 +39,9 @@ const toDateInput = (value: string | null | undefined): string =>
 const statusVariant = (status: string): BadgeProps['variant'] => {
   switch (status) {
     case 'DRAFT': return 'secondary';
+    case 'PENDING_SIGNATURE': return 'warning';
     case 'ACTIVE': return 'success';
+    case 'SUSPENDED': return 'error';
     case 'EXPIRED': return 'warning';
     case 'CANCELLED': return 'error';
     default: return 'secondary';
@@ -49,7 +51,10 @@ const statusVariant = (status: string): BadgeProps['variant'] => {
 const paymentVariant = (status: string): BadgeProps['variant'] => {
   switch (status) {
     case 'PAID': return 'success';
-    case 'PARTIAL': return 'warning';
+    case 'PARTIALLY_PAID': return 'warning';
+    case 'PAYMENT_PENDING': return 'warning';
+    case 'OVERDUE': return 'error';
+    case 'INVOICE_ISSUED': return 'secondary';
     case 'WAIVED': return 'secondary';
     default: return 'secondary';
   }
@@ -502,7 +507,7 @@ export const ContractDetailContent: React.FC = () => {
                           </td>
                           <td className={styles.amountCell}>
                             {formatMoney(payment.amount)}
-                            {payment.status === 'PARTIAL' && (
+                            {payment.status === 'PARTIALLY_PAID' && (
                               <span className={styles.partialHint}>
                                 {t('payments.outstandingOf', {
                                   outstanding: formatMoney(payment.outstanding),
@@ -532,7 +537,7 @@ export const ContractDetailContent: React.FC = () => {
                                   <Check size={14} />
                                 </Button>
                               )}
-                              {can('RECORD_PAYMENT') && payment.status !== 'UNPAID' && (
+                              {can('RECORD_PAYMENT') && payment.status !== 'PAYMENT_PENDING' && (
                                 <Button
                                   variant="outline"
                                   onClick={() => quickAction(payment, 'UNPAY')}

@@ -30,6 +30,7 @@
 --  11. mysql_migration_add_lookup_lists.sql
 --  12. mysql_migration_add_areas_cities.sql
 --  13. mysql_migration_add_sales_lists.sql
+--  14. mysql_migration_add_status_labels.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -1144,6 +1145,48 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 14. Status keys and labels (Slice 10: FR-SET-07, 08; decision D6)
+-- ---------------------------------------------------------------
+
+SELECT '14. Status keys and labels' AS step, NOW() AS at;
+
+-- Existing ContractPayment rows are remapped so no row is left on a key the
+-- product no longer offers: UNPAID -> PAYMENT_PENDING, PARTIAL ->
+-- PARTIALLY_PAID, PAID stays PAID. WAIVED is untouched: it has no SRS
+-- equivalent (D6) and stays a hidden legacy key on the rows that already
+-- have it.
+UPDATE `ContractPayment` SET `status` = 'PAYMENT_PENDING' WHERE `status` = 'UNPAID';
+UPDATE `ContractPayment` SET `status` = 'PARTIALLY_PAID' WHERE `status` = 'PARTIAL';
+ALTER TABLE `ContractPayment` ALTER COLUMN `status` SET DEFAULT 'PAYMENT_PENDING';
+
+CREATE TABLE IF NOT EXISTS `StatusLabel` (
+    `tenantId` VARCHAR(191) NOT NULL,
+    `domain` VARCHAR(191) NOT NULL,
+    `key` VARCHAR(191) NOT NULL,
+    `labelSq` VARCHAR(191) NOT NULL,
+    `labelEn` VARCHAR(191) NULL,
+    `colour` VARCHAR(191) NOT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`tenantId`, `domain`, `key`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'StatusLabel' AND CONSTRAINT_NAME = 'StatusLabel_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `StatusLabel` ADD CONSTRAINT `StatusLabel_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: StatusLabel.StatusLabel_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260928174225_status_keys_and_labels', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260928174225_status_keys_and_labels'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -1195,6 +1238,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='FollowUpInterval'
   UNION ALL SELECT 'LostReason table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='LostReason'
+  UNION ALL SELECT 'StatusLabel table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='StatusLabel'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

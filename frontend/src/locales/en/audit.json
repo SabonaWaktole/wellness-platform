@@ -40,7 +40,8 @@
     "Area": "Area",
     "City": "City",
     "FollowUpInterval": "Follow-up interval",
-    "LostReason": "Lost-deal reason"
+    "LostReason": "Lost-deal reason",
+    "StatusLabel": "Status label"
   },
   "actors": {
     "system": "System",
@@ -88,6 +89,9 @@
     "riskLevel": "Risk level",
     "area": "Area",
     "days": "Days",
+    "labelSq": "Albanian label",
+    "labelEn": "English label",
+    "colour": "Colour",
     "order": "Order",
     "active": "Active"
   },

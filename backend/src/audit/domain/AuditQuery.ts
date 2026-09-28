@@ -21,6 +21,7 @@ export const AUDITED_ENTITY_TYPES = [
   'City',
   'FollowUpInterval',
   'LostReason',
+  'StatusLabel',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];

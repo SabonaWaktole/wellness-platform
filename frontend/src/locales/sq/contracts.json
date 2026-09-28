@@ -1,14 +1,19 @@
 {
   "status": {
     "draft": "Skicë",
+    "pendingSignature": "Në pritje të nënshkrimit",
     "active": "Aktiv",
+    "suspended": "Pezulluar",
     "expired": "Skaduar",
     "cancelled": "Anuluar"
   },
   "paymentStatus": {
-    "unpaid": "Papaguar",
+    "notInvoiced": "Pa faturuar",
+    "invoiceIssued": "Faturë lëshuar",
+    "paymentPending": "Në pritje të pagesës",
+    "partiallyPaid": "Paguar pjesërisht",
     "paid": "Paguar",
-    "partial": "Paguar pjesërisht",
+    "overdue": "Vonuar",
     "waived": "Falur"
   },
   "billingPeriod": {

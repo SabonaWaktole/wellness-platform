@@ -40,7 +40,8 @@
     "Area": "Zonë",
     "City": "Qytet",
     "FollowUpInterval": "Interval ndjekjeje",
-    "LostReason": "Arsye humbjeje"
+    "LostReason": "Arsye humbjeje",
+    "StatusLabel": "Etiketë statusi"
   },
   "actors": {
     "system": "Sistemi",
@@ -88,6 +89,9 @@
     "riskLevel": "Niveli i rrezikut",
     "area": "Zona",
     "days": "Ditët",
+    "labelSq": "Etiketa në shqip",
+    "labelEn": "Etiketa në anglisht",
+    "colour": "Ngjyra",
     "order": "Renditja",
     "active": "Aktive"
   },
