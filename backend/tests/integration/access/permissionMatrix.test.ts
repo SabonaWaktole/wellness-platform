@@ -192,6 +192,21 @@ describe('Permission matrix (SRS §4.2)', () => {
       permissionKey: 'invoices.manage',
       request: (t) => request(app).get(`/api/${tenantSlug}/invoices`).set('Authorization', `Bearer ${t}`),
     },
+    {
+      label: 'audit.view — GET /audit',
+      permissionKey: 'audit.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/audit`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'audit.view — GET /audit/:id',
+      permissionKey: 'audit.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/audit/nonexistent`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'audit.view — GET /audit/export.csv',
+      permissionKey: 'audit.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/audit/export.csv`).set('Authorization', `Bearer ${t}`),
+    },
   ];
 
   for (const testCase of CASES) {
