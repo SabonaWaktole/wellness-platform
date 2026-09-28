@@ -103,6 +103,13 @@ import { createRoleRouter } from '../access/interfaces/http/roleRoutes';
 import { IUserAdminTransaction } from '../auth/application/ports/IUserAdminTransaction';
 import { PrismaUserAdminTransaction } from '../auth/infrastructure/PrismaUserAdminTransaction';
 import { ResolveAccessContextUseCase } from '../access/application/use-cases/ResolveAccessContextUseCase';
+import { IAuditEntryReader } from '../audit/application/ports/IAuditEntryReader';
+import { PrismaAuditEntryReader } from '../audit/infrastructure/PrismaAuditEntryReader';
+import { SearchAuditEntriesUseCase } from '../audit/application/use-cases/SearchAuditEntriesUseCase';
+import { GetAuditEntryUseCase } from '../audit/application/use-cases/GetAuditEntryUseCase';
+import { ExportAuditEntriesUseCase } from '../audit/application/use-cases/ExportAuditEntriesUseCase';
+import { AuditController } from '../audit/interfaces/http/AuditController';
+import { createAuditRouter } from '../audit/interfaces/http/auditRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -129,6 +136,8 @@ export interface AppDependencies {
   userAdminTransaction: IUserAdminTransaction;
   /** Slice 6: the transaction role edits and their audit entries share. */
   roleAdminTransaction: IRoleAdminTransaction;
+  /** Slice 7: the audit log viewer's read side. */
+  auditEntryReader: IAuditEntryReader;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -197,6 +206,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const userAdminTransaction = overrides?.userAdminTransaction ?? new PrismaUserAdminTransaction();
   const roleManagementGuard = new RoleManagementGuard(roleCatalogue);
   const roleAdminTransaction = overrides?.roleAdminTransaction ?? new PrismaRoleAdminTransaction();
+  const auditEntryReader = overrides?.auditEntryReader ?? new PrismaAuditEntryReader();
 
   // Use Cases
   //
@@ -352,6 +362,14 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DeleteCustomRoleUseCase(roleCatalogue, roleAdminTransaction)
   );
   app.use('/api/:tenantSlug/roles', createRoleRouter(rolesController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Audit log viewer (Slice 7: FR-AUD-06, 08).
+  const auditController = new AuditController(
+    new SearchAuditEntriesUseCase(auditEntryReader),
+    new GetAuditEntryUseCase(auditEntryReader),
+    new ExportAuditEntriesUseCase(auditEntryReader)
+  );
+  app.use('/api/:tenantSlug/audit', createAuditRouter(auditController, tokenService, tenantRepository, resolveAccessContext));
 
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');

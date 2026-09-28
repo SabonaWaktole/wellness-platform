@@ -194,16 +194,17 @@ describe('Contract audit trail (Slice 2)', () => {
     expect(entries[0].userRole).toBe('SYSTEM');
   });
 
-  it('FR-AUD-05 no route exposes reading, updating or deleting an audit entry yet', async () => {
+  it('FR-AUD-05 the trail can be read (Slice 7) but never updated or deleted', async () => {
     const get = await api().get(`/api/${tenantSlug}/audit`).set('Authorization', `Bearer ${tokenOwner}`);
     const put = await api().put(`/api/${tenantSlug}/audit/some-id`).set('Authorization', `Bearer ${tokenOwner}`);
     const del = await api()
       .delete(`/api/${tenantSlug}/audit/some-id`)
       .set('Authorization', `Bearer ${tokenOwner}`);
 
-    // 404: no such route is mounted (the viewer is Slice 7). Not 401/403,
-    // which would mean a route exists but is merely guarded.
-    expect(get.status).toBe(404);
+    // The Administrator (BUSINESS_OWNER's D2 mapping) holds audit.view, so
+    // the viewer's own read route answers. There is still no PUT or DELETE
+    // route anywhere on /audit — a written entry can never be changed.
+    expect(get.status).toBe(200);
     expect(put.status).toBe(404);
     expect(del.status).toBe(404);
   });

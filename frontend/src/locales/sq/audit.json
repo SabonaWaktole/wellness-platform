@@ -1,0 +1,85 @@
+{
+  "breadcrumb": "Regjistri i auditimit",
+  "title": "Regjistri i auditimit",
+  "subtitle": "Çdo ndryshim i ndjeshëm, kush e bëri dhe kur.",
+  "loading": "Po ngarkohet regjistri i auditimit…",
+  "loadFailed": "Regjistri i auditimit nuk u ngarkua dot.",
+  "export": "Eksporto CSV",
+  "filters": {
+    "from": "Nga",
+    "to": "Deri",
+    "user": "Përdoruesi",
+    "allUsers": "Të gjithë përdoruesit",
+    "system": "Sistemi",
+    "entityType": "Lloji i regjistrimit",
+    "allEntityTypes": "Të gjitha llojet",
+    "action": "Veprimi",
+    "allActions": "Të gjitha veprimet"
+  },
+  "columns": {
+    "at": "Koha",
+    "user": "Përdoruesi",
+    "action": "Veprimi",
+    "entity": "Regjistrimi"
+  },
+  "actions": {
+    "CREATE": "Krijuar",
+    "UPDATE": "Përditësuar",
+    "DELETE": "Fshirë",
+    "STATUS_CHANGE": "Statusi ndryshuar"
+  },
+  "entityTypes": {
+    "Contract": "Kontratë",
+    "ContractPayment": "Pagesë",
+    "User": "Përdorues",
+    "Invitation": "Ftesë",
+    "Client": "Kompani",
+    "Role": "Rol"
+  },
+  "actors": {
+    "system": "Sistemi",
+    "platformOperator": "Operatori i platformës"
+  },
+  "redacted": "ndryshuar",
+  "dash": "—",
+  "detail": {
+    "title": "Hyrja e auditimit",
+    "field": "Fusha",
+    "old": "Para",
+    "new": "Pas",
+    "noChanges": "Nuk u regjistrua asnjë fushë për këtë hyrje."
+  },
+  "fields": {
+    "status": "Statusi",
+    "planName": "Plani",
+    "amount": "Shuma",
+    "billingPeriod": "Periudha e faturimit",
+    "startsAt": "Fillon",
+    "endsAt": "Përfundon",
+    "assignedUserId": "Caktuar tek",
+    "notes": "Shënime",
+    "note": "Shënim",
+    "renewedFromContractId": "Rinovuar nga",
+    "generatedPayments": "Pagesat e gjeneruara",
+    "cancelReason": "Arsyeja e anulimit",
+    "dueDate": "Afati i pagesës",
+    "paidAmount": "Shuma e paguar",
+    "paidAt": "Paguar më",
+    "method": "Metoda",
+    "email": "Email",
+    "role": "Roli",
+    "warehouseId": "Magazina",
+    "isActive": "Aktiv",
+    "permissions": "Lejet",
+    "permissionsAdded": "Leje të shtuara",
+    "permissionsRemoved": "Leje të hequra",
+    "scopesChanged": "Fusha e ndryshuar",
+    "nameSq": "Emri në shqip",
+    "nameEn": "Emri në anglisht",
+    "copiedFrom": "Kopjuar nga"
+  },
+  "empty": {
+    "title": "Asnjë hyrje nuk përputhet me këto filtra",
+    "description": "Provoni të zgjeroni periudhën ose të pastroni një filtër."
+  }
+}

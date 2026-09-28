@@ -1,0 +1,85 @@
+{
+  "breadcrumb": "Audit log",
+  "title": "Audit log",
+  "subtitle": "Every sensitive change, who made it and when.",
+  "loading": "Loading the audit log…",
+  "loadFailed": "Couldn't load the audit log.",
+  "export": "Export CSV",
+  "filters": {
+    "from": "From",
+    "to": "To",
+    "user": "User",
+    "allUsers": "All users",
+    "system": "System",
+    "entityType": "Record type",
+    "allEntityTypes": "All record types",
+    "action": "Action",
+    "allActions": "All actions"
+  },
+  "columns": {
+    "at": "Time",
+    "user": "User",
+    "action": "Action",
+    "entity": "Record"
+  },
+  "actions": {
+    "CREATE": "Created",
+    "UPDATE": "Updated",
+    "DELETE": "Deleted",
+    "STATUS_CHANGE": "Status changed"
+  },
+  "entityTypes": {
+    "Contract": "Contract",
+    "ContractPayment": "Payment",
+    "User": "User",
+    "Invitation": "Invitation",
+    "Client": "Company",
+    "Role": "Role"
+  },
+  "actors": {
+    "system": "System",
+    "platformOperator": "Platform operator"
+  },
+  "redacted": "changed",
+  "dash": "—",
+  "detail": {
+    "title": "Audit entry",
+    "field": "Field",
+    "old": "Before",
+    "new": "After",
+    "noChanges": "No fields were recorded for this entry."
+  },
+  "fields": {
+    "status": "Status",
+    "planName": "Plan",
+    "amount": "Amount",
+    "billingPeriod": "Billing period",
+    "startsAt": "Starts",
+    "endsAt": "Ends",
+    "assignedUserId": "Assigned to",
+    "notes": "Notes",
+    "note": "Note",
+    "renewedFromContractId": "Renewed from",
+    "generatedPayments": "Generated payments",
+    "cancelReason": "Cancellation reason",
+    "dueDate": "Due date",
+    "paidAmount": "Paid amount",
+    "paidAt": "Paid on",
+    "method": "Method",
+    "email": "Email",
+    "role": "Role",
+    "warehouseId": "Warehouse",
+    "isActive": "Active",
+    "permissions": "Permissions",
+    "permissionsAdded": "Permissions added",
+    "permissionsRemoved": "Permissions removed",
+    "scopesChanged": "Scope changed",
+    "nameSq": "Albanian name",
+    "nameEn": "English name",
+    "copiedFrom": "Copied from"
+  },
+  "empty": {
+    "title": "No entries match these filters",
+    "description": "Try widening the date range or clearing a filter."
+  }
+}

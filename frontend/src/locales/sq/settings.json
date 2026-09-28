@@ -10,7 +10,8 @@
     "roles": "Rolet dhe lejet",
     "integrations": "Integrimet",
     "warehouses": "Magazinat",
-    "categories": "Kategoritë"
+    "categories": "Kategoritë",
+    "audit": "Regjistri i auditimit"
   },
   "company": {
     "title": "Cilësimet e kompanisë",
