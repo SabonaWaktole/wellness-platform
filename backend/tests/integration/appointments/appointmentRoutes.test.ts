@@ -72,7 +72,7 @@ describe('Appointment Routes (Integration)', () => {
     // Setup client (Tenant 1)
     await prisma.client.upsert({
       where: { id: 'c1-t1' },
-      create: { id: 'c1-t1', tenantId: 't1', name: 'Client 1 T1', status: ClientStatus.ACTIVE, customFieldValues: {}, lastUpdatedByUserId: 'u1-owner' },
+      create: { id: 'c1-t1', tenantId: 't1', name: 'Client 1 T1', status: ClientStatus.CLIENT, customFieldValues: {}, lastUpdatedByUserId: 'u1-owner' },
       update: {}
     });
 
@@ -255,7 +255,7 @@ describe('Appointment Routes (Integration)', () => {
     // Setup Tenant B client
     await prisma.client.upsert({
       where: { id: 'c2-t2' },
-      create: { id: 'c2-t2', tenantId: 't2', name: 'Client 2 T2', status: ClientStatus.ACTIVE, customFieldValues: {}, lastUpdatedByUserId: 'u2-owner' },
+      create: { id: 'c2-t2', tenantId: 't2', name: 'Client 2 T2', status: ClientStatus.CLIENT, customFieldValues: {}, lastUpdatedByUserId: 'u2-owner' },
       update: {}
     });
 

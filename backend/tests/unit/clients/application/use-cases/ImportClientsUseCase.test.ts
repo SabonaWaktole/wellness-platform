@@ -101,7 +101,7 @@ describe('ImportClientsUseCase', () => {
           Name: 'Acme Ltd',
           Email: 'hi@acme.com',
           Phone: '+123',
-          Status: ClientStatus.ACTIVE,
+          Status: ClientStatus.CLIENT,
           'Company Size': 42,
           'Is VIP': true,
           'Plate Number': 'AB 123',

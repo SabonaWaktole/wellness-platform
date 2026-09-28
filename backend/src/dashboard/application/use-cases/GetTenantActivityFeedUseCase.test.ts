@@ -101,8 +101,8 @@ describe('GetTenantActivityFeedUseCase', () => {
     }
 
     const clients = [
-      Client.create({ id: 'c1', tenantId: 'tenant-a', name: 'Client 1', status: ClientStatus.ACTIVE, lastUpdatedByUserId: 'u1', customFieldValues: {}, contactInfo: { email: 'a@a.com', phone: '123' }, updatedAt: new Date(), createdAt: new Date(baseDate.getTime() + 16000) }, []),
-      Client.create({ id: 'c2', tenantId: 'tenant-a', name: 'Client 2', status: ClientStatus.ACTIVE, lastUpdatedByUserId: 'u1', customFieldValues: {}, contactInfo: { email: 'b@b.com', phone: '456' }, updatedAt: new Date(), createdAt: new Date(baseDate.getTime() + 17000) }, []),
+      Client.create({ id: 'c1', tenantId: 'tenant-a', name: 'Client 1', status: ClientStatus.CLIENT, lastUpdatedByUserId: 'u1', customFieldValues: {}, contactInfo: { email: 'a@a.com', phone: '123' }, updatedAt: new Date(), createdAt: new Date(baseDate.getTime() + 16000) }, []),
+      Client.create({ id: 'c2', tenantId: 'tenant-a', name: 'Client 2', status: ClientStatus.CLIENT, lastUpdatedByUserId: 'u1', customFieldValues: {}, contactInfo: { email: 'b@b.com', phone: '456' }, updatedAt: new Date(), createdAt: new Date(baseDate.getTime() + 17000) }, []),
     ];
 
     const appointments = [

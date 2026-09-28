@@ -2,6 +2,8 @@ import { Client } from '../../../../../src/clients/domain/entities/Client';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
+import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
+import { EmailInvalidError, PhoneInvalidError } from '../../../../../src/clients/domain/errors';
 
 describe('Client Entity', () => {
   const tenantId = 'tenant-123';
@@ -204,6 +206,52 @@ describe('Client Entity', () => {
           updatedAt: new Date(),
         }, [requiredMultiSelectDef])
       ).toThrow('Field "regions" is required.');
+    });
+  });
+
+  describe('email and phone formats', () => {
+    const emailDef = CustomFieldDefinition.create({
+      id: 'field-email',
+      tenantId,
+      fieldName: 'Email',
+      fieldType: FieldType.EMAIL,
+      role: FieldRole.PRIMARY_EMAIL,
+    });
+    const phoneDef = CustomFieldDefinition.create({
+      id: 'field-phone',
+      tenantId,
+      fieldName: 'Phone',
+      fieldType: FieldType.TEXT,
+      role: FieldRole.PRIMARY_PHONE,
+    });
+
+    const baseProps = {
+      id: 'client-contact',
+      tenantId,
+      name: 'Acme Corp',
+      contactInfo: {},
+      status: ClientStatus.PROSPECT,
+      lastUpdatedByUserId: 'user-1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('rejects a malformed email with a coded error', () => {
+      expect(() =>
+        Client.create({ ...baseProps, customFieldValues: { Email: 'not-an-email' } }, [emailDef])
+      ).toThrow(EmailInvalidError);
+    });
+
+    it('rejects a malformed phone with a coded error', () => {
+      expect(() =>
+        Client.create({ ...baseProps, customFieldValues: { Phone: 'abc' } }, [phoneDef])
+      ).toThrow(PhoneInvalidError);
+    });
+
+    it('accepts a well-formed phone', () => {
+      expect(() =>
+        Client.create({ ...baseProps, customFieldValues: { Phone: '+355 69 123 4567' } }, [phoneDef])
+      ).not.toThrow();
     });
   });
 });

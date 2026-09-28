@@ -21,7 +21,7 @@ const DEFAULT_FIELDS: DefaultFieldSeed[] = [
     role: FieldRole.STATUS,
     fieldName: 'Status',
     fieldType: FieldType.SINGLE_SELECT,
-    options: ['PROSPECT', 'ACTIVE', 'INACTIVE'],
+    options: ['LEAD', 'PROSPECT', 'CLIENT', 'FORMER_CLIENT'],
     required: true,
   },
   { role: FieldRole.ASSIGNEE, fieldName: 'Assigned To', fieldType: FieldType.USER_REFERENCE },

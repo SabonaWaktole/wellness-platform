@@ -73,6 +73,14 @@ export class CustomFieldDefinition {
       if (losesRole || changesType) {
         throw new DomainError(`Field "${this.fieldName}" is locked: its role and type cannot change.`);
       }
+      // STATUS's options are the fixed set from Slice 11 (Q9), not a list the
+      // tenant may edit — only ASSIGNEE has no options to guard.
+      if (this.role === FieldRole.STATUS) {
+        const changesOptions = changes.options !== undefined && !sameOptions(changes.options, this.options);
+        if (changesOptions) {
+          throw new DomainError(`Field "${this.fieldName}" is locked: its options cannot change.`);
+        }
+      }
     }
     const merged: CustomFieldDefinitionProps = {
       id: this.id,
@@ -95,6 +103,12 @@ export class CustomFieldDefinition {
    * never deleted, retyped or stripped of its role.
    */
   public get isLocked(): boolean {
-    return this.role === FieldRole.ASSIGNEE;
+    return this.role === FieldRole.ASSIGNEE || this.role === FieldRole.STATUS;
   }
+}
+
+function sameOptions(a?: string[], b?: string[]): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
 }

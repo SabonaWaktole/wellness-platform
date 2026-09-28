@@ -1,9 +1,13 @@
 import { CustomFieldDefinition } from './CustomFieldDefinition';
 import { FieldType } from '../enums/FieldType';
+import { FieldRole } from '../enums/FieldRole';
+import { CompanyProfile } from '../value-objects/CompanyProfile';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
+import { EmailInvalidError, PhoneInvalidError } from '../errors';
 
 const ALPHANUMERIC_PATTERN = /^[a-zA-Z0-9 ]+$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
 export interface ClientProps {
   id: string;
@@ -21,6 +25,12 @@ export interface ClientProps {
   customFieldValues: Record<string, any>;
   /** Free-text internal notes, private to the workspace. */
   notes?: string | null;
+  /**
+   * The Slice 11 company profile (FR-CMP-01, 02, 03). Null until Slice 14
+   * backfills a legacy company; every company created or edited through the
+   * company form carries one.
+   */
+  profile?: CompanyProfile | null;
   lastUpdatedByUserId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +47,7 @@ export class Client {
   public readonly assignedUserId?: string | null;
   public readonly customFieldValues: Record<string, any>;
   public readonly notes?: string | null;
+  public readonly profile: CompanyProfile | null;
   public readonly lastUpdatedByUserId: string;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
@@ -51,6 +62,7 @@ export class Client {
     this.assignedUserId = props.assignedUserId;
     this.customFieldValues = props.customFieldValues;
     this.notes = props.notes ?? null;
+    this.profile = props.profile ?? null;
     this.lastUpdatedByUserId = props.lastUpdatedByUserId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -97,6 +109,10 @@ export class Client {
           throw new DomainError(`Field "${key}" is required.`);
         }
 
+        if (def.role === FieldRole.PRIMARY_PHONE && !isBlank && (typeof value !== 'string' || !PHONE_PATTERN.test(value))) {
+          throw new PhoneInvalidError(key);
+        }
+
         switch (def.fieldType) {
           case FieldType.SINGLE_SELECT:
             if (!isBlank && !def.options?.includes(value)) {
@@ -127,7 +143,7 @@ export class Client {
 
           case FieldType.EMAIL:
             if (!isBlank && (typeof value !== 'string' || !EMAIL_PATTERN.test(value))) {
-              throw new DomainError(`Value for field "${key}" must be a valid email address.`);
+              throw new EmailInvalidError(key);
             }
             break;
 

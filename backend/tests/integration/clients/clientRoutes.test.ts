@@ -443,7 +443,9 @@ describe('Client Routes', () => {
         'Company Size': 'AB 12',
         Name: 'Imported Alpha',
         Email: 'alpha@example.com',
-        Status: 'ACTIVE',
+        // The sheet still says 'ACTIVE' (the pre-Slice-11 option); the import
+        // remaps it the same way the Slice 11 migration remapped existing rows.
+        Status: 'CLIENT',
       });
     });
 
@@ -526,7 +528,7 @@ describe('Client Routes', () => {
             id: activeId,
             tenantId: 't1',
             name: 'Active Annie',
-            status: ClientStatus.ACTIVE,
+            status: ClientStatus.CLIENT,
             customFieldValues: {},
             lastUpdatedByUserId: 'u1',
             deletedAt: null,
@@ -535,7 +537,7 @@ describe('Client Routes', () => {
             id: archivedId,
             tenantId: 't1',
             name: 'Archived Archie',
-            status: ClientStatus.ACTIVE,
+            status: ClientStatus.CLIENT,
             customFieldValues: {},
             lastUpdatedByUserId: 'u1',
             deletedAt: new Date(),
