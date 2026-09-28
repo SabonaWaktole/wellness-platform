@@ -9,6 +9,8 @@ import {
   contractPaymentStatusKey,
   billingPeriodKey,
 } from '../constants/statusKeys';
+import { useStatusLabels } from './useStatusLabels';
+import { lookupLabel } from '../utils/lookupLabel';
 
 /**
  * Translated status labels.
@@ -19,11 +21,25 @@ import {
  *
  * An unknown status falls back to its raw value rather than to a blank or a
  * guessed label — see the note on `lookup` in statusKeys.ts.
+ *
+ * Contract and payment statuses are the two domains an Administrator can
+ * relabel (FR-SET-07, 08, Settings → Statuses). `contract`/`contractPayment`
+ * prefer that tenant-set label over the built-in translation, falling back
+ * to it while the tenant label is still loading or was never set (WAIVED,
+ * which has none). Renaming "Active" there is then reflected on every badge
+ * without a code change or a redeploy.
  */
 export function useStatusLabel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const contractLabels = useStatusLabels('contract');
+  const paymentLabels = useStatusLabels('payment');
 
   const translate = (key: string | null, raw: string) => (key ? t(key) : raw);
+
+  const fromCatalogue = (labels: ReturnType<typeof useStatusLabels>, status: string, fallback: string) => {
+    const item = labels.find((l) => l.key === status);
+    return item ? lookupLabel({ nameSq: item.labelSq, nameEn: item.labelEn }, i18n.language) : fallback;
+  };
 
   return {
     quotation: (status: string) => translate(quotationStatusKey(status), status),
@@ -31,8 +47,8 @@ export function useStatusLabel() {
     client: (status: string) => translate(clientStatusKey(status), status),
     product: (status: string) => translate(productStatusKey(status), status),
     appointment: (status: string) => translate(appointmentStatusKey(status), status),
-    contract: (status: string) => translate(contractStatusKey(status), status),
-    contractPayment: (status: string) => translate(contractPaymentStatusKey(status), status),
+    contract: (status: string) => fromCatalogue(contractLabels, status, translate(contractStatusKey(status), status)),
+    contractPayment: (status: string) => fromCatalogue(paymentLabels, status, translate(contractPaymentStatusKey(status), status)),
     billingPeriod: (period: string) => translate(billingPeriodKey(period), period),
   };
 }

@@ -8,15 +8,19 @@ import { RiskLevelsList } from './RiskLevelsList';
 import { BusinessTypesList } from './BusinessTypesList';
 import { AreasList } from './AreasList';
 import { CitiesList } from './CitiesList';
+import { FollowUpIntervalsList } from './FollowUpIntervalsList';
+import { LostReasonsList } from './LostReasonsList';
 import styles from './ListsSettingsContent.module.css';
 
-const LISTS: LookupListKey[] = ['risk-levels', 'business-types', 'areas', 'cities'];
+const LISTS: LookupListKey[] = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons'];
 
 const TAB_LABEL: Record<LookupListKey, string> = {
   'risk-levels': 'lists.tabs.riskLevels',
   'business-types': 'lists.tabs.businessTypes',
   areas: 'lists.tabs.areas',
   cities: 'lists.tabs.cities',
+  'follow-up-intervals': 'lists.tabs.followUpIntervals',
+  'lost-reasons': 'lists.tabs.lostReasons',
 };
 
 const HINT: Record<LookupListKey, string> = {
@@ -24,6 +28,8 @@ const HINT: Record<LookupListKey, string> = {
   'business-types': 'lists.hints.businessTypes',
   areas: 'lists.hints.areas',
   cities: 'lists.hints.cities',
+  'follow-up-intervals': 'lists.hints.followUpIntervals',
+  'lost-reasons': 'lists.hints.lostReasons',
 };
 
 const PANEL: Record<LookupListKey, ComponentType> = {
@@ -31,11 +37,14 @@ const PANEL: Record<LookupListKey, ComponentType> = {
   'business-types': BusinessTypesList,
   areas: AreasList,
   cities: CitiesList,
+  'follow-up-intervals': FollowUpIntervalsList,
+  'lost-reasons': LostReasonsList,
 };
 
 /**
- * Settings → Lists (Slices 8, 9): the admin-managed values the company form
- * offers. One tab per list; the URL names the open one, so it can be linked.
+ * Settings → Lists (Slices 8, 9, 10): the admin-managed values the company
+ * form and, from Milestone 2, deals offer. One tab per list; the URL names
+ * the open one, so it can be linked.
  */
 export const ListsSettingsContent = () => {
   const { t } = useTranslation('settings');
