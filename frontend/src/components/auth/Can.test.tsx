@@ -21,7 +21,7 @@ describe('<Can> (FR-RBAC-07)', () => {
     });
     render(
       <Can permission="users.manage">
-        <p>Manage users</p>
+        <p>{'Manage users'}</p>
       </Can>
     );
     expect(screen.getByText('Manage users')).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe('<Can> (FR-RBAC-07)', () => {
     });
     render(
       <Can permission="users.manage">
-        <p>Manage users</p>
+        <p>{'Manage users'}</p>
       </Can>
     );
     expect(screen.queryByText('Manage users')).not.toBeInTheDocument();
@@ -44,8 +44,8 @@ describe('<Can> (FR-RBAC-07)', () => {
       user: { userId: '1', role: 'STAFF', tenantId: 't1', tenantSlug: 't1', email: 'e', permissions: {} },
     });
     render(
-      <Can permission="users.manage" fallback={<p>No access</p>}>
-        <p>Manage users</p>
+      <Can permission="users.manage" fallback={<p>{'No access'}</p>}>
+        <p>{'Manage users'}</p>
       </Can>
     );
     expect(screen.getByText('No access')).toBeInTheDocument();
