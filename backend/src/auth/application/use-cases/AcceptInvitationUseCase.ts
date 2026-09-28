@@ -1,5 +1,8 @@
 import { IInvitationRepository } from '../../domain/repositories/IInvitationRepository';
-import { IUserRepository } from '../../domain/repositories/IUserRepository';
+import { IUserAdminTransaction } from '../ports/IUserAdminTransaction';
+import { IRoleCatalogue } from '../../../access/application/ports/IRoleCatalogue';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { currentRoleKey } from '../userAudit';
 import { IPasswordHasher } from '../ports/IPasswordHasher';
 import { InvitationExpiredError, InvitationAlreadyAcceptedError } from '../../domain/errors';
 import { User } from '../../domain/entities/User';
@@ -12,9 +15,10 @@ import { NotificationService } from '../../../notifications/application/Notifica
 export class AcceptInvitationUseCase {
   constructor(
     private invitationRepository: IInvitationRepository,
-    private userRepository: IUserRepository,
     private passwordHasher: IPasswordHasher,
     private tenantRepository: ITenantRepository,
+    private roles: IRoleCatalogue,
+    private writeTx: IUserAdminTransaction,
     private notifications?: NotificationService
   ) {}
 
@@ -33,13 +37,33 @@ export class AcceptInvitationUseCase {
       email: invitation.email,
       hashedPassword,
       role: invitation.role,
+      roleId: invitation.roleId,
       tenantId: invitation.tenantId,
       warehouseId: invitation.warehouseId,
       createdAt: new Date(),
     });
 
-    await this.userRepository.create(user);
-    await this.invitationRepository.markAccepted(invitation.id, new Date());
+    const roleKey = await currentRoleKey(user, this.roles);
+    await this.writeTx.run(async ({ staff, invitations, auditTrail }) => {
+      await staff.create(user);
+      await invitations.markAccepted(invitation.id, new Date());
+      // A Platform Admin invitation has no workspace, and so no audit trail to join.
+      if (invitation.tenantId) {
+        await auditTrail.record({
+          tenantId: invitation.tenantId,
+          userId: user.id,
+          userRole: roleKey ?? user.role,
+          action: AuditAction.Create,
+          entityType: 'User',
+          entityId: user.id,
+          entityLabel: user.email,
+          changes: [
+            { field: 'email', old: null, new: user.email },
+            { field: 'role', old: null, new: roleKey },
+          ],
+        });
+      }
+    });
 
     // Null for a Platform Admin invitation, which belongs to no workspace.
     const tenant = invitation.tenantId ? await this.tenantRepository.findById(invitation.tenantId) : null;

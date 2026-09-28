@@ -172,6 +172,7 @@
     "confirmCancelInvitation": "Jeni i sigurt që doni ta anuloni këtë ftesë?",
     "expires": "Skadon më {{date}}",
     "deactivateAria": "Çaktivizo {{email}}",
+    "editAria": "Ndrysho {{email}}",
     "roles": {
       "BUSINESS_OWNER": "Pronar Biznesi",
       "STAFF": "Përfaqësues Shitjesh",
@@ -182,13 +183,10 @@
       "email": "Adresa e email-it",
       "emailPlaceholder": "koleg@shembull.com",
       "role": "Roli",
-      "roleStaff": "Staf (Përfaqësues Shitjesh)",
-      "roleOwner": "Pronar Biznesi",
       "warehouse": "Cakto magazinë (Opsionale)",
       "noWarehouse": "Pa magazinë (Vetëm paneli)",
       "submit": "Dërgo ftesën",
       "failed": "Ftesa nuk u dërgua dot",
-      "roleStaffOnly": "Vetëm roli STAF mbështetet për ftesa për momentin.",
       "warehouseHint": "Nëse caktohet, ky anëtar stafi do të mund të shohë dhe menaxhojë vetëm produktet në këtë magazinë."
     },
     "edit": {
@@ -196,26 +194,37 @@
       "role": "Roli",
       "warehouse": "Cakto magazinë",
       "failed": "Anëtari nuk u përditësua dot",
-      "editing": "Duke ndryshuar {{email}}"
+      "editing": "Duke ndryshuar {{email}}",
+      "roleAppliesNextLoad": "Roli i ri zbatohet herën tjetër që hapin një faqe. Nuk kanë nevojë të hyjnë përsëri."
     },
     "deactivate": {
       "title": "Të çaktivizohet anëtari i ekipit?",
       "confirm": "Çaktivizo",
       "intro": "{{name}} nuk do të mund të hyjë më. Llogaria dhe historiku i tyre ruhen, nuk fshihen.",
-      "stillAssignedPrefix": "Atyre u janë caktuar ende ",
-      "stillAssignedSuffix": ". Këto mbeten të caktuara tek ata derisa t'i ricaktoni.",
-      "clients_one": "{{count}} klient",
-      "clients_other": "{{count}} klientë",
-      "appointments_one": "{{count}} takim i ardhshëm",
-      "appointments_other": "{{count}} takime të ardhshme",
-      "and": " dhe ",
-      "residualAccess": "Nëse janë të kyçur tani, sesioni i tyre përfundon herën tjetër që aplikacioni ringarkohet, dhe brenda një ore më së voni."
+      "residualAccess": "Nëse janë të kyçur tani, sesioni i tyre ndalon së punuari në veprimin e tyre të radhës.",
+      "companiesIntro_one": "Ata janë shitësi për {{count}} kompani. Zgjidhni një koleg që ta marrë përsipër:",
+      "companiesIntro_other": "Ata janë shitësi për {{count}} kompani. Zgjidhni një koleg që t'i marrë përsipër:",
+      "moreCompanies_one": "…dhe {{count}} tjetër",
+      "moreCompanies_other": "…dhe {{count}} të tjera",
+      "reassignTo": "Ricakto te",
+      "chooseColleague": "Zgjidhni një koleg",
+      "contractsFollow_one": "{{count}} kontratë e hapur e tyre kalon bashkë me kompanitë.",
+      "contractsFollow_other": "{{count}} kontratat e hapura të tyre kalojnë bashkë me kompanitë.",
+      "appointmentsStay_one": "{{count}} takim i ardhshëm mbetet i tyre.",
+      "appointmentsStay_other": "{{count}} takimet e ardhshme mbeten të tyre.",
+      "failed": "Anëtari i ekipit nuk u çaktivizua dot."
     },
     "breadcrumb": "Cilësimet e ekipit",
     "members": "Të gjithë anëtarët",
     "deactivatedBadge": "I çaktivizuar",
     "reactivateAria": "Riaktivizo {{email}}",
-    "confirmReactivate": "Të rikthehet qasja për {{name}}? Ata do të mund të hyjnë përsëri."
+    "confirmReactivate": "Të rikthehet qasja për {{name}}? Ata do të mund të hyjnë përsëri.",
+    "errors": {
+      "LAST_ROLE_MANAGER": "Ky është përdoruesi i fundit aktiv që mund të menaxhojë rolet. Jepini fillimisht dikujt tjetër këtë leje.",
+      "REASSIGNMENT_REQUIRED": "Ky përdorues ka ende kompani. Zgjidhni një koleg që t'i marrë përsipër.",
+      "INVALID_REASSIGNMENT_TARGET": "Zgjidhni një koleg aktiv në këtë hapësirë pune.",
+      "UNKNOWN_ROLE": "Ky rol nuk ekziston më. Ringarkoni faqen dhe zgjidhni përsëri."
+    }
   },
   "integrations": {
     "breadcrumb": "Integrimet",

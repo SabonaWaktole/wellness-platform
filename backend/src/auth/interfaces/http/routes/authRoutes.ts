@@ -160,6 +160,7 @@ export const createTenantAuthRoutes = (
     resolveTenantMw,
     loadAccessMw,
     requirePermission('users.manage'),
+    validateRequest(authSchemas.deactivateStaff),
     authController.deactivateStaff
   );
 
@@ -180,6 +181,16 @@ export const createTenantAuthRoutes = (
     requirePermission('users.manage'),
     validateRequest(authSchemas.updateStaffRole),
     authController.updateStaffRole
+  );
+
+  // The roles the Team page offers when inviting or re-roling someone (FR-USR-02).
+  router.get(
+    '/roles',
+    authMw,
+    resolveTenantMw,
+    loadAccessMw,
+    requirePermission('users.manage'),
+    authController.listRoles
   );
 
   return router;

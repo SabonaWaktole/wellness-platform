@@ -172,6 +172,7 @@
     "confirmCancelInvitation": "Are you sure you want to cancel this invitation?",
     "expires": "Expires {{date}}",
     "deactivateAria": "Deactivate {{email}}",
+    "editAria": "Edit {{email}}",
     "roles": {
       "BUSINESS_OWNER": "Business Owner",
       "STAFF": "Sales Rep",
@@ -182,13 +183,10 @@
       "email": "Email Address",
       "emailPlaceholder": "colleague@example.com",
       "role": "Role",
-      "roleStaff": "Staff (Sales Representative)",
-      "roleOwner": "Business Owner",
       "warehouse": "Assign Warehouse (Optional)",
       "noWarehouse": "No Warehouse (Dashboard Only)",
       "submit": "Send Invitation",
       "failed": "Failed to send invitation",
-      "roleStaffOnly": "Only STAFF role is supported for invitations at this time.",
       "warehouseHint": "If assigned, this staff member will only be able to view and manage products in this specific warehouse."
     },
     "edit": {
@@ -196,26 +194,37 @@
       "role": "Role",
       "warehouse": "Assign Warehouse",
       "failed": "Failed to update member",
-      "editing": "Editing {{email}}"
+      "editing": "Editing {{email}}",
+      "roleAppliesNextLoad": "A new role applies the next time they open a page. They do not need to sign in again."
     },
     "deactivate": {
       "title": "Deactivate team member?",
       "confirm": "Deactivate",
       "intro": "{{name}} will no longer be able to sign in. Their account and history are kept, not deleted.",
-      "stillAssignedPrefix": "They are still assigned ",
-      "stillAssignedSuffix": ". These stay assigned to them until you reassign them.",
-      "clients_one": "{{count}} client",
-      "clients_other": "{{count}} clients",
-      "appointments_one": "{{count}} upcoming appointment",
-      "appointments_other": "{{count}} upcoming appointments",
-      "and": " and ",
-      "residualAccess": "If they are signed in right now, their session ends the next time the app reloads, and within an hour at the latest."
+      "residualAccess": "If they are signed in right now, their session stops working on their next action.",
+      "companiesIntro_one": "They are the salesperson for {{count}} company. Choose a colleague to take it over:",
+      "companiesIntro_other": "They are the salesperson for {{count}} companies. Choose a colleague to take them over:",
+      "moreCompanies_one": "…and {{count}} more",
+      "moreCompanies_other": "…and {{count}} more",
+      "reassignTo": "Reassign to",
+      "chooseColleague": "Choose a colleague",
+      "contractsFollow_one": "Their {{count}} open contract moves with the companies.",
+      "contractsFollow_other": "Their {{count}} open contracts move with the companies.",
+      "appointmentsStay_one": "Their {{count}} upcoming appointment stays with them.",
+      "appointmentsStay_other": "Their {{count}} upcoming appointments stay with them.",
+      "failed": "The team member could not be deactivated."
     },
     "breadcrumb": "Team Settings",
     "members": "All Members",
     "deactivatedBadge": "Deactivated",
     "reactivateAria": "Reactivate {{email}}",
-    "confirmReactivate": "Restore access for {{name}}? They will be able to sign in again."
+    "confirmReactivate": "Restore access for {{name}}? They will be able to sign in again.",
+    "errors": {
+      "LAST_ROLE_MANAGER": "This is the last active user who can manage roles. Give someone else that permission first.",
+      "REASSIGNMENT_REQUIRED": "This user still has companies. Choose a colleague to take them over.",
+      "INVALID_REASSIGNMENT_TARGET": "Choose an active colleague in this workspace.",
+      "UNKNOWN_ROLE": "That role no longer exists. Reload the page and choose again."
+    }
   },
   "integrations": {
     "breadcrumb": "Integrations",

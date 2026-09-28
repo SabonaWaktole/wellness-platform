@@ -15,26 +15,31 @@ export const authSchemas = {
   }),
   inviteStaff: z.object({
     email: z.string().email(),
-    role: z.enum(['STAFF', 'BUSINESS_OWNER']),
+    // One of the workspace's roles (FR-USR-02); the use case checks it belongs to this tenant.
+    roleId: z.string().min(1),
     warehouseId: z.string().optional().nullable(),
   }),
   /**
    * Creating an account with its password already set, as opposed to
-   * `inviteStaff`, which only sends a link. Same role enum and same password
+   * `inviteStaff`, which only sends a link. Same role choice and same password
    * floor: an admin-set password is a real credential, so it is not relaxed.
    */
   createUser: z.object({
     email: z.string().email(),
     password: z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
-    role: z.enum(['STAFF', 'BUSINESS_OWNER']),
+    roleId: z.string().min(1),
     firstName: z.string().min(1).optional().nullable(),
     lastName: z.string().min(1).optional().nullable(),
     phone: z.string().optional().nullable(),
     warehouseId: z.string().optional().nullable(),
   }),
   updateStaffRole: z.object({
-    role: z.enum(['STAFF', 'BUSINESS_OWNER']),
+    roleId: z.string().min(1),
     warehouseId: z.string().optional().nullable(),
+  }),
+  deactivateStaff: z.object({
+    // FR-USR-05: required by the use case whenever the user still has companies.
+    reassignToUserId: z.string().min(1).optional().nullable(),
   }),
   acceptInvitation: z.object({
     token: z.string().min(1),

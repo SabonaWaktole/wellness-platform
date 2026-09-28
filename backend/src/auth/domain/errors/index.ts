@@ -163,3 +163,33 @@ export class RestoreOwnershipChoiceRequiredError extends DomainError {
     super('Choose whether to restore original ownership or keep the current Business Owner');
   }
 }
+
+/** The chosen role does not exist in this workspace. Mapped to 400. */
+export class UnknownRoleError extends DomainError {
+  readonly code = 'UNKNOWN_ROLE';
+
+  constructor() {
+    super('The selected role does not exist in this workspace.');
+  }
+}
+
+/**
+ * FR-USR-05: the user still has companies assigned, so deactivating them
+ * needs a colleague to hand those companies to. Mapped to 409.
+ */
+export class ReassignmentRequiredError extends DomainError {
+  readonly code = 'REASSIGNMENT_REQUIRED';
+
+  constructor(readonly companies: number) {
+    super('This user still has companies assigned. Choose who takes them over first.');
+  }
+}
+
+/** The colleague chosen to take over is not an active user of this workspace, or is the user leaving. Mapped to 400. */
+export class InvalidReassignmentTargetError extends DomainError {
+  readonly code = 'INVALID_REASSIGNMENT_TARGET';
+
+  constructor() {
+    super('Choose an active colleague in this workspace to take over the companies.');
+  }
+}

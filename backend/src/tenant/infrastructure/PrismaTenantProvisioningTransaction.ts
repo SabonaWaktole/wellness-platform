@@ -6,6 +6,7 @@ import {
 } from '../application/ports/ITenantProvisioningTransaction';
 import { PrismaTenantRepository } from './repositories/PrismaTenantRepository';
 import { PrismaUserRepository } from '../../auth/infrastructure/repositories/PrismaUserRepository';
+import { PrismaSystemRoleSeeder } from '../../access/infrastructure/PrismaSystemRoleSeeder';
 
 export class PrismaTenantProvisioningTransaction implements ITenantProvisioningTransaction {
   constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
@@ -26,6 +27,7 @@ export class PrismaTenantProvisioningTransaction implements ITenantProvisioningT
       return work({
         tenantRepo: new PrismaTenantRepository(client),
         userRepo: new PrismaUserRepository(client),
+        roleSeeder: new PrismaSystemRoleSeeder(client),
       });
     });
   }

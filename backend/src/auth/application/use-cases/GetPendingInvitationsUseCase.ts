@@ -17,6 +17,7 @@ export class GetPendingInvitationsUseCase {
       id: inv.id,
       email: inv.email,
       role: inv.role,
+      roleId: inv.roleId,
       expiresAt: inv.expiresAt,
     }));
   }

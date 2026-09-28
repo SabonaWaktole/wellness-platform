@@ -6,6 +6,8 @@ interface InvitationProps {
   tenantId: string | null;
   email: string;
   role: UserRole;
+  /** The role the account is created with. Null only for a Platform Admin invitation. */
+  roleId?: string | null;
   token: string;
   expiresAt: Date;
   acceptedAt: Date | null;
@@ -19,6 +21,7 @@ export class Invitation {
   public readonly tenantId: string | null;
   public readonly email: string;
   public readonly role: UserRole;
+  public readonly roleId: string | null;
   public readonly token: string;
   public readonly expiresAt: Date;
   public readonly acceptedAt: Date | null;
@@ -30,6 +33,7 @@ export class Invitation {
     this.tenantId = props.tenantId;
     this.email = props.email;
     this.role = props.role;
+    this.roleId = props.roleId ?? null;
     this.token = props.token;
     this.expiresAt = props.expiresAt;
     this.acceptedAt = props.acceptedAt;

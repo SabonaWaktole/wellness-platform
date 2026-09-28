@@ -26,3 +26,15 @@ export class PermissionDeniedError extends DomainError {
     super(message);
   }
 }
+
+/**
+ * FR-RBAC-08: the change would leave the workspace with no active user who
+ * can manage roles, and so no way back into the admin panel. Mapped to 409.
+ */
+export class LastRoleManagerError extends DomainError {
+  readonly code = 'LAST_ROLE_MANAGER';
+
+  constructor() {
+    super('This is the last active user who can manage roles. Give someone else that permission first.');
+  }
+}

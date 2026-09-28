@@ -1,5 +1,12 @@
 import { Request, Response } from 'express';
-import { PermissionDeniedError } from '../../../../access/domain/errors';
+import { LastRoleManagerError, PermissionDeniedError } from '../../../../access/domain/errors';
+import { ListRolesUseCase } from '../../../../access/application/use-cases/ListRolesUseCase';
+import {
+  InvalidReassignmentTargetError,
+  ReassignmentRequiredError,
+  UnauthorizedError,
+  UnknownRoleError,
+} from '@auth/domain/errors';
 import { requireTenant, requireTenantId } from "@main/interfaces/http/tenantContext";
 import { authCookieOptions, AUTH_COOKIE_MAX_AGE_MS } from "@main/interfaces/http/authCookie";
 import { LoginUseCase } from '@auth/application/use-cases/LoginUseCase';
@@ -22,6 +29,24 @@ import { GetDeactivationImpactUseCase } from '@auth/application/use-cases/GetDea
 import { ITenantRepository } from '@tenant/domain/repositories/ITenantRepository';
 import { UserRole } from '@auth/domain/enums/UserRole';
 import { ResolveAccessContextUseCase } from '../../../../access/application/use-cases/ResolveAccessContextUseCase';
+/**
+ * Status codes for the user-administration handlers. Mapped by error type,
+ * never by message, and each carries a `code` the Team page translates.
+ */
+function sendUserAdminError(res: Response, error: any) {
+  if (error instanceof PermissionDeniedError || error instanceof UnauthorizedError) {
+    return res.status(403).json({ error: error.message });
+  }
+  if (error instanceof LastRoleManagerError || error instanceof ReassignmentRequiredError) {
+    const detail = error instanceof ReassignmentRequiredError ? { companies: error.companies } : {};
+    return res.status(409).json({ error: error.message, code: error.code, ...detail });
+  }
+  if (error instanceof UnknownRoleError || error instanceof InvalidReassignmentTargetError) {
+    return res.status(400).json({ error: error.message, code: error.code });
+  }
+  return res.status(400).json({ error: error.message });
+}
+
 export class AuthController {
   constructor(
     private loginUseCase: LoginUseCase,
@@ -42,8 +67,18 @@ export class AuthController {
     private createUserUseCase?: CreateUserUseCase,
     private exitTenantUseCase?: ExitTenantUseCase,
     private changePasswordUseCase?: ChangePasswordUseCase,
-    private resolveAccessContext?: ResolveAccessContextUseCase
+    private resolveAccessContext?: ResolveAccessContextUseCase,
+    private listRolesUseCase?: ListRolesUseCase
   ) {}
+
+  listRoles = async (req: Request, res: Response) => {
+    try {
+      const roles = await this.listRolesUseCase!.execute({ access: req.access!, tenantId: requireTenantId(req) });
+      res.status(200).json({ roles });
+    } catch (error: any) {
+      sendUserAdminError(res, error);
+    }
+  };
 
   loginTenant = async (req: Request, res: Response) => {
     try {
@@ -100,15 +135,12 @@ export class AuthController {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         phone: req.body.phone,
-        role: req.body.role,
+        roleId: req.body.roleId,
         warehouseId: req.body.warehouseId,
       });
       res.status(201).json({ user });
     } catch (error: any) {
-      if (error instanceof PermissionDeniedError || error.name === 'UnauthorizedError' || error.message.includes('Unauthorized')) {
-        return res.status(403).json({ error: error.message });
-      }
-      res.status(400).json({ error: error.message });
+      sendUserAdminError(res, error);
     }
   };
 
@@ -306,14 +338,14 @@ export class AuthController {
         access: req.access!,
         tenantId: requireTenantId(req),
         inviteeEmail: req.body.email,
-        role: req.body.role,
+        roleId: req.body.roleId,
         warehouseId: req.body.warehouseId,
         tenantName: tenant!.name,
+        language: tenant!.defaultLanguage,
       });
       res.status(200).json({ message: 'Invitation sent' });
     } catch (error: any) {
-      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
-      res.status(400).json({ error: error.message });
+      sendUserAdminError(res, error);
     }
   };
 
@@ -323,15 +355,12 @@ export class AuthController {
         access: req.access!,
         tenantId: requireTenantId(req),
         userIdToUpdate: req.params.id as string,
-        newRole: req.body.role,
-        newWarehouseId: req.body.warehouseId,
+        newRoleId: req.body.roleId,
+        newWarehouseId: req.body.warehouseId ?? null,
       });
       res.status(200).json({ message: 'User role and permissions updated' });
     } catch (error: any) {
-      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
-        return res.status(403).json({ error: error.message });
-      }
-      res.status(400).json({ error: error.message });
+      sendUserAdminError(res, error);
     }
   };
 
@@ -353,18 +382,16 @@ export class AuthController {
 
   deactivateStaff = async (req: Request, res: Response) => {
     try {
-      await this.deactivateUserUseCase!.execute({
+      const result = await this.deactivateUserUseCase!.execute({
         access: req.access!,
         requestingUserId: req.user!.userId,
         tenantId: requireTenantId(req),
         userIdToDeactivate: req.params.id as string,
+        reassignToUserId: req.body?.reassignToUserId ?? null,
       });
-      res.status(200).json({ message: 'Team member deactivated' });
+      res.status(200).json({ message: 'Team member deactivated', reassigned: result.reassigned });
     } catch (error: any) {
-      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
-        return res.status(403).json({ error: error.message });
-      }
-      res.status(400).json({ error: error.message });
+      sendUserAdminError(res, error);
     }
   };
 
@@ -377,10 +404,7 @@ export class AuthController {
       });
       res.status(200).json({ message: 'Team member reactivated' });
     } catch (error: any) {
-      if (error instanceof PermissionDeniedError || error.message.includes('Unauthorized')) {
-        return res.status(403).json({ error: error.message });
-      }
-      res.status(400).json({ error: error.message });
+      sendUserAdminError(res, error);
     }
   };
 

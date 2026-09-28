@@ -4,11 +4,14 @@
 } from '../../src/tenant/application/ports/ITenantProvisioningTransaction';
 import { ITenantRepository } from '../../src/tenant/domain/repositories/ITenantRepository';
 import { IUserRepository } from '../../src/auth/domain/repositories/IUserRepository';
+import { ISystemRoleSeeder } from '../../src/access/application/ports/ISystemRoleSeeder';
+import { RoleKey } from '../../src/access/domain/RoleKey';
 
 export interface TenantProvisioningHarness {
   provisioningTx: ITenantProvisioningTransaction;
   tenantRepo: jest.Mocked<ITenantRepository>;
   userRepo: jest.Mocked<IUserRepository>;
+  roleSeeder: jest.Mocked<ISystemRoleSeeder>;
 }
 
 /**
@@ -48,16 +51,21 @@ export function makeTenantProvisioningHarness(): TenantProvisioningHarness {
     create: jest.fn().mockImplementation(async (user) => user),
     updatePassword: jest.fn(),
     updateProfile: jest.fn(),
-    updateRoleAndWarehouse: jest.fn(),
     setActive: jest.fn(),
     softDelete: jest.fn(),
     countAssignedWork: jest.fn(),
   } as unknown as jest.Mocked<IUserRepository>;
 
+  const roleSeeder = {
+    seed: jest.fn().mockResolvedValue(
+      Object.fromEntries(Object.values(RoleKey).map((key) => [key, `role-${key}`])) as Record<RoleKey, string>
+    ),
+  } as jest.Mocked<ISystemRoleSeeder>;
+
   const provisioningTx: ITenantProvisioningTransaction = {
     run: <T>(work: (repos: TenantProvisioningRepos) => Promise<T>): Promise<T> =>
-      work({ tenantRepo, userRepo }),
+      work({ tenantRepo, userRepo, roleSeeder }),
   };
 
-  return { provisioningTx, tenantRepo, userRepo };
+  return { provisioningTx, tenantRepo, userRepo, roleSeeder };
 }

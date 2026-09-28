@@ -45,12 +45,14 @@ export function renderEmailLayout(params: {
   bodyHtml: string;
   cta?: { label: string; url: string };
   footerNote?: string;
+  /** The email's language, 'sq' or 'en'. Defaults to English. */
+  language?: 'sq' | 'en';
 }): string {
-  const { appUrl, preheader, eyebrow, heading, bodyHtml, cta, footerNote } = params;
+  const { appUrl, preheader, eyebrow, heading, bodyHtml, cta, footerNote, language = 'en' } = params;
   const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -129,7 +131,7 @@ export function renderEmailLayout(params: {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; max-width:100%; margin-top: 24px;">
             <tr>
               <td align="center">
-                <p style="margin:0; font-size:12px; line-height:18px; color:${MUTED_COLOR};">&copy; ${year} ${PRODUCT_NAME}. All rights reserved.</p>
+                <p style="margin:0; font-size:12px; line-height:18px; color:${MUTED_COLOR};">&copy; ${year} ${PRODUCT_NAME}. ${language === 'sq' ? 'Të gjitha të drejtat e rezervuara.' : 'All rights reserved.'}</p>
               </td>
             </tr>
           </table>

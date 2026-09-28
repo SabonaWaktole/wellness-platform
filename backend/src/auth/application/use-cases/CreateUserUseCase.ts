@@ -5,6 +5,11 @@ import { IPasswordHasher } from '../ports/IPasswordHasher';
 import { User } from '../../domain/entities/User';
 import { UserRole } from '../../domain/enums/UserRole';
 import { UnauthorizedError } from '../../domain/errors';
+import { IRoleCatalogue } from '../../../access/application/ports/IRoleCatalogue';
+import { legacyRoleFor } from '../../../access/domain/LegacyRoleMapping';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { IUserAdminTransaction } from '../ports/IUserAdminTransaction';
+import { roleInTenant } from '../userAudit';
 
 export interface CreateUserInput {
   access: AccessContext;
@@ -17,7 +22,8 @@ export interface CreateUserInput {
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
-  role: UserRole;
+  /** One of the workspace's roles (FR-USR-02). */
+  roleId: string;
   warehouseId?: string | null;
 }
 
@@ -34,27 +40,16 @@ export interface CreateUserInput {
 export class CreateUserUseCase {
   constructor(
     private userRepository: IUserRepository,
-    private passwordHasher: IPasswordHasher
+    private passwordHasher: IPasswordHasher,
+    private roles: IRoleCatalogue,
+    private writeTx: IUserAdminTransaction
   ) {}
 
   async execute(input: CreateUserInput) {
-    /*
-     * SUPER_ADMIN is seeded, never created through the API.
-     *
-     * Checked before the caller checks below, so the answer does not depend on
-     * who is asking: there is no caller for whom this is allowed. The role
-     * grants access to every workspace on the platform, and an endpoint that
-     * can mint one turns a single compromised owner session into full platform
-     * access. See scratch/seed-super-admin.ts.
-     */
-    if (input.role === UserRole.SUPER_ADMIN) {
-      throw new UnauthorizedError('Platform administrators cannot be created through this endpoint');
-    }
-
     if (!input.access.isPlatformOperator) {
-      // The platform operator may create either role, in any workspace — that
-      // is the point of the platform console (D2). Anyone else needs
-      // users.manage, and may staff their own workspace and no other.
+      // The platform operator may staff any workspace — that is the point of
+      // the platform console (D2). Anyone else needs users.manage, and may
+      // staff their own workspace and no other.
       // `callerTenantId` comes from the verified token and `tenantId` from the
       // resolved URL slug; `resolveTenant` already rejects a mismatch, so this
       // is a second barrier rather than the only one.
@@ -62,12 +57,11 @@ export class CreateUserUseCase {
       if (input.callerTenantId !== input.tenantId) {
         throw new UnauthorizedError('You cannot create users in another workspace');
       }
-      // Choosing one of the five roles for a new account is Slice 5; until
-      // then a workspace administrator creates Staff (Sales User) accounts.
-      if (input.role !== UserRole.STAFF) {
-        throw new UnauthorizedError('Workspace administrators can only create Staff accounts');
-      }
     }
+
+    // A role id names the workspace's own roles only, so SUPER_ADMIN — which
+    // has no role row (D2) — can never be minted here.
+    const role = await roleInTenant(this.roles, input.tenantId, input.roleId);
 
     // Uniqueness is per workspace, matching how `LoginUseCase` looks an account
     // up: `findByEmail(email, tenantId)`. Two workspaces may each have an
@@ -88,13 +82,29 @@ export class CreateUserUseCase {
       firstName: input.firstName ?? null,
       lastName: input.lastName ?? null,
       phone: input.phone ?? null,
-      role: input.role,
+      role: legacyRoleFor(role.key) as UserRole,
+      roleId: role.id,
       tenantId: input.tenantId,
       warehouseId: input.warehouseId ?? null,
       createdAt: new Date(),
     });
 
-    await this.userRepository.create(user);
+    await this.writeTx.run(async ({ staff, auditTrail }) => {
+      await staff.create(user);
+      await auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.access.userId,
+        userRole: input.access.auditRole,
+        action: AuditAction.Create,
+        entityType: 'User',
+        entityId: user.id,
+        entityLabel: user.email,
+        changes: [
+          { field: 'email', old: null, new: user.email },
+          { field: 'role', old: null, new: role.key },
+        ],
+      });
+    });
 
     // The password is not returned, not even to the administrator who just set
     // it: they typed it, and echoing it puts a plaintext credential into
@@ -105,6 +115,7 @@ export class CreateUserUseCase {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      roleId: user.roleId,
       tenantId: user.tenantId,
       warehouseId: user.warehouseId,
       isActive: user.isActive,

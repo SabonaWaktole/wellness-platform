@@ -182,13 +182,10 @@
       "email": "Indirizzo email",
       "emailPlaceholder": "collega@example.com",
       "role": "Ruolo",
-      "roleStaff": "Personale (addetto vendite)",
-      "roleOwner": "Titolare aziendale",
       "warehouse": "Assegna magazzino (facoltativo)",
       "noWarehouse": "Nessun magazzino (solo dashboard)",
       "submit": "Invia invito",
       "failed": "Impossibile inviare l'invito",
-      "roleStaffOnly": "Al momento per gli inviti è supportato solo il ruolo PERSONALE.",
       "warehouseHint": "Se assegnato, questo membro del personale potrà vedere e gestire solo i prodotti di questo specifico magazzino."
     },
     "edit": {
@@ -201,15 +198,7 @@
     "deactivate": {
       "title": "Disattivare questo membro del team?",
       "confirm": "Disattiva",
-      "intro": "{{name}} non potrà più accedere. Il suo account e la sua cronologia vengono conservati, non eliminati.",
-      "stillAssignedPrefix": "Gli sono ancora assegnati ",
-      "stillAssignedSuffix": ". Restano assegnati a questa persona finché non li riassegni.",
-      "clients_one": "{{count}} cliente",
-      "clients_other": "{{count}} clienti",
-      "appointments_one": "{{count}} appuntamento in arrivo",
-      "appointments_other": "{{count}} appuntamenti in arrivo",
-      "and": " e ",
-      "residualAccess": "Se in questo momento ha una sessione attiva, questa termina al successivo ricaricamento dell'app, e comunque entro un'ora."
+      "intro": "{{name}} non potrà più accedere. Il suo account e la sua cronologia vengono conservati, non eliminati."
     },
     "breadcrumb": "Impostazioni team",
     "members": "Tutti i membri",
