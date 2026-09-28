@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FileSignature, Plus } from 'lucide-react';
 import { Card } from '../ui/Card/Card';
-import { Badge } from '../ui/Badge/Badge';
-import type { BadgeProps } from '../ui/Badge/Badge';
+import { StatusBadge } from '../ui/StatusBadge/StatusBadge';
 import { Button } from '../ui/Button/Button';
 import { Can } from '../auth/Can';
 import { useContracts } from '../../hooks/useContracts';
@@ -14,18 +13,6 @@ import { useDateFormat } from '../../hooks/useDateFormat';
 import { contractReference } from '../../utils/contractReference';
 import type { ClientContracts } from '../../types/contract';
 import styles from './ClientContractsTab.module.css';
-
-const statusVariant = (status: string): BadgeProps['variant'] => {
-  switch (status) {
-    case 'DRAFT': return 'secondary';
-    case 'PENDING_SIGNATURE': return 'warning';
-    case 'ACTIVE': return 'success';
-    case 'SUSPENDED': return 'error';
-    case 'EXPIRED': return 'warning';
-    case 'CANCELLED': return 'error';
-    default: return 'secondary';
-  }
-};
 
 /**
  * The client page's answer to "are they a paying customer, and do they owe us
@@ -142,9 +129,7 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
                   {formatMoney(contract.paymentSummary.outstanding)}
                 </span>
               )}
-              <Badge variant={statusVariant(contract.status)}>
-                {statusLabel.contract(contract.status)}
-              </Badge>
+              <StatusBadge domain="contract" status={contract.status} />
             </div>
           </button>
         ))}

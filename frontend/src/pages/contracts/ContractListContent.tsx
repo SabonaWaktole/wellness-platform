@@ -7,8 +7,7 @@ import { Button } from '../../components/ui/Button/Button';
 import { Can } from '../../components/auth/Can';
 import { usePermission } from '../../hooks/usePermission';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
-import { Badge } from '../../components/ui/Badge/Badge';
-import type { BadgeProps } from '../../components/ui/Badge/Badge';
+import { StatusBadge } from '../../components/ui/StatusBadge/StatusBadge';
 import styles from './ContractListContent.module.css';
 
 import { useContracts } from '../../hooks/useContracts';
@@ -79,18 +78,6 @@ export const ContractListContent: React.FC = () => {
     };
     loadData();
   }, [fetchContracts, debouncedSearchTerm, activeTab]);
-
-  const getStatusBadgeVariant = (status: string): BadgeProps['variant'] => {
-    switch (status) {
-      case 'DRAFT': return 'secondary';
-      case 'PENDING_SIGNATURE': return 'warning';
-      case 'ACTIVE': return 'success';
-      case 'SUSPENDED': return 'error';
-      case 'EXPIRED': return 'warning';
-      case 'CANCELLED': return 'error';
-      default: return 'secondary';
-    }
-  };
 
   /**
    * The countdown line under the term.
@@ -279,9 +266,7 @@ export const ContractListContent: React.FC = () => {
                         </td>
                       )}
                       <td>
-                        <Badge variant={getStatusBadgeVariant(contract.status)}>
-                          {statusLabel.contract(contract.status)}
-                        </Badge>
+                        <StatusBadge domain="contract" status={contract.status} />
                       </td>
                       <td className={styles.tdAction}>
                         <DropdownMenu
