@@ -36,6 +36,9 @@ const signIn = (role: 'BUSINESS_OWNER' | 'STAFF') => {
       role,
       tenantId: 't1',
       tenantSlug: 'acme',
+      // settings.manage (D2's BUSINESS_OWNER -> Administrator mapping) is
+      // what the page actually gates on now (FR-RBAC-07).
+      permissions: role === 'BUSINESS_OWNER' ? { 'settings.manage': true } : {},
     } as any,
     isAuthenticated: true,
   });

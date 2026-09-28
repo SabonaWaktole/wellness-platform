@@ -12,62 +12,49 @@ import type { NavItem } from '../components/layout/Sidebar/Sidebar';
  * the hook re-runs on each render, so the sidebar follows the language like
  * the rest of the interface does.
  */
-type NavItemSpec = Omit<NavItem, 'label'> & { labelKey: string };
+type NavItemSpec = Omit<NavItem, 'label'> & { labelKey: string; permission?: string };
 
 /**
- * Sidebar contents per role.
- *
- * These lists must mirror the role gating in src/routes/index.tsx. A link the
- * route layer denies is worse than no link: it looks available and lands the
- * user on /unauthorized. Reports is the case in point — it is guarded
- * `['BUSINESS_OWNER', 'SUPER_ADMIN']` there, so it must not appear for STAFF.
+ * The one tenant sidebar, filtered by permission (FR-RBAC-07) instead of
+ * branching on role. An item with no `permission` is always shown to a
+ * tenant user (dashboard, the user's own profile). This list must mirror the
+ * `requirePermission(...)` on the matching backend route — see
+ * `RequirePermission` in routes/index.tsx, which enforces the same keys.
  */
-const ownerNavItems: NavItemSpec[] = [
+const tenantNavItems: NavItemSpec[] = [
   { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'dashboard' },
-  { id: 'clients', labelKey: 'nav.clients', icon: 'group' },
-  { id: 'appointments', labelKey: 'nav.appointments', icon: 'event' },
-  { id: 'inventory', labelKey: 'nav.inventory', icon: 'inventory_2' },
-  { id: 'quotations', labelKey: 'nav.quotations', icon: 'description' },
+  { id: 'clients', labelKey: 'nav.clients', icon: 'group', permission: 'companies.view' },
+  { id: 'appointments', labelKey: 'nav.appointments', icon: 'event', permission: 'calendar.view' },
+  { id: 'inventory', labelKey: 'nav.inventory', icon: 'inventory_2', permission: 'inventory.manage' },
+  { id: 'quotations', labelKey: 'nav.quotations', icon: 'description', permission: 'quotations.manage' },
   // Same icon family as quotations — an invoice is a quotation's next state,
   // so `receipt_long` reads as "description, but final" without inventing a
   // third visual language for billing documents.
-  { id: 'invoices', labelKey: 'nav.invoices', icon: 'receipt_long' },
+  { id: 'invoices', labelKey: 'nav.invoices', icon: 'receipt_long', permission: 'invoices.manage' },
   // Subscriptions sold to clients. Sits after invoices because it reads as the
   // ongoing commitment behind them rather than a separate part of the product.
-  { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract' },
-  { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart' },
-  { id: 'settings', path: 'settings/profile', labelKey: 'nav.settings', icon: 'settings' },
-];
-
-const staffNavItems: NavItemSpec[] = [
-  { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'dashboard' },
-  { id: 'clients', labelKey: 'nav.clients', icon: 'group' },
-  { id: 'appointments', labelKey: 'nav.appointments', icon: 'event' },
-  { id: 'quotations', labelKey: 'nav.quotations', icon: 'description' },
-  { id: 'invoices', labelKey: 'nav.invoices', icon: 'receipt_long' },
-  { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract' },
-  // No 'tasks' entry: there is no Tasks feature in this codebase — no route,
-  // page, Prisma model or endpoint. The link was a leftover from early planning
-  // and sent staff to a 404.
-  // settings/profile carries no RoleGuard, so every staff member can reach
-  // their own profile — previously this link only appeared for staff who
-  // happened to manage a warehouse.
+  { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract', permission: 'contracts.validity.view' },
+  { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },
+  // settings/profile carries no permission gate on the backend, so every
+  // tenant user can reach their own profile.
   { id: 'settings', path: 'settings/profile', labelKey: 'nav.settings', icon: 'settings' },
 ];
 
 /**
  * Platform administration, not a business's workspace.
  *
- * SUPER_ADMIN used to fall through to `ownerNavItems` — the hook branched only
- * on `role === 'STAFF'`, so every other role silently inherited the owner list.
- * That gave the platform console links to Clients, Appointments, Inventory,
- * Quotations, Reports and Settings: six dead ends, because Phase A established
- * that SUPER_ADMIN gets **zero** access to any individual tenant's business
- * data, and `resolveTenant` enforces exactly that with a 403.
+ * SUPER_ADMIN used to fall through to the owner list — the hook branched only
+ * on `role === 'STAFF'`, so every other role silently inherited it. That gave
+ * the platform console links to Clients, Appointments, Inventory, Quotations,
+ * Reports and Settings: six dead ends, because SUPER_ADMIN gets **zero**
+ * access to any individual tenant's business data, and `resolveTenant`
+ * enforces exactly that with a 403.
  *
  * So this is not a routing fix. The links were correct to fail; the list was
  * wrong. It now contains only what a platform-level role can actually reach.
- * TD-008.
+ * TD-008. Left as its own role-branched list, unlike the tenant list above:
+ * SUPER_ADMIN sits outside the permission system entirely (D2), same as
+ * `RoleGuard` staying on the `/admin/*` routes.
  */
 const superAdminNavItems: NavItemSpec[] = [
   { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'dashboard' },
@@ -85,33 +72,17 @@ const superAdminNavItems: NavItemSpec[] = [
   { id: 'setting', labelKey: 'nav.settings', icon: 'settings' },
 ];
 
-/** Stock management is the one item legitimately gated on the staff warehouse. */
-const staffWarehouseNavItem: NavItemSpec = {
-  id: 'inventory',
-  labelKey: 'nav.inventory',
-  icon: 'inventory_2',
-};
-
 export const useNavigation = (user?: any | null, currentPath?: string): NavItem[] => {
   const { t } = useTranslation('common');
   const role = user?.role;
+  const permissions: Record<string, unknown> = user?.permissions ?? {};
 
-  // Every branch copies. Returning the module-level array by reference meant a
-  // future push on one path would permanently mutate the shared list for every
-  // screen in the app.
-  //
-  // SUPER_ADMIN is matched explicitly rather than being left to fall through:
-  // "not STAFF" was never a sound definition of "business owner". See TD-008.
+  // SUPER_ADMIN is matched explicitly rather than left to a permission check:
+  // it sits outside the permission system (D2) and gets its own fixed list.
   const baseItems: NavItemSpec[] =
-    role === 'STAFF'
-      ? [...staffNavItems]
-      : role === 'SUPER_ADMIN'
-        ? [...superAdminNavItems]
-        : [...ownerNavItems];
-
-  if (role === 'STAFF' && user?.warehouseId) {
-    baseItems.push(staffWarehouseNavItem);
-  }
+    role === 'SUPER_ADMIN'
+      ? [...superAdminNavItems]
+      : tenantNavItems.filter((item) => !item.permission || permissions[item.permission] !== undefined);
 
   /*
    * Dashboard doubles as the fallback highlight when the path matches nothing
@@ -121,12 +92,12 @@ export const useNavigation = (user?: any | null, currentPath?: string): NavItem[
    * sidebar lit up Dashboard as well as the real page.
    *
    * Deriving the exclusions from the item list itself cannot fall behind it,
-   * and it is what lets the new Tenants entry work without another manual edit.
+   * and it is what lets a new entry work without another manual edit.
    */
   const matchesPath = (id: string) => currentPath?.includes(`/${id}`) ?? false;
   const anotherItemMatches = baseItems.some(item => item.id !== 'dashboard' && matchesPath(item.id));
 
-  return baseItems.map(({ labelKey, ...item }) => ({
+  return baseItems.map(({ labelKey, permission: _permission, ...item }) => ({
     ...item,
     label: t(labelKey),
     isActive:

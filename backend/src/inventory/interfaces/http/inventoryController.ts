@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { CreateProductUseCase } from '../../application/use-cases/CreateProductUseCase';
 import { UpdateProductUseCase } from '../../application/use-cases/UpdateProductUseCase';
@@ -85,7 +86,7 @@ export class InventoryController {
     if (error instanceof NegativeStockError) return res.status(400).json({ error: error.message });
 
     const message: string = error?.message ?? 'Something went wrong.';
-    if (message.includes('Unauthorized')) return res.status(403).json({ error: message });
+    if (error instanceof PermissionDeniedError) return res.status(403).json({ error: message });
     if (message.includes('not found')) return res.status(404).json({ error: message });
 
     return res.status(fallbackStatus).json({ error: message });
@@ -100,7 +101,7 @@ export class InventoryController {
       const results = await this.deps.searchProductsUseCase.execute({
         tenantId: requireTenantId(req),
         ...query,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
       });
       res.json({
@@ -119,7 +120,7 @@ export class InventoryController {
     try {
       const facets = await this.deps.getProductFacetsUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.json(facets);
     } catch (error: any) {
@@ -132,7 +133,7 @@ export class InventoryController {
       const result = await this.deps.getProductUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
       });
       res.json(presentProduct(result));
@@ -146,7 +147,7 @@ export class InventoryController {
       const parsed = createProductSchema.parse(req.body);
       const { product } = await this.deps.createProductUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
         ...parsed,
         categoryId: parsed.categoryId ?? null,
@@ -166,7 +167,7 @@ export class InventoryController {
       const product = await this.deps.updateProductUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
         ...parsed,
         categoryId: parsed.categoryId !== undefined ? (parsed.categoryId ?? null) : undefined,
@@ -182,7 +183,7 @@ export class InventoryController {
       await this.deps.deleteProductUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.status(204).send();
     } catch (error: any) {
@@ -195,7 +196,7 @@ export class InventoryController {
       const parsed = bulkProductActionSchema.parse(req.body);
       const result = await this.deps.bulkUpdateProductsUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         ...parsed,
       });
       // 200 even with failures — the body reports both halves, and a partial
@@ -211,7 +212,7 @@ export class InventoryController {
     return this.deps.getProductUseCase.execute({
       tenantId: requireTenantId(req),
       id,
-      authorRole: req.user!.role as any,
+      access: req.access!,
       authorWarehouseId: req.user!.warehouseId,
     });
   }
@@ -226,7 +227,7 @@ export class InventoryController {
         tenantId: requireTenantId(req),
         productId: req.params.id as string,
         files: files.map((file) => file.buffer),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
       });
       res.status(201).json(images.map(presentProductImage));
@@ -241,7 +242,7 @@ export class InventoryController {
         tenantId: requireTenantId(req),
         productId: req.params.id as string,
         imageId: req.params.imageId as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
       });
       // Return the surviving gallery so the client does not have to guess how
@@ -259,7 +260,7 @@ export class InventoryController {
         tenantId: requireTenantId(req),
         productId: req.params.id as string,
         imageIds: parsed.imageIds,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
       });
       res.json(images.map(presentProductImage));
@@ -276,7 +277,7 @@ export class InventoryController {
       const result = await this.deps.getProductStockBreakdownUseCase.execute({
         tenantId: requireTenantId(req),
         productId: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -291,7 +292,7 @@ export class InventoryController {
         tenantId: requireTenantId(req),
         productId: req.params.id as string,
         authorUserId: req.user!.userId,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
         warehouseId: parsed.warehouseId,
         quantityChange: parsed.quantityChange,
@@ -310,7 +311,7 @@ export class InventoryController {
         tenantId: requireTenantId(req),
         productId: req.params.id as string,
         authorUserId: req.user!.userId,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
         ...parsed,
       });
@@ -327,7 +328,7 @@ export class InventoryController {
     try {
       const results = await this.deps.getWarehousesUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         authorWarehouseId: req.user!.warehouseId,
       });
       res.json(results);
@@ -341,7 +342,7 @@ export class InventoryController {
       const parsed = createWarehouseSchema.parse(req.body);
       const result = await this.deps.createWarehouseUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         ...parsed,
       });
       res.status(201).json(result);
@@ -356,7 +357,7 @@ export class InventoryController {
       const result = await this.deps.updateWarehouseUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         ...parsed,
       });
       res.json(result);
@@ -370,7 +371,7 @@ export class InventoryController {
       await this.deps.deleteWarehouseUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.status(204).send();
     } catch (error: any) {
@@ -385,7 +386,7 @@ export class InventoryController {
     try {
       const results = await this.deps.getCategoriesUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         includeArchived: req.query.includeArchived === 'true',
       });
       res.json(results);
@@ -399,7 +400,7 @@ export class InventoryController {
       const parsed = createCategorySchema.parse(req.body);
       const result = await this.deps.createCategoryUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
         ...parsed,
       });
       res.status(201).json(result);
@@ -414,7 +415,7 @@ export class InventoryController {
       const result = await this.deps.updateCategoryUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
         ...parsed,
       });
       res.json(result);
@@ -428,7 +429,7 @@ export class InventoryController {
       await this.deps.deleteCategoryUseCase.execute({
         tenantId: requireTenantId(req),
         id: req.params.id as string,
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.status(204).send();
     } catch (error: any) {
@@ -446,7 +447,7 @@ export class InventoryController {
     try {
       const result = await this.deps.archiveUnusedCategoriesUseCase.preview({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -459,7 +460,7 @@ export class InventoryController {
       // No `limit`. The previous call passed a hard-coded 3 "matching UI mock".
       const result = await this.deps.archiveUnusedCategoriesUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as any,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {

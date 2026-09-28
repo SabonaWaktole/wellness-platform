@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { CreateClientUseCase } from '../../../application/use-cases/CreateClientUseCase';
 import { UpdateClientUseCase } from '../../../application/use-cases/UpdateClientUseCase';
@@ -87,13 +88,13 @@ export class ClientController {
 
       const result = await this.importCustomFieldsUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         sheet,
       });
 
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -285,17 +286,16 @@ export class ClientController {
     try {
       const validatedData = defineCustomFieldSchema.parse(req.body);
       const tenantId = requireTenantId(req);
-      const requestingUserRole = req.user!.role;
 
       const definition = await this.defineCustomFieldUseCase.execute({
         tenantId,
-        requestingUserRole,
+        access: req.access!,
         ...validatedData
       });
 
       res.status(201).json(definition);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -307,19 +307,18 @@ export class ClientController {
     try {
       const validatedData = updateCustomFieldSchema.parse(req.body);
       const tenantId = requireTenantId(req);
-      const requestingUserRole = req.user!.role;
       const fieldId = req.params.fieldId as string;
 
       const definition = await this.updateCustomFieldUseCase.execute({
         tenantId,
-        requestingUserRole,
+        access: req.access!,
         fieldId,
         ...validatedData
       });
 
       res.status(200).json(definition);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
@@ -332,18 +331,17 @@ export class ClientController {
   public deleteCustomField = async (req: Request, res: Response) => {
     try {
       const tenantId = requireTenantId(req);
-      const requestingUserRole = req.user!.role;
       const fieldId = req.params.fieldId as string;
 
       const result = await this.deleteCustomFieldUseCase.execute({
         tenantId,
-        requestingUserRole,
+        access: req.access!,
         fieldId,
       });
 
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
@@ -357,17 +355,16 @@ export class ClientController {
     try {
       const validatedData = reorderCustomFieldsSchema.parse(req.body);
       const tenantId = requireTenantId(req);
-      const requestingUserRole = req.user!.role;
 
       await this.reorderCustomFieldsUseCase.execute({
         tenantId,
-        requestingUserRole,
+        access: req.access!,
         orderedFieldIds: validatedData.orderedFieldIds,
       });
 
       res.status(204).send();
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -379,17 +376,16 @@ export class ClientController {
     try {
       const validatedData = defineOutcomeCategorySchema.parse(req.body);
       const tenantId = requireTenantId(req);
-      const requestingUserRole = req.user!.role;
 
       const category = await this.defineOutcomeCategoryUseCase.execute({
         tenantId,
-        requestingUserRole,
+        access: req.access!,
         ...validatedData
       });
 
       res.status(201).json(category);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -428,13 +424,13 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const result = await this.archiveClientUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         requestingUserId: req.user!.userId,
         clientId: req.params.clientId as string,
       });
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });
@@ -449,13 +445,13 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const result = await this.restoreClientUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         requestingUserId: req.user!.userId,
         clientId: req.params.clientId as string,
       });
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.message.includes('Only Business Owners')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else if (error.message.includes('not found')) {
         res.status(404).json({ error: error.message });

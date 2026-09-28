@@ -116,6 +116,9 @@ model Tenant {
 
   // Integrations
   integrations Integration[]
+
+  // Slice 3: RBAC
+  roles Role[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -189,6 +192,9 @@ model User {
   lastName       String?
   phone          String?
   role           String // 'SUPER_ADMIN', 'BUSINESS_OWNER', 'STAFF'
+  // See the Postgres schema for the full rationale; this column must stay in
+  // step with it.
+  roleId         String?
   // Soft off-boarding. A hard delete is impossible: seven non-nullable columns
   // reference User (Quotation.createdByUserId, Appointment.assignedUserId,
   // Client.lastUpdatedByUserId, ...), so RESTRICT blocks it and cascading would
@@ -228,6 +234,42 @@ model User {
   sentInvitations                   Invitation[]             @relation("InvitationSender")
   ownershipTransfersAsOriginalOwner OwnershipTransfer[]      @relation("OwnershipTransferOriginalOwner")
   ownershipTransfersAsActingOwner   OwnershipTransfer[]      @relation("OwnershipTransferActingOwner")
+
+  assignedRole Role? @relation(fields: [roleId], references: [id])
+
+  @@index([roleId])
+}
+
+/// See the Postgres schema for the full rationale; this model must stay in
+/// step with it field-for-field.
+model Role {
+  id        String   @id
+  tenantId  String
+  key       String
+  nameSq    String
+  nameEn    String
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+/// See the Postgres schema for the full rationale; this model must stay in
+/// step with it field-for-field.
+model RolePermission {
+  roleId        String
+  permissionKey String
+  scope         String?
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
 }
 
 /// See the Postgres schema for the full rationale; this model must stay in

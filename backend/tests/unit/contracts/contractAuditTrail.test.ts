@@ -12,6 +12,7 @@ import { AddContractPaymentUseCase } from '../../../src/contracts/application/us
 import { UpdateContractPaymentUseCase } from '../../../src/contracts/application/use-cases/UpdateContractPaymentUseCase';
 import { DeleteContractPaymentUseCase } from '../../../src/contracts/application/use-cases/DeleteContractPaymentUseCase';
 import { makeContractWriteHarness } from '../../support/fakeContractWriteTransaction';
+import { administrator } from '../../support/access';
 import { AuditAction } from '../../../src/audit/domain/AuditAction';
 
 const TENANT_ID = 'tenant-1';
@@ -63,7 +64,7 @@ describe('CreateContractUseCase audit trail', () => {
       startsAt: new Date('2026-01-01T00:00:00.000Z'),
       endsAt: new Date('2026-12-31T00:00:00.000Z'),
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -86,7 +87,7 @@ describe('ActivateContractUseCase audit trail', () => {
       tenantId: TENANT_ID,
       contractId: contract.id,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const entries = harness.recordedAuditEntries();
@@ -109,7 +110,7 @@ describe('CancelContractUseCase audit trail', () => {
       contractId: contract.id,
       reason: 'Client requested',
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -133,7 +134,7 @@ describe('RenewContractUseCase audit trail', () => {
       tenantId: TENANT_ID,
       contractId: previous.id,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -155,7 +156,7 @@ describe('UpdateContractUseCase audit trail', () => {
       contractId: contract.id,
       amount: 150,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -174,7 +175,7 @@ describe('UpdateContractUseCase audit trail', () => {
       contractId: contract.id,
       planName: contract.planName,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     expect(harness.recordedAuditEntries()).toHaveLength(0);
@@ -212,7 +213,7 @@ describe('RecordContractPaymentUseCase audit trail', () => {
       paymentId: payment.id,
       action: 'PAY',
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -239,7 +240,7 @@ describe('RecordContractPaymentUseCase audit trail', () => {
       paymentId: payment.id,
       action: 'UNPAY',
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -264,7 +265,7 @@ describe('AddContractPaymentUseCase audit trail', () => {
       dueDate: new Date('2026-03-01T00:00:00.000Z'),
       amount: 50,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -288,7 +289,7 @@ describe('UpdateContractPaymentUseCase audit trail', () => {
       paymentId: payment.id,
       amount: 75,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();
@@ -310,7 +311,7 @@ describe('UpdateContractPaymentUseCase audit trail', () => {
       paymentId: payment.id,
       amount: payment.amount,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     expect(harness.recordedAuditEntries()).toHaveLength(0);
@@ -331,7 +332,7 @@ describe('DeleteContractPaymentUseCase audit trail', () => {
       contractId: contract.id,
       paymentId: payment.id,
       actingUserId: USER_ID,
-      actingUserRole: USER_ROLE,
+      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
 
     const [entry] = harness.recordedAuditEntries();

@@ -6,7 +6,7 @@ import { PrismaQuotationWriteTransaction } from '../../../src/quotations/infrast
 import { PrismaQuotationLineItemRepository } from '../../../src/quotations/infrastructure/repositories/PrismaQuotationLineItemRepository';
 import { PrismaStockLevelRepository } from '../../../src/inventory/infrastructure/repositories/PrismaStockLevelRepository';
 import { PrismaUserRepository } from '../../../src/auth/infrastructure/repositories/PrismaUserRepository';
-import { UserRole } from '../../../src/auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../support/access';
 
 /**
  * Emission through the real transaction, against a real database.
@@ -124,7 +124,7 @@ describe('Notification emission through the quotation write transaction', () => 
       tenantId,
       quotationId,
       actingUserId: staffId,
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: staffId }),
       requiresQuotationApproval: true,
     });
 
@@ -137,7 +137,7 @@ describe('Notification emission through the quotation write transaction', () => 
       tenantId,
       quotationId,
       actingUserId: staffId,
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: staffId }),
       requiresQuotationApproval: true,
     });
 
@@ -150,7 +150,7 @@ describe('Notification emission through the quotation write transaction', () => 
       tenantId,
       quotationId,
       actingUserId: staffId,
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: staffId }),
       requiresQuotationApproval: false,
     });
 
@@ -160,12 +160,12 @@ describe('Notification emission through the quotation write transaction', () => 
   it('notifies the creator on approval, and not the approver', async () => {
     await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
       tenantId, quotationId, actingUserId: staffId,
-      actingUserRole: UserRole.STAFF, requiresQuotationApproval: true,
+      access: salesUser({ userId: staffId }), requiresQuotationApproval: true,
     });
     await prisma.notification.deleteMany({ where: { tenantId } });
 
     await new ApproveQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
-      tenantId, quotationId, actingUserId: ownerAId, actingUserRole: UserRole.BUSINESS_OWNER,
+      tenantId, quotationId, actingUserId: ownerAId, access: administrator({ userId: ownerAId }),
     });
 
     const forCreator = await notificationsFor(staffId);
@@ -178,7 +178,7 @@ describe('Notification emission through the quotation write transaction', () => 
   it('stores an i18n key and params, not a rendered sentence', async () => {
     await new SubmitQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
       tenantId, quotationId, actingUserId: staffId,
-      actingUserRole: UserRole.STAFF, requiresQuotationApproval: true,
+      access: salesUser({ userId: staffId }), requiresQuotationApproval: true,
     });
 
     const [row] = await notificationsFor(ownerAId);
@@ -200,7 +200,7 @@ describe('Notification emission through the quotation write transaction', () => 
      */
     await expect(
       new ApproveQuotationUseCase(writeTx(), userRepo(), lineItemRepo(), stockLevelRepo()).execute({
-        tenantId, quotationId, actingUserId: ownerAId, actingUserRole: UserRole.BUSINESS_OWNER,
+        tenantId, quotationId, actingUserId: ownerAId, access: administrator({ userId: ownerAId }),
       })
     ).rejects.toThrow('Invalid state transition');
 

@@ -1,5 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationWriteTransaction } from '../ports/IQuotationWriteTransaction';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
@@ -17,15 +17,13 @@ export class ReturnQuotationToDraftUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
     reason?: string;
   }) {
     // Authorisation before the transaction opens: an unauthorised caller must
     // not cause a database round trip, and the error must not depend on
     // whether the quotation they named happens to exist.
-    if (input.actingUserRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can return quotations');
-    }
+    input.access.ensure('quotations.approve');
 
     return runWithPostCommitEmail(this.writeTx, this.emailDispatcher, async (repos, notify) => {
       const quotation = await repos.quotationRepo.findById(input.tenantId, input.quotationId);

@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { MediaService } from '../../../media/MediaService';
 import { FormPermissions } from '../../domain/services/FormPermissions';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
@@ -24,12 +25,10 @@ export class StoreFormAssetUseCase {
 
   async execute(
     tenantId: string,
-    requestingUserRole: string,
+    access: AccessContext,
     buffer: Buffer
   ): Promise<StoredFormAsset> {
-    if (!FormPermissions.can(requestingUserRole, 'forms:edit')) {
-      throw new DomainError('Only Business Owners can upload form images');
-    }
+    FormPermissions.ensure(access, 'forms:edit');
 
     const stored = await this.mediaService.storeImage(FORM_ASSET_SPEC, 'form-asset', tenantId, buffer);
     return { url: stored.url, width: stored.width, height: stored.height };

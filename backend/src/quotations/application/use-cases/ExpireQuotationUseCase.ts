@@ -1,5 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { assertReachesQuotation } from './quotationAccess';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationWriteTransaction } from '../ports/IQuotationWriteTransaction';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
@@ -23,7 +24,7 @@ export class ExpireQuotationUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string | null;
-    actingUserRole: string | null;
+    access: AccessContext | null;
   }) {
     return runWithPostCommitEmail(this.writeTx, this.emailDispatcher, async (repos, notify) => {
       const quotation = await repos.quotationRepo.findById(input.tenantId, input.quotationId);
@@ -31,9 +32,7 @@ export class ExpireQuotationUseCase {
         throw new Error('Quotation not found');
       }
 
-      if (input.actingUserRole === UserRole.STAFF && quotation.createdByUserId !== input.actingUserId) {
-        throw new Error('Unauthorized: Staff can only act on their own quotations');
-      }
+      assertReachesQuotation(quotation, input.access);
 
       const fromStatus = quotation.status;
       quotation.expire();

@@ -3,7 +3,8 @@ import { IProductRepository, IWarehouseRepository, IStockLevelRepository, IStock
 import { Product } from '../../domain/Product';
 import { Warehouse } from '../../domain/Warehouse';
 import { CrossTenantIsolationError } from '../../domain/errors';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('CreateProductUseCase', () => {
   let useCase: CreateProductUseCase;
@@ -59,7 +60,7 @@ describe('CreateProductUseCase', () => {
       categoryId: null,
       price: 100,
       initialStock: [],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(result.product.name).toBe('Test Product');
@@ -82,7 +83,7 @@ describe('CreateProductUseCase', () => {
       categoryId: null,
       price: 100,
       initialStock: [{ warehouseId: 'w1', quantity: 50 }],
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -107,7 +108,7 @@ describe('CreateProductUseCase', () => {
       categoryId: null,
       price: 100,
       initialStock: [{ warehouseId: 'w1', quantity: 50 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     })).rejects.toThrow(CrossTenantIsolationError);
 
     expect(productRepo.save).not.toHaveBeenCalled();
@@ -124,7 +125,7 @@ describe('CreateProductUseCase', () => {
       categoryId: null,
       price: 100,
       initialStock: [{ warehouseId: 'w1', quantity: 50 }],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     })).rejects.toThrow('Warehouse w1 not found');
 
     expect(productRepo.save).not.toHaveBeenCalled();
@@ -138,8 +139,8 @@ describe('CreateProductUseCase', () => {
       categoryId: null,
       price: 100,
       initialStock: [],
-      authorRole: UserRole.SUPER_ADMIN as any
-    })).rejects.toThrow('Unauthorized: Only Business Owners and Staff can create products.');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should bubble up errors during transaction and ensure atomic partial failure', async () => {
@@ -164,7 +165,7 @@ describe('CreateProductUseCase', () => {
         { warehouseId: 'w1', quantity: 50 },
         { warehouseId: 'w2', quantity: 30 }
       ],
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     })).rejects.toThrow('DB Constraint Violation');
 
     // Because the transactionManager.executeTransaction ensures atomicity,

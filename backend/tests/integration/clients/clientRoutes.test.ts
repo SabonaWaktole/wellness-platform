@@ -28,7 +28,10 @@ class NonCryptographicStubTokenService implements ITokenService {
 
 const stubTokenService = new NonCryptographicStubTokenService();
 const validToken = stubTokenService.sign({ userId: 'u1', role: UserRole.BUSINESS_OWNER, tenantId: 't1', tenantSlug: 't1' });
-const staffToken = stubTokenService.sign({ userId: 'u1', role: UserRole.STAFF, tenantId: 't1', tenantSlug: 't1' });
+// Its own user: permissions are resolved from the database per request
+// (FR-RBAC-01, D1), so a STAFF-signed token for the owner's id would still
+// read as the Administrator.
+const staffToken = stubTokenService.sign({ userId: 'u-staff-cr', role: UserRole.STAFF, tenantId: 't1', tenantSlug: 't1' });
 
 /** Builds a one-sheet .xlsx in memory so imports can be posted as real uploads. */
 const workbook = async (rows: any[][]): Promise<Buffer> => {
@@ -83,6 +86,17 @@ describe('Client Routes', () => {
       },
       update: {},
     });
+    await prisma.user.upsert({
+      where: { id: 'u-staff-cr' },
+      create: {
+        id: 'u-staff-cr',
+        email: 'staff-cr@test.com',
+        hashedPassword: 'hash',
+        role: 'STAFF',
+        tenantId: 't1'
+      },
+      update: {},
+    });
 
     // Clean up leftover data
     await prisma.interaction.deleteMany({ where: { client: { tenantId: 't1' } } });
@@ -105,7 +119,7 @@ describe('Client Routes', () => {
     await prisma.customFieldDefinition.deleteMany({ where: { tenantId: 't1' } });
     await prisma.outcomeCategory.deleteMany({ where: { tenantId: 't1' } });
     await prisma.notification.deleteMany({ where: { recipientUserId: 'u1' } });
-    await prisma.user.deleteMany({ where: { id: 'u1' } });
+    await prisma.user.deleteMany({ where: { id: { in: ['u1', 'u-staff-cr'] } } });
     await prisma.$disconnect();
   });
 

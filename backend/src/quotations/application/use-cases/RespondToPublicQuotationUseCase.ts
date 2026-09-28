@@ -47,14 +47,14 @@ export class RespondToPublicQuotationUseCase {
           tenantId: view.tenantId,
           quotationId: view.quotationId,
           actingUserId: null,
-          actingUserRole: null,
+          access: null,
         });
       } else {
         await this.rejectUseCase.execute({
           tenantId: view.tenantId,
           quotationId: view.quotationId,
           actingUserId: null,
-          actingUserRole: null,
+          access: null,
           note: input.note ?? null,
         });
       }

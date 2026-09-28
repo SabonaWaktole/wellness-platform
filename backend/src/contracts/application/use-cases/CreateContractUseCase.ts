@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
@@ -33,7 +34,7 @@ export class CreateContractUseCase {
     assignedUserId?: string | null;
     notes?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     // The client is checked through its own repository, which already filters
     // soft-deleted rows — a raw FK insert would happily attach a contract to a
@@ -86,7 +87,7 @@ export class CreateContractUseCase {
       await repos.auditTrail.record({
         tenantId: input.tenantId,
         userId: input.actingUserId,
-        userRole: input.actingUserRole,
+        userRole: input.access.auditRole,
         action: AuditAction.Create,
         entityType: 'Contract',
         entityId: contract.id,

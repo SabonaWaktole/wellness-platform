@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import multer from 'multer';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
@@ -19,6 +20,7 @@ import {
   CONTRACT_DOC_MIME,
   MAX_CONTRACT_DOC_BYTES,
 } from '../../infrastructure/ContractDocumentStore';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 import {
   createContractSchema,
   updateContractSchema,
@@ -68,25 +70,42 @@ export class ContractsController {
   }
 
   private initializeRoutes() {
+    // contracts.validity.view (scoped): reads. contracts.manage (scoped):
+    // writes. At OWN scope the use cases narrow further to the caller's own
+    // contracts (`contractAccess.canAccessContract`).
+    //
     // `/client/:clientId` is declared BEFORE `/:id`, or Express would match
     // the literal segment "client" as a contract id.
-    this.router.get('/client/:clientId', this.getClientContracts.bind(this));
+    this.router.get('/client/:clientId', requirePermission('contracts.validity.view'), this.getClientContracts.bind(this));
 
-    this.router.get('/', this.searchContracts.bind(this));
-    this.router.post('/', this.createContract.bind(this));
-    this.router.get('/:id', this.getContractDetail.bind(this));
-    this.router.patch('/:id', this.updateContract.bind(this));
-    this.router.post('/:id/activate', this.activateContract.bind(this));
-    this.router.post('/:id/cancel', this.cancelContract.bind(this));
-    this.router.post('/:id/renew', this.renewContract.bind(this));
+    this.router.get('/', requirePermission('contracts.validity.view'), this.searchContracts.bind(this));
+    this.router.post('/', requirePermission('contracts.manage'), this.createContract.bind(this));
+    this.router.get('/:id', requirePermission('contracts.validity.view'), this.getContractDetail.bind(this));
+    this.router.patch('/:id', requirePermission('contracts.manage'), this.updateContract.bind(this));
+    this.router.post('/:id/activate', requirePermission('contracts.manage'), this.activateContract.bind(this));
+    this.router.post('/:id/cancel', requirePermission('contracts.manage'), this.cancelContract.bind(this));
+    this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
 
-    this.router.post('/:id/payments', this.addPayment.bind(this));
-    this.router.patch('/:id/payments/:paymentId', this.updatePayment.bind(this));
-    this.router.post('/:id/payments/:paymentId/record', this.recordPayment.bind(this));
-    this.router.delete('/:id/payments/:paymentId', this.deletePayment.bind(this));
+    this.router.post('/:id/payments', requirePermission('contracts.manage'), this.addPayment.bind(this));
+    this.router.patch(
+      '/:id/payments/:paymentId',
+      requirePermission('contracts.manage'),
+      this.updatePayment.bind(this)
+    );
+    this.router.post(
+      '/:id/payments/:paymentId/record',
+      requirePermission('contracts.manage'),
+      this.recordPayment.bind(this)
+    );
+    this.router.delete(
+      '/:id/payments/:paymentId',
+      requirePermission('contracts.manage'),
+      this.deletePayment.bind(this)
+    );
 
     this.router.post(
       '/:id/document',
+      requirePermission('contracts.manage'),
       // Multer errors (too large, wrong type) surface as thrown errors, so they
       // are translated here rather than falling through to the global 500
       // handler — same treatment as MediaController.
@@ -104,7 +123,7 @@ export class ContractsController {
       },
       this.attachDocument.bind(this)
     );
-    this.router.delete('/:id/document', this.clearDocument.bind(this));
+    this.router.delete('/:id/document', requirePermission('contracts.manage'), this.clearDocument.bind(this));
   }
 
   /**
@@ -118,7 +137,7 @@ export class ContractsController {
     if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
     const message = String(error?.message ?? 'Unexpected error');
     if (message.includes('not found')) return res.status(404).json({ error: message });
-    if (message.includes('Unauthorized')) return res.status(403).json({ error: message });
+    if (error instanceof PermissionDeniedError) return res.status(403).json({ error: message });
     return res.status(400).json({ error: message });
   }
 
@@ -136,7 +155,7 @@ export class ContractsController {
         assignedUserId: data.assignedUserId,
         notes: data.notes,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.status(201).json(result.contract);
     } catch (error: any) {
@@ -158,7 +177,7 @@ export class ContractsController {
         assignedUserId: data.assignedUserId,
         notes: data.notes,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ contract: result.contract, scheduleNeedsReview: result.scheduleNeedsReview });
     } catch (error: any) {
@@ -172,7 +191,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ contract: result.contract, generatedPayments: result.generatedPayments });
     } catch (error: any) {
@@ -188,7 +207,7 @@ export class ContractsController {
         contractId: req.params.id as string,
         reason: data.reason,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result.contract);
     } catch (error: any) {
@@ -209,7 +228,7 @@ export class ContractsController {
         endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
         notes: data.notes,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.status(201).json(result.contract);
     } catch (error: any) {
@@ -223,7 +242,7 @@ export class ContractsController {
       const result = await this.searchContractsUseCase.execute({
         tenantId: requireTenantId(req),
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         params,
       });
       res.json(result);
@@ -238,7 +257,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -252,7 +271,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         clientId: req.params.clientId as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
@@ -273,7 +292,7 @@ export class ContractsController {
         method: data.method,
         note: data.note,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ payment: result.payment, contract: result.contract });
     } catch (error: any) {
@@ -292,7 +311,7 @@ export class ContractsController {
         method: data.method,
         note: data.note,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.status(201).json({ payment: result.payment, contract: result.contract });
     } catch (error: any) {
@@ -312,7 +331,7 @@ export class ContractsController {
         method: data.method,
         note: data.note,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ payment: result.payment, contract: result.contract });
     } catch (error: any) {
@@ -327,7 +346,7 @@ export class ContractsController {
         contractId: req.params.id as string,
         paymentId: req.params.paymentId as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json({ contract: result.contract });
     } catch (error: any) {
@@ -345,7 +364,7 @@ export class ContractsController {
         contractId: req.params.id as string,
         file: { originalName: req.file.originalname, buffer: req.file.buffer },
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result.contract);
     } catch (error: any) {
@@ -359,7 +378,7 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
       });
       res.json(result.contract);
     } catch (error: any) {

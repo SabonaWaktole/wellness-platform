@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
 import { ConvertQuotationToInvoiceUseCase } from '../../application/use-cases/ConvertQuotationToInvoiceUseCase';
@@ -11,6 +12,7 @@ import { GetInvoicePdfViewUseCase } from '../../application/GetInvoicePdfViewUse
 import { InvoicePdfRenderer } from '../../infrastructure/InvoicePdfRenderer';
 import { invoiceReference } from '../../domain/invoiceReference';
 import { convertToInvoiceSchema, searchInvoicesSchema } from './schemas/invoiceSchemas';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 
 export class InvoicesController {
   public router = Router();
@@ -29,13 +31,20 @@ export class InvoicesController {
   }
 
   private initializeRoutes() {
-    this.router.post('/from-quotation/:quotationId', this.convertFromQuotation.bind(this));
-    this.router.get('/', this.searchInvoices.bind(this));
-    this.router.get('/:id', this.getInvoiceDetail.bind(this));
-    this.router.get('/:id/pdf', this.downloadPdf.bind(this));
-    this.router.post('/:id/send', this.sendInvoice.bind(this));
-    this.router.post('/:id/mark-paid', this.markPaid.bind(this));
-    this.router.post('/:id/void', this.voidInvoice.bind(this));
+    // invoices.manage (scoped OWN/TEAM/ALL): the creator-only ("OWN") check
+    // stays inside each use case — see GetInvoiceDetailUseCase and friends —
+    // this only screens out someone with no invoices right at all.
+    this.router.post(
+      '/from-quotation/:quotationId',
+      requirePermission('invoices.manage'),
+      this.convertFromQuotation.bind(this)
+    );
+    this.router.get('/', requirePermission('invoices.manage'), this.searchInvoices.bind(this));
+    this.router.get('/:id', requirePermission('invoices.manage'), this.getInvoiceDetail.bind(this));
+    this.router.get('/:id/pdf', requirePermission('invoices.manage'), this.downloadPdf.bind(this));
+    this.router.post('/:id/send', requirePermission('invoices.manage'), this.sendInvoice.bind(this));
+    this.router.post('/:id/mark-paid', requirePermission('invoices.manage'), this.markPaid.bind(this));
+    this.router.post('/:id/void', requirePermission('invoices.manage'), this.voidInvoice.bind(this));
   }
 
   private async convertFromQuotation(req: Request, res: Response) {
@@ -48,14 +57,14 @@ export class InvoicesController {
         tenantId,
         quotationId,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined
       });
       res.status(201).json(result.invoice);
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -68,12 +77,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result.invoice);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -86,12 +95,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result.invoice);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -104,12 +113,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result.invoice);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -122,7 +131,7 @@ export class InvoicesController {
       const result = await this.searchInvoicesUseCase.execute({
         tenantId,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         params: {
           query: validatedQuery.query,
           status: validatedQuery.status,
@@ -146,12 +155,12 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
       res.json(result);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -173,7 +182,7 @@ export class InvoicesController {
         tenantId,
         invoiceId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!,
       });
 
       const view = await this.getInvoicePdfViewUseCase.execute(tenantId, id);
@@ -190,7 +199,7 @@ export class InvoicesController {
       res.send(pdf);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }

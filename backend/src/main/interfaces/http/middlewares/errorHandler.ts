@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 
 /**
  * Terminal error handler.
@@ -18,6 +19,13 @@ export const errorHandler = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ) => {
+  // A use case refusing the caller (FR-RBAC-05) is an expected outcome, not
+  // a server fault: 403, with the same fixed body requirePermission sends.
+  if (err instanceof PermissionDeniedError && !res.headersSent) {
+    res.status(403).json({ error: 'Forbidden. Insufficient permissions.' });
+    return;
+  }
+
   console.error('GLOBAL ERROR:', err);
 
   if (res.headersSent) {

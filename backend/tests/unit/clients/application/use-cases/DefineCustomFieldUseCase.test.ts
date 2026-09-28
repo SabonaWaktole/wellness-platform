@@ -2,7 +2,8 @@ import { DefineCustomFieldUseCase } from '../../../../../src/clients/application
 import { ICustomFieldDefinitionRepository } from '../../../../../src/clients/domain/repositories/ICustomFieldDefinitionRepository';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { accessWith, administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('DefineCustomFieldUseCase', () => {
   let useCase: DefineCustomFieldUseCase;
@@ -23,10 +24,10 @@ describe('DefineCustomFieldUseCase', () => {
     useCase = new DefineCustomFieldUseCase(customFieldRepo);
   });
 
-  it('allows BUSINESS_OWNER to create a field', async () => {
+  it('allows the Administrator (settings.manage) to create a field', async () => {
     const result = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       fieldName: 'industry',
       fieldType: FieldType.TEXT,
     });
@@ -35,13 +36,23 @@ describe('DefineCustomFieldUseCase', () => {
     expect(result.fieldName).toBe('industry');
   });
 
-  it('rejects STAFF from creating a field', async () => {
-    await expect(useCase.execute({
+  it('FR-RBAC-05 allows any role holding settings.manage', async () => {
+    await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.STAFF,
+      access: accessWith({ 'settings.manage': true }),
       fieldName: 'industry',
       fieldType: FieldType.TEXT,
-    })).rejects.toThrow('Only Business Owners can define custom fields');
+    });
+    expect(customFieldRepo.save).toHaveBeenCalled();
+  });
+
+  it('rejects a Sales User (no settings.manage) from creating a field', async () => {
+    await expect(useCase.execute({
+      tenantId: 't1',
+      access: salesUser(),
+      fieldName: 'industry',
+      fieldType: FieldType.TEXT,
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   /*
@@ -49,7 +60,7 @@ describe('DefineCustomFieldUseCase', () => {
    * (tenantId, fieldName) unique constraint and the raw Prisma P2002 error —
    * a full stack trace naming the internal repository file — propagates
    * straight to the controller and out to the user, since it doesn't match
-   * the "Only Business Owners" substring check the controller looks for.
+   * the PermissionDeniedError the controller maps to 403.
    */
   it('rejects a name that collides with an existing field, with a clean message', async () => {
     customFieldRepo.findByTenantId.mockResolvedValue([
@@ -63,7 +74,7 @@ describe('DefineCustomFieldUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       fieldName: 'Name',
       fieldType: FieldType.TEXT,
     })).rejects.toThrow('A field named "Name" already exists.');
@@ -83,7 +94,7 @@ describe('DefineCustomFieldUseCase', () => {
 
     await expect(useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       fieldName: 'industry',
       fieldType: FieldType.TEXT,
     })).rejects.toThrow('already exists');
@@ -94,7 +105,7 @@ describe('DefineCustomFieldUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       fieldName: '  Industry  ',
       fieldType: FieldType.TEXT,
     });

@@ -1,7 +1,8 @@
 import { GetWarehousesUseCase } from './GetWarehousesUseCase';
 import { IWarehouseRepository } from '../../domain/repositories';
 import { Warehouse } from '../../domain/Warehouse';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('GetWarehousesUseCase', () => {
   let warehouseRepo: jest.Mocked<IWarehouseRepository>;
@@ -26,7 +27,7 @@ describe('GetWarehousesUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(results).toHaveLength(2);
@@ -41,7 +42,7 @@ describe('GetWarehousesUseCase', () => {
 
     const results = await useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -52,14 +53,14 @@ describe('GetWarehousesUseCase', () => {
   it('should reject SUPER_ADMIN from listing tenant warehouses', async () => {
     await expect(useCase.execute({
       tenantId: 'tenant1',
-      authorRole: UserRole.SUPER_ADMIN as any
-    })).rejects.toThrow('Unauthorized: Only Business Owners and Staff can view warehouses.');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should explicitly scope query to tenantId, proving tenant isolation', async () => {
     await useCase.execute({
       tenantId: 'tenant-isolated',
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     // Proves that repository is queried exactly with the passed tenantId

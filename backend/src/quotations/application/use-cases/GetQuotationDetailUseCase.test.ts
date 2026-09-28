@@ -5,7 +5,8 @@ import { IQuotationStatusHistoryRepository } from '../../domain/IQuotationStatus
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, salesManager, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('GetQuotationDetailUseCase', () => {
   let useCase: GetQuotationDetailUseCase;
@@ -45,7 +46,7 @@ describe('GetQuotationDetailUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'owner-1',
-      actingUserRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'owner-1' })
     });
 
     expect(result.quotation.id).toBe('q1');
@@ -57,7 +58,7 @@ describe('GetQuotationDetailUseCase', () => {
     quotationRepo.findById.mockResolvedValue(null);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Quotation not found');
   });
 
@@ -66,7 +67,38 @@ describe('GetQuotationDetailUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF
-    })).rejects.toThrow('Unauthorized: Staff can only view their own quotations');
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
+    })).rejects.toThrow(PermissionDeniedError);
+  });
+
+  it('FR-RBAC-11 lets a TEAM-scoped Sales Manager act on a colleague\'s draft', async () => {
+    quotationRepo.findById.mockResolvedValue(makeQuotation('user-2'));
+    lineItemRepo.findByQuotationId.mockResolvedValue([]);
+    historyRepo.findByQuotationId.mockResolvedValue([]);
+
+    const result = await useCase.execute({
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'mgr-1', access: salesManager({ userId: 'mgr-1' })
+    });
+
+    expect(result.permittedActions).toEqual(['EDIT', 'SUBMIT']);
+  });
+
+  it('FR-RBAC-05 offers APPROVE only to a holder of quotations.approve', async () => {
+    const pending = makeQuotation('user-2');
+    pending.submit({ requiresApproval: true });
+    quotationRepo.findById.mockResolvedValue(pending);
+    lineItemRepo.findByQuotationId.mockResolvedValue([]);
+    historyRepo.findByQuotationId.mockResolvedValue([]);
+
+    const asManager = await useCase.execute({
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'mgr-1', access: salesManager({ userId: 'mgr-1' })
+    });
+    const asApprover = await useCase.execute({
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'mgr-1',
+      access: salesManager({ userId: 'mgr-1', grant: { 'quotations.approve': true } })
+    });
+
+    expect(asManager.permittedActions).toEqual([]);
+    expect(asApprover.permittedActions).toEqual(['APPROVE', 'RETURN_TO_DRAFT']);
   });
 });

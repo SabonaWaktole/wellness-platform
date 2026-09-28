@@ -2,7 +2,8 @@
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { UserRole } from '../../domain/enums/UserRole';
 import { User } from '../../domain/entities/User';
-import { UnauthorizedError } from '../../domain/errors';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('DeactivateUserUseCase', () => {
   let userRepository: jest.Mocked<IUserRepository>;
@@ -25,7 +26,7 @@ describe('DeactivateUserUseCase', () => {
 
   const deactivate = (over: any = {}) =>
     useCase.execute({
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       requestingUserId: OWNER_ID,
       tenantId: TENANT,
       userIdToDeactivate: 'staff-1',
@@ -58,6 +59,15 @@ describe('DeactivateUserUseCase', () => {
     expect(userRepository.setActive).toHaveBeenCalledWith('staff-1', false);
   });
 
+  it('D1: clears the access cache for the deactivated user', async () => {
+    const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
+    useCase = new DeactivateUserUseCase(userRepository, permissionsChanged);
+
+    await deactivate();
+
+    expect(permissionsChanged.userChanged).toHaveBeenCalledWith('staff-1');
+  });
+
   it('never deletes â€” deactivation is the only off-boarding path', () => {
     // Seven non-nullable columns reference User; a delete method would be
     // blocked by RESTRICT or would destroy financial and audit history.
@@ -66,12 +76,12 @@ describe('DeactivateUserUseCase', () => {
 
   describe('role gating', () => {
     it('rejects STAFF', async () => {
-      await expect(deactivate({ requestingUserRole: UserRole.STAFF })).rejects.toThrow(UnauthorizedError);
+      await expect(deactivate({ access: salesUser() })).rejects.toThrow(PermissionDeniedError);
       expect(userRepository.setActive).not.toHaveBeenCalled();
     });
 
-    it('rejects SUPER_ADMIN, which has no business inside a tenant', async () => {
-      await expect(deactivate({ requestingUserRole: UserRole.SUPER_ADMIN })).rejects.toThrow(UnauthorizedError);
+    it('FR-RBAC-05 rejects a role without users.manage', async () => {
+      await expect(deactivate({ access: reception() })).rejects.toThrow(PermissionDeniedError);
       expect(userRepository.setActive).not.toHaveBeenCalled();
     });
   });

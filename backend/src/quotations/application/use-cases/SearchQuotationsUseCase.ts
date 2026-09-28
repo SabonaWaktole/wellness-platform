@@ -1,6 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { QuotationStatus } from '../../domain/Quotation';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export class SearchQuotationsUseCase {
   constructor(private quotationRepo: IQuotationRepository) {}
@@ -8,7 +8,7 @@ export class SearchQuotationsUseCase {
   async execute(input: {
     tenantId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
     params: {
       query?: string;
       status?: QuotationStatus;
@@ -20,8 +20,8 @@ export class SearchQuotationsUseCase {
     const page = input.params.page || 1;
     const limit = input.params.limit || 10;
 
-    // Staff can only see their own quotations
-    const createdByUserId = input.actingUserRole === UserRole.STAFF ? input.actingUserId : undefined;
+    // At OWN scope a caller sees only the quotations they created.
+    const createdByUserId = input.access.ownOnly('quotations.manage') ? input.access.userId : undefined;
 
     const result = await this.quotationRepo.search({
       tenantId: input.tenantId,

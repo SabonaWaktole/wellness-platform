@@ -52,7 +52,7 @@ export class QuotationExpiryJob implements ScheduledJob {
             // records that honestly, and a null actor means the creator is
             // still notified rather than being treated as the one who did it.
             actingUserId: null,
-            actingUserRole: null,
+            access: null,
           });
           expired += 1;
         } catch (error) {

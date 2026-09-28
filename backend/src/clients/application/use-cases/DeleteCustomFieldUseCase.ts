@@ -1,10 +1,10 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface DeleteCustomFieldDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   fieldId: string;
 }
 
@@ -19,9 +19,7 @@ export class DeleteCustomFieldUseCase {
   constructor(private customFieldRepo: ICustomFieldDefinitionRepository) {}
 
   async execute(dto: DeleteCustomFieldDTO): Promise<DeleteCustomFieldResult> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
-      throw new DomainError('Only Business Owners can delete custom fields');
-    }
+    dto.access.ensure('settings.manage');
 
     const existing = await this.customFieldRepo.findById(dto.tenantId, dto.fieldId);
     if (!existing) {

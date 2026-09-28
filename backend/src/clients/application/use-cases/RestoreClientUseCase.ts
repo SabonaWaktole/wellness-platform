@@ -1,10 +1,10 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 
 interface RestoreClientDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   requestingUserId: string;
   clientId: string;
 }
@@ -15,9 +15,7 @@ export class RestoreClientUseCase {
   constructor(private clientRepo: IClientRepository) {}
 
   async execute(dto: RestoreClientDTO): Promise<{ restoredClientName: string }> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
-      throw new DomainError('Only Business Owners can restore clients');
-    }
+    dto.access.ensure('companies.delete');
 
     const existing = await this.clientRepo.findById(dto.tenantId, dto.clientId, { includeArchived: true });
     if (!existing) {

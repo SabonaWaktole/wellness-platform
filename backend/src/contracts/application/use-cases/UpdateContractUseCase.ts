@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { BillingPeriod, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
@@ -36,7 +37,7 @@ export class UpdateContractUseCase {
     assignedUserId?: string | null;
     notes?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -44,7 +45,7 @@ export class UpdateContractUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(contract, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(contract, input.access);
 
       if (contract.status === ContractStatus.Expired || contract.status === ContractStatus.Cancelled) {
         throw new Error(`A ${contract.status} contract can no longer be edited`);
@@ -104,7 +105,7 @@ export class UpdateContractUseCase {
         await repos.auditTrail.record({
           tenantId: input.tenantId,
           userId: input.actingUserId,
-          userRole: input.actingUserRole,
+          userRole: input.access.auditRole,
           action: AuditAction.Update,
           entityType: 'Contract',
           entityId: contract.id,

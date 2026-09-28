@@ -1,7 +1,8 @@
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { DisconnectIntegrationUseCase } from '../DisconnectIntegrationUseCase';
 import { IIntegrationRepository } from '../../../domain/repositories/IIntegrationRepository';
 import { Integration } from '../../../domain/entities/Integration';
-import { UserRole } from '@auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../../tests/support/access';
 
 describe('DisconnectIntegrationUseCase', () => {
   let mockRepo: jest.Mocked<IIntegrationRepository>;
@@ -19,9 +20,9 @@ describe('DisconnectIntegrationUseCase', () => {
   it('should throw Unauthorized if user is STAFF', async () => {
     await expect(useCase.execute({
       tenantId: 't1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       provider: 'GOOGLE_CALENDAR'
-    })).rejects.toThrow('Unauthorized: Only Business Owners can disconnect integrations.');
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should do nothing if integration does not exist', async () => {
@@ -29,7 +30,7 @@ describe('DisconnectIntegrationUseCase', () => {
 
     await useCase.execute({
       tenantId: 't1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       provider: 'GOOGLE_CALENDAR'
     });
 
@@ -51,7 +52,7 @@ describe('DisconnectIntegrationUseCase', () => {
 
     await useCase.execute({
       tenantId: 't1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       provider: 'GOOGLE_CALENDAR'
     });
 

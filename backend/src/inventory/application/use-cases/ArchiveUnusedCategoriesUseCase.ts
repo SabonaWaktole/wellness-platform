@@ -1,9 +1,10 @@
+import { PermissionScope } from '../../../access/domain/PermissionScope';
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { ICategoryRepository } from '../../domain/repositories';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface ArchiveUnusedCategoriesRequest {
   tenantId: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 /** A candidate, named so the user can see what is about to be archived. */
@@ -43,13 +44,13 @@ export class ArchiveUnusedCategoriesUseCase {
    * entirely different.
    */
   async preview(request: ArchiveUnusedCategoriesRequest): Promise<UnusedCategoriesResult> {
-    this.assertAuthorized(request.authorRole);
+    request.access.ensureScope('inventory.manage', PermissionScope.All);
     const candidates = await this.categoryRepository.findUnusedCategories(request.tenantId);
     return this.summarise(candidates);
   }
 
   async execute(request: ArchiveUnusedCategoriesRequest): Promise<UnusedCategoriesResult> {
-    this.assertAuthorized(request.authorRole);
+    request.access.ensureScope('inventory.manage', PermissionScope.All);
 
     const categoriesToArchive = await this.categoryRepository.findUnusedCategories(request.tenantId);
 
@@ -66,11 +67,5 @@ export class ArchiveUnusedCategoriesUseCase {
       count: categories.length,
       categories: categories.map((c) => ({ id: c.id, name: c.name })),
     };
-  }
-
-  private assertAuthorized(authorRole: UserRole): void {
-    if (authorRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can archive categories.');
-    }
   }
 }

@@ -4,19 +4,22 @@ import { validateRequest } from '@main/interfaces/http/middlewares/validateReque
 import { authSchemas } from '@auth/interfaces/http/schemas/authSchemas';
 import { authenticate } from '@main/interfaces/http/middlewares/authenticate';
 import { optionalAuthenticate } from '@main/interfaces/http/middlewares/optionalAuthenticate';
-import { authorize } from '@main/interfaces/http/middlewares/authorize';
 import { resolveTenant } from '@main/interfaces/http/middlewares/resolveTenant';
-import { UserRole } from '@auth/domain/enums/UserRole';
 import { ITokenService } from '@auth/application/ports/ITokenService';
 import { ITenantRepository } from '@tenant/domain/repositories/ITenantRepository';
 import { createAuthRateLimiter } from '@main/interfaces/http/middlewares/authRateLimit';
+import { loadAccess } from '@main/interfaces/http/middlewares/loadAccess';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
+import { ResolveAccessContextUseCase } from '../../../../access/application/use-cases/ResolveAccessContextUseCase';
 
 export const createGlobalAuthRoutes = (
   authController: AuthController,
   tokenService: ITokenService,
+  resolveAccessContext: ResolveAccessContextUseCase
 ): Router => {
   const router = Router();
   const authMw = authenticate(tokenService);
+  const loadAccessMw = loadAccess(resolveAccessContext);
   const optionalAuthMw = optionalAuthenticate(tokenService);
   const authLimiter = createAuthRateLimiter();
 
@@ -45,7 +48,10 @@ export const createGlobalAuthRoutes = (
 
   // Profile endpoints
   router.get('/me', optionalAuthMw, authController.getMe);
-  router.put('/me', authMw, validateRequest(authSchemas.updateProfile), authController.updateMe);
+  // loadAccess: changing one's own email takes users.manage (FR-RBAC-05).
+  // It resolves from the token's own tenant, so it works on this slug-less
+  // route, and the platform operator resolves without one.
+  router.put('/me', authMw, loadAccessMw, validateRequest(authSchemas.updateProfile), authController.updateMe);
   router.put('/me/password', authMw, validateRequest(authSchemas.changePassword), authController.changeMyPassword);
 
   return router;
@@ -54,11 +60,13 @@ export const createGlobalAuthRoutes = (
 export const createTenantAuthRoutes = (
   authController: AuthController,
   tokenService: ITokenService,
-  tenantRepository: ITenantRepository
+  tenantRepository: ITenantRepository,
+  resolveAccessContext: ResolveAccessContextUseCase
 ): Router => {
   const router = Router({ mergeParams: true });
   const authMw = authenticate(tokenService);
   const resolveTenantMw = resolveTenant(tenantRepository);
+  const loadAccessMw = loadAccess(resolveAccessContext);
   const authLimiter = createAuthRateLimiter();
 
   /*
@@ -76,7 +84,8 @@ export const createTenantAuthRoutes = (
     '/invitations',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     validateRequest(authSchemas.inviteStaff),
     authController.inviteStaff
   );
@@ -85,7 +94,8 @@ export const createTenantAuthRoutes = (
     '/invitations',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     authController.getPendingInvitations
   );
 
@@ -93,7 +103,8 @@ export const createTenantAuthRoutes = (
     '/invitations/:id',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     authController.cancelInvitation
   );
 
@@ -113,26 +124,33 @@ export const createTenantAuthRoutes = (
     '/users',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     validateRequest(authSchemas.createUser),
     authController.createUser
   );
 
+  // companies.view: every one of the five roles holds it (Reception and CEO
+  // at ALL, the rest at OWN/TEAM), so this stays reachable by any tenant
+  // user — the same "any authenticated tenant user" gate BUSINESS_OWNER +
+  // STAFF gave before Slice 3.
   router.get(
     '/staff',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF]),
+    loadAccessMw,
+    requirePermission('companies.view'),
     authController.getTenantStaff
   );
 
-  // Business-Owner-only: deactivation revokes access, and the impact lookup
+  // users.manage: deactivation revokes access, and the impact lookup
   // reveals how much work a colleague holds.
   router.get(
     '/staff/:id/deactivation-impact',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     authController.getDeactivationImpact
   );
 
@@ -140,7 +158,8 @@ export const createTenantAuthRoutes = (
     '/staff/:id/deactivate',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     authController.deactivateStaff
   );
 
@@ -148,7 +167,8 @@ export const createTenantAuthRoutes = (
     '/staff/:id/reactivate',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     authController.reactivateStaff
   );
 
@@ -156,7 +176,8 @@ export const createTenantAuthRoutes = (
     '/staff/:id',
     authMw,
     resolveTenantMw,
-    authorize([UserRole.BUSINESS_OWNER, UserRole.SUPER_ADMIN]),
+    loadAccessMw,
+    requirePermission('users.manage'),
     validateRequest(authSchemas.updateStaffRole),
     authController.updateStaffRole
   );

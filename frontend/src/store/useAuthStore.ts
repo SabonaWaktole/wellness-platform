@@ -44,6 +44,20 @@ export interface User {
    */
   userLanguage?: string | null;
   tenantDefaultLanguage?: string | null;
+  /**
+   * Slice 3 (FR-RBAC-07): `{ [permissionKey]: scope | true }`, from
+   * `GET /auth/me`. The nav, route guards and `<Can>` all read from this —
+   * never from `role`, which stays on the session only for the pieces of the
+   * app RBAC hasn't reached yet (see RoleGuard on the SUPER_ADMIN routes).
+   */
+  permissions?: Record<string, 'OWN' | 'TEAM' | 'ALL' | true>;
+  /**
+   * Changes exactly when `permissions` does. `api/index.ts`'s response
+   * interceptor watches `X-Permissions-Version` against this and triggers a
+   * refetch of `/auth/me` when they disagree — the mechanism behind
+   * FR-USR-03 ("a role change applies on the user's next page load").
+   */
+  permissionsVersion?: string | null;
 }
 
 /**

@@ -1,11 +1,12 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { IWarehouseRepository, IStockLevelRepository } from '../../domain/repositories';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { WarehouseInUseError } from '../../domain/inUseErrors';
 
 export interface DeleteWarehouseDTO {
   tenantId: string;
   id: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 export class DeleteWarehouseUseCase {
@@ -15,9 +16,7 @@ export class DeleteWarehouseUseCase {
   ) {}
 
   async execute(dto: DeleteWarehouseDTO): Promise<void> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can manage warehouses.');
-    }
+    dto.access.ensureScope('inventory.manage', PermissionScope.All);
 
     const warehouse = await this.warehouseRepo.findById(dto.tenantId, dto.id);
     if (!warehouse) {

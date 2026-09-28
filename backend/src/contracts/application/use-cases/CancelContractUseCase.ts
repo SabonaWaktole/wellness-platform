@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
@@ -22,7 +23,7 @@ export class CancelContractUseCase {
     contractId: string;
     reason?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -30,7 +31,7 @@ export class CancelContractUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(contract, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(contract, input.access);
 
       const before = contractSnapshot(contract);
       contract.cancel();
@@ -55,7 +56,7 @@ export class CancelContractUseCase {
       await repos.auditTrail.record({
         tenantId: input.tenantId,
         userId: input.actingUserId,
-        userRole: input.actingUserRole,
+        userRole: input.access.auditRole,
         action: AuditAction.StatusChange,
         entityType: 'Contract',
         entityId: contract.id,

@@ -1,11 +1,12 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { ICategoryRepository, IProductRepository } from '../../domain/repositories';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { CategoryInUseError } from '../../domain/inUseErrors';
 
 export interface DeleteCategoryDTO {
   tenantId: string;
   id: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 export class DeleteCategoryUseCase {
@@ -15,9 +16,7 @@ export class DeleteCategoryUseCase {
   ) {}
 
   async execute(dto: DeleteCategoryDTO): Promise<void> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can manage categories.');
-    }
+    dto.access.ensureScope('inventory.manage', PermissionScope.All);
 
     const category = await this.categoryRepo.findById(dto.tenantId, dto.id);
     if (!category) {

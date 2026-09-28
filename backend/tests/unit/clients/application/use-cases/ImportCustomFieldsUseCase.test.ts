@@ -2,8 +2,9 @@ import { ImportCustomFieldsUseCase } from '../../../../../src/clients/applicatio
 import { ICustomFieldDefinitionRepository } from '../../../../../src/clients/domain/repositories/ICustomFieldDefinitionRepository';
 import { CustomFieldDefinition } from '../../../../../src/clients/domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../../../../src/clients/domain/enums/FieldType';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
 import { ParsedSheet } from '../../../../../src/clients/infrastructure/excel/sheet';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 describe('ImportCustomFieldsUseCase', () => {
   const tenantId = 'tenant-1';
@@ -32,14 +33,14 @@ describe('ImportCustomFieldsUseCase', () => {
 
   it('rejects non-owners', async () => {
     await expect(
-      useCase.execute({ tenantId, requestingUserRole: UserRole.STAFF, sheet: sheetOf([]) })
-    ).rejects.toThrow('Only Business Owners can define custom fields');
+      useCase.execute({ tenantId, access: salesUser(), sheet: sheetOf([]) })
+    ).rejects.toThrow(PermissionDeniedError);
   });
 
   it('creates valid rows and reports the invalid one without aborting', async () => {
     const result = await useCase.execute({
       tenantId,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       sheet: sheetOf([
         { fieldName: 'Company Size', fieldType: 'ALPHANUMERIC', options: '' },
         { fieldName: 'Industry', fieldType: 'SINGLE_SELECT', options: 'Retail; Services' },
@@ -60,7 +61,7 @@ describe('ImportCustomFieldsUseCase', () => {
   it('accepts lower-case and spaced type names', async () => {
     const result = await useCase.execute({
       tenantId,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       sheet: sheetOf([{ fieldName: 'Industry', fieldType: 'single select', options: 'Retail' }]),
     });
 
@@ -79,7 +80,7 @@ describe('ImportCustomFieldsUseCase', () => {
 
     const result = await useCase.execute({
       tenantId,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       sheet: sheetOf([{ fieldName: 'company size', fieldType: 'TEXT', options: '' }]),
     });
 
@@ -90,7 +91,7 @@ describe('ImportCustomFieldsUseCase', () => {
   it('skips a name duplicated within the same file', async () => {
     const result = await useCase.execute({
       tenantId,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       sheet: sheetOf([
         { fieldName: 'Region', fieldType: 'TEXT', options: '' },
         { fieldName: 'Region', fieldType: 'TEXT', options: '' },
@@ -104,7 +105,7 @@ describe('ImportCustomFieldsUseCase', () => {
   it('reports SINGLE_SELECT rows that carry no options', async () => {
     const result = await useCase.execute({
       tenantId,
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       sheet: sheetOf([{ fieldName: 'Industry', fieldType: 'SINGLE_SELECT', options: '' }]),
     });
 

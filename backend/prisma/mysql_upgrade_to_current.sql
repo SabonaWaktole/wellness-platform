@@ -14,7 +14,7 @@
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
 --                                    column can become NOT NULL.
 --
--- It replaces running these five by hand, in this order (the order matters —
+-- It replaces running these eight by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql
@@ -23,7 +23,8 @@
 --   4. mysql_migration_add_form_versions_and_submissions.sql
 --   5. mysql_migration_add_published_at_draft_version.sql
 --   6. mysql_migration_add_contracts.sql
---   7. mysql_migration_add_audit_entries.sql
+--   7. mysql_migration_add_roles_and_permissions.sql
+--   8. mysql_migration_add_audit_entries.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -421,6 +422,273 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET FOREIGN_KEY_CHECKS=1;
 
+
+-- ---------------------------------------------------------------
+-- 7. Roles & permissions module (Slice 3: FR-RBAC-01, 02)
+--
+-- Five system roles per tenant (Sales User, Sales Manager, Reception,
+-- Administrator, CEO), each with its default SRS §4.2 permissions, plus
+-- User.roleId and the legacy BUSINESS_OWNER/STAFF -> role mapping (D2).
+-- Purely additive: two new tables and one new nullable column.
+-- ---------------------------------------------------------------
+SELECT 'roles & permissions module' AS step, NOW() AS at;
+
+
+-- ---------------------------------------------------------------
+-- User.roleId
+-- ---------------------------------------------------------------
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'User' AND COLUMN_NAME = 'roleId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `User` ADD COLUMN `roleId` VARCHAR(191) NULL', 'SELECT ''skip: User.roleId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'User' AND INDEX_NAME = 'User_roleId_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `User_roleId_idx` ON `User`(`roleId`)', 'SELECT ''skip: User_roleId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ---------------------------------------------------------------
+-- Tables
+-- ---------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `Role` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `key` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NOT NULL,
+    `isSystem` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `Role_tenantId_key_key`(`tenantId`, `key`),
+    INDEX `Role_tenantId_idx`(`tenantId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `RolePermission` (
+    `roleId` VARCHAR(191) NOT NULL,
+    `permissionKey` VARCHAR(191) NOT NULL,
+    `scope` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`roleId`, `permissionKey`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------
+-- Foreign keys
+-- ---------------------------------------------------------------
+SET FOREIGN_KEY_CHECKS=0;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'User' AND CONSTRAINT_NAME = 'User_roleId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `User` ADD CONSTRAINT `User_roleId_fkey` FOREIGN KEY (`roleId`) REFERENCES `Role`(`id`) ON DELETE SET NULL ON UPDATE CASCADE', 'SELECT ''skip: User.User_roleId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Role' AND CONSTRAINT_NAME = 'Role_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Role` ADD CONSTRAINT `Role_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: Role.Role_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RolePermission' AND CONSTRAINT_NAME = 'RolePermission_roleId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `RolePermission` ADD CONSTRAINT `RolePermission_roleId_fkey` FOREIGN KEY (`roleId`) REFERENCES `Role`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: RolePermission.RolePermission_roleId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET FOREIGN_KEY_CHECKS=1;
+
+-- ---------------------------------------------------------------
+-- Seed data (FR-RBAC-01, 02; D2 legacy mapping)
+-- ---------------------------------------------------------------
+-- BEGIN GENERATED ROLE SEED
+-- Generated by scripts/generate-role-seed-sql.ts from DEFAULT_ROLE_MATRIX.
+-- Seed the five system roles for every tenant that doesn't have them yet.
+INSERT INTO `Role` (`id`, `tenantId`, `key`, `nameSq`, `nameEn`, `isSystem`, `updatedAt`)
+SELECT UUID(), t.id, v.rolekey, v.namesq, v.nameen, 1, NOW(3)
+FROM `Tenant` t
+JOIN (
+  SELECT 'SALES_USER' AS rolekey, 'Përdorues Shitjesh' AS namesq, 'Sales User' AS nameen
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'Menaxher Shitjesh' AS namesq, 'Sales Manager' AS nameen
+  UNION ALL
+  SELECT 'RECEPTION' AS rolekey, 'Recepsion' AS namesq, 'Reception' AS nameen
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'Administrator' AS namesq, 'Administrator' AS nameen
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'CEO' AS namesq, 'CEO' AS nameen
+) v ON 1 = 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `Role` r WHERE r.tenantId = t.id AND r.`key` = v.rolekey
+);
+
+-- Grant each system role its default permissions (SRS §4.2).
+INSERT INTO `RolePermission` (`roleId`, `permissionKey`, `scope`)
+SELECT r.id, v.permissionkey, v.scope
+FROM `Role` r
+JOIN (
+  SELECT 'SALES_USER' AS rolekey, 'activities.add' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'activities.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'calendar.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'commercial.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'companies.edit' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'companies.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'contracts.manage' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'contracts.validity.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'inventory.manage' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'invoices.manage' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'notes.add' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'notes.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'payments.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'performance.view' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_USER' AS rolekey, 'quotations.manage' AS permissionkey, 'OWN' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'activities.add' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'activities.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'calendar.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'commercial.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'companies.delete' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'companies.edit' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'companies.reassign' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'companies.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'contracts.manage' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'contracts.validity.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'invoices.manage' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'notes.add' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'notes.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'payments.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'performance.view' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'SALES_MANAGER' AS rolekey, 'quotations.manage' AS permissionkey, 'TEAM' AS scope
+  UNION ALL
+  SELECT 'RECEPTION' AS rolekey, 'companies.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'RECEPTION' AS rolekey, 'contracts.validity.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'RECEPTION' AS rolekey, 'notes.add' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'RECEPTION' AS rolekey, 'notes.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'activities.add' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'activities.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'audit.view' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'calendar.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'commercial.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'companies.delete' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'companies.edit' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'companies.reassign' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'companies.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'contracts.manage' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'contracts.validity.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'forms.manage' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'integrations.manage' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'inventory.manage' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'invoices.manage' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'notes.add' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'notes.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'payments.update' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'payments.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'pricing.manage' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'quotations.approve' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'quotations.manage' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'reports.view' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'roles.manage' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'settings.manage' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'ADMINISTRATOR' AS rolekey, 'users.manage' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'activities.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'audit.view' AS permissionkey, NULL AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'calendar.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'commercial.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'companies.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'contracts.validity.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'notes.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'payments.view' AS permissionkey, 'ALL' AS scope
+  UNION ALL
+  SELECT 'CEO' AS rolekey, 'performance.view' AS permissionkey, 'ALL' AS scope
+) v ON v.rolekey = r.`key`
+WHERE r.isSystem = 1
+  AND NOT EXISTS (
+    SELECT 1 FROM `RolePermission` rp WHERE rp.roleId = r.id AND rp.permissionKey = v.permissionkey
+  );
+
+-- D2: map every legacy user onto the new roles (BUSINESS_OWNER -> Administrator,
+-- STAFF -> Sales User). SUPER_ADMIN is left alone: it has no tenant and no row here.
+UPDATE `User` u
+JOIN `Role` r ON r.tenantId = u.tenantId AND r.isSystem = 1
+SET u.roleId = r.id
+WHERE u.roleId IS NULL
+  AND (
+    (u.role = 'BUSINESS_OWNER' AND r.`key` = 'ADMINISTRATOR')
+    OR (u.role = 'STAFF' AND r.`key` = 'SALES_USER')
+  );
+-- END GENERATED ROLE SEED
+
+
+-- ---------------------------------------------------------------
+-- Migration-history bookkeeping for the roles & permissions migration.
+-- ---------------------------------------------------------------
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260927112507_add_roles_and_permissions', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260927112507_add_roles_and_permissions'
+);
+
 -- ---------------------------------------------------------------
 -- Migration-history bookkeeping, so a later `prisma migrate deploy`
 -- recognises this work as already applied rather than trying to redo it.
@@ -434,7 +702,7 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
--- 7. Audit trail
+-- 8. Audit trail
 -- ---------------------------------------------------------------
 
 SELECT 'AuditEntry table' AS step, NOW() AS at;
@@ -495,6 +763,12 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractPayment'
   UNION ALL SELECT 'ContractStatusHistory table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractStatusHistory'
+  UNION ALL SELECT 'User.roleId', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='User' AND COLUMN_NAME='roleId'
+  UNION ALL SELECT 'Role table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Role'
+  UNION ALL SELECT 'RolePermission table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='RolePermission'
   UNION ALL SELECT 'AuditEntry table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='AuditEntry'
 ) AS checks;

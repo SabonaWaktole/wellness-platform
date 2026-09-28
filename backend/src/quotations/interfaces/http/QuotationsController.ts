@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { ZodError } from 'zod';
 import { CreateQuotationUseCase } from '../../application/use-cases/CreateQuotationUseCase';
@@ -13,6 +14,7 @@ import { SearchQuotationsUseCase } from '../../application/use-cases/SearchQuota
 import { GetQuotationDetailUseCase } from '../../application/use-cases/GetQuotationDetailUseCase';
 import { GetPendingApprovalsUseCase } from '../../application/use-cases/GetPendingApprovalsUseCase';
 import { SettingsService } from '../../../settings/SettingsService';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 import {
   createQuotationSchema,
   updateQuotationSchema,
@@ -42,17 +44,21 @@ export class QuotationsController {
   }
 
   private initializeRoutes() {
-    this.router.post('/', this.createQuotation.bind(this));
-    this.router.get('/', this.searchQuotations.bind(this));
-    this.router.get('/pending-approvals', this.getPendingApprovals.bind(this));
-    this.router.get('/:id', this.getQuotationDetail.bind(this));
-    this.router.put('/:id', this.updateQuotation.bind(this));
-    this.router.post('/:id/submit', this.submitQuotation.bind(this));
-    this.router.post('/:id/approve', this.approveQuotation.bind(this));
-    this.router.post('/:id/return-to-draft', this.returnToDraft.bind(this));
-    this.router.post('/:id/mark-accepted', this.markAccepted.bind(this));
-    this.router.post('/:id/mark-rejected', this.markRejected.bind(this));
-    this.router.post('/:id/expire', this.expireQuotation.bind(this));
+    // quotations.manage (scoped OWN/TEAM/ALL): the creator-only ("OWN") check
+    // stays inside each use case — see SearchQuotationsUseCase and friends —
+    // this only screens out someone with no quotations right at all.
+    // quotations.approve: Administrator only, per SRS §4.2.
+    this.router.post('/', requirePermission('quotations.manage'), this.createQuotation.bind(this));
+    this.router.get('/', requirePermission('quotations.manage'), this.searchQuotations.bind(this));
+    this.router.get('/pending-approvals', requirePermission('quotations.approve'), this.getPendingApprovals.bind(this));
+    this.router.get('/:id', requirePermission('quotations.manage'), this.getQuotationDetail.bind(this));
+    this.router.put('/:id', requirePermission('quotations.manage'), this.updateQuotation.bind(this));
+    this.router.post('/:id/submit', requirePermission('quotations.manage'), this.submitQuotation.bind(this));
+    this.router.post('/:id/approve', requirePermission('quotations.approve'), this.approveQuotation.bind(this));
+    this.router.post('/:id/return-to-draft', requirePermission('quotations.approve'), this.returnToDraft.bind(this));
+    this.router.post('/:id/mark-accepted', requirePermission('quotations.manage'), this.markAccepted.bind(this));
+    this.router.post('/:id/mark-rejected', requirePermission('quotations.manage'), this.markRejected.bind(this));
+    this.router.post('/:id/expire', requirePermission('quotations.manage'), this.expireQuotation.bind(this));
   }
 
   private async createQuotation(req: Request, res: Response) {
@@ -63,13 +69,13 @@ export class QuotationsController {
         tenantId,
         clientId: validatedData.clientId,
         createdByUserId: req.user!.userId,
-        authorRole: req.user!.role,
+        access: req.access!,
         lineItems: validatedData.lineItems
       });
       res.status(201).json(result.quotation);
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -83,14 +89,14 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         lineItems: validatedData.lineItems
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -106,13 +112,13 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         requiresQuotationApproval: requiresApproval
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -125,12 +131,12 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -144,13 +150,13 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         reason
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -164,13 +170,13 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -184,14 +190,14 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         note: validatedData.note
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -204,12 +210,12 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!
       });
       res.json(result.quotation);
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -222,7 +228,7 @@ export class QuotationsController {
       const result = await this.searchQuotationsUseCase.execute({
         tenantId,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role,
+        access: req.access!,
         params: {
           query: validatedQuery.query,
           status: validatedQuery.status,
@@ -243,11 +249,11 @@ export class QuotationsController {
       const tenantId = requireTenantId(req);
       const result = await this.getPendingApprovalsUseCase.execute({
         tenantId,
-        actingUserRole: req.user!.role
+        access: req.access!
       });
       res.json(result.quotations);
     } catch (error: any) {
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }
@@ -260,7 +266,7 @@ export class QuotationsController {
         tenantId,
         quotationId: id,
         actingUserId: req.user!.userId,
-        actingUserRole: req.user!.role
+        access: req.access!
       });
 
       /*
@@ -289,7 +295,7 @@ export class QuotationsController {
       res.json({ ...result, shareUrl, shareToken: result.quotation.shareToken });
     } catch (error: any) {
       if (error.message.includes('not found')) return res.status(404).json({ error: error.message });
-      if (error.message.includes('Unauthorized')) return res.status(403).json({ error: error.message });
+      if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }
   }

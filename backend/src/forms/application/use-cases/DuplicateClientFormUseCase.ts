@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
 import { IClientFormRepository } from '../../domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../domain/entities/ClientForm';
@@ -11,13 +12,11 @@ export class DuplicateClientFormUseCase {
 
   async execute(
     tenantId: string,
-    requestingUserRole: string,
+    access: AccessContext,
     formId: string,
     newName: string
   ): Promise<ClientForm> {
-    if (!FormPermissions.can(requestingUserRole, 'forms:create')) {
-      throw new DomainError('Only Business Owners can duplicate client forms');
-    }
+    FormPermissions.ensure(access, 'forms:create');
 
     const source = await this.formRepo.findById(tenantId, formId);
     if (!source) {

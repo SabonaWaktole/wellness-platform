@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card/Card';
 import { SettingsLayout } from '../../components/layout/SettingsLayout/SettingsLayout';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useLogout } from '../../hooks/useLogout';
+import { usePermission } from '../../hooks/usePermission';
 import { useTenantSettings, SUPPORTED_LOCALES } from '../../hooks/useTenantSettings';
 import type { TenantSettings } from '../../hooks/useTenantSettings';
 import { useToast } from '../../components/ui/Toast';
@@ -108,8 +109,9 @@ export const AccountSettingsPage = () => {
   // One expression for "may edit workspace settings", used by every control on
   // the page. There used to be two — an `isBusinessOwner` const and a separate
   // `roleName !== 'Business Owner'` string comparison — which could disagree
-  // for SUPER_ADMIN. Same class of bug as the duplicated nav arrays.
-  const isBusinessOwner = user?.role === 'BUSINESS_OWNER';
+  // for SUPER_ADMIN. Same class of bug as the duplicated nav arrays. Now reads
+  // settings.manage (FR-RBAC-07) rather than the BUSINESS_OWNER role.
+  const isBusinessOwner = usePermission('settings.manage');
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saved, setSaved] = useState<TenantSettings | null>(null);

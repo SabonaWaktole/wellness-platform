@@ -1,7 +1,8 @@
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { ConnectIntegrationUseCase } from '../ConnectIntegrationUseCase';
 import { IIntegrationRepository } from '../../../domain/repositories/IIntegrationRepository';
 import { Integration } from '../../../domain/entities/Integration';
-import { UserRole } from '@auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../../tests/support/access';
 
 describe('ConnectIntegrationUseCase', () => {
   let mockRepo: jest.Mocked<IIntegrationRepository>;
@@ -19,9 +20,9 @@ describe('ConnectIntegrationUseCase', () => {
   it('should throw Unauthorized if user is STAFF', async () => {
     await expect(useCase.execute({
       tenantId: 't1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       provider: 'GOOGLE_CALENDAR'
-    })).rejects.toThrow('Unauthorized: Only Business Owners can connect integrations.');
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should create a new integration if none exists', async () => {
@@ -29,7 +30,7 @@ describe('ConnectIntegrationUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 't1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       provider: 'GOOGLE_CALENDAR',
       config: { token: 'abc' }
     });
@@ -55,7 +56,7 @@ describe('ConnectIntegrationUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 't1',
-      authorRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       provider: 'GOOGLE_CALENDAR',
       config: { newToken: 'def' }
     });

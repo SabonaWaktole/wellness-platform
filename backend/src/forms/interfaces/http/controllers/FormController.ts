@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { GetClientFormUseCase, ClientFormView } from '../../../application/use-cases/GetClientFormUseCase';
 import { GetClientFormsUseCase } from '../../../application/use-cases/GetClientFormsUseCase';
@@ -101,12 +102,11 @@ const toSubmissionDetailJson = (detail: SubmissionDetail) => ({
   document: detail.version.document,
 });
 
-/** Maps a DomainError message to a status code the same way every other
- *  controller in this codebase does — substring matching on the message,
- *  because DomainError carries no code of its own. */
+/** Maps a use-case error to a status code: by type where the error has one,
+ *  otherwise by message, because DomainError carries no code of its own. */
 const statusFor = (error: any): number => {
   if (error instanceof FormVersionConflictError) return 409;
-  if (error.message?.includes('Only Business Owners')) return 403;
+  if (error instanceof PermissionDeniedError) return 403;
   if (error.message?.includes('not found')) return 404;
   return 400;
 };
@@ -146,7 +146,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const form = await this.createClientFormUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         name: validated.name,
         description: validated.description,
       });
@@ -162,7 +162,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const form = await this.updateClientFormSettingsUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         formId: String(req.params.formId),
         ...validated,
         status: validated.status as FormStatus | undefined,
@@ -179,7 +179,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const form = await this.duplicateClientFormUseCase.execute(
         tenantId,
-        req.user!.role,
+        req.access!,
         String(req.params.formId),
         validated.name
       );
@@ -206,7 +206,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const template = await this.saveAsTemplateUseCase.execute(
         tenantId,
-        req.user!.role,
+        req.access!,
         String(req.params.formId),
         validated.name
       );
@@ -222,7 +222,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const form = await this.createFormFromTemplateUseCase.execute(
         tenantId,
-        req.user!.role,
+        req.access!,
         String(req.params.templateId),
         validated.name
       );
@@ -235,7 +235,7 @@ export class FormController {
   public deleteForm = async (req: Request, res: Response) => {
     try {
       const tenantId = requireTenantId(req);
-      await this.deleteClientFormUseCase.execute(tenantId, req.user!.role, String(req.params.formId));
+      await this.deleteClientFormUseCase.execute(tenantId, req.access!, String(req.params.formId));
       res.status(204).end();
     } catch (error: any) {
       res.status(statusFor(error)).json({ error: error.message });
@@ -250,7 +250,7 @@ export class FormController {
         res.status(400).json({ error: 'No image was uploaded.' });
         return;
       }
-      const asset = await this.storeFormAssetUseCase.execute(tenantId, req.user!.role, file.buffer);
+      const asset = await this.storeFormAssetUseCase.execute(tenantId, req.access!, file.buffer);
       res.status(201).json(asset);
     } catch (error: any) {
       res.status(statusFor(error)).json({ error: error.message });
@@ -293,7 +293,7 @@ export class FormController {
 
       await this.updateClientFormLayoutUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         formId: String(req.params.formId),
         layout: validatedData.layout,
         expectedVersion: validatedData.expectedVersion,
@@ -319,7 +319,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const { form, version } = await this.publishFormUseCase.execute({
         tenantId,
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         formId: String(req.params.formId),
         expectedVersion: validated.expectedVersion,
         publishedByUserId: req.user!.userId,
@@ -362,7 +362,7 @@ export class FormController {
   public listSubmissions = async (req: Request, res: Response) => {
     try {
       const tenantId = requireTenantId(req);
-      const submissions = await this.listSubmissionsUseCase.execute(tenantId, req.user!.role, String(req.params.formId));
+      const submissions = await this.listSubmissionsUseCase.execute(tenantId, req.access!, String(req.params.formId));
       res.json(submissions.map(toSubmissionSummaryJson));
     } catch (error: any) {
       res.status(statusFor(error)).json({ error: error.message });
@@ -374,7 +374,7 @@ export class FormController {
       const tenantId = requireTenantId(req);
       const detail = await this.getSubmissionUseCase.execute(
         tenantId,
-        req.user!.role,
+        req.access!,
         String(req.params.formId),
         String(req.params.submissionId)
       );

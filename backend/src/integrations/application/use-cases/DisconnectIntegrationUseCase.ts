@@ -1,9 +1,9 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IIntegrationRepository } from '../../domain/repositories/IIntegrationRepository';
-import { UserRole } from '@auth/domain/enums/UserRole';
 
 export interface DisconnectIntegrationDTO {
   tenantId: string;
-  authorRole: UserRole;
+  access: AccessContext;
   provider: string;
 }
 
@@ -11,9 +11,7 @@ export class DisconnectIntegrationUseCase {
   constructor(private integrationRepository: IIntegrationRepository) {}
 
   async execute(dto: DisconnectIntegrationDTO): Promise<void> {
-    if (dto.authorRole === UserRole.STAFF || dto.authorRole === UserRole.SUPER_ADMIN) {
-      throw new Error('Unauthorized: Only Business Owners can disconnect integrations.');
-    }
+    dto.access.ensure('integrations.manage');
 
     const integration = await this.integrationRepository.findByProvider(dto.tenantId, dto.provider);
 

@@ -1,22 +1,21 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { ICategoryRepository } from '../../domain/repositories';
 import { Category } from '../../domain/Category';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { randomUUID } from 'crypto';
 
 export interface CreateCategoryDTO {
   tenantId: string;
   name: string;
   description?: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 export class CreateCategoryUseCase {
   constructor(private categoryRepo: ICategoryRepository) {}
 
   async execute(dto: CreateCategoryDTO): Promise<Category> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can manage categories.');
-    }
+    dto.access.ensureScope('inventory.manage', PermissionScope.All);
 
     const category = Category.create({
       id: randomUUID(),

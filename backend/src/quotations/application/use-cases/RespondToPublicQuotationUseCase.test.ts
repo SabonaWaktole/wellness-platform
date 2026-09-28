@@ -53,7 +53,7 @@ describe('RespondToPublicQuotationUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: null,
-      actingUserRole: null,
+      access: null,
     });
   });
 
@@ -68,7 +68,7 @@ describe('RespondToPublicQuotationUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: null,
-      actingUserRole: null,
+      access: null,
       note: 'Please lower the price',
     });
   });

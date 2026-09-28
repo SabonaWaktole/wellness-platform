@@ -30,8 +30,10 @@ import { PrismaAppointmentRepository } from '../../../../appointments/infrastruc
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../../main/interfaces/http/middlewares/resolveTenant';
-import { authorize } from '../../../../main/interfaces/http/middlewares/authorize';
-import { UserRole } from '../../../../auth/domain/enums/UserRole';
+import { loadAccess } from '../../../../main/interfaces/http/middlewares/loadAccess';
+import { requirePermission, requireAnyPermission } from '../../../../main/interfaces/http/middlewares/requirePermission';
+import { ResolveAccessContextUseCase } from '../../../../access/application/use-cases/ResolveAccessContextUseCase';
+import { defaultResolveAccessContext } from '../../../../access/infrastructure/defaultResolveAccessContext';
 import { ITokenService } from '../../../../auth/application/ports/ITokenService';
 import { ITenantRepository } from '../../../../tenant/domain/repositories/ITenantRepository';
 import { NotificationService } from '../../../../notifications/application/NotificationService';
@@ -82,9 +84,12 @@ export const createClientRouter = (
    * stack. The fallback emits in-app notifications and sends no mail — the
    * previous behaviour, now explicit rather than accidental.
    */
-  notificationService?: NotificationService
+  notificationService?: NotificationService,
+  /** Defaults to a real Prisma-backed one on `prisma`, for the direct-construction test call sites. */
+  resolveAccessContext?: ResolveAccessContextUseCase
 ): Router => {
   const router = Router({ mergeParams: true });
+  const accessContext = resolveAccessContext ?? defaultResolveAccessContext(prisma);
 
   // Repositories
   const clientRepo = new PrismaClientRepository(prisma);
@@ -144,33 +149,77 @@ export const createClientRouter = (
   // Middlewares applied to all routes in this router
   const authMw = authenticate(tokenService);
   const resolveTenantMw = resolveTenant(tenantRepository);
+  const loadAccessMw = loadAccess(accessContext);
 
   router.use(authMw);
   router.use(resolveTenantMw);
-  router.use(authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF]));
+  router.use(loadAccessMw);
 
-  router.get('/settings/custom-fields', clientController.getCustomFields);
-  router.get('/settings/custom-fields/template', clientController.downloadCustomFieldTemplate);
-  router.get('/import/template', clientController.downloadClientTemplate);
-  router.get('/settings/outcome-categories', clientController.getOutcomeCategories);
+  // settings.manage: custom fields and outcome categories are workspace
+  // configuration, same bucket as lookup lists (Slice 8) and role editing.
+  router.get('/settings/custom-fields', requirePermission('settings.manage'), clientController.getCustomFields);
+  router.get(
+    '/settings/custom-fields/template',
+    requirePermission('settings.manage'),
+    clientController.downloadCustomFieldTemplate
+  );
+  router.get('/import/template', requirePermission('companies.edit'), clientController.downloadClientTemplate);
+  router.get(
+    '/settings/outcome-categories',
+    requirePermission('settings.manage'),
+    clientController.getOutcomeCategories
+  );
 
-  router.post('/', clientController.createClient);
-  router.get('/search', clientController.searchClients);
-  router.get('/:clientId', clientController.getClient);
-  router.put('/:clientId', clientController.updateClient);
-  router.get('/:clientId/history', clientController.getHistory);
-  router.post('/:clientId/interactions', clientController.addInteraction);
-  router.get('/:clientId/related-counts', clientController.getClientRelatedCounts);
-  router.delete('/:clientId', clientController.archiveClient);
-  router.post('/:clientId/restore', clientController.restoreClient);
-  
-  router.post('/settings/custom-fields', clientController.defineCustomField);
-  router.patch('/settings/custom-fields/:fieldId', clientController.updateCustomField);
-  router.delete('/settings/custom-fields/:fieldId', clientController.deleteCustomField);
-  router.post('/settings/custom-fields/reorder', clientController.reorderCustomFields);
-  router.post('/settings/custom-fields/import', receiveSpreadsheet, clientController.importCustomFields);
-  router.post('/import', receiveSpreadsheet, clientController.importClients);
-  router.post('/settings/outcome-categories', clientController.defineOutcomeCategory);
+  router.post('/', requirePermission('companies.edit'), clientController.createClient);
+  router.get('/search', requirePermission('companies.view'), clientController.searchClients);
+  router.get('/:clientId', requirePermission('companies.view'), clientController.getClient);
+  router.put('/:clientId', requirePermission('companies.edit'), clientController.updateClient);
+  router.get('/:clientId/history', requirePermission('companies.view'), clientController.getHistory);
+  // D3: a NOTE is `notes.add`, everything else is `activities.add` — the
+  // exact check is body-dependent and lives in AddInteractionUseCase; this
+  // only screens out someone with neither. Full response-side redaction by
+  // permission (which fields/entries a role may even see) is Slice 4.
+  router.post(
+    '/:clientId/interactions',
+    requireAnyPermission(['activities.add', 'notes.add']),
+    clientController.addInteraction
+  );
+  router.get(
+    '/:clientId/related-counts',
+    requirePermission('companies.view'),
+    clientController.getClientRelatedCounts
+  );
+  router.delete('/:clientId', requirePermission('companies.delete'), clientController.archiveClient);
+  router.post('/:clientId/restore', requirePermission('companies.delete'), clientController.restoreClient);
+
+  router.post('/settings/custom-fields', requirePermission('settings.manage'), clientController.defineCustomField);
+  router.patch(
+    '/settings/custom-fields/:fieldId',
+    requirePermission('settings.manage'),
+    clientController.updateCustomField
+  );
+  router.delete(
+    '/settings/custom-fields/:fieldId',
+    requirePermission('settings.manage'),
+    clientController.deleteCustomField
+  );
+  router.post(
+    '/settings/custom-fields/reorder',
+    requirePermission('settings.manage'),
+    clientController.reorderCustomFields
+  );
+  router.post(
+    '/settings/custom-fields/import',
+    requirePermission('settings.manage'),
+    receiveSpreadsheet,
+    clientController.importCustomFields
+  );
+  router.post('/import', requirePermission('companies.edit'), receiveSpreadsheet, clientController.importClients);
+  router.post(
+    '/settings/outcome-categories',
+    requirePermission('settings.manage'),
+    clientController.defineOutcomeCategory
+  );
 
   return router;
 };

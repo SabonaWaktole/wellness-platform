@@ -1,13 +1,13 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { CustomFieldDefinition } from '../../domain/entities/CustomFieldDefinition';
 import { FieldType } from '../../domain/enums/FieldType';
 import { FieldRole } from '../../domain/enums/FieldRole';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 import { ICustomFieldWriteTransaction } from '../ports/ICustomFieldWriteTransaction';
 
 interface UpdateCustomFieldDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   fieldId: string;
   fieldName?: string;
   fieldType?: FieldType;
@@ -20,9 +20,7 @@ export class UpdateCustomFieldUseCase {
   constructor(private writeTransaction: ICustomFieldWriteTransaction) {}
 
   async execute(dto: UpdateCustomFieldDTO): Promise<CustomFieldDefinition> {
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER && dto.requestingUserRole !== UserRole.SUPER_ADMIN) {
-      throw new DomainError('Only Business Owners can edit custom fields');
-    }
+    dto.access.ensure('settings.manage');
 
     return this.writeTransaction.run(async ({ customFieldRepo, clientRepo }) => {
       const existing = await customFieldRepo.findById(dto.tenantId, dto.fieldId);

@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { v4 as uuidv4 } from 'uuid';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { IPasswordHasher } from '../ports/IPasswordHasher';
@@ -6,7 +7,7 @@ import { UserRole } from '../../domain/enums/UserRole';
 import { UnauthorizedError } from '../../domain/errors';
 
 export interface CreateUserInput {
-  callerRole: string;
+  access: AccessContext;
   /** Null for SUPER_ADMIN, who belongs to no workspace. */
   callerTenantId: string | null;
   /** The workspace the new account belongs to. */
@@ -50,22 +51,22 @@ export class CreateUserUseCase {
       throw new UnauthorizedError('Platform administrators cannot be created through this endpoint');
     }
 
-    if (input.callerRole === UserRole.SUPER_ADMIN) {
-      // May create either role, in any workspace — that is the point of the
-      // platform console.
-    } else if (input.callerRole === UserRole.BUSINESS_OWNER) {
-      // An owner may staff their own workspace and no other. `callerTenantId`
-      // comes from the verified token and `tenantId` from the resolved URL
-      // slug; `resolveTenant` already rejects a mismatch, so this is a second
-      // barrier rather than the only one.
+    if (!input.access.isPlatformOperator) {
+      // The platform operator may create either role, in any workspace — that
+      // is the point of the platform console (D2). Anyone else needs
+      // users.manage, and may staff their own workspace and no other.
+      // `callerTenantId` comes from the verified token and `tenantId` from the
+      // resolved URL slug; `resolveTenant` already rejects a mismatch, so this
+      // is a second barrier rather than the only one.
+      input.access.ensure('users.manage');
       if (input.callerTenantId !== input.tenantId) {
         throw new UnauthorizedError('You cannot create users in another workspace');
       }
+      // Choosing one of the five roles for a new account is Slice 5; until
+      // then a workspace administrator creates Staff (Sales User) accounts.
       if (input.role !== UserRole.STAFF) {
-        throw new UnauthorizedError('Business Owners can only create Staff accounts');
+        throw new UnauthorizedError('Workspace administrators can only create Staff accounts');
       }
-    } else {
-      throw new UnauthorizedError('Only Business Owners can create user accounts');
     }
 
     // Uniqueness is per workspace, matching how `LoginUseCase` looks an account

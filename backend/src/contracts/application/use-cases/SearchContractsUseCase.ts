@@ -1,6 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractRepository } from '../../domain/IContractRepository';
 import { ContractStatus } from '../../domain/Contract';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 /**
  * The contracts list, and the renewals worklist behind the same endpoint.
@@ -15,7 +15,7 @@ export class SearchContractsUseCase {
   async execute(input: {
     tenantId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
     params: {
       query?: string;
       status?: ContractStatus;
@@ -27,8 +27,8 @@ export class SearchContractsUseCase {
     };
   }) {
     const assignedUserId =
-      input.actingUserRole === UserRole.STAFF
-        ? input.actingUserId
+      input.access.ownOnly('contracts.validity.view')
+        ? input.access.userId
         : input.params.assignedUserId;
 
     return this.contractRepo.search({

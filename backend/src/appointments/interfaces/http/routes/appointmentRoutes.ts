@@ -14,8 +14,10 @@ import { PrismaUserRepository } from '../../../../auth/infrastructure/repositori
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../../main/interfaces/http/middlewares/resolveTenant';
-import { authorize } from '../../../../main/interfaces/http/middlewares/authorize';
-import { UserRole } from '../../../../auth/domain/enums/UserRole';
+import { loadAccess } from '../../../../main/interfaces/http/middlewares/loadAccess';
+import { requirePermission } from '../../../../main/interfaces/http/middlewares/requirePermission';
+import { ResolveAccessContextUseCase } from '../../../../access/application/use-cases/ResolveAccessContextUseCase';
+import { defaultResolveAccessContext } from '../../../../access/infrastructure/defaultResolveAccessContext';
 import { ITokenService } from '../../../../auth/application/ports/ITokenService';
 import { ITenantRepository } from '../../../../tenant/domain/repositories/ITenantRepository';
 import { NotificationService } from '../../../../notifications/application/NotificationService';
@@ -31,9 +33,11 @@ export const createAppointmentRouter = (
    * Optional with a local fallback for integration tests — see the same
    * parameter on `createClientRouter`.
    */
-  notificationService?: NotificationService
+  notificationService?: NotificationService,
+  resolveAccessContext?: ResolveAccessContextUseCase
 ): Router => {
   const router = Router({ mergeParams: true });
+  const accessContext = resolveAccessContext ?? defaultResolveAccessContext(prisma);
 
   // Repositories
   const appointmentRepo = new PrismaAppointmentRepository(prisma);
@@ -71,21 +75,34 @@ export const createAppointmentRouter = (
   // Middlewares applied to all routes in this router
   const authMw = authenticate(tokenService);
   const resolveTenantMw = resolveTenant(tenantRepository);
+  const loadAccessMw = loadAccess(accessContext);
 
   router.use(authMw);
   router.use(resolveTenantMw);
-  router.use(authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF]));
+  router.use(loadAccessMw);
 
-  router.post('/', appointmentController.createAppointment);
-  router.get('/search', appointmentController.searchAppointments);
-  router.get('/upcoming', appointmentController.getUpcomingAppointments);
-  router.get('/:appointmentId/history', appointmentController.getAppointmentHistory);
-  
-  router.put('/:appointmentId', appointmentController.updateAppointment);
-  
-  router.put('/:appointmentId/reschedule', appointmentController.rescheduleAppointment);
-  router.put('/:appointmentId/cancel', appointmentController.cancelAppointment);
-  router.put('/:appointmentId/status', appointmentController.updateAppointmentStatus);
+  router.post('/', requirePermission('activities.add'), appointmentController.createAppointment);
+  router.get('/search', requirePermission('calendar.view'), appointmentController.searchAppointments);
+  router.get('/upcoming', requirePermission('calendar.view'), appointmentController.getUpcomingAppointments);
+  router.get(
+    '/:appointmentId/history',
+    requirePermission('calendar.view'),
+    appointmentController.getAppointmentHistory
+  );
+
+  router.put('/:appointmentId', requirePermission('activities.add'), appointmentController.updateAppointment);
+
+  router.put(
+    '/:appointmentId/reschedule',
+    requirePermission('activities.add'),
+    appointmentController.rescheduleAppointment
+  );
+  router.put('/:appointmentId/cancel', requirePermission('activities.add'), appointmentController.cancelAppointment);
+  router.put(
+    '/:appointmentId/status',
+    requirePermission('activities.add'),
+    appointmentController.updateAppointmentStatus
+  );
 
   return router;
 };

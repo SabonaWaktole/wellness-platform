@@ -2,7 +2,8 @@ import { GetProductStockBreakdownUseCase } from './GetProductStockBreakdownUseCa
 import { IProductRepository, IStockLevelRepository } from '../../domain/repositories';
 import { Product } from '../../domain/Product';
 import { StockLevel } from '../../domain/StockLevel';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('GetProductStockBreakdownUseCase', () => {
   let useCase: GetProductStockBreakdownUseCase;
@@ -54,7 +55,7 @@ describe('GetProductStockBreakdownUseCase', () => {
     const result = await useCase.execute({
       tenantId: 'tenant1',
       productId: 'p1',
-      authorRole: UserRole.STAFF
+      access: salesUser()
     });
 
     expect(result.product.id).toBe('p1');
@@ -70,7 +71,7 @@ describe('GetProductStockBreakdownUseCase', () => {
     await expect(useCase.execute({
       tenantId: 'tenant1',
       productId: 'p-from-tenant2',
-      authorRole: UserRole.STAFF
+      access: salesUser()
     })).rejects.toThrow('Product p-from-tenant2 not found');
   });
 
@@ -78,7 +79,7 @@ describe('GetProductStockBreakdownUseCase', () => {
     await expect(useCase.execute({
       tenantId: 'tenant1',
       productId: 'p1',
-      authorRole: UserRole.SUPER_ADMIN
-    })).rejects.toThrow('Unauthorized');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 });

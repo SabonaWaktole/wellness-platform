@@ -1,10 +1,11 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { assertReachesQuotation } from './quotationAccess';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../domain/IQuotationLineItemRepository';
 import { IProductRepository, IWarehouseRepository, IStockLevelRepository } from '../../../inventory/domain/repositories';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { QuotationStatus } from '../../domain/Quotation';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { IQuotationWriteTransaction } from '../ports/IQuotationWriteTransaction';
 import { IQuotationDeliveryService } from '../QuotationDeliveryService';
 import { assertStockAvailable } from '../assertQuotationStockAvailable';
@@ -24,7 +25,7 @@ export class UpdateQuotationUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
     lineItems: Array<{ productId: string; warehouseId: string; quantity: number; unitPrice: number }>;
   }) {
     const quotation = await this.quotationRepo.findById(input.tenantId, input.quotationId);
@@ -32,9 +33,7 @@ export class UpdateQuotationUseCase {
       throw new Error('Quotation not found');
     }
 
-    if (input.actingUserRole === UserRole.STAFF && quotation.createdByUserId !== input.actingUserId) {
-      throw new Error('Unauthorized: Staff can only act on their own quotations');
-    }
+    assertReachesQuotation(quotation, input.access);
 
     /*
      * Rejected is editable too, on top of Draft — the client said no to

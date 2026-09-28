@@ -3,8 +3,9 @@ import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRepository';
 import { TenantProfileStore } from '../../infrastructure/TenantProfileStore';
 import { UpdateTenantSettingsUseCase } from '../../application/use-cases/UpdateTenantSettingsUseCase';
-import { UnauthorizedError } from '../../../auth/domain/errors';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { ZodError } from 'zod';
+import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 
 export class SettingsController {
   public router = Router({ mergeParams: true });
@@ -19,7 +20,7 @@ export class SettingsController {
 
   private initializeRoutes() {
     this.router.get('/', this.getSettings.bind(this));
-    this.router.put('/', this.updateSettings.bind(this));
+    this.router.put('/', requirePermission('settings.manage'), this.updateSettings.bind(this));
   }
 
   /**
@@ -74,7 +75,7 @@ export class SettingsController {
 
       await this.updateTenantSettingsUseCase.execute({
         tenantId,
-        requestingUserRole: req.user.role,
+        access: req.access!,
         patch: req.body,
       });
 
@@ -85,7 +86,7 @@ export class SettingsController {
       // cannot be told a change happened that did not.
       return this.getSettings(req, res);
     } catch (error: any) {
-      if (error instanceof UnauthorizedError) {
+      if (error instanceof PermissionDeniedError) {
         return res.status(403).json({ error: error.message });
       }
       if (error instanceof ZodError) {

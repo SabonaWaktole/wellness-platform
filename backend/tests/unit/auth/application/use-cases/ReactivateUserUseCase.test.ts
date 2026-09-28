@@ -2,6 +2,8 @@
 import { IUserRepository } from '@auth/domain/repositories/IUserRepository';
 import { User } from '@auth/domain/entities/User';
 import { UserRole } from '@auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 
 /**
  * Reactivation existed as a repository capability (`setActive(id, boolean)`)
@@ -50,7 +52,7 @@ describe('ReactivateUserUseCase', () => {
     userRepository.findById.mockResolvedValue(makeUser());
 
     const result = await useCase.execute({
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       tenantId: 'tenant1',
       userIdToReactivate: 'u1',
     });
@@ -59,11 +61,21 @@ describe('ReactivateUserUseCase', () => {
     expect(userRepository.setActive).toHaveBeenCalledWith('u1', true);
   });
 
+  it('D1: clears the access cache for the reactivated user', async () => {
+    userRepository.findById.mockResolvedValue(makeUser());
+    const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
+    useCase = new ReactivateUserUseCase(userRepository, permissionsChanged);
+
+    await useCase.execute({ access: administrator(), tenantId: 'tenant1', userIdToReactivate: 'u1' });
+
+    expect(permissionsChanged.userChanged).toHaveBeenCalledWith('u1');
+  });
+
   it('is idempotent â€” reactivating an active member succeeds and writes nothing', async () => {
     userRepository.findById.mockResolvedValue(makeUser({ isActive: true } as any));
 
     const result = await useCase.execute({
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       tenantId: 'tenant1',
       userIdToReactivate: 'u1',
     });
@@ -75,11 +87,11 @@ describe('ReactivateUserUseCase', () => {
   it('rejects a STAFF caller', async () => {
     await expect(
       useCase.execute({
-        requestingUserRole: UserRole.STAFF,
+        access: salesUser(),
         tenantId: 'tenant1',
         userIdToReactivate: 'u1',
       })
-    ).rejects.toThrow('Only Business Owners can reactivate');
+    ).rejects.toThrow(PermissionDeniedError);
 
     expect(userRepository.setActive).not.toHaveBeenCalled();
     // Authorisation is checked before the record is even read.
@@ -93,7 +105,7 @@ describe('ReactivateUserUseCase', () => {
 
     await expect(
       useCase.execute({
-        requestingUserRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         tenantId: 'tenant1',
         userIdToReactivate: 'u1',
       })
@@ -107,7 +119,7 @@ describe('ReactivateUserUseCase', () => {
 
     await expect(
       useCase.execute({
-        requestingUserRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         tenantId: 'tenant1',
         userIdToReactivate: 'nobody',
       })

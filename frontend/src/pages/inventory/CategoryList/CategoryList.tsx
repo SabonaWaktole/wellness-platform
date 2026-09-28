@@ -21,6 +21,7 @@ import { Sidebar } from '../../../components/layout/Sidebar/Sidebar';
 import { SettingsLayout } from '../../../components/layout/SettingsLayout/SettingsLayout';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useLogout } from '../../../hooks/useLogout';
+import { usePermissionScope } from '../../../hooks/usePermission';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { getUserDisplayName } from '../../../utils/userUtils';
 
@@ -38,8 +39,9 @@ const CategoryListContent: React.FC = () => {
     isPending: isCleaningUp,
   } = useArchiveCategories();
 
-  const { user } = useAuthStore();
-  const isBusinessOwner = user?.role === 'BUSINESS_OWNER';
+  // Creating/editing/cleaning up categories needs inventory.manage at ALL,
+  // not merely a grant — same reasoning as WarehouseList (FR-RBAC-07).
+  const isBusinessOwner = usePermissionScope('inventory.manage') === 'ALL';
 
   React.useEffect(() => {
     fetchCategories();

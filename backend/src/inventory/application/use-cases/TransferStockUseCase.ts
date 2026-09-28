@@ -1,7 +1,8 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IStockLevelRepository, IStockMovementRepository, IStockTransactionManager } from '../../domain/repositories';
 import { StockMovement, StockMovementType } from '../../domain/StockMovement';
 import { StockLevel } from '../../domain/StockLevel';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { randomUUID } from 'crypto';
 
 export interface TransferStockDTO {
@@ -12,7 +13,7 @@ export interface TransferStockDTO {
   quantity: number; // Always positive — represents the amount being moved
   reason?: string;
   authorUserId: string;
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -23,12 +24,10 @@ export class TransferStockUseCase {
   ) {}
 
   async execute(dto: TransferStockDTO): Promise<{ sourceStock: StockLevel; destStock: StockLevel; movement: StockMovement }> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can transfer stock.');
-    }
+    dto.access.ensure('inventory.manage');
 
-    if (dto.authorRole === UserRole.STAFF && dto.authorWarehouseId !== dto.fromWarehouseId) {
-      throw new Error('Unauthorized: You can only transfer stock out of your assigned warehouse.');
+    if (dto.access.ownOnly('inventory.manage') && dto.authorWarehouseId !== dto.fromWarehouseId) {
+      throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You can only transfer stock out of your assigned warehouse.');
     }
 
     if (dto.quantity <= 0) {

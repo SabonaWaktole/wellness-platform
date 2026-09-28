@@ -3,7 +3,8 @@ import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRe
 export interface GetUpcomingAppointmentsDTO {
   tenantId: string;
   userId: string;
-  role: string;
+  /** Slice 3: the caller's `calendar.view` scope. `OWN` sees only their own appointments. */
+  scope?: string | null;
   limit?: number;
 }
 
@@ -11,7 +12,7 @@ export class GetUpcomingAppointmentsUseCase {
   constructor(private readonly appointmentRepository: IAppointmentRepository) {}
 
   async execute(dto: GetUpcomingAppointmentsDTO) {
-    const assignedUserId = dto.role === 'STAFF' ? dto.userId : undefined;
+    const assignedUserId = dto.scope === 'OWN' ? dto.userId : undefined;
     const limit = dto.limit ?? 5;
 
     const appointments = await this.appointmentRepository.findUpcoming(

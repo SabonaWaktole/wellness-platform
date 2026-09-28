@@ -6,8 +6,9 @@ import { IStockLevelRepository } from '../../../inventory/domain/repositories';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('ApproveQuotationUseCase', () => {
   let useCase: ApproveQuotationUseCase;
@@ -54,7 +55,7 @@ describe('ApproveQuotationUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'owner-1',
-      actingUserRole: UserRole.BUSINESS_OWNER
+      access: administrator({ userId: 'owner-1' })
     });
 
     expect(result.quotation.status).toBe(QuotationStatus.Sent);
@@ -65,15 +66,15 @@ describe('ApproveQuotationUseCase', () => {
 
   it('should reject STAFF role', async () => {
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF
-    })).rejects.toThrow('Unauthorized: Only Business Owners can approve quotations');
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should reject if quotation not found', async () => {
     quotationRepo.findById.mockResolvedValue(null);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Quotation not found');
   });
 
@@ -82,7 +83,7 @@ describe('ApproveQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Invalid state transition');
   });
 
@@ -94,7 +95,7 @@ describe('ApproveQuotationUseCase', () => {
     );
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Insufficient stock for product p1 at warehouse w1');
 
     expect(quotationRepo.save).not.toHaveBeenCalled();

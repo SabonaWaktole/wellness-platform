@@ -9,7 +9,7 @@ import { Notification } from '../../domain/Notification';
 import { GetNotificationSettingsUseCase } from '../../application/GetNotificationSettingsUseCase';
 import { UpdateNotificationSettingsUseCase } from '../../application/UpdateNotificationSettingsUseCase';
 import { InvalidNotificationSettingsError } from '../../domain/NotificationSettings';
-import { UnauthorizedError } from '../../../auth/domain/errors';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { notificationSettingsSchema } from './schemas/notificationSettingsSchemas';
 import { ZodError } from 'zod';
 
@@ -118,12 +118,12 @@ export class NotificationController {
 
       const settings = await this.updateSettings.execute({
         tenantId: requireTenantId(req),
-        requestingUserRole: req.user!.role,
+        access: req.access!,
         patch,
       });
       res.json(settings.toJSON());
     } catch (error: any) {
-      if (error instanceof UnauthorizedError) {
+      if (error instanceof PermissionDeniedError) {
         return res.status(403).json({ error: error.message });
       }
       if (error instanceof InvalidNotificationSettingsError) {

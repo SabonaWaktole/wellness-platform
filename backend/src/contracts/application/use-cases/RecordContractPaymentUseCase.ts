@@ -1,3 +1,4 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { assertCanAccessContract } from './contractAccess';
 import { AuditAction } from '../../../audit/domain/AuditAction';
@@ -25,7 +26,7 @@ export class RecordContractPaymentUseCase {
     method?: string | null;
     note?: string | null;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
   }) {
     return this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
@@ -33,7 +34,7 @@ export class RecordContractPaymentUseCase {
         throw new Error('Contract not found');
       }
 
-      assertCanAccessContract(contract, input.actingUserId, input.actingUserRole);
+      assertCanAccessContract(contract, input.access);
 
       const payment = await repos.paymentRepo.findById(input.tenantId, input.paymentId);
       // The parent check is not redundant with this one: without it, a payment
@@ -68,7 +69,7 @@ export class RecordContractPaymentUseCase {
       await repos.auditTrail.record({
         tenantId: input.tenantId,
         userId: input.actingUserId,
-        userRole: input.actingUserRole,
+        userRole: input.access.auditRole,
         action: actionFor(changes, AuditAction.Update),
         entityType: 'ContractPayment',
         entityId: payment.id,

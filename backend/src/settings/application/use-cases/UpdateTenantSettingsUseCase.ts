@@ -1,12 +1,11 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { ITenantRepository, TenantSettingsUpdate } from '../../../tenant/domain/repositories/ITenantRepository';
 import { TenantProfileStore, TenantProfile } from '../../infrastructure/TenantProfileStore';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
-import { UnauthorizedError } from '../../../auth/domain/errors';
 import { updateTenantSettingsSchema } from '../../interfaces/http/schemas/settingsSchemas';
 
 export interface UpdateTenantSettingsDTO {
   tenantId: string;
-  requestingUserRole: string;
+  access: AccessContext;
   /** The raw request body. Parsed here — see the note below. */
   patch: unknown;
 }
@@ -18,12 +17,10 @@ export class UpdateTenantSettingsUseCase {
   ) {}
 
   async execute(dto: UpdateTenantSettingsDTO) {
-    // SUPER_ADMIN is not accepted: it has no business editing an individual
-    // tenant's company details, and admitting it here would re-open the kind of
-    // cross-tenant reach that Phase A Step 3 closed.
-    if (dto.requestingUserRole !== UserRole.BUSINESS_OWNER) {
-      throw new UnauthorizedError('Only Business Owners can update settings.');
-    }
+    // settings.manage (FR-RBAC-05). A bare SUPER_ADMIN never reaches this:
+    // resolveTenant refuses it on tenant routes, so the platform operator
+    // only gets here while impersonating the workspace, as before.
+    dto.access.ensure('settings.manage');
 
     // Validation happens HERE rather than via the usual validateRequest route
     // middleware, on purpose. That middleware calls `schema.parseAsync(req.body)`

@@ -2,7 +2,8 @@ import { GetPendingApprovalsUseCase } from './GetPendingApprovalsUseCase';
 import { IQuotationRepository } from '../../domain/IQuotationRepository';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('GetPendingApprovalsUseCase', () => {
   let useCase: GetPendingApprovalsUseCase;
@@ -26,7 +27,7 @@ describe('GetPendingApprovalsUseCase', () => {
 
     const result = await useCase.execute({
       tenantId: 'tenant-1',
-      actingUserRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(quotationRepo.findPendingApprovals).toHaveBeenCalledWith('tenant-1');
@@ -37,7 +38,7 @@ describe('GetPendingApprovalsUseCase', () => {
   it('should reject STAFF role', async () => {
     await expect(useCase.execute({
       tenantId: 'tenant-1',
-      actingUserRole: UserRole.STAFF
-    })).rejects.toThrow('Unauthorized: Only Business Owners can view pending approvals');
+      access: salesUser()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 });

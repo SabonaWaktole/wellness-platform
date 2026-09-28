@@ -3,8 +3,9 @@ import { UpdateCategoryUseCase } from './UpdateCategoryUseCase';
 import { DeleteCategoryUseCase } from './DeleteCategoryUseCase';
 import { ICategoryRepository, IProductRepository } from '../../domain/repositories';
 import { Category } from '../../domain/Category';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { CategoryInUseError } from '../../domain/inUseErrors';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('Category Use Cases (Business Owner only)', () => {
   let categoryRepo: jest.Mocked<ICategoryRepository>;
@@ -49,7 +50,7 @@ describe('Category Use Cases (Business Owner only)', () => {
       const result = await createUseCase.execute({
         tenantId: 'tenant1',
         name: 'Electronics',
-        authorRole: UserRole.BUSINESS_OWNER
+        access: administrator()
       });
 
       expect(result.name).toBe('Electronics');
@@ -61,16 +62,16 @@ describe('Category Use Cases (Business Owner only)', () => {
       await expect(createUseCase.execute({
         tenantId: 'tenant1',
         name: 'Electronics',
-        authorRole: UserRole.STAFF
-      })).rejects.toThrow('Unauthorized: Only Business Owners can manage categories.');
+        access: salesUser()
+      })).rejects.toThrow(PermissionDeniedError);
     });
 
     it('should reject SUPER_ADMIN', async () => {
       await expect(createUseCase.execute({
         tenantId: 'tenant1',
         name: 'Electronics',
-        authorRole: UserRole.SUPER_ADMIN
-      })).rejects.toThrow('Unauthorized');
+        access: reception()
+      })).rejects.toThrow(PermissionDeniedError);
     });
   });
 
@@ -91,7 +92,7 @@ describe('Category Use Cases (Business Owner only)', () => {
         tenantId: 'tenant1',
         id: 'c1',
         name: 'New Name',
-        authorRole: UserRole.BUSINESS_OWNER
+        access: administrator()
       });
 
       expect(result.name).toBe('New Name');
@@ -103,8 +104,8 @@ describe('Category Use Cases (Business Owner only)', () => {
         tenantId: 'tenant1',
         id: 'c1',
         name: 'New Name',
-        authorRole: UserRole.STAFF
-      })).rejects.toThrow('Unauthorized');
+        access: salesUser()
+      })).rejects.toThrow(PermissionDeniedError);
     });
 
     it('should enforce tenant isolation: reject category not found for tenant', async () => {
@@ -114,7 +115,7 @@ describe('Category Use Cases (Business Owner only)', () => {
         tenantId: 'tenant1',
         id: 'c-from-tenant2',
         name: 'Hijack',
-        authorRole: UserRole.BUSINESS_OWNER
+        access: administrator()
       })).rejects.toThrow('Category c-from-tenant2 not found');
     });
   });
@@ -136,7 +137,7 @@ describe('Category Use Cases (Business Owner only)', () => {
       await deleteUseCase.execute({
         tenantId: 'tenant1',
         id: 'c1',
-        authorRole: UserRole.BUSINESS_OWNER
+        access: administrator()
       });
 
       expect(categoryRepo.delete).toHaveBeenCalledWith('tenant1', 'c1');
@@ -151,7 +152,7 @@ describe('Category Use Cases (Business Owner only)', () => {
       await expect(deleteUseCase.execute({
         tenantId: 'tenant1',
         id: 'c1',
-        authorRole: UserRole.BUSINESS_OWNER
+        access: administrator()
       })).rejects.toThrow(CategoryInUseError);
 
       // Confirm delete was NEVER called
@@ -162,16 +163,16 @@ describe('Category Use Cases (Business Owner only)', () => {
       await expect(deleteUseCase.execute({
         tenantId: 'tenant1',
         id: 'c1',
-        authorRole: UserRole.STAFF
-      })).rejects.toThrow('Unauthorized');
+        access: salesUser()
+      })).rejects.toThrow(PermissionDeniedError);
     });
 
     it('should reject SUPER_ADMIN', async () => {
       await expect(deleteUseCase.execute({
         tenantId: 'tenant1',
         id: 'c1',
-        authorRole: UserRole.SUPER_ADMIN
-      })).rejects.toThrow('Unauthorized');
+        access: reception()
+      })).rejects.toThrow(PermissionDeniedError);
     });
   });
 });

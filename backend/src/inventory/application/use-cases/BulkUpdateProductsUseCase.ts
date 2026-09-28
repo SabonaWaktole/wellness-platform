@@ -1,5 +1,6 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { IProductRepository } from '../../domain/repositories';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { DeleteProductUseCase } from './DeleteProductUseCase';
 
 export type BulkProductAction = 'archive' | 'unarchive' | 'delete';
@@ -8,7 +9,7 @@ export interface BulkUpdateProductsDTO {
   tenantId: string;
   ids: string[];
   action: BulkProductAction;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 export interface BulkUpdateFailure {
@@ -39,9 +40,7 @@ export class BulkUpdateProductsUseCase {
   ) {}
 
   async execute(dto: BulkUpdateProductsDTO): Promise<BulkUpdateProductsResult> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can run bulk product actions.');
-    }
+    dto.access.ensureScope('inventory.manage', PermissionScope.All);
     if (dto.ids.length === 0) {
       throw new Error('Select at least one product.');
     }
@@ -90,7 +89,7 @@ export class BulkUpdateProductsUseCase {
         await this.deleteProductUseCase.execute({
           tenantId: dto.tenantId,
           id,
-          authorRole: dto.authorRole,
+          access: dto.access,
         });
         succeeded.push(id);
       } catch (error: any) {

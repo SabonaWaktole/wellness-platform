@@ -3,7 +3,8 @@ import { IStockLevelRepository, IStockMovementRepository, IStockTransactionManag
 import { StockLevel } from '../../domain/StockLevel';
 import { NegativeStockError } from '../../domain/errors';
 import { StockMovementType } from '../../domain/StockMovement';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('TransferStockUseCase', () => {
   let useCase: TransferStockUseCase;
@@ -68,7 +69,7 @@ describe('TransferStockUseCase', () => {
       quantity: 20,
       reason: 'Rebalancing',
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -102,7 +103,7 @@ describe('TransferStockUseCase', () => {
       toWarehouseId: 'w2',
       quantity: 20, // More than source has
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow(NegativeStockError);
 
@@ -141,7 +142,7 @@ describe('TransferStockUseCase', () => {
       toWarehouseId: 'w2',
       quantity: 10,
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow('Stock level not found for product p1 at source warehouse w1');
   });
@@ -159,7 +160,7 @@ describe('TransferStockUseCase', () => {
       toWarehouseId: 'w2',
       quantity: 10,
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow('Stock level not found for product p1 at destination warehouse w2');
   });
@@ -172,8 +173,8 @@ describe('TransferStockUseCase', () => {
       toWarehouseId: 'w2',
       quantity: 10,
       authorUserId: 'u1',
-      authorRole: UserRole.SUPER_ADMIN as any
-    })).rejects.toThrow('Unauthorized: Only Business Owners and Staff can transfer stock.');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should reject zero or negative transfer quantity', async () => {
@@ -184,7 +185,7 @@ describe('TransferStockUseCase', () => {
       toWarehouseId: 'w2',
       quantity: 0,
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow('Transfer quantity must be positive.');
 
@@ -195,7 +196,7 @@ describe('TransferStockUseCase', () => {
       toWarehouseId: 'w2',
       quantity: -5,
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow('Transfer quantity must be positive.');
   });

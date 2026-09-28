@@ -1,7 +1,8 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IProductRepository } from '../../domain/repositories';
 import { Product } from '../../domain/Product';
 import { DuplicateSkuError } from '../../domain/inUseErrors';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface UpdateProductDTO {
   tenantId: string;
@@ -16,7 +17,7 @@ export interface UpdateProductDTO {
   tags?: string[];
   lowStockThreshold?: number;
   isArchived?: boolean;
-  authorRole: UserRole;
+  access: AccessContext;
   authorWarehouseId?: string | null;
 }
 
@@ -24,12 +25,10 @@ export class UpdateProductUseCase {
   constructor(private productRepo: IProductRepository) {}
 
   async execute(dto: UpdateProductDTO): Promise<Product> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can update products.');
-    }
+    dto.access.ensure('inventory.manage');
 
-    if (dto.authorRole === UserRole.STAFF && !dto.authorWarehouseId) {
-      throw new Error('Unauthorized: You must be assigned to a warehouse to update products.');
+    if (dto.access.ownOnly('inventory.manage') && !dto.authorWarehouseId) {
+      throw new PermissionDeniedError('inventory.manage', 'Unauthorized: You must be assigned to a warehouse to update products.');
     }
 
     const product = await this.productRepo.findById(dto.tenantId, dto.id);

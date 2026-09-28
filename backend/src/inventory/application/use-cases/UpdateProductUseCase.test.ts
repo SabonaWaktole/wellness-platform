@@ -1,7 +1,8 @@
 import { UpdateProductUseCase } from './UpdateProductUseCase';
 import { IProductRepository } from '../../domain/repositories';
 import { Product } from '../../domain/Product';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('UpdateProductUseCase', () => {
   let useCase: UpdateProductUseCase;
@@ -37,7 +38,7 @@ describe('UpdateProductUseCase', () => {
       id: 'p1',
       name: 'New Name',
       price: 150,
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(result.name).toBe('New Name');
@@ -56,7 +57,7 @@ describe('UpdateProductUseCase', () => {
       tenantId: 'tenant1',
       id: 'p1',
       name: 'New Name',
-      authorRole: UserRole.STAFF, authorWarehouseId: 'w1',
+      access: salesUser(), authorWarehouseId: 'w1',
       stockLevels: [{ quantity: 9999 }] // Ignored by typescript interface, but passing to test runtime behavior
     };
 
@@ -73,7 +74,7 @@ describe('UpdateProductUseCase', () => {
       tenantId: 'tenant1',
       id: 'p1',
       name: 'New Name',
-      authorRole: UserRole.SUPER_ADMIN as any
-    })).rejects.toThrow('Unauthorized: Only Business Owners and Staff can update products.');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
   });
 });

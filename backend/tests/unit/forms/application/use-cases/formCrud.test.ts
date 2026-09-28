@@ -18,7 +18,8 @@ import { FormVersionConflictError } from '../../../../../src/forms/application/u
 import { IClientFormRepository } from '../../../../../src/forms/domain/repositories/IClientFormRepository';
 import { ClientForm } from '../../../../../src/forms/domain/entities/ClientForm';
 import { FormStatus } from '../../../../../src/forms/domain/enums/FormStatus';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { administrator, salesUser } from '../../../../support/access';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
 import { emptyPageGeometry } from '../../../../../src/forms/domain/value-objects/FormDocument';
 
 const mockFormRepo = (): jest.Mocked<IClientFormRepository> => ({
@@ -89,7 +90,7 @@ describe('ListSubmissionsUseCase', () => {
     ];
     submissionRepo.listByForm.mockResolvedValue(submissions);
 
-    const result = await new ListSubmissionsUseCase(submissionRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1');
+    const result = await new ListSubmissionsUseCase(submissionRepo).execute('t1', administrator(), 'f1');
     expect(result).toBe(submissions);
     expect(submissionRepo.listByForm).toHaveBeenCalledWith('t1', 'f1');
   });
@@ -97,8 +98,8 @@ describe('ListSubmissionsUseCase', () => {
   it('refuses a staff member', async () => {
     const submissionRepo = mockSubmissionRepo();
     await expect(
-      new ListSubmissionsUseCase(submissionRepo).execute('t1', UserRole.STAFF, 'f1')
-    ).rejects.toThrow('Only Business Owners can view form submissions');
+      new ListSubmissionsUseCase(submissionRepo).execute('t1', salesUser(), 'f1')
+    ).rejects.toThrow(PermissionDeniedError);
   });
 });
 
@@ -111,7 +112,7 @@ describe('GetSubmissionUseCase', () => {
     submissionRepo.findById.mockResolvedValue(submission);
     versionRepo.findById.mockResolvedValue(version);
 
-    const result = await new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 's1');
+    const result = await new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', administrator(), 'f1', 's1');
     expect(result).toEqual({ submission, version });
   });
 
@@ -121,7 +122,7 @@ describe('GetSubmissionUseCase', () => {
     const submission = FormSubmission.create({ id: 's1', tenantId: 't1', formId: 'other-form', formVersionId: 'v1', data: {} });
     submissionRepo.findById.mockResolvedValue(submission);
 
-    const result = await new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 's1');
+    const result = await new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', administrator(), 'f1', 's1');
     expect(result).toBeNull();
   });
 
@@ -130,7 +131,7 @@ describe('GetSubmissionUseCase', () => {
     const versionRepo = mockVersionRepo();
     submissionRepo.findById.mockResolvedValue(null);
 
-    const result = await new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 'gone');
+    const result = await new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', administrator(), 'f1', 'gone');
     expect(result).toBeNull();
   });
 
@@ -138,8 +139,8 @@ describe('GetSubmissionUseCase', () => {
     const submissionRepo = mockSubmissionRepo();
     const versionRepo = mockVersionRepo();
     await expect(
-      new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', UserRole.STAFF, 'f1', 's1')
-    ).rejects.toThrow('Only Business Owners can view form submissions');
+      new GetSubmissionUseCase(submissionRepo, versionRepo).execute('t1', salesUser(), 'f1', 's1')
+    ).rejects.toThrow(PermissionDeniedError);
   });
 });
 
@@ -188,7 +189,7 @@ describe('CreateClientFormUseCase', () => {
   it('creates a blank draft form', async () => {
     const form = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       name: 'Occupational Health Intake',
     });
 
@@ -201,8 +202,8 @@ describe('CreateClientFormUseCase', () => {
 
   it('refuses a staff member', async () => {
     await expect(
-      useCase.execute({ tenantId: 't1', requestingUserRole: UserRole.STAFF, name: 'X' })
-    ).rejects.toThrow('Only Business Owners can create client forms');
+      useCase.execute({ tenantId: 't1', access: salesUser(), name: 'X' })
+    ).rejects.toThrow(PermissionDeniedError);
     expect(formRepo.save).not.toHaveBeenCalled();
   });
 
@@ -210,7 +211,7 @@ describe('CreateClientFormUseCase', () => {
     formRepo.save.mockRejectedValue(new Error('Unique constraint failed on the fields: (`tenantId`,`name`)'));
 
     await expect(
-      useCase.execute({ tenantId: 't1', requestingUserRole: UserRole.BUSINESS_OWNER, name: 'Taken' })
+      useCase.execute({ tenantId: 't1', access: administrator(), name: 'Taken' })
     ).rejects.toThrow('A form named "Taken" already exists.');
   });
 });
@@ -234,7 +235,7 @@ describe('DuplicateClientFormUseCase', () => {
 
     const copy = await new DuplicateClientFormUseCase(formRepo).execute(
       't1',
-      UserRole.BUSINESS_OWNER,
+      administrator(),
       'f1',
       'Copy of Original'
     );
@@ -249,7 +250,7 @@ describe('DuplicateClientFormUseCase', () => {
     const formRepo = mockFormRepo();
     formRepo.findById.mockResolvedValue(null);
     await expect(
-      new DuplicateClientFormUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'gone', 'X')
+      new DuplicateClientFormUseCase(formRepo).execute('t1', administrator(), 'gone', 'X')
     ).rejects.toThrow('Form not found');
   });
 });
@@ -274,7 +275,7 @@ describe('SaveAsTemplateUseCase', () => {
 
     const template = await new SaveAsTemplateUseCase(formRepo).execute(
       't1',
-      UserRole.BUSINESS_OWNER,
+      administrator(),
       'f1',
       'Intake Template'
     );
@@ -290,15 +291,15 @@ describe('SaveAsTemplateUseCase', () => {
     formRepo.findById.mockResolvedValue(source);
     formRepo.save.mockResolvedValue();
 
-    const template = await new SaveAsTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 'T');
+    const template = await new SaveAsTemplateUseCase(formRepo).execute('t1', administrator(), 'f1', 'T');
     expect(template.layout.pages[0].sections[0].id).not.toBe('s1');
   });
 
   it('refuses a staff member', async () => {
     const formRepo = mockFormRepo();
     await expect(
-      new SaveAsTemplateUseCase(formRepo).execute('t1', UserRole.STAFF, 'f1', 'T')
-    ).rejects.toThrow('Only Business Owners can manage form templates');
+      new SaveAsTemplateUseCase(formRepo).execute('t1', salesUser(), 'f1', 'T')
+    ).rejects.toThrow(PermissionDeniedError);
     expect(formRepo.findById).not.toHaveBeenCalled();
   });
 
@@ -306,7 +307,7 @@ describe('SaveAsTemplateUseCase', () => {
     const formRepo = mockFormRepo();
     formRepo.findById.mockResolvedValue(null);
     await expect(
-      new SaveAsTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'gone', 'T')
+      new SaveAsTemplateUseCase(formRepo).execute('t1', administrator(), 'gone', 'T')
     ).rejects.toThrow('Form not found');
   });
 });
@@ -331,7 +332,7 @@ describe('CreateFormFromTemplateUseCase', () => {
 
     const form = await new CreateFormFromTemplateUseCase(formRepo).execute(
       't1',
-      UserRole.BUSINESS_OWNER,
+      administrator(),
       't-1',
       'From Template'
     );
@@ -345,15 +346,15 @@ describe('CreateFormFromTemplateUseCase', () => {
   it('refuses a staff member', async () => {
     const formRepo = mockFormRepo();
     await expect(
-      new CreateFormFromTemplateUseCase(formRepo).execute('t1', UserRole.STAFF, 't-1', 'X')
-    ).rejects.toThrow('Only Business Owners can manage form templates');
+      new CreateFormFromTemplateUseCase(formRepo).execute('t1', salesUser(), 't-1', 'X')
+    ).rejects.toThrow(PermissionDeniedError);
   });
 
   it('404s a template that does not exist', async () => {
     const formRepo = mockFormRepo();
     formRepo.findById.mockResolvedValue(null);
     await expect(
-      new CreateFormFromTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'gone', 'X')
+      new CreateFormFromTemplateUseCase(formRepo).execute('t1', administrator(), 'gone', 'X')
     ).rejects.toThrow('Template not found');
   });
 
@@ -363,7 +364,7 @@ describe('CreateFormFromTemplateUseCase', () => {
       ClientForm.create({ id: 'f1', tenantId: 't1', name: 'Ordinary', isTemplate: false })
     );
     await expect(
-      new CreateFormFromTemplateUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1', 'X')
+      new CreateFormFromTemplateUseCase(formRepo).execute('t1', administrator(), 'f1', 'X')
     ).rejects.toThrow('Template not found');
   });
 });
@@ -375,7 +376,7 @@ describe('DeleteClientFormUseCase', () => {
       ClientForm.create({ id: 'f1', tenantId: 't1', name: 'Extra', isDefault: false })
     );
 
-    await new DeleteClientFormUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1');
+    await new DeleteClientFormUseCase(formRepo).execute('t1', administrator(), 'f1');
     expect(formRepo.softDelete).toHaveBeenCalledWith('t1', 'f1');
   });
 
@@ -390,7 +391,7 @@ describe('DeleteClientFormUseCase', () => {
     );
 
     await expect(
-      new DeleteClientFormUseCase(formRepo).execute('t1', UserRole.BUSINESS_OWNER, 'f1')
+      new DeleteClientFormUseCase(formRepo).execute('t1', administrator(), 'f1')
     ).rejects.toThrow('client-intake form');
     expect(formRepo.softDelete).not.toHaveBeenCalled();
   });
@@ -398,8 +399,8 @@ describe('DeleteClientFormUseCase', () => {
   it('refuses a staff member', async () => {
     const formRepo = mockFormRepo();
     await expect(
-      new DeleteClientFormUseCase(formRepo).execute('t1', UserRole.STAFF, 'f1')
-    ).rejects.toThrow('Only Business Owners can delete client forms');
+      new DeleteClientFormUseCase(formRepo).execute('t1', salesUser(), 'f1')
+    ).rejects.toThrow(PermissionDeniedError);
   });
 });
 
@@ -419,7 +420,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
   it('renames a form and bumps its version', async () => {
     const result = await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'f1',
       expectedVersion: 2,
       name: 'New Name',
@@ -434,7 +435,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
     await expect(
       useCase.execute({
         tenantId: 't1',
-        requestingUserRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         formId: 'f1',
         expectedVersion: 2,
         name: 'New Name',
@@ -446,7 +447,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
     await expect(
       useCase.execute({
         tenantId: 't1',
-        requestingUserRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         formId: 'f1',
         expectedVersion: 2,
         status: FormStatus.PUBLISHED,
@@ -461,7 +462,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
 
     await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'f1',
       expectedVersion: published.version,
       status: FormStatus.PUBLISHED,
@@ -478,7 +479,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
     await expect(
       useCase.execute({
         tenantId: 't1',
-        requestingUserRole: UserRole.BUSINESS_OWNER,
+        access: administrator(),
         formId: 'f1',
         expectedVersion: 2,
         isDefault: false,
@@ -498,7 +499,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
 
     await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'f1',
       expectedVersion: 2,
       isDefault: true,
@@ -518,7 +519,7 @@ describe('UpdateClientFormSettingsUseCase', () => {
 
     await useCase.execute({
       tenantId: 't1',
-      requestingUserRole: UserRole.BUSINESS_OWNER,
+      access: administrator(),
       formId: 'f1',
       expectedVersion: 2,
       isDefault: true,

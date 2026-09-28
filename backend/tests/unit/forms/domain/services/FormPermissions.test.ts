@@ -1,5 +1,6 @@
 import { FormPermissions, FormCapability } from '../../../../../src/forms/domain/services/FormPermissions';
-import { UserRole } from '../../../../../src/auth/domain/enums/UserRole';
+import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
+import { accessWith, administrator, platformOperator, salesManager, salesUser } from '../../../../support/access';
 
 const CAPABILITIES: FormCapability[] = [
   'forms:create',
@@ -11,19 +12,25 @@ const CAPABILITIES: FormCapability[] = [
 ];
 
 describe('FormPermissions', () => {
-  it.each(CAPABILITIES)('allows BUSINESS_OWNER for %s', (capability) => {
-    expect(FormPermissions.can(UserRole.BUSINESS_OWNER, capability)).toBe(true);
+  it.each(CAPABILITIES)('allows the Administrator (forms.manage) for %s', (capability) => {
+    expect(FormPermissions.can(administrator(), capability)).toBe(true);
   });
 
-  it.each(CAPABILITIES)('allows SUPER_ADMIN for %s', (capability) => {
-    expect(FormPermissions.can(UserRole.SUPER_ADMIN, capability)).toBe(true);
+  it.each(CAPABILITIES)('allows the platform operator for %s', (capability) => {
+    expect(FormPermissions.can(platformOperator(), capability)).toBe(true);
   });
 
-  it.each(CAPABILITIES)('denies STAFF for %s', (capability) => {
-    expect(FormPermissions.can(UserRole.STAFF, capability)).toBe(false);
+  it.each(CAPABILITIES)('denies a Sales User for %s', (capability) => {
+    expect(FormPermissions.can(salesUser(), capability)).toBe(false);
   });
 
-  it('denies an unrecognised role string', () => {
-    expect(FormPermissions.can('NOT_A_ROLE', 'forms:edit')).toBe(false);
+  it('FR-RBAC-05 follows forms.manage, not the role name', () => {
+    expect(FormPermissions.can(accessWith({ 'forms.manage': true }), 'forms:publish')).toBe(true);
+    expect(FormPermissions.can(salesManager(), 'forms:publish')).toBe(false);
+  });
+
+  it('ensure() throws PermissionDeniedError for a caller without forms.manage', () => {
+    expect(() => FormPermissions.ensure(salesUser(), 'forms:edit')).toThrow(PermissionDeniedError);
+    expect(() => FormPermissions.ensure(administrator(), 'forms:edit')).not.toThrow();
   });
 });

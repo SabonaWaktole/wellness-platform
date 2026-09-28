@@ -26,8 +26,10 @@ import { MediaService } from '../../../../media/MediaService';
 import { ACCEPTED_MIME, MAX_UPLOAD_BYTES } from '../../../../media/MediaService';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../../main/interfaces/http/middlewares/resolveTenant';
-import { authorize } from '../../../../main/interfaces/http/middlewares/authorize';
-import { UserRole } from '../../../../auth/domain/enums/UserRole';
+import { loadAccess } from '../../../../main/interfaces/http/middlewares/loadAccess';
+import { requirePermission } from '../../../../main/interfaces/http/middlewares/requirePermission';
+import { ResolveAccessContextUseCase } from '../../../../access/application/use-cases/ResolveAccessContextUseCase';
+import { defaultResolveAccessContext } from '../../../../access/infrastructure/defaultResolveAccessContext';
 import { ITokenService } from '../../../../auth/application/ports/ITokenService';
 import { ITenantRepository } from '../../../../tenant/domain/repositories/ITenantRepository';
 
@@ -75,9 +77,11 @@ const receiveImage = (req: Request, res: Response, next: NextFunction) => {
 export const createFormRouter = (
   prisma: PrismaClient,
   tokenService: ITokenService,
-  tenantRepository: ITenantRepository
+  tenantRepository: ITenantRepository,
+  resolveAccessContext?: ResolveAccessContextUseCase
 ): Router => {
   const router = Router({ mergeParams: true });
+  const accessContext = resolveAccessContext ?? defaultResolveAccessContext(prisma);
 
   const formRepo = new PrismaClientFormRepository(prisma);
   const formVersionRepo = new PrismaFormVersionRepository(prisma);
@@ -132,30 +136,42 @@ export const createFormRouter = (
 
   router.use(authenticate(tokenService));
   router.use(resolveTenant(tenantRepository));
-  router.use(authorize([UserRole.BUSINESS_OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN]));
+  router.use(loadAccess(accessContext));
 
-  router.get('/', formController.listForms);
-  router.post('/', formController.createForm);
+  // companies.view: every one of the five roles holds it — reads stay open
+  // the way they were to STAFF, since the client create/edit page renders
+  // from '/default'. forms.manage (D8, Administrator only by default) gates
+  // every write, matching what FormPermissions already enforced internally.
+  router.get('/', requirePermission('companies.view'), formController.listForms);
+  router.post('/', requirePermission('forms.manage'), formController.createForm);
 
   // Static paths before '/:formId': that param would otherwise swallow
   // '/default' or '/templates' and try to look up a form whose id is the
   // literal string.
-  router.get('/default', formController.getDefaultForm);
-  router.get('/templates', formController.listTemplates);
-  router.post('/templates/:templateId/instantiate', formController.createFormFromTemplate);
+  router.get('/default', requirePermission('companies.view'), formController.getDefaultForm);
+  router.get('/templates', requirePermission('companies.view'), formController.listTemplates);
+  router.post(
+    '/templates/:templateId/instantiate',
+    requirePermission('forms.manage'),
+    formController.createFormFromTemplate
+  );
 
-  router.get('/:formId', formController.getForm);
-  router.patch('/:formId', formController.updateSettings);
-  router.delete('/:formId', formController.deleteForm);
-  router.post('/:formId/duplicate', formController.duplicateForm);
-  router.post('/:formId/save-as-template', formController.saveAsTemplate);
-  router.put('/:formId/layout', formController.updateLayout);
-  router.post('/:formId/assets', receiveImage, formController.uploadAsset);
-  router.post('/:formId/publish', formController.publishForm);
-  router.get('/:formId/versions', formController.listVersions);
-  router.get('/:formId/versions/:versionNumber', formController.getVersion);
-  router.get('/:formId/submissions', formController.listSubmissions);
-  router.get('/:formId/submissions/:submissionId', formController.getSubmission);
+  router.get('/:formId', requirePermission('companies.view'), formController.getForm);
+  router.patch('/:formId', requirePermission('forms.manage'), formController.updateSettings);
+  router.delete('/:formId', requirePermission('forms.manage'), formController.deleteForm);
+  router.post('/:formId/duplicate', requirePermission('forms.manage'), formController.duplicateForm);
+  router.post('/:formId/save-as-template', requirePermission('forms.manage'), formController.saveAsTemplate);
+  router.put('/:formId/layout', requirePermission('forms.manage'), formController.updateLayout);
+  router.post('/:formId/assets', requirePermission('forms.manage'), receiveImage, formController.uploadAsset);
+  router.post('/:formId/publish', requirePermission('forms.manage'), formController.publishForm);
+  router.get('/:formId/versions', requirePermission('companies.view'), formController.listVersions);
+  router.get('/:formId/versions/:versionNumber', requirePermission('companies.view'), formController.getVersion);
+  router.get('/:formId/submissions', requirePermission('companies.view'), formController.listSubmissions);
+  router.get(
+    '/:formId/submissions/:submissionId',
+    requirePermission('companies.view'),
+    formController.getSubmission
+  );
 
   return router;
 };

@@ -3,7 +3,8 @@ import { IStockLevelRepository, IStockMovementRepository } from '../../domain/re
 import { StockLevel } from '../../domain/StockLevel';
 import { NegativeStockError } from '../../domain/errors';
 import { StockMovementType } from '../../domain/StockMovement';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { administrator, reception, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('AdjustStockUseCase', () => {
   let useCase: AdjustStockUseCase;
@@ -39,7 +40,7 @@ describe('AdjustStockUseCase', () => {
       quantityChange: 10,
       reason: 'Received shipment',
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     });
 
@@ -67,7 +68,7 @@ describe('AdjustStockUseCase', () => {
       quantityChange: -15,
       reason: 'Damaged goods',
       authorUserId: 'u1',
-      authorRole: UserRole.BUSINESS_OWNER
+      access: administrator()
     });
 
     expect(result.stockLevel.quantity).toBe(5);
@@ -88,7 +89,7 @@ describe('AdjustStockUseCase', () => {
       quantityChange: -10,
       reason: 'Removing stock',
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow(NegativeStockError);
 
@@ -106,7 +107,7 @@ describe('AdjustStockUseCase', () => {
       quantityChange: 5,
       reason: 'Test',
       authorUserId: 'u1',
-      authorRole: UserRole.STAFF,
+      access: salesUser(),
       authorWarehouseId: 'w1'
     })).rejects.toThrow('Stock level not found for product p1 at warehouse w1');
 
@@ -122,8 +123,8 @@ describe('AdjustStockUseCase', () => {
       quantityChange: 5,
       reason: 'Test',
       authorUserId: 'u1',
-      authorRole: UserRole.SUPER_ADMIN
-    })).rejects.toThrow('Unauthorized');
+      access: reception()
+    })).rejects.toThrow(PermissionDeniedError);
 
     expect(stockLevelRepo.findByProductAndWarehouse).not.toHaveBeenCalled();
   });

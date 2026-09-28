@@ -1,12 +1,13 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { PermissionScope } from '../../../access/domain/PermissionScope';
 import { IProductImageRepository, IProductRepository } from '../../domain/repositories';
 import { ProductInUseError } from '../../domain/inUseErrors';
 import { IProductImageStorage } from '../ports/IProductImageStorage';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface DeleteProductDTO {
   tenantId: string;
   id: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 /**
@@ -26,9 +27,7 @@ export class DeleteProductUseCase {
   async execute(dto: DeleteProductDTO): Promise<void> {
     // Deleting is destructive and unscoped by warehouse, so unlike editing it
     // stays with the business owner.
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER) {
-      throw new Error('Unauthorized: Only Business Owners can delete products.');
-    }
+    dto.access.ensureScope('inventory.manage', PermissionScope.All);
 
     const product = await this.productRepo.findById(dto.tenantId, dto.id);
     if (!product) {

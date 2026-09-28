@@ -1,11 +1,11 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IIntegrationRepository } from '../../domain/repositories/IIntegrationRepository';
 import { Integration } from '../../domain/entities/Integration';
-import { UserRole } from '@auth/domain/enums/UserRole';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ConnectIntegrationDTO {
   tenantId: string;
-  authorRole: UserRole;
+  access: AccessContext;
   provider: string;
   config?: Record<string, any>;
 }
@@ -14,9 +14,7 @@ export class ConnectIntegrationUseCase {
   constructor(private integrationRepository: IIntegrationRepository) {}
 
   async execute(dto: ConnectIntegrationDTO): Promise<Integration> {
-    if (dto.authorRole === UserRole.STAFF || dto.authorRole === UserRole.SUPER_ADMIN) {
-      throw new Error('Unauthorized: Only Business Owners can connect integrations.');
-    }
+    dto.access.ensure('integrations.manage');
 
     let integration = await this.integrationRepository.findByProvider(dto.tenantId, dto.provider);
 

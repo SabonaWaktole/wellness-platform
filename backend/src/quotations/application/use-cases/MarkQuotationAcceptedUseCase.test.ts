@@ -7,8 +7,9 @@ import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
 import { StockMovementType } from '../../../inventory/domain/StockMovement';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('MarkQuotationAcceptedUseCase', () => {
   let useCase: MarkQuotationAcceptedUseCase;
@@ -85,7 +86,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
       .mockResolvedValueOnce(stock2);
 
     const result = await useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     });
 
     expect(result.quotation.status).toBe(QuotationStatus.Accepted);
@@ -132,7 +133,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
       .mockResolvedValueOnce(stock2);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Insufficient stock for product p2 at warehouse w2');
 
     // ALL quantities must remain completely unchanged
@@ -154,7 +155,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
     stockLevelRepo.findByProductAndWarehouse.mockResolvedValueOnce(null);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Stock level not found for product p1 at warehouse w1');
   });
 
@@ -164,7 +165,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
     lineItemRepo.findByQuotationId.mockResolvedValue(quotation.lineItems);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' })
     })).rejects.toThrow('Invalid state transition');
   });
 
@@ -173,8 +174,8 @@ describe('MarkQuotationAcceptedUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF
-    })).rejects.toThrow('Unauthorized: Staff can only act on their own quotations');
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should allow Staff to accept their own quotation', async () => {
@@ -198,7 +199,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
       .mockResolvedValueOnce(stock2);
 
     const result = await useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' })
     });
 
     expect(result.quotation.status).toBe(QuotationStatus.Accepted);
@@ -225,7 +226,7 @@ describe('MarkQuotationAcceptedUseCase', () => {
       .mockResolvedValueOnce(stock2);
 
     const result = await useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: null, actingUserRole: null
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: null, access: null
     });
 
     expect(result.quotation.status).toBe(QuotationStatus.Accepted);

@@ -1,3 +1,5 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
+import { assertReachesQuotation } from '../../../quotations/application/use-cases/quotationAccess';
 import { IQuotationRepository } from '../../../quotations/domain/IQuotationRepository';
 import { IQuotationLineItemRepository } from '../../../quotations/domain/IQuotationLineItemRepository';
 import { QuotationStatus } from '../../../quotations/domain/Quotation';
@@ -6,7 +8,6 @@ import { Invoice } from '../../domain/Invoice';
 import { InvoiceLineItem } from '../../domain/InvoiceLineItem';
 import { InvoiceStatusHistory } from '../../domain/InvoiceStatusHistory';
 import { IInvoiceWriteTransaction } from '../ports/IInvoiceWriteTransaction';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 const DEFAULT_DUE_DAYS = 30;
 
@@ -39,7 +40,7 @@ export class ConvertQuotationToInvoiceUseCase {
     tenantId: string;
     quotationId: string;
     actingUserId: string;
-    actingUserRole: string;
+    access: AccessContext;
     dueDate?: Date;
   }) {
     const quotation = await this.quotationRepo.findById(input.tenantId, input.quotationId);
@@ -47,9 +48,7 @@ export class ConvertQuotationToInvoiceUseCase {
       throw new Error('Quotation not found');
     }
 
-    if (input.actingUserRole === UserRole.STAFF && quotation.createdByUserId !== input.actingUserId) {
-      throw new Error('Unauthorized: Staff can only act on their own quotations');
-    }
+    assertReachesQuotation(quotation, input.access);
 
     if (quotation.status !== QuotationStatus.Accepted) {
       throw new Error('Only an accepted quotation can be converted to an invoice');

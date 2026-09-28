@@ -3,7 +3,7 @@ import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { GetIntegrationsUseCase } from '../../application/use-cases/GetIntegrationsUseCase';
 import { ConnectIntegrationUseCase } from '../../application/use-cases/ConnectIntegrationUseCase';
 import { DisconnectIntegrationUseCase } from '../../application/use-cases/DisconnectIntegrationUseCase';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 export class IntegrationsController {
   constructor(
@@ -28,14 +28,14 @@ export class IntegrationsController {
     try {
       await this.connectIntegrationUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as UserRole,
+        access: req.access!,
         provider: req.body.provider,
         config: req.body.config
       });
       res.status(200).json({ message: 'Integration connected' });
     } catch (error: any) {
       console.error(error);
-      if (error.message.includes('Unauthorized')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });
@@ -47,13 +47,13 @@ export class IntegrationsController {
     try {
       await this.disconnectIntegrationUseCase.execute({
         tenantId: requireTenantId(req),
-        authorRole: req.user!.role as UserRole,
+        access: req.access!,
         provider: req.body.provider
       });
       res.status(200).json({ message: 'Integration disconnected' });
     } catch (error: any) {
       console.error(error);
-      if (error.message.includes('Unauthorized')) {
+      if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });
       } else {
         res.status(400).json({ error: error.message });

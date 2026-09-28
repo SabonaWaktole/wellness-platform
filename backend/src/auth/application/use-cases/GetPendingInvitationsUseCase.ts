@@ -1,14 +1,11 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IInvitationRepository } from '../../domain/repositories/IInvitationRepository';
-import { UserRole } from '../../domain/enums/UserRole';
-import { UnauthorizedError } from '../../domain/errors';
 
 export class GetPendingInvitationsUseCase {
   constructor(private invitationRepository: IInvitationRepository) {}
 
-  async execute(input: { tenantId: string; requestingUserRole: UserRole }) {
-    if (input.requestingUserRole !== UserRole.BUSINESS_OWNER && input.requestingUserRole !== UserRole.SUPER_ADMIN) {
-      throw new UnauthorizedError('Only Business Owners can view invitations');
-    }
+  async execute(input: { tenantId: string; access: AccessContext }) {
+    input.access.ensure('users.manage');
 
     const invitations = await this.invitationRepository.findByTenantId(input.tenantId);
     

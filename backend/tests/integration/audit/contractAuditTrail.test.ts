@@ -6,6 +6,7 @@ import { ContractExpiryJob } from '../../../src/scheduler/jobs/ContractExpiryJob
 import { PrismaSchedulerQueries } from '../../../src/scheduler/PrismaSchedulerQueries';
 import { ExpireContractUseCase } from '../../../src/contracts/application/use-cases/ExpireContractUseCase';
 import { ActivateContractUseCase } from '../../../src/contracts/application/use-cases/ActivateContractUseCase';
+import { administrator } from '../../support/access';
 import { PrismaContractWriteTransaction } from '../../../src/contracts/infrastructure/PrismaContractWriteTransaction';
 
 let app: any;
@@ -154,7 +155,7 @@ describe('Contract audit trail (Slice 2)', () => {
         tenantId,
         contractId: contract.id,
         actingUserId: ownerId,
-        actingUserRole: 'BUSINESS_OWNER',
+        access: administrator({ userId: ownerId, tenantId }),
       })
     ).rejects.toThrow('audit write failed');
 

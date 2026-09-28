@@ -82,6 +82,10 @@ import { QuotationDeliveryService } from '../quotations/application/QuotationDel
 import { GetPublicQuotationUseCase } from '../quotations/application/GetPublicQuotationUseCase';
 import { RespondToPublicQuotationUseCase } from '../quotations/application/use-cases/RespondToPublicQuotationUseCase';
 import { createPublicQuotationRouter } from '../quotations/interfaces/http/publicQuotationRoutes';
+import { IAccessRepository } from '../access/application/ports/IAccessRepository';
+import { PrismaAccessRepository } from '../access/infrastructure/PrismaAccessRepository';
+import { InMemoryAccessCache } from '../access/infrastructure/InMemoryAccessCache';
+import { ResolveAccessContextUseCase } from '../access/application/use-cases/ResolveAccessContextUseCase';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -99,6 +103,10 @@ export interface AppDependencies {
   tenantProvisioningTransaction: ITenantProvisioningTransaction;
   platformSettingsRepository: IPlatformSettingsRepository;
   integrationRepository?: any;
+  /** Slice 3: overridable so tests can seed a fake AccessRecord instead of hitting Postgres. */
+  accessRepository: IAccessRepository;
+  /** Fresh per `createApp()` call by default, so test suites never share cached grants. */
+  accessCache: InMemoryAccessCache;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -159,6 +167,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     overrides?.tenantProvisioningTransaction ?? new PrismaTenantProvisioningTransaction();
   const platformSettingsRepository =
     overrides?.platformSettingsRepository ?? new PrismaPlatformSettingsRepository();
+  const accessRepository = overrides?.accessRepository ?? new PrismaAccessRepository();
+  const accessCache = overrides?.accessCache ?? new InMemoryAccessCache();
+  const resolveAccessContext = new ResolveAccessContextUseCase(accessRepository, accessCache);
 
   // Use Cases
   //
@@ -219,11 +230,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
   const changePasswordUseCase = new ChangePasswordUseCase(userRepository, passwordHasher);
   const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
-  const updateUserRoleUseCase = new UpdateUserRoleUseCase(userRepository);
+  const updateUserRoleUseCase = new UpdateUserRoleUseCase(userRepository, accessCache);
   const cancelInvitationUseCase = new CancelInvitationUseCase(invitationRepository);
-  const deactivateUserUseCase = new DeactivateUserUseCase(userRepository);
+  const deactivateUserUseCase = new DeactivateUserUseCase(userRepository, accessCache);
   const getDeactivationImpactUseCase = new GetDeactivationImpactUseCase(userRepository);
-  const reactivateUserUseCase = new ReactivateUserUseCase(userRepository);
+  const reactivateUserUseCase = new ReactivateUserUseCase(userRepository, accessCache);
 
   // Platform Admin user lifecycle (suspend/reactivate/delete, including
   // Business Owner ownership transfer). Distinct actor and scope from the
@@ -278,20 +289,21 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     reactivateUserUseCase,
     createUserUseCase,
     exitTenantUseCase,
-    changePasswordUseCase
+    changePasswordUseCase,
+    resolveAccessContext
   );
 
   // Auth Routes
   const { createGlobalAuthRoutes, createTenantAuthRoutes } = require('@auth/interfaces/http/routes/authRoutes');
-  const globalAuthRoutes = createGlobalAuthRoutes(authController, tokenService);
-  const tenantAuthRoutes = createTenantAuthRoutes(authController, tokenService, tenantRepository);
+  const globalAuthRoutes = createGlobalAuthRoutes(authController, tokenService, resolveAccessContext);
+  const tenantAuthRoutes = createTenantAuthRoutes(authController, tokenService, tenantRepository, resolveAccessContext);
   
   app.use('/api/auth', globalAuthRoutes);
   app.use('/api/:tenantSlug/auth', tenantAuthRoutes);
 
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');
-  const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService);
+  const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService, resolveAccessContext);
   app.use('/api/:tenantSlug/clients', clientRoutes);
 
   // The client-facing form (§24) — no tenant prefix, no auth. Mounted BEFORE
@@ -347,12 +359,12 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // the tenant's field dictionary, and clientRoutes already wires 18 use cases
   // into a single controller.
   const { createFormRouter } = require('../forms/interfaces/http/routes/formRoutes');
-  const formRoutes = createFormRouter(prisma, tokenService, tenantRepository);
+  const formRoutes = createFormRouter(prisma, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/forms', formRoutes);
 
   // Appointment routes
   const { createAppointmentRouter } = require('../appointments/interfaces/http/routes/appointmentRoutes');
-  const appointmentRoutes = createAppointmentRouter(prisma, tokenService, tenantRepository, notificationService);
+  const appointmentRoutes = createAppointmentRouter(prisma, tokenService, tenantRepository, notificationService, resolveAccessContext);
   app.use('/api/:tenantSlug/appointments', appointmentRoutes);
 
   // Tenant Routes
@@ -434,7 +446,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const getTenantActivityFeedUseCase = new GetTenantActivityFeedUseCase(prismaClientRepository, interactionRepository, appointmentRepository, userRepository);
   
   const { createDashboardRouter } = require('../dashboard/interfaces/http/routes/dashboardRoutes');
-  const dashboardRoutes = createDashboardRouter(getTenantClientMetricsUseCase, getTenantActivityFeedUseCase, tokenService, tenantRepository);
+  const dashboardRoutes = createDashboardRouter(getTenantClientMetricsUseCase, getTenantActivityFeedUseCase, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/dashboard', dashboardRoutes);
 
   // Inventory Routes
@@ -515,7 +527,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     archiveUnusedCategoriesUseCase: new ArchiveUnusedCategoriesUseCase(categoryRepo),
   });
 
-  const inventoryRoutes = createInventoryRouter(inventoryController, tokenService, tenantRepository);
+  const inventoryRoutes = createInventoryRouter(inventoryController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/inventory', inventoryRoutes);
 
   // Quotations Routes
@@ -613,7 +625,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     )
   );
 
-  const quotationRoutes = createQuotationRouter(quotationsController, tokenService, tenantRepository);
+  const quotationRoutes = createQuotationRouter(quotationsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/quotations', quotationRoutes);
 
   // Invoices Routes
@@ -658,7 +670,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new InvoicePdfRenderer()
   );
 
-  const invoiceRoutes = createInvoiceRouter(invoicesController, tokenService, tenantRepository);
+  const invoiceRoutes = createInvoiceRouter(invoicesController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/invoices', invoiceRoutes);
 
   // Contracts Routes
@@ -711,7 +723,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore)
   );
 
-  const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository);
+  const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/contracts', contractRoutes);
 
   // Media Routes (profile photos + workspace branding)
@@ -720,7 +732,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { UPLOADS_DIR } = require('../media/MediaService');
 
   const mediaController = new MediaController();
-  const mediaRoutes = createMediaRouter(mediaController, tokenService, tenantRepository);
+  const mediaRoutes = createMediaRouter(mediaController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/media', mediaRoutes);
 
   // Serve stored images. Filenames contain a UUID and are never reused, so a
@@ -750,7 +762,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const tenantProfileStore = new TenantProfileStore();
   const updateTenantSettingsUseCase = new UpdateTenantSettingsUseCase(tenantRepository, tenantProfileStore);
   const settingsController = new SettingsController(tenantRepository, tenantProfileStore, updateTenantSettingsUseCase);
-  const settingsRoutes = createSettingsRouter(settingsController, tokenService, tenantRepository);
+  const settingsRoutes = createSettingsRouter(settingsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/settings', settingsRoutes);
 
   // Integrations Routes
@@ -769,7 +781,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DisconnectIntegrationUseCase(integrationRepo)
   );
 
-  const integrationRoutes = createIntegrationRouter(integrationsController, tokenService, tenantRepository);
+  const integrationRoutes = createIntegrationRouter(integrationsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/integrations', integrationRoutes);
 
   // Report Routes
@@ -796,7 +808,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new ReportPdfRenderer()
   );
 
-  const reportRoutes = createReportRouter(reportsController, tokenService, tenantRepository);
+  const reportRoutes = createReportRouter(reportsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/reports', reportRoutes);
 
   // Notifications
@@ -809,7 +821,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   );
   app.use(
     '/api/:tenantSlug/notifications',
-    createNotificationRouter(notificationController, tokenService, tenantRepository)
+    createNotificationRouter(notificationController, tokenService, tenantRepository, resolveAccessContext)
   );
 
   app.use(errorHandler);

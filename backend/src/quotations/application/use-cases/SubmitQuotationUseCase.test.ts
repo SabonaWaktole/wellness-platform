@@ -6,8 +6,9 @@ import { IStockLevelRepository } from '../../../inventory/domain/repositories';
 import { Quotation, QuotationStatus } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { StockLevel } from '../../../inventory/domain/StockLevel';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 import { makeQuotationWriteHarness } from '../../../../tests/support/fakeQuotationWriteTransaction';
+import { administrator, salesUser } from '../../../../tests/support/access';
+import { PermissionDeniedError } from '../../../access/domain/errors';
 
 describe('SubmitQuotationUseCase', () => {
   let useCase: SubmitQuotationUseCase;
@@ -57,7 +58,7 @@ describe('SubmitQuotationUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'user-1',
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: 'user-1' }),
       requiresQuotationApproval: true
     });
 
@@ -75,7 +76,7 @@ describe('SubmitQuotationUseCase', () => {
       tenantId: 'tenant-1',
       quotationId: 'q1',
       actingUserId: 'user-1',
-      actingUserRole: UserRole.STAFF,
+      access: salesUser({ userId: 'user-1' }),
       requiresQuotationApproval: false
     });
 
@@ -88,7 +89,7 @@ describe('SubmitQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, requiresQuotationApproval: true
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), requiresQuotationApproval: true
     })).rejects.toThrow('Invalid state transition');
   });
 
@@ -97,8 +98,8 @@ describe('SubmitQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, requiresQuotationApproval: true
-    })).rejects.toThrow('Unauthorized: Staff can only act on their own quotations');
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), requiresQuotationApproval: true
+    })).rejects.toThrow(PermissionDeniedError);
   });
 
   it('should allow Business Owner to submit any quotation', async () => {
@@ -106,7 +107,7 @@ describe('SubmitQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     const result = await useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', actingUserRole: UserRole.BUSINESS_OWNER, requiresQuotationApproval: true
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'owner-1', access: administrator({ userId: 'owner-1' }), requiresQuotationApproval: true
     });
 
     expect(result.quotation.status).toBe(QuotationStatus.PendingApproval);
@@ -120,7 +121,7 @@ describe('SubmitQuotationUseCase', () => {
     );
 
     await expect(useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, requiresQuotationApproval: false
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), requiresQuotationApproval: false
     })).rejects.toThrow('Insufficient stock for product p1 at warehouse w1');
 
     expect(quotationRepo.save).not.toHaveBeenCalled();
@@ -132,7 +133,7 @@ describe('SubmitQuotationUseCase', () => {
     quotationRepo.findById.mockResolvedValue(quotation);
 
     await useCase.execute({
-      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', actingUserRole: UserRole.STAFF, requiresQuotationApproval: true
+      tenantId: 'tenant-1', quotationId: 'q1', actingUserId: 'user-1', access: salesUser({ userId: 'user-1' }), requiresQuotationApproval: true
     });
 
     // Stock can move before an owner approves it — that check belongs to

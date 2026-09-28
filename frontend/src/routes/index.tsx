@@ -43,17 +43,20 @@ import { IntegrationsPage } from '../pages/IntegrationsPage';
 import { StatusPage } from '../components/StatusPage/StatusPage';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleGuard } from './RoleGuard';
+import { RequirePermission } from './RequirePermission';
 import { TenantGuard } from './TenantGuard';
 
 
-// Temporary dashboard wrapper that chooses the right shell based on role
-// We will refine this as we build out the AppShell properly
-import { useAuthStore } from '../store/useAuthStore';
+// Temporary dashboard wrapper that chooses the right shell based on the
+// caller's companies.view scope (FR-RBAC-07) — ALL is the owner's-eye view
+// of the whole tenant, anything narrower (OWN/TEAM) or absent is the staff
+// dashboard. We will refine this as we build out the AppShell properly.
+import { usePermissionScope } from '../hooks/usePermission';
 
 const DashboardSelector = () => {
-  const { user } = useAuthStore();
-  
-  if (user?.role === 'BUSINESS_OWNER') {
+  const scope = usePermissionScope('companies.view');
+
+  if (scope === 'ALL') {
     return <BusinessOwnerShell />;
   }
   return <StaffShell />;
@@ -152,9 +155,9 @@ export const routes: RouteObject[] = [
         path: 'settings/team',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER', 'SUPER_ADMIN']}>
+            <RequirePermission permission="users.manage">
               <TeamSettingsPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },
@@ -162,9 +165,9 @@ export const routes: RouteObject[] = [
         path: 'settings/integrations',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER', 'SUPER_ADMIN', 'STAFF']}>
+            <RequirePermission permission="integrations.manage">
               <IntegrationsPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },
@@ -180,9 +183,9 @@ export const routes: RouteObject[] = [
         path: 'reports',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER', 'SUPER_ADMIN']}>
+            <RequirePermission permission="reports.view">
               <ReportsPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },
@@ -254,9 +257,9 @@ export const routes: RouteObject[] = [
         path: 'settings/client-management/forms/:formId',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+            <RequirePermission permission="forms.manage">
               <FormBuilderPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },
@@ -264,9 +267,9 @@ export const routes: RouteObject[] = [
         path: 'settings/client-management/forms/:formId/submissions',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+            <RequirePermission permission="forms.manage">
               <FormSubmissionsPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },
@@ -274,9 +277,9 @@ export const routes: RouteObject[] = [
         path: 'settings/client-management/forms/:formId/print',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+            <RequirePermission permission="forms.manage">
               <FormPrintPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },
@@ -284,9 +287,9 @@ export const routes: RouteObject[] = [
         path: 'settings/client-management/forms/:formId/submissions/:submissionId/print',
         element: (
           <ProtectedRoute>
-            <RoleGuard allowedRoles={['BUSINESS_OWNER']}>
+            <RequirePermission permission="forms.manage">
               <FormSubmissionPrintPage />
-            </RoleGuard>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

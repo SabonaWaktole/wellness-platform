@@ -22,6 +22,7 @@ import { Tenant } from '@tenant/domain/entities/Tenant';
 import { Invitation } from '@auth/domain/entities/Invitation';
 import { PasswordResetToken } from '@auth/domain/entities/PasswordResetToken';
 import { UserRole } from '@auth/domain/enums/UserRole';
+import { IAccessRepository, AccessRecord } from '../../../src/access/application/ports/IAccessRepository';
 
 // ---------------------------------------------------------------------------
 // In-memory implementations of ports â€” lightweight fakes that behave like
@@ -404,6 +405,35 @@ class FakeTenantProvisioningTransaction implements ITenantProvisioningTransactio
   }
 }
 
+/**
+ * Slice 3: `loadAccess` resolves `req.access` through `IAccessRepository`,
+ * separately from `IUserRepository` (it is a dedicated read model over
+ * User + Role + RolePermission — see PrismaAccessRepository). These fixtures
+ * never seed a Role, so `roleId` is always null and every user resolves via
+ * `LegacyRoleMapping` (D2) — exactly the BUSINESS_OWNER/STAFF behaviour these
+ * tests already assume.
+ */
+class FakeAccessRepository implements IAccessRepository {
+  constructor(private readonly userRepo: IUserRepository) {}
+
+  async findAccessRecord(tenantId: string, userId: string): Promise<AccessRecord | null> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.tenantId !== tenantId) {
+      return null;
+    }
+    return {
+      userId: user.id,
+      tenantId,
+      legacyRole: user.role,
+      roleId: null,
+      roleKey: null,
+      isActive: user.isActive,
+      deletedAt: user.deletedAt,
+      grants: {},
+    };
+  }
+}
+
 // ===========================================================================
 // INTEGRATION TESTS
 // ===========================================================================
@@ -438,6 +468,7 @@ describe('Auth Integration Tests', () => {
       tokenService,
       emailSender,
       tenantProvisioningTransaction,
+      accessRepository: new FakeAccessRepository(userRepo),
     });
   });
 
@@ -718,6 +749,28 @@ describe('Auth Integration Tests', () => {
         .expect(400);
 
       expect(res.body.error).toContain('expired');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 4b. GET /api/auth/me — Slice 3 permissions
+  // -----------------------------------------------------------------------
+  describe('GET /api/auth/me (FR-RBAC-01, enabler for FR-USR-03)', () => {
+    it('returns permissions (D2 legacy mapping) and an X-Permissions-Version header', async () => {
+      await provisionTenant({ name: 'Acme Corp', slug: 'acme', ownerEmail: 'owner@acme.com', ownerPassword: 'Password1' });
+      const loginRes = await request(app)
+        .post('/api/acme/auth/login')
+        .send({ email: 'owner@acme.com', password: 'Password1' });
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${loginRes.body.token}`)
+        .expect(200);
+
+      // BUSINESS_OWNER -> Administrator (D2): holds users.manage.
+      expect(res.body.user.permissions['users.manage']).toBe(true);
+      expect(typeof res.body.user.permissionsVersion).toBe('string');
+      expect(res.headers['x-permissions-version']).toBe(res.body.user.permissionsVersion);
     });
   });
 

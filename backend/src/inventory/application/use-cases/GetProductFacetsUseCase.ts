@@ -1,9 +1,9 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IProductRepository } from '../../domain/repositories';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface GetProductFacetsDTO {
   tenantId: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 export interface ProductFacets {
@@ -19,9 +19,7 @@ export class GetProductFacetsUseCase {
   constructor(private productRepo: IProductRepository) {}
 
   async execute(dto: GetProductFacetsDTO): Promise<ProductFacets> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can view the catalogue.');
-    }
+    dto.access.ensure('inventory.manage');
 
     const [brands, tags] = await Promise.all([
       this.productRepo.listBrands(dto.tenantId),

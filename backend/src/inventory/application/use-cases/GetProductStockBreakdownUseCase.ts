@@ -1,12 +1,12 @@
+import { AccessContext } from '../../../access/domain/AccessContext';
 import { IProductRepository, IStockLevelRepository } from '../../domain/repositories';
 import { StockLevel } from '../../domain/StockLevel';
 import { Product } from '../../domain/Product';
-import { UserRole } from '../../../auth/domain/enums/UserRole';
 
 export interface GetProductStockBreakdownDTO {
   tenantId: string;
   productId: string;
-  authorRole: UserRole;
+  access: AccessContext;
 }
 
 export class GetProductStockBreakdownUseCase {
@@ -16,9 +16,7 @@ export class GetProductStockBreakdownUseCase {
   ) {}
 
   async execute(dto: GetProductStockBreakdownDTO): Promise<{ product: Product; stockLevels: StockLevel[] }> {
-    if (dto.authorRole !== UserRole.BUSINESS_OWNER && dto.authorRole !== UserRole.STAFF) {
-      throw new Error('Unauthorized: Only Business Owners and Staff can view product stock.');
-    }
+    dto.access.ensure('inventory.manage');
 
     const product = await this.productRepo.findById(dto.tenantId, dto.productId);
     if (!product) {
