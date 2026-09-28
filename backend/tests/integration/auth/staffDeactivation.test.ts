@@ -85,9 +85,12 @@ describe('Staff deactivation', () => {
   afterEach(async () => {
     const ids = [tenantId, otherTenantId];
     await prisma.appointment.deleteMany({ where: { tenantId: { in: ids } } });
+    await prisma.contract.deleteMany({ where: { tenantId: { in: ids } } });
+    await prisma.auditEntry.deleteMany({ where: { tenantId: { in: ids } } });
     await prisma.client.deleteMany({ where: { tenantId: { in: ids } } });
     await prisma.notification.deleteMany({ where: { tenantId: { in: ids } } });
     await prisma.user.deleteMany({ where: { tenantId: { in: ids } } });
+    await prisma.role.deleteMany({ where: { tenantId: { in: ids } } });
     await prisma.tenant.deleteMany({ where: { id: { in: ids } } });
   });
 
@@ -226,7 +229,12 @@ describe('Staff deactivation', () => {
         .set('Cookie', [`jwt=${ownerToken}`]);
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ clients: 1, upcomingAppointments: 1 });
+      expect(res.body).toEqual({
+        clients: 1,
+        upcomingAppointments: 1,
+        openContracts: 0,
+        companies: [{ id: clientId, name: 'Held Client' }],
+      });
     });
 
     it('is Business-Owner-only', async () => {
@@ -237,8 +245,8 @@ describe('Staff deactivation', () => {
     });
   });
 
-  describe('assignments survive deactivation', () => {
-    it('leaves assigned clients and appointments pointing at the deactivated user', async () => {
+  describe('forced reassignment (FR-USR-05)', () => {
+    const heldClient = async () => {
       const clientId = uuidv4();
       await prisma.client.create({
         data: {
@@ -246,18 +254,90 @@ describe('Staff deactivation', () => {
           assignedUserId: staffId, lastUpdatedByUserId: staffId, customFieldValues: {},
         },
       });
+      return clientId;
+    };
 
-      await deactivate(staffId, ownerToken).expect(200);
+    it('FR-USR-05 refuses with 409 while the user still has companies and no colleague is named', async () => {
+      await heldClient();
 
-      // History stays truthful about who held the work; reassignment is a
-      // separate, deliberate step.
-      const client = await prisma.client.findUnique({ where: { id: clientId } });
-      expect(client?.assignedUserId).toBe(staffId);
+      const res = await deactivate(staffId, ownerToken).expect(409);
 
-      // And the user row itself is retained, not deleted.
+      expect(res.body).toMatchObject({ code: 'REASSIGNMENT_REQUIRED', companies: 1 });
+      const user = await prisma.user.findUnique({ where: { id: staffId } });
+      expect(user?.isActive).toBe(true);
+    });
+
+    it('FR-USR-05 hands companies and open contracts to the colleague, keeps appointments, and audits each move', async () => {
+      const clientId = await heldClient();
+      const colleagueId = uuidv4();
+      await prisma.user.create({
+        data: { id: colleagueId, email: `colleague-${runId}@t.com`, hashedPassword: 'x', role: 'STAFF', tenantId },
+      });
+      const contractId = uuidv4();
+      const closedContractId = uuidv4();
+      const contract = (id: string, status: string) => ({
+        id, tenantId, clientId, planName: 'Gold', amount: 100, billingPeriod: 'MONTHLY', status,
+        startsAt: new Date('2026-01-01'), endsAt: new Date('2026-12-31'), assignedUserId: staffId, createdByUserId: staffId,
+      });
+      await prisma.contract.createMany({ data: [contract(contractId, 'ACTIVE'), contract(closedContractId, 'EXPIRED')] });
+      const appointmentId = uuidv4();
+      await prisma.appointment.create({
+        data: { id: appointmentId, tenantId, clientId, assignedUserId: staffId, scheduledAt: new Date(Date.now() + 86400000), status: 'SCHEDULED' },
+      });
+
+      const res = await deactivate(staffId, ownerToken).send({ reassignToUserId: colleagueId }).expect(200);
+
+      expect(res.body.reassigned).toEqual({ companies: 1, contracts: 1 });
+      expect((await prisma.client.findUnique({ where: { id: clientId } }))?.assignedUserId).toBe(colleagueId);
+      expect((await prisma.contract.findUnique({ where: { id: contractId } }))?.assignedUserId).toBe(colleagueId);
+      // A closed term records who held it; only open work moves.
+      expect((await prisma.contract.findUnique({ where: { id: closedContractId } }))?.assignedUserId).toBe(staffId);
+      expect((await prisma.appointment.findUnique({ where: { id: appointmentId } }))?.assignedUserId).toBe(staffId);
+
       const user = await prisma.user.findUnique({ where: { id: staffId } });
       expect(user).not.toBeNull();
       expect(user?.isActive).toBe(false);
+
+      const entries = await prisma.auditEntry.findMany({ where: { tenantId }, orderBy: { at: 'asc' } });
+      expect(entries.map((e) => [e.entityType, e.entityId, e.action])).toEqual([
+        ['Client', clientId, 'UPDATE'],
+        ['Contract', contractId, 'UPDATE'],
+        ['User', staffId, 'STATUS_CHANGE'],
+      ]);
+      expect(entries[0]).toMatchObject({ userId: ownerId, userRole: 'ADMINISTRATOR' });
+      expect(entries[0].changes).toEqual([{ field: 'assignedUserId', old: staffId, new: colleagueId }]);
+    });
+
+    it('refuses a colleague from another workspace', async () => {
+      await heldClient();
+
+      const res = await deactivate(staffId, ownerToken).send({ reassignToUserId: otherTenantStaffId }).expect(400);
+
+      expect(res.body.code).toBe('INVALID_REASSIGNMENT_TARGET');
+    });
+  });
+
+  describe('lock-out guard (FR-RBAC-08)', () => {
+    it('FR-RBAC-08 refuses with 409 to deactivate the only user who can manage roles', async () => {
+      // A custom role that may manage users but not roles (Slice 6 will let
+      // the Administrator build one), held by someone other than the owner.
+      const roleId = uuidv4();
+      await prisma.role.create({
+        data: {
+          id: roleId, tenantId, key: 'HR', nameSq: 'Burime njerëzore', nameEn: 'HR',
+          permissions: { create: [{ permissionKey: 'users.manage' }, { permissionKey: 'companies.view', scope: 'ALL' }] },
+        },
+      });
+      const hrId = uuidv4();
+      await prisma.user.create({
+        data: { id: hrId, email: `hr-${runId}@t.com`, hashedPassword: 'x', role: 'STAFF', roleId, tenantId },
+      });
+      const hrToken = tokenService.sign({ userId: hrId, role: 'STAFF', tenantId, tenantSlug: slug, warehouseId: null });
+
+      const res = await deactivate(ownerId, hrToken).expect(409);
+
+      expect(res.body.code).toBe('LAST_ROLE_MANAGER');
+      expect((await prisma.user.findUnique({ where: { id: ownerId } }))?.isActive).toBe(true);
     });
   });
 });

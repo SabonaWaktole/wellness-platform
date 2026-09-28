@@ -1,80 +1,125 @@
 import { UpdateUserRoleUseCase } from '@auth/application/use-cases/UpdateUserRoleUseCase';
-import { IUserRepository } from '@auth/domain/repositories/IUserRepository';
-import { User } from '@auth/domain/entities/User';
 import { UserRole } from '@auth/domain/enums/UserRole';
-import { UnauthorizedError } from '@auth/domain/errors';
+import { UnauthorizedError, UnknownRoleError } from '@auth/domain/errors';
 import { administrator, salesUser } from '../../../../support/access';
-import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
+import { makeRoleCatalogue, makeUser, makeUserRepository } from '../../../../support/fakeUserAdmin';
+import { makeUserAdminHarness } from '../../../../support/fakeUserAdminTransaction';
+import { LastRoleManagerError, PermissionDeniedError } from '../../../../../src/access/domain/errors';
+import { RoleManagementGuard } from '../../../../../src/access/application/RoleManagementGuard';
+import { AuditAction } from '../../../../../src/audit/domain/AuditAction';
 
 describe('UpdateUserRoleUseCase', () => {
-  let userRepository: jest.Mocked<IUserRepository>;
-  let useCase: UpdateUserRoleUseCase;
+  const setup = (options: { users?: ReturnType<typeof makeUser>[]; roleManagers?: string[] } = {}) => {
+    const userRepository = makeUserRepository(options.users ?? [makeUser()]);
+    const roles = makeRoleCatalogue(undefined, options.roleManagers);
+    const harness = makeUserAdminHarness();
+    const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
+    const useCase = new UpdateUserRoleUseCase(
+      userRepository,
+      roles,
+      new RoleManagementGuard(roles),
+      harness.writeTx,
+      permissionsChanged
+    );
+    const execute = (over: Record<string, unknown> = {}) =>
+      useCase.execute({
+        access: administrator({ userId: 'admin', tenantId: 'tenant1' }),
+        tenantId: 'tenant1',
+        userIdToUpdate: 'u1',
+        newRoleId: 'role-SALES_MANAGER',
+        newWarehouseId: null,
+        ...over,
+      });
+    return { harness, permissionsChanged, execute };
+  };
 
-  const makeUser = (overrides: Partial<Parameters<typeof User.create>[0]> = {}) =>
-    User.create({
-      id: 'u1',
-      email: 'staff@tenant1.test',
-      hashedPassword: 'hash',
-      role: UserRole.STAFF,
-      tenantId: 'tenant1',
-      isActive: true,
-      ...overrides,
-    } as any);
-
-  beforeEach(() => {
-    userRepository = {
-      findById: jest.fn().mockResolvedValue(makeUser()),
-      findByEmail: jest.fn(),
-      findAnyByEmail: jest.fn(),
-      findByTenantId: jest.fn(),
-      findSuperAdminByEmail: jest.fn(),
-      create: jest.fn(),
-      delete: jest.fn(),
-      updatePassword: jest.fn(),
-      updateProfile: jest.fn(),
-      updateRoleAndWarehouse: jest.fn(),
-      setActive: jest.fn(),
-      softDelete: jest.fn(),
-      countAssignedWork: jest.fn(),
-      findActiveByTenantAndRole: jest.fn().mockResolvedValue([]),
-      findPlatformUsers: jest.fn().mockResolvedValue({ items: [], total: 0 }),
-      countActivePlatformAdmins: jest.fn().mockResolvedValue(1),
-    } as unknown as jest.Mocked<IUserRepository>;
-
-    useCase = new UpdateUserRoleUseCase(userRepository);
-  });
-
-  const execute = (over: any = {}) =>
-    useCase.execute({
-      access: administrator(),
-      tenantId: 'tenant1',
-      userIdToUpdate: 'u1',
-      newRole: UserRole.STAFF,
-      newWarehouseId: null,
-      ...over,
-    });
-
-  it('rejects a non-owner, non-super-admin caller', async () => {
+  it('FR-RBAC-05 refuses a caller without users.manage', async () => {
+    const { harness, execute } = setup();
     await expect(execute({ access: salesUser() })).rejects.toThrow(PermissionDeniedError);
-    expect(userRepository.updateRoleAndWarehouse).not.toHaveBeenCalled();
+    expect(harness.staff.setRole).not.toHaveBeenCalled();
   });
 
-  it('rejects a user outside the caller tenant', async () => {
-    userRepository.findById.mockResolvedValue(makeUser({ tenantId: 'other-tenant' } as any));
+  it('refuses a user outside the caller\'s tenant', async () => {
+    const { execute } = setup({ users: [makeUser({ tenantId: 'other-tenant' })] });
     await expect(execute()).rejects.toThrow(UnauthorizedError);
   });
 
-  it('updates the role and warehouse', async () => {
-    await execute({ newRole: UserRole.BUSINESS_OWNER, newWarehouseId: 'wh-1' });
-    expect(userRepository.updateRoleAndWarehouse).toHaveBeenCalledWith('u1', UserRole.BUSINESS_OWNER, 'wh-1');
+  it('refuses a role that is not one of this workspace\'s', async () => {
+    const { harness, execute } = setup();
+    await expect(execute({ newRoleId: 'role-from-elsewhere' })).rejects.toThrow(UnknownRoleError);
+    expect(harness.staff.setRole).not.toHaveBeenCalled();
   });
 
-  it('FR-USR-03: clears the access cache for the updated user', async () => {
-    const permissionsChanged = { userChanged: jest.fn(), tenantChanged: jest.fn() };
-    useCase = new UpdateUserRoleUseCase(userRepository, permissionsChanged);
+  it('FR-USR-03 writes the new roleId with its legacy role string and warehouse', async () => {
+    const { harness, execute } = setup();
+
+    await execute({ newRoleId: 'role-ADMINISTRATOR', newWarehouseId: 'wh-1' });
+
+    expect(harness.staff.setRole).toHaveBeenCalledWith('tenant1', 'u1', {
+      roleId: 'role-ADMINISTRATOR',
+      legacyRole: UserRole.BUSINESS_OWNER,
+      warehouseId: 'wh-1',
+    });
+  });
+
+  it('FR-USR-06 audits the role change with the old and new role', async () => {
+    const { harness, execute } = setup();
 
     await execute();
 
+    const [entry] = harness.recordedAuditEntries();
+    expect(entry).toMatchObject({
+      tenantId: 'tenant1',
+      userId: 'admin',
+      userRole: 'ADMINISTRATOR',
+      action: AuditAction.Update,
+      entityType: 'User',
+      entityId: 'u1',
+      entityLabel: 'staff@tenant1.test',
+    });
+    expect(entry.changes).toEqual([{ field: 'role', old: 'SALES_USER', new: 'SALES_MANAGER' }]);
+  });
+
+  it('reads a legacy user\'s old role through D2 when they have no roleId yet', async () => {
+    const { harness, execute } = setup({ users: [makeUser({ roleId: null, role: UserRole.BUSINESS_OWNER })] });
+
+    await execute({ newRoleId: 'role-CEO' });
+
+    expect(harness.recordedAuditEntries()[0].changes).toEqual([{ field: 'role', old: 'ADMINISTRATOR', new: 'CEO' }]);
+  });
+
+  it('FR-USR-03 clears the access cache so the next request uses the new role', async () => {
+    const { permissionsChanged, execute } = setup();
+    await execute();
     expect(permissionsChanged.userChanged).toHaveBeenCalledWith('u1');
+  });
+
+  it('FR-RBAC-08 refuses to move the last role manager to a role without roles.manage', async () => {
+    const { harness, execute } = setup({
+      users: [makeUser({ id: 'admin', roleId: 'role-ADMINISTRATOR' })],
+      roleManagers: ['admin'],
+    });
+
+    await expect(execute({ userIdToUpdate: 'admin', newRoleId: 'role-CEO' })).rejects.toThrow(LastRoleManagerError);
+    expect(harness.staff.setRole).not.toHaveBeenCalled();
+  });
+
+  it('lets the last role manager keep a role that still has roles.manage', async () => {
+    const { harness, execute } = setup({
+      users: [makeUser({ id: 'admin', roleId: 'role-ADMINISTRATOR' })],
+      roleManagers: ['admin'],
+    });
+
+    await execute({ userIdToUpdate: 'admin', newRoleId: 'role-ADMINISTRATOR', newWarehouseId: 'wh-2' });
+
+    expect(harness.staff.setRole).toHaveBeenCalled();
+  });
+
+  it('FR-AUD-04 leaves the cache alone when the audited write fails', async () => {
+    const { harness, permissionsChanged, execute } = setup();
+    harness.auditTrail.record.mockRejectedValue(new Error('audit write failed'));
+
+    await expect(execute()).rejects.toThrow('audit write failed');
+    expect(permissionsChanged.userChanged).not.toHaveBeenCalled();
   });
 });

@@ -34,6 +34,16 @@ export interface PlatformUserRow {
   pendingOwnershipTransfer: { actingOwnerName: string } | null;
 }
 
+export interface AssignedWork {
+  /** Non-archived companies assigned to the user. */
+  clients: number;
+  upcomingAppointments: number;
+  /** DRAFT or ACTIVE contracts assigned to the user. */
+  openContracts: number;
+  /** The first of those companies by name, for the reassignment dialog. */
+  companies: Array<{ id: string; name: string }>;
+}
+
 export interface IUserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string, tenantId: string): Promise<User | null>;
@@ -65,7 +75,6 @@ export interface IUserRepository {
    */
   findActiveByTenantAndRole(tenantId: string, role: string): Promise<User[]>;
   updateProfile(userId: string, data: { firstName?: string | null; lastName?: string | null; phone?: string | null; email?: string; language?: string | null }): Promise<void>;
-  updateRoleAndWarehouse(userId: string, role: string, warehouseId: string | null): Promise<void>;
   /**
    * Soft off-boarding. There is deliberately no `delete`: seven non-nullable
    * columns reference User, so Postgres RESTRICT blocks removal outright and
@@ -82,9 +91,9 @@ export interface IUserRepository {
   softDelete(userId: string): Promise<void>;
   /**
    * Work still pointing at a user, shown in the deactivation confirmation so
-   * the owner sees what will be left unattended.
+   * the administrator sees what has to be handed over (FR-USR-05).
    */
-  countAssignedWork(userId: string): Promise<{ clients: number; upcomingAppointments: number }>;
+  countAssignedWork(userId: string): Promise<AssignedWork>;
   /**
    * Every user on the platform, across all workspaces — the one query in this
    * repository that is deliberately NOT tenant-scoped. Only the SUPER_ADMIN

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import {
+  AssignedWork,
   IUserRepository,
   PlatformUserFilters,
   PlatformUserRow,
@@ -8,6 +9,9 @@ import { User } from '../../domain/entities/User';
 import { UserRole } from '../../domain/enums/UserRole';
 import { prisma as defaultPrisma } from '../../../shared/infrastructure/prisma/client';
 import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
+
+/** Enough to recognise whose book it is; the count carries the rest. */
+const ASSIGNED_COMPANIES_SHOWN = 20;
 
 export class PrismaUserRepository implements IUserRepository {
   /**
@@ -94,13 +98,6 @@ export class PrismaUserRepository implements IUserRepository {
     return data.map(u => User.create({ ...u, role: u.role as UserRole }));
   }
 
-  async updateRoleAndWarehouse(userId: string, role: string, warehouseId: string | null): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { role, warehouseId },
-    });
-  }
-
   async setActive(userId: string, isActive: boolean): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
@@ -127,13 +124,14 @@ export class PrismaUserRepository implements IUserRepository {
     });
   }
 
-  async countAssignedWork(userId: string): Promise<{ clients: number; upcomingAppointments: number }> {
+  async countAssignedWork(userId: string): Promise<AssignedWork> {
     // Only work that would actually go unattended is counted: currently
-    // assigned clients, and appointments still ahead that are not cancelled.
-    // Past and cancelled appointments are history, not a handover concern.
-    const [clients, upcomingAppointments] = await Promise.all([
-      // Archived clients need no handover — they are out of the active book.
-      this.prisma.client.count({ where: { assignedUserId: userId, deletedAt: null } }),
+    // assigned clients and open contracts, and appointments still ahead that
+    // are not cancelled. Past and cancelled work is history, not a handover.
+    // Archived clients need no handover — they are out of the active book.
+    const companyWhere = { assignedUserId: userId, deletedAt: null };
+    const [clients, upcomingAppointments, openContracts, companies] = await Promise.all([
+      this.prisma.client.count({ where: companyWhere }),
       this.prisma.appointment.count({
         where: {
           assignedUserId: userId,
@@ -141,9 +139,21 @@ export class PrismaUserRepository implements IUserRepository {
           status: { in: ['SCHEDULED', 'CONFIRMED'] },
         },
       }),
+      this.prisma.contract.count({ where: { assignedUserId: userId, status: { in: ['DRAFT', 'ACTIVE'] } } }),
+      this.prisma.client.findMany({
+        where: companyWhere,
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+        take: ASSIGNED_COMPANIES_SHOWN,
+      }),
     ]);
 
-    return { clients, upcomingAppointments };
+    return {
+      clients,
+      upcomingAppointments,
+      openContracts,
+      companies: companies.map((company) => ({ id: company.id, name: company.name ?? '' })),
+    };
   }
 
   async findPlatformUsers(

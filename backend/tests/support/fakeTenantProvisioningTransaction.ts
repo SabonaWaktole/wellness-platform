@@ -51,7 +51,6 @@ export function makeTenantProvisioningHarness(): TenantProvisioningHarness {
     create: jest.fn().mockImplementation(async (user) => user),
     updatePassword: jest.fn(),
     updateProfile: jest.fn(),
-    updateRoleAndWarehouse: jest.fn(),
     setActive: jest.fn(),
     softDelete: jest.fn(),
     countAssignedWork: jest.fn(),

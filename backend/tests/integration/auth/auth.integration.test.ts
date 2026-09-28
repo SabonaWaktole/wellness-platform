@@ -2,6 +2,7 @@
 import express from 'express';
 import { createApp, AppDependencies } from '@main/app';
 import {
+  AssignedWork,
   IUserRepository,
   PlatformUserFilters,
   PlatformUserRow,
@@ -23,7 +24,12 @@ import { Invitation } from '@auth/domain/entities/Invitation';
 import { PasswordResetToken } from '@auth/domain/entities/PasswordResetToken';
 import { UserRole } from '@auth/domain/enums/UserRole';
 import { IAccessRepository, AccessRecord } from '../../../src/access/application/ports/IAccessRepository';
-import { RoleKey } from '../../../src/access/domain/RoleKey';
+import { RoleKey, SYSTEM_ROLE_NAMES } from '../../../src/access/domain/RoleKey';
+import { IRoleCatalogue, RoleSummary } from '../../../src/access/application/ports/IRoleCatalogue';
+import { DEFAULT_ROLE_MATRIX } from '../../../src/access/domain/DefaultRoleMatrix';
+import { legacyRoleKeyFor } from '../../../src/access/domain/LegacyRoleMapping';
+import { IUserAdminTransaction, UserAdminRepos } from '../../../src/auth/application/ports/IUserAdminTransaction';
+import { AuditEntry } from '../../../src/audit/domain/AuditEntry';
 
 // ---------------------------------------------------------------------------
 // In-memory implementations of ports â€” lightweight fakes that behave like
@@ -128,7 +134,8 @@ class InMemoryUserRepository implements IUserRepository {
       });
     }
   }
-  async updateRoleAndWarehouse(userId: string, role: string, warehouseId: string | null): Promise<void> {
+  /** Not on IUserRepository: role writes go through IUserAdminTransaction (see InMemoryUserAdminTransaction). */
+  async setRole(userId: string, roleId: string, role: string, warehouseId: string | null): Promise<void> {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       const idx = this.users.indexOf(user);
@@ -137,6 +144,7 @@ class InMemoryUserRepository implements IUserRepository {
         email: user.email,
         hashedPassword: user.hashedPassword,
         role: role as UserRole,
+        roleId,
         tenantId: user.tenantId,
         createdAt: user.createdAt,
         firstName: user.firstName,
@@ -167,9 +175,9 @@ class InMemoryUserRepository implements IUserRepository {
     }
   }
 
-  async countAssignedWork(_userId: string): Promise<{ clients: number; upcomingAppointments: number }> {
-    // This double holds no clients or appointments, so there is nothing to count.
-    return { clients: 0, upcomingAppointments: 0 };
+  async countAssignedWork(_userId: string): Promise<AssignedWork> {
+    // This double holds no clients, contracts or appointments, so there is nothing to count.
+    return { clients: 0, upcomingAppointments: 0, openContracts: 0, companies: [] };
   }
 
   async softDelete(userId: string): Promise<void> {
@@ -439,6 +447,63 @@ class FakeAccessRepository implements IAccessRepository {
   }
 }
 
+/** Every tenant has the five system roles, with ids `role-<KEY>`. */
+class InMemoryRoleCatalogue implements IRoleCatalogue {
+  constructor(private readonly userRepo: InMemoryUserRepository) {}
+
+  private roles(): RoleSummary[] {
+    return Object.values(RoleKey).map((key) => ({
+      id: `role-${key}`,
+      key,
+      ...SYSTEM_ROLE_NAMES[key],
+      isSystem: true,
+      grants: DEFAULT_ROLE_MATRIX[key],
+    }));
+  }
+  async list(_tenantId: string): Promise<RoleSummary[]> {
+    return this.roles();
+  }
+  async findById(_tenantId: string, roleId: string): Promise<RoleSummary | null> {
+    return this.roles().find((role) => role.id === roleId) ?? null;
+  }
+  async activeHolderIds(tenantId: string, permissionKey: string): Promise<string[]> {
+    const users = await this.userRepo.findByTenantId(tenantId);
+    return users
+      .filter((u) => u.isActive)
+      .filter((u) => {
+        const key = u.roleId ? u.roleId.replace(/^role-/, '') : legacyRoleKeyFor(u.role);
+        return key !== null && (DEFAULT_ROLE_MATRIX as any)[key]?.[permissionKey] !== undefined;
+      })
+      .map((u) => u.id);
+  }
+}
+
+/** Runs user-admin writes straight against the in-memory repositories, collecting audit entries. */
+class InMemoryUserAdminTransaction implements IUserAdminTransaction {
+  readonly auditEntries: AuditEntry[] = [];
+
+  constructor(
+    private readonly userRepo: InMemoryUserRepository,
+    private readonly invitationRepo: InMemoryInvitationRepository
+  ) {}
+
+  run<T>(work: (repos: UserAdminRepos) => Promise<T>): Promise<T> {
+    return work({
+      staff: {
+        create: async (user) => {
+          await this.userRepo.create(user);
+        },
+        setRole: (_tenantId, userId, change) =>
+          this.userRepo.setRole(userId, change.roleId, change.legacyRole, change.warehouseId),
+        setActive: (_tenantId, userId, isActive) => this.userRepo.setActive(userId, isActive),
+      },
+      invitations: this.invitationRepo,
+      assignments: { reassignCompanies: async () => [], reassignOpenContracts: async () => [] },
+      auditTrail: { record: async (entry) => void this.auditEntries.push(entry) },
+    });
+  }
+}
+
 // ===========================================================================
 // INTEGRATION TESTS
 // ===========================================================================
@@ -474,6 +539,8 @@ describe('Auth Integration Tests', () => {
       emailSender,
       tenantProvisioningTransaction,
       accessRepository: new FakeAccessRepository(userRepo),
+      roleCatalogue: new InMemoryRoleCatalogue(userRepo),
+      userAdminTransaction: new InMemoryUserAdminTransaction(userRepo, invitationRepo),
     });
   });
 
@@ -604,7 +671,7 @@ describe('Auth Integration Tests', () => {
       const res = await request(app)
         .post('/api/acme/auth/invitations')
         .set('Authorization', `Bearer ${ownerToken}`)
-        .send({ email: 'staff@acme.com', role: 'STAFF' })
+        .send({ email: 'staff@acme.com', roleId: 'role-SALES_USER' })
         .expect(200);
 
       expect(res.body.message).toBe('Invitation sent');
@@ -623,7 +690,7 @@ describe('Auth Integration Tests', () => {
     it('should reject invitation from unauthenticated user (401)', async () => {
       await request(app)
         .post('/api/acme/auth/invitations')
-        .send({ email: 'staff@acme.com', role: 'STAFF' })
+        .send({ email: 'staff@acme.com', roleId: 'role-SALES_USER' })
         .expect(401);
     });
 
@@ -650,7 +717,7 @@ describe('Auth Integration Tests', () => {
       await request(app)
         .post('/api/acme/auth/invitations')
         .set('Authorization', `Bearer ${staffToken}`)
-        .send({ email: 'another@acme.com', role: 'STAFF' })
+        .send({ email: 'another@acme.com', roleId: 'role-SALES_USER' })
         .expect(403);
     });
 
@@ -668,7 +735,7 @@ describe('Auth Integration Tests', () => {
       await request(app)
         .post('/api/other-corp/auth/invitations')
         .set('Authorization', `Bearer ${ownerToken}`)
-        .send({ email: 'staff@other.com', role: 'STAFF' })
+        .send({ email: 'staff@other.com', roleId: 'role-SALES_USER' })
         .expect(403);
     });
   });
@@ -912,7 +979,7 @@ describe('Auth Integration Tests', () => {
       await request(app)
         .post('/api/tenant-b/auth/invitations')
         .set('Authorization', `Bearer ${tenantAOwnerToken}`)
-        .send({ email: 'staff@b.com', role: 'STAFF' })
+        .send({ email: 'staff@b.com', roleId: 'role-SALES_USER' })
         .expect(403);
     });
 
@@ -920,7 +987,7 @@ describe('Auth Integration Tests', () => {
       await request(app)
         .post('/api/tenant-a/auth/invitations')
         .set('Authorization', `Bearer ${tenantBOwnerToken}`)
-        .send({ email: 'staff@a.com', role: 'STAFF' })
+        .send({ email: 'staff@a.com', roleId: 'role-SALES_USER' })
         .expect(403);
     });
 
@@ -949,7 +1016,7 @@ describe('Auth Integration Tests', () => {
       const res = await request(app)
         .post('/api/tenant-a/auth/invitations')
         .set('Authorization', `Bearer ${saToken}`)
-        .send({ email: 'new-staff@a.com', role: 'STAFF' })
+        .send({ email: 'new-staff@a.com', roleId: 'role-SALES_USER' })
         .expect(403);
 
       // Denied by the tenant guard, not crashed on a null tenantId.

@@ -87,6 +87,12 @@ import { createPublicQuotationRouter } from '../quotations/interfaces/http/publi
 import { IAccessRepository } from '../access/application/ports/IAccessRepository';
 import { PrismaAccessRepository } from '../access/infrastructure/PrismaAccessRepository';
 import { InMemoryAccessCache } from '../access/infrastructure/InMemoryAccessCache';
+import { IRoleCatalogue } from '../access/application/ports/IRoleCatalogue';
+import { PrismaRoleCatalogue } from '../access/infrastructure/PrismaRoleCatalogue';
+import { RoleManagementGuard } from '../access/application/RoleManagementGuard';
+import { ListRolesUseCase } from '../access/application/use-cases/ListRolesUseCase';
+import { IUserAdminTransaction } from '../auth/application/ports/IUserAdminTransaction';
+import { PrismaUserAdminTransaction } from '../auth/infrastructure/PrismaUserAdminTransaction';
 import { ResolveAccessContextUseCase } from '../access/application/use-cases/ResolveAccessContextUseCase';
 
 export interface AppDependencies {
@@ -109,6 +115,9 @@ export interface AppDependencies {
   accessRepository: IAccessRepository;
   /** Fresh per `createApp()` call by default, so test suites never share cached grants. */
   accessCache: InMemoryAccessCache;
+  /** Slice 5: the workspace's roles, and the transaction user-admin writes and their audit entries share. */
+  roleCatalogue: IRoleCatalogue;
+  userAdminTransaction: IUserAdminTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -173,6 +182,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const accessCache = overrides?.accessCache ?? new InMemoryAccessCache();
   const resolveAccessContext = new ResolveAccessContextUseCase(accessRepository, accessCache);
   const recordScopes = new RecordScopeResolver(new PrismaTeamRoster());
+  const roleCatalogue = overrides?.roleCatalogue ?? new PrismaRoleCatalogue();
+  const userAdminTransaction = overrides?.userAdminTransaction ?? new PrismaUserAdminTransaction();
+  const roleManagementGuard = new RoleManagementGuard(roleCatalogue);
 
   // Use Cases
   //
@@ -188,7 +200,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const updatePlatformSettingsUseCase = new UpdatePlatformSettingsUseCase(platformSettingsRepository);
   const bulkUpdateTenantSettingsUseCase = new BulkUpdateTenantSettingsUseCase(tenantRepository);
   const loginUseCase = new LoginUseCase(userRepository, tenantRepository, passwordHasher, tokenService);
-  const createUserUseCase = new CreateUserUseCase(userRepository, passwordHasher);
+  const createUserUseCase = new CreateUserUseCase(userRepository, passwordHasher, roleCatalogue, userAdminTransaction);
   const getPlatformUsersUseCase = new GetPlatformUsersUseCase(userRepository);
   const enterTenantUseCase = new EnterTenantUseCase(tenantRepository, userRepository, tokenService);
   const exitTenantUseCase = new ExitTenantUseCase(userRepository, tokenService);
@@ -199,7 +211,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new FsTenantMediaCleaner(),
     auditLogger
   );
-  const inviteStaffUseCase = new InviteStaffUseCase(invitationRepository, emailSender);
+  const inviteStaffUseCase = new InviteStaffUseCase(roleCatalogue, userAdminTransaction, emailSender);
   const notificationRepository = new PrismaNotificationRepository();
   const notificationSettingsRepository = new PrismaNotificationSettingsRepository();
 
@@ -225,19 +237,33 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     notificationEmailDispatcher
   );
   const quotationWriteTx = new PrismaQuotationWriteTransaction();
-  const acceptInvitationUseCase = new AcceptInvitationUseCase(invitationRepository, userRepository, passwordHasher, tenantRepository, notificationService);
+  const acceptInvitationUseCase = new AcceptInvitationUseCase(
+    invitationRepository,
+    passwordHasher,
+    tenantRepository,
+    roleCatalogue,
+    userAdminTransaction,
+    notificationService
+  );
   const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userRepository, prtRepository, emailSender);
   const resetPasswordUseCase = new ResetPasswordUseCase(prtRepository, userRepository, passwordHasher);
-  const getTenantStaffUseCase = new GetTenantStaffUseCase(userRepository);
+  const getTenantStaffUseCase = new GetTenantStaffUseCase(userRepository, roleCatalogue);
+  const listRolesUseCase = new ListRolesUseCase(roleCatalogue);
   const getPendingInvitationsUseCase = new GetPendingInvitationsUseCase(invitationRepository);
   const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
   const changePasswordUseCase = new ChangePasswordUseCase(userRepository, passwordHasher);
   const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
-  const updateUserRoleUseCase = new UpdateUserRoleUseCase(userRepository, accessCache);
+  const updateUserRoleUseCase = new UpdateUserRoleUseCase(
+    userRepository,
+    roleCatalogue,
+    roleManagementGuard,
+    userAdminTransaction,
+    accessCache
+  );
   const cancelInvitationUseCase = new CancelInvitationUseCase(invitationRepository);
-  const deactivateUserUseCase = new DeactivateUserUseCase(userRepository, accessCache);
+  const deactivateUserUseCase = new DeactivateUserUseCase(userRepository, roleManagementGuard, userAdminTransaction, accessCache);
   const getDeactivationImpactUseCase = new GetDeactivationImpactUseCase(userRepository);
-  const reactivateUserUseCase = new ReactivateUserUseCase(userRepository, accessCache);
+  const reactivateUserUseCase = new ReactivateUserUseCase(userRepository, userAdminTransaction, accessCache);
 
   // Platform Admin user lifecycle (suspend/reactivate/delete, including
   // Business Owner ownership transfer). Distinct actor and scope from the
@@ -293,7 +319,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     createUserUseCase,
     exitTenantUseCase,
     changePasswordUseCase,
-    resolveAccessContext
+    resolveAccessContext,
+    listRolesUseCase
   );
 
   // Auth Routes

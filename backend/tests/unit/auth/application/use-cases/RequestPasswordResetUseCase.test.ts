@@ -19,7 +19,6 @@ describe('RequestPasswordResetUseCase', () => {
       findSuperAdminByEmail: jest.fn(),
       updatePassword: jest.fn(),
       updateProfile: jest.fn(),
-      updateRoleAndWarehouse: jest.fn(),
       setActive: jest.fn(),
       softDelete: jest.fn(),
       countAssignedWork: jest.fn(),

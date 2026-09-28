@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { createApp } from '../../../src/main/app';
 import { SmtpEmailSender } from '../../../src/auth/infrastructure/SmtpEmailSender';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
+import { RoleKey } from '../../../src/access/domain/RoleKey';
+import { seedSystemRoles } from '../../support/seedRoles';
 
 interface SentMail {
   from: { name: string; address: string };
@@ -30,6 +32,7 @@ describe('system email branding', () => {
   let sent: SentMail[];
   let tenantId: string;
   let ownerToken: string;
+  let roles: Record<RoleKey, string>;
 
   /** Both flows send after responding, so the message can land a tick later. */
   const nextMail = async (): Promise<SentMail> => {
@@ -71,6 +74,7 @@ describe('system email branding', () => {
     tenantId = uuidv4();
     const ownerId = uuidv4();
     await prisma.tenant.create({ data: { id: tenantId, name: 'Wellness Albania', urlSlug: slug } });
+    roles = await seedSystemRoles(prisma, tenantId);
     await prisma.user.create({
       data: { id: ownerId, email: ownerEmail, hashedPassword: 'x', role: 'BUSINESS_OWNER', tenantId },
     });
@@ -86,6 +90,7 @@ describe('system email branding', () => {
   afterEach(async () => {
     await prisma.passwordResetToken.deleteMany({ where: { user: { tenantId } } });
     await prisma.invitation.deleteMany({ where: { tenantId } });
+    await prisma.auditEntry.deleteMany({ where: { tenantId } });
     await prisma.notification.deleteMany({ where: { tenantId } });
     await prisma.user.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -107,7 +112,7 @@ describe('system email branding', () => {
     await request(app)
       .post(`/api/${slug}/auth/invitations`)
       .set('Cookie', [`jwt=${ownerToken}`])
-      .send({ email: `invitee-${runId}@wellness.test`, role: 'STAFF' })
+      .send({ email: `invitee-${runId}@wellness.test`, roleId: roles[RoleKey.SalesUser] })
       .expect(200);
 
     const mail = await nextMail();

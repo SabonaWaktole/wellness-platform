@@ -1,5 +1,5 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
-import { IUserRepository } from '../../domain/repositories/IUserRepository';
+import { AssignedWork, IUserRepository } from '../../domain/repositories/IUserRepository';
 
 export interface GetDeactivationImpactDTO {
   access: AccessContext;
@@ -8,7 +8,8 @@ export interface GetDeactivationImpactDTO {
 }
 
 /**
- * What would be left unattended if this user were deactivated.
+ * What would be left unattended if this user were deactivated, and so what
+ * has to be handed to a colleague first (FR-USR-05).
  *
  * Read by the confirmation dialog so the decision is made with the consequence
  * visible, rather than discovered afterwards.
@@ -16,7 +17,7 @@ export interface GetDeactivationImpactDTO {
 export class GetDeactivationImpactUseCase {
   constructor(private userRepository: IUserRepository) {}
 
-  async execute(dto: GetDeactivationImpactDTO): Promise<{ clients: number; upcomingAppointments: number }> {
+  async execute(dto: GetDeactivationImpactDTO): Promise<AssignedWork> {
     dto.access.ensure('users.manage');
 
     const target = await this.userRepository.findById(dto.userId);

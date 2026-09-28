@@ -1,6 +1,9 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { IPermissionsChanged } from '../../../access/application/ports/IPermissionsChanged';
+import { AuditAction } from '../../../audit/domain/AuditAction';
+import { IUserAdminTransaction } from '../ports/IUserAdminTransaction';
+import { userLabel } from '../userAudit';
 
 export interface ReactivateUserDTO {
   access: AccessContext;
@@ -19,9 +22,9 @@ export interface ReactivateUserDTO {
  * the confirmation copy's promise that the account is kept rather than deleted
  * — kept, but unreachable, is not much of a promise.
  *
- * Deliberately does NOT restore anything else. Deactivation leaves clients and
- * appointments assigned where they were, so reactivation has nothing to put
- * back; the member simply becomes able to sign in again. The one thing that can
+ * Deliberately does NOT restore anything else. Companies and open contracts
+ * were handed to a colleague on deactivation (FR-USR-05) and stay with them;
+ * the member simply becomes able to sign in again. The one thing that can
  * differ is `warehouseId`: if their warehouse was deleted while they were
  * inactive, the optional FK has already been nulled, so they return with no
  * warehouse scope rather than a dangling one. That is visible in Team Settings
@@ -30,6 +33,7 @@ export interface ReactivateUserDTO {
 export class ReactivateUserUseCase {
   constructor(
     private userRepository: IUserRepository,
+    private writeTx: IUserAdminTransaction,
     /** D1: cleared so the account's next request is resolved fresh rather than from a stale (pre-reactivation) cache entry. */
     private permissionsChanged?: IPermissionsChanged
   ) {}
@@ -55,7 +59,19 @@ export class ReactivateUserUseCase {
       return { userId: target.id };
     }
 
-    await this.userRepository.setActive(dto.userIdToReactivate, true);
+    await this.writeTx.run(async ({ staff, auditTrail }) => {
+      await staff.setActive(dto.tenantId, target.id, true);
+      await auditTrail.record({
+        tenantId: dto.tenantId,
+        userId: dto.access.userId,
+        userRole: dto.access.auditRole,
+        action: AuditAction.StatusChange,
+        entityType: 'User',
+        entityId: target.id,
+        entityLabel: userLabel(target),
+        changes: [{ field: 'isActive', old: false, new: true }],
+      });
+    });
     this.permissionsChanged?.userChanged(dto.userIdToReactivate);
     return { userId: dto.userIdToReactivate };
   }
