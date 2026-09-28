@@ -17,6 +17,12 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
       case LookupList.BusinessTypes:
         // Nothing points at a business type until companies do (Slice 11).
         return 0;
+      case LookupList.Areas:
+        // Active or not: even an inactive city still holds its area.
+        return this.prisma.city.count({ where: { tenantId, areaId: id } });
+      case LookupList.Cities:
+        // Nothing points at a city until companies do (Slice 11).
+        return 0;
     }
   }
 }

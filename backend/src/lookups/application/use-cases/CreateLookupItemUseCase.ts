@@ -28,18 +28,18 @@ export class CreateLookupItemUseCase {
     const rules = this.rules[input.list];
 
     const labels = lookupLabels(input.values);
+    const fields = pickFields(input.values, rules.fields);
     const siblings = await this.store.list(input.tenantId, input.list);
-    if (findNameClash(siblings, labels)) {
+    // The candidate's own fields (a city's areaId) decide which siblings its
+    // name and order are scoped to (FR-SET-04); `order` is not among them, so
+    // it is not needed yet.
+    const candidate: LookupRecord = { id: '', ...labels, ...fields, order: 0, active: true };
+    const peers = rules.namePeers(candidate, siblings);
+    if (findNameClash(peers, labels)) {
       throw new LookupValueTakenError('nameSq');
     }
 
-    const item: LookupRecord = {
-      ...pickFields(input.values, rules.fields),
-      id: randomUUID(),
-      ...labels,
-      order: nextOrder(siblings),
-      active: true,
-    };
+    const item: LookupRecord = { ...candidate, id: randomUUID(), order: nextOrder(peers) };
     await rules.validate(input.tenantId, item, null, siblings);
 
     const after = await auditFieldsOf(rules, input.tenantId, item);

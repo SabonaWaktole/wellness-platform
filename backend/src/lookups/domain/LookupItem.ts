@@ -26,6 +26,12 @@ export type BusinessType = LookupItem & {
   riskLevelId: string;
 };
 
+export type Area = LookupItem;
+
+export type City = LookupItem & {
+  areaId: string;
+};
+
 export interface LookupLabels {
   nameSq: string;
   nameEn: string | null;

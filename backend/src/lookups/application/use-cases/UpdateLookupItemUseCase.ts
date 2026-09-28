@@ -36,12 +36,14 @@ export class UpdateLookupItemUseCase {
       nameSq: 'nameSq' in input.values ? (input.values.nameSq as string) : current.nameSq,
       nameEn: 'nameEn' in input.values ? (input.values.nameEn as string | null) : current.nameEn,
     });
+    const next: LookupRecord = { ...current, ...pickFields(input.values, rules.fields), ...labels };
     const siblings = await this.store.list(input.tenantId, input.list);
-    if (findNameClash(siblings, labels, current.id)) {
+    // Scoped by `next`'s own fields, so moving a city to another area checks
+    // the name against its new area, not its old one (FR-SET-04).
+    if (findNameClash(rules.namePeers(next, siblings), labels, current.id)) {
       throw new LookupValueTakenError('nameSq');
     }
 
-    const next: LookupRecord = { ...current, ...pickFields(input.values, rules.fields), ...labels };
     await rules.validate(input.tenantId, next, current, siblings);
 
     const changes = diff(

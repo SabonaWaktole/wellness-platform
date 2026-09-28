@@ -387,14 +387,15 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   );
   app.use('/api/:tenantSlug/audit', createAuditRouter(auditController, tokenService, tenantRepository, resolveAccessContext));
 
-  // Settings → Lists: risk levels and business types (Slice 8: FR-SET-01, 02).
+  // Settings → Lists: risk levels, business types (Slice 8: FR-SET-01, 02),
+  // and areas, cities (Slice 9: FR-SET-03, 04).
   const lookupStore = new PrismaLookupStore();
   const lookupRules = createLookupRules(lookupStore);
   const lookupsController = new LookupsController(
-    new ListLookupItemsUseCase(lookupStore),
+    new ListLookupItemsUseCase(lookupStore, lookupRules),
     new CreateLookupItemUseCase(lookupStore, lookupRules, lookupWriteTransaction),
     new UpdateLookupItemUseCase(lookupStore, lookupRules, lookupWriteTransaction),
-    new ReorderLookupItemsUseCase(lookupStore, lookupWriteTransaction),
+    new ReorderLookupItemsUseCase(lookupStore, lookupRules, lookupWriteTransaction),
     new SetLookupItemActiveUseCase(lookupStore, lookupRules, lookupWriteTransaction),
     new DeleteLookupItemUseCase(lookupStore, lookupRules, new PrismaLookupInUsePolicy(), lookupWriteTransaction)
   );

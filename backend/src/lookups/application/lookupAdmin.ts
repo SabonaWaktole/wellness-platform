@@ -51,3 +51,16 @@ export function lookupAuditEntry(
 export function pickFields(values: Record<string, unknown>, fields: string[]): Record<string, unknown> {
   return Object.fromEntries(fields.filter((field) => field in values).map((field) => [field, values[field]]));
 }
+
+/**
+ * Only the keys `rules` allows filtering by (City's `areaId`, FR-SET-04), and
+ * only when their value is a plain string — a query param an unfiltered list
+ * doesn't recognise, or an array from a repeated param, is dropped rather
+ * than reaching the store.
+ */
+export function allowedFilter(rules: LookupListRules, filter: Record<string, unknown> | undefined): Record<string, string> {
+  const fields = rules.filterFields ?? [];
+  return Object.fromEntries(
+    Object.entries(filter ?? {}).filter((entry): entry is [string, string] => fields.includes(entry[0]) && typeof entry[1] === 'string')
+  );
+}
