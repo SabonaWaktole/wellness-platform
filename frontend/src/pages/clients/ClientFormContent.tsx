@@ -18,9 +18,11 @@ import { useActiveLookups } from '../../hooks/useActiveLookups';
 import { getStaffDisplayName } from '../../utils/userUtils';
 import { lookupLabel } from '../../utils/lookupLabel';
 import { RiskBadge } from '../../components/clients/RiskBadge';
+import { ContactPersonsEditor } from './ContactPersonsEditor';
 import { clientErrorMessage, clientErrorField } from './clientErrorMessage';
+import { Users } from 'lucide-react';
 import type { FormElement } from '../../types/form';
-import type { CompanyProfileInput } from '../../types/client';
+import type { CompanyProfileInput, ContactPersonInput } from '../../types/client';
 import styles from './ClientFormContent.module.css';
 
 interface ClientFormValues {
@@ -37,6 +39,8 @@ interface ClientFormValues {
     website: string;
   };
 }
+
+const emptyContactRow = (): ContactPersonInput => ({ name: '', position: '', phone: '', email: '' });
 
 const PROFILE_FIELDS = new Set(['businessTypeId', 'employeeCount', 'areaId', 'cityId', 'taxId', 'website']);
 
@@ -55,6 +59,9 @@ export const ClientFormContent: React.FC = () => {
   const [requiredErrors, setRequiredErrors] = useState<Record<string, string>>({});
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Create mode only — the initial contacts (FR-CMP-04). Edit mode reads
+  // client.contacts directly and writes through the per-contact endpoints.
+  const [draftContacts, setDraftContacts] = useState<ContactPersonInput[]>([emptyContactRow()]);
 
   const { control, handleSubmit, reset, getValues, watch, setValue } = useForm<ClientFormValues>({
     defaultValues: {
@@ -247,6 +254,9 @@ export const ClientFormContent: React.FC = () => {
       // clears the stored notes instead of leaving the old text in place.
       notes: values.notes?.trim() ?? '',
       profile,
+      // Contacts travel only on create — an edit's contacts are already
+      // saved individually through ContactPersonsEditor's own endpoints.
+      ...(isEdit ? {} : { contacts: draftContacts }),
     };
 
     setSubmitError(null);
@@ -457,6 +467,28 @@ export const ClientFormContent: React.FC = () => {
               )}
             />
           </div>
+        </Card>
+
+        {/* Contact persons (Slice 12: FR-CMP-04) */}
+        <Card className={styles.sectionCard} padding="xl">
+          <div className={styles.sectionHeader}>
+            <div className={styles.iconWrapper}>
+              <Users size={20} />
+            </div>
+            <h2 className={styles.sectionTitle}>{t('form.contacts.title')}</h2>
+          </div>
+          {isEdit ? (
+            client && (
+              <ContactPersonsEditor
+                mode="edit"
+                clientId={client.id}
+                contacts={client.contacts ?? []}
+                onChanged={fetchClient}
+              />
+            )
+          ) : (
+            <ContactPersonsEditor mode="create" contacts={draftContacts} onChange={setDraftContacts} />
+          )}
         </Card>
 
         {/* Internal Notes */}

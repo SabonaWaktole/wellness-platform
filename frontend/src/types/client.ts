@@ -49,6 +49,28 @@ export interface CompanyProfileInput {
   website?: string | null;
 }
 
+/** A named person at a company (FR-CMP-04, Slice 12). */
+export interface ContactPerson {
+  id: string;
+  clientId: string;
+  name: string;
+  position: string | null;
+  phone: string | null;
+  email: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A contact as the company form submits it, before it has an id. */
+export interface ContactPersonInput {
+  name: string;
+  position?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  isPrimary?: boolean;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -62,6 +84,10 @@ export interface Client {
   /** Free-text internal notes, private to the workspace. */
   notes?: string | null;
   profile?: CompanyProfile;
+  /** The company's contacts (FR-CMP-04), primary first. Present on a single-client read. */
+  contacts?: ContactPerson[];
+  /** The primary contact only — what the company list carries, to stay light. */
+  primaryContact?: ContactPerson | null;
   lastUpdatedByUserId: string;
   createdAt: string;
   updatedAt: string;

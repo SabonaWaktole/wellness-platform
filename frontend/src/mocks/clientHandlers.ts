@@ -28,6 +28,14 @@ const mockClients = [
   }
 ];
 
+/** Slice 12 contacts (FR-CMP-04), keyed by clientId. */
+const mockContacts: Record<string, any[]> = {
+  c1: [
+    { id: 'ct1', clientId: 'c1', name: 'Jane Doe', position: 'Owner', phone: '+1 555 0100', email: 'jane@acme.com', isPrimary: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  ],
+  c2: [],
+};
+
 export const clientHandlers = [
   http.get(`${API_URL}/:tenantSlug/clients/search`, ({ request }) => {
     const url = new URL(request.url);
@@ -46,7 +54,7 @@ export const clientHandlers = [
     if (!client) {
       return new HttpResponse(null, { status: 404 });
     }
-    return HttpResponse.json(client);
+    return HttpResponse.json({ ...client, contacts: mockContacts[client.id] ?? [] });
   }),
 
   http.post(`${API_URL}/:tenantSlug/clients`, async ({ request }) => {
@@ -63,7 +71,18 @@ export const clientHandlers = [
       updatedAt: new Date().toISOString(),
     };
     mockClients.push(newClient);
-    return HttpResponse.json(newClient, { status: 201 });
+    mockContacts[newClient.id] = (body.contacts || []).map((c: any, i: number) => ({
+      id: `ct${Date.now()}${i}`,
+      clientId: newClient.id,
+      name: c.name,
+      position: c.position ?? null,
+      phone: c.phone ?? null,
+      email: c.email ?? null,
+      isPrimary: i === 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+    return HttpResponse.json({ ...newClient, contacts: mockContacts[newClient.id] }, { status: 201 });
   }),
 
   http.put(`${API_URL}/:tenantSlug/clients/:clientId`, async ({ params, request }) => {
@@ -125,6 +144,58 @@ export const clientHandlers = [
     });
   }),
   
+  http.post(`${API_URL}/:tenantSlug/clients/:clientId/contacts`, async ({ params, request }) => {
+    const clientId = params.clientId as string;
+    const body = await request.json() as any;
+    const list = mockContacts[clientId] ?? (mockContacts[clientId] = []);
+    const contact = {
+      id: `ct${Date.now()}`,
+      clientId,
+      name: body.name,
+      position: body.position ?? null,
+      phone: body.phone ?? null,
+      email: body.email ?? null,
+      isPrimary: list.length === 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    list.push(contact);
+    return HttpResponse.json(contact, { status: 201 });
+  }),
+
+  http.patch(`${API_URL}/:tenantSlug/clients/:clientId/contacts/:contactId`, async ({ params, request }) => {
+    const list = mockContacts[params.clientId as string] ?? [];
+    const contact = list.find((c) => c.id === params.contactId);
+    if (!contact) return new HttpResponse(null, { status: 404 });
+    const body = await request.json() as any;
+    Object.assign(contact, body, { updatedAt: new Date().toISOString() });
+    return HttpResponse.json(contact);
+  }),
+
+  http.delete(`${API_URL}/:tenantSlug/clients/:clientId/contacts/:contactId`, ({ params, request }) => {
+    const list = mockContacts[params.clientId as string] ?? [];
+    const index = list.findIndex((c) => c.id === params.contactId);
+    if (index === -1) return new HttpResponse(null, { status: 404 });
+    const removed = list[index];
+    if (list.length === 1) return HttpResponse.json({ error: 'Last contact', code: 'PRIMARY_CONTACT_REQUIRED' }, { status: 400 });
+    if (removed.isPrimary) {
+      const newPrimaryId = new URL(request.url).searchParams.get('newPrimaryContactId');
+      const successor = list.find((c) => c.id === newPrimaryId);
+      if (!successor) return HttpResponse.json({ error: 'Choose a new primary', code: 'PRIMARY_CONTACT_REQUIRED' }, { status: 400 });
+      successor.isPrimary = true;
+    }
+    list.splice(index, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post(`${API_URL}/:tenantSlug/clients/:clientId/contacts/:contactId/primary`, ({ params }) => {
+    const list = mockContacts[params.clientId as string] ?? [];
+    const contact = list.find((c) => c.id === params.contactId);
+    if (!contact) return new HttpResponse(null, { status: 404 });
+    list.forEach((c) => { c.isPrimary = c.id === contact.id; });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.post(`${API_URL}/:tenantSlug/clients/:clientId/interactions`, async ({ request }) => {
     const body = await request.json() as any;
     return HttpResponse.json({

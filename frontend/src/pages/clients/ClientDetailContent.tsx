@@ -311,6 +311,37 @@ export const ClientDetailContent: React.FC = () => {
             </div>
           </Card>
 
+          {/* Contact persons (Slice 12: FR-CMP-04) */}
+          <Card padding="lg">
+            <h2 className={styles.cardTitle}>{t('detail.contacts.title')}</h2>
+            <div className={styles.contactsList}>
+              {(client.contacts ?? []).map((contact) => (
+                <div key={contact.id} className={styles.contactCard}>
+                  <div className={styles.contactCardHeader}>
+                    <span className={styles.contactName}>{contact.name}</span>
+                    {contact.isPrimary && <Badge variant="primary">{t('detail.contacts.primary')}</Badge>}
+                  </div>
+                  {contact.position && <p className={styles.contactTitle}>{contact.position}</p>}
+                  <div className={styles.contactActions}>
+                    {contact.phone && (
+                      <a href={`tel:${contact.phone}`} className={styles.contactLink}>
+                        <Phone size={16} /> {contact.phone}
+                      </a>
+                    )}
+                    {contact.email && (
+                      <a href={`mailto:${contact.email}`} className={styles.contactLink}>
+                        <Mail size={16} /> {contact.email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {(client.contacts ?? []).length === 0 && (
+                <p className={styles.fieldValue}>{t('detail.contacts.none')}</p>
+              )}
+            </div>
+          </Card>
+
           {/* About Card — every field not already rendered above via its role */}
           <Card padding="lg" className={styles.customFieldsCard}>
             <div className={styles.cardHeader}>

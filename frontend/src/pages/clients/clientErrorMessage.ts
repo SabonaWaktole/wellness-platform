@@ -13,6 +13,10 @@ const KNOWN_CODES = [
   'EMAIL_INVALID',
   'PHONE_INVALID',
   'WEBSITE_INVALID',
+  'CONTACT_NAME_REQUIRED',
+  'CONTACT_REACH_REQUIRED',
+  'CONTACTS_REQUIRED',
+  'PRIMARY_CONTACT_REQUIRED',
 ];
 
 /** The company create/update API's refusals (Slice 11), in the user's language; anything else is the generic message. */

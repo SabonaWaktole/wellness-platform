@@ -18,6 +18,14 @@ vi.mock('../../hooks/useClients', () => ({
   useCreateClient: vi.fn(),
   useUpdateClient: vi.fn(),
   useClientDetail: vi.fn(),
+  useContactPersons: vi.fn(() => ({
+    addContact: vi.fn(),
+    updateContact: vi.fn(),
+    removeContact: vi.fn(),
+    setPrimaryContact: vi.fn(),
+    isLoading: false,
+    error: null,
+  })),
 }));
 vi.mock('../../hooks/useClientForm', () => ({ useClientForm: vi.fn() }));
 vi.mock('../../hooks/useTeam', () => ({ useTeam: vi.fn() }));

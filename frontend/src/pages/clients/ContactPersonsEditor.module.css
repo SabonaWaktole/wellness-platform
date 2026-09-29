@@ -1,0 +1,92 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-base);
+  border: 1px solid var(--border-subtle, #e2e2e2);
+  border-radius: var(--radius-lg);
+}
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.rowIndex {
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.rowGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+@media (max-width: 480px) {
+  .rowGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-error, #c0392b);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-md);
+}
+
+.removeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primaryRadio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.setPrimaryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.replacePrompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--color-warning-container, #fff3e0);
+  border-radius: var(--radius-md);
+}
+
+.errorBanner {
+  padding: 10px var(--spacing-base);
+  background-color: var(--color-error-container);
+  color: var(--color-on-error-container);
+  border-radius: var(--radius-lg);
+}

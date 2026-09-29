@@ -266,6 +266,33 @@
   color: var(--color-primary);
 }
 
+/* --------------------------------------------------- contact persons (12) */
+
+.contactsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.contactCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.contactCard:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.contactCardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
 /* --------------------------------------------------------- custom fields */
 
 .customFieldsCard {
