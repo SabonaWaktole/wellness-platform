@@ -122,28 +122,29 @@ export const clientHandlers = [
     ]);
   }),
 
-  http.get(`${API_URL}/:tenantSlug/clients/:clientId/history`, () => {
-    return HttpResponse.json({
-      timeline: [
-        {
-          id: 'i1',
-          timestamp: new Date().toISOString(),
-          type: 'INTERACTION_ADDED',
-          description: 'Added an interaction',
-          actor: 'User 1',
-          details: { channel: 'EMAIL', content: 'Sent initial proposal' }
-        },
-        {
-          id: 'h1',
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          type: 'CLIENT_CREATED',
-          description: 'Created client record',
-          actor: 'User 1'
-        }
-      ]
-    });
+  http.get(`${API_URL}/:tenantSlug/clients/:clientId/history`, ({ request }) => {
+    const types = new URL(request.url).searchParams.get('type')?.split(',').filter(Boolean) ?? [];
+    const timeline = [
+      {
+        id: 'interaction:i1',
+        category: 'ACTIVITY',
+        timestamp: new Date().toISOString(),
+        type: 'INTERACTION_ADDED',
+        actor: { id: 'u1', name: 'User 1' },
+        details: { channel: 'EMAIL', content: 'Sent initial proposal' },
+      },
+      {
+        id: 'contact-added:ct1',
+        category: 'CONTACT',
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        type: 'CONTACT_ADDED',
+        actor: null,
+        details: { name: 'Jane Doe', position: 'Manager' },
+      },
+    ].filter((entry) => types.length === 0 || types.includes(entry.category));
+    return HttpResponse.json({ timeline, nextCursor: null });
   }),
-  
+
   http.post(`${API_URL}/:tenantSlug/clients/:clientId/contacts`, async ({ params, request }) => {
     const clientId = params.clientId as string;
     const body = await request.json() as any;

@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { clientService } from '../services/clientService';
 import { useParams } from 'react-router-dom';
-import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory, ClientRelatedCounts, ContactPersonInput } from '../types/client';
+import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory, ClientRelatedCounts, ContactPersonInput, TimelineCategory } from '../types/client';
 import { extractApiErrorMessage } from '../utils/apiError';
 
 export const useClients = () => {
@@ -52,27 +52,58 @@ export const useClientDetail = (clientId: string) => {
   return { client, isLoading, error, fetchClient };
 };
 
+/**
+ * The company timeline (FR-CMP-05): the first page for the chosen `types`,
+ * then `loadMore` appends the next page by cursor. Changing `types` changes
+ * `fetchHistory`, so a caller's effect on it refetches from the top. A
+ * response that arrives after a newer request started is dropped, so quickly
+ * toggling filters cannot leave an older filter's entries on screen.
+ */
 export const useClientHistory = (clientId: string) => {
   const { tenantSlug } = useParams();
   const [history, setHistory] = useState<ClientHistory | null>(null);
+  const [types, setTypes] = useState<TimelineCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const latestRequest = useRef(0);
 
   const fetchHistory = useCallback(async () => {
     if (!tenantSlug || !clientId) return;
+    const request = ++latestRequest.current;
     setIsLoading(true);
     setError(null);
     try {
-      const data = await clientService.getClientHistory(tenantSlug, clientId);
-      setHistory(data);
+      const data = await clientService.getClientHistory(tenantSlug, clientId, { types });
+      if (request === latestRequest.current) setHistory(data);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch history');
+      if (request === latestRequest.current) setError(err.response?.data?.error || 'Failed to fetch history');
     } finally {
-      setIsLoading(false);
+      if (request === latestRequest.current) setIsLoading(false);
     }
-  }, [tenantSlug, clientId]);
+  }, [tenantSlug, clientId, types]);
 
-  return { history, isLoading, error, fetchHistory };
+  const nextCursor = history?.nextCursor ?? null;
+  const loadMore = useCallback(async () => {
+    if (!tenantSlug || !clientId || !nextCursor) return;
+    const request = latestRequest.current;
+    setIsLoadingMore(true);
+    try {
+      const data = await clientService.getClientHistory(tenantSlug, clientId, { types, cursor: nextCursor });
+      if (request === latestRequest.current) {
+        setHistory((current) => ({
+          timeline: [...(current?.timeline ?? []), ...data.timeline],
+          nextCursor: data.nextCursor,
+        }));
+      }
+    } catch (err: any) {
+      if (request === latestRequest.current) setError(err.response?.data?.error || 'Failed to fetch history');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [tenantSlug, clientId, types, nextCursor]);
+
+  return { history, types, setTypes, isLoading, isLoadingMore, error, fetchHistory, loadMore };
 };
 
 export const useClientSettings = () => {

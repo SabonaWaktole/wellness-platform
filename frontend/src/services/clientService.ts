@@ -6,6 +6,7 @@ import type {
   CustomFieldDefinition,
   OutcomeCategory,
   ClientHistory,
+  ClientHistoryParams,
   Interaction,
   ImportResult,
   ClientRelatedCounts,
@@ -81,8 +82,14 @@ export const clientService = {
     return response.data;
   },
 
-  getClientHistory: async (tenantSlug: string, clientId: string) => {
-    const response = await apiClient.get<ClientHistory>(`/${tenantSlug}/clients/${clientId}/history`);
+  getClientHistory: async (tenantSlug: string, clientId: string, params: ClientHistoryParams = {}) => {
+    const response = await apiClient.get<ClientHistory>(`/${tenantSlug}/clients/${clientId}/history`, {
+      params: {
+        type: params.types && params.types.length > 0 ? params.types.join(',') : undefined,
+        cursor: params.cursor,
+        limit: params.limit,
+      },
+    });
     return response.data;
   },
 

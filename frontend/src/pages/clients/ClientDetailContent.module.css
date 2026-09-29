@@ -379,14 +379,7 @@
   /* No extra styles */
 }
 
-.timelineActions {
-  display: flex;
-  gap: var(--spacing-xs);
-}
 
-.smallIconButton {
-  min-width: unset;
-}
 
 .logActivityRow {
   display: flex;
@@ -416,12 +409,6 @@
   gap: 6px;
 }
 
-.timelineList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  padding-left: var(--spacing-xs);
-}
 
 /* ------------------------------------------------------------------ tabs */
 

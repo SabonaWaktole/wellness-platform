@@ -27,6 +27,7 @@ import { IMPORT_MIME, MAX_IMPORT_BYTES } from '../../../infrastructure/excel/she
 import { PrismaClientRepository } from '../../../infrastructure/repositories/PrismaClientRepository';
 import { PrismaClientWriteTransaction } from '../../../infrastructure/repositories/PrismaClientWriteTransaction';
 import { PrismaContactPersonRepository } from '../../../infrastructure/repositories/PrismaContactPersonRepository';
+import { companyTimelineSources } from '../../../infrastructure/timeline/companyTimelineSources';
 import { AddContactPersonUseCase } from '../../../application/use-cases/AddContactPersonUseCase';
 import { UpdateContactPersonUseCase } from '../../../application/use-cases/UpdateContactPersonUseCase';
 import { RemoveContactPersonUseCase } from '../../../application/use-cases/RemoveContactPersonUseCase';
@@ -36,7 +37,6 @@ import { PrismaCustomFieldDefinitionRepository } from '../../../infrastructure/r
 import { PrismaCustomFieldWriteTransaction } from '../../../infrastructure/PrismaCustomFieldWriteTransaction';
 import { PrismaInteractionRepository } from '../../../infrastructure/repositories/PrismaInteractionRepository';
 import { PrismaOutcomeCategoryRepository } from '../../../infrastructure/repositories/PrismaOutcomeCategoryRepository';
-import { PrismaAppointmentRepository } from '../../../../appointments/infrastructure/repositories/PrismaAppointmentRepository';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../../main/interfaces/http/middlewares/resolveTenant';
@@ -110,7 +110,6 @@ export const createClientRouter = (
   const customFieldWriteTransaction = new PrismaCustomFieldWriteTransaction(prisma);
   const interactionRepo = new PrismaInteractionRepository(prisma);
   const outcomeCategoryRepo = new PrismaOutcomeCategoryRepository(prisma);
-  const appointmentRepo = new PrismaAppointmentRepository(prisma);
   const scopes = new RecordScopeResolver(new PrismaTeamRoster(prisma));
 
   const notifications =
@@ -122,7 +121,12 @@ export const createClientRouter = (
   const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, lookupStore, notifications, clientWriteTx);
   const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, scopes, clientWriteTx, lookupStore, notifications);
   const searchClientsUseCase = new SearchClientsUseCase(clientRepo, scopes);
-  const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, scopes, appointmentRepo);
+  const getClientHistoryUseCase = new GetClientHistoryUseCase(
+    clientRepo,
+    scopes,
+    companyTimelineSources(prisma),
+    new PrismaUserRepository(prisma)
+  );
   const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo, scopes);
   const defineCustomFieldUseCase = new DefineCustomFieldUseCase(customFieldRepo);
   const updateCustomFieldUseCase = new UpdateCustomFieldUseCase(customFieldWriteTransaction);

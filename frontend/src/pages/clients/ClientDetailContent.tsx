@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Filter, Search, PhoneCall, Video, FileText, Calendar } from 'lucide-react';
+import { ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, PhoneCall, Video, FileText, Calendar } from 'lucide-react';
 import { useClientDetail, useClientHistory, useClientSettings } from '../../hooks/useClients';
 import { useClientAppointments } from '../../hooks/useAppointments';
 import { Card } from '../../components/ui/Card/Card';
@@ -12,11 +12,10 @@ import { SlideOver } from '../../components/ui/SlideOver';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
 import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
-import { TimelineItem } from '../../components/ui/TimelineItem/TimelineItem';
 import { Tabs } from '../../components/ui/Tabs';
 import { usePermission } from '../../hooks/usePermission';
 import { ClientContractsTab } from '../../components/clients/ClientContractsTab';
-import { getActivityConfig } from '../../utils/activityMapper';
+import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { AppointmentForm } from '../../components/forms/AppointmentForm/AppointmentForm';
 import { useAddInteraction } from '../../hooks/useClients';
@@ -76,7 +75,16 @@ export const ClientDetailContent: React.FC = () => {
   const showDuplicateNameWarning = !!(location.state as { duplicateNameWarning?: boolean } | null)?.duplicateNameWarning;
   const [searchParams, setSearchParams] = useSearchParams();
   const { client, isLoading: isClientLoading, fetchClient } = useClientDetail(clientId || '');
-  const { history, isLoading: isHistoryLoading, fetchHistory } = useClientHistory(clientId || '');
+  const {
+    history,
+    types: historyTypes,
+    setTypes: setHistoryTypes,
+    isLoading: isHistoryLoading,
+    isLoadingMore: isLoadingMoreHistory,
+    error: historyError,
+    fetchHistory,
+    loadMore: loadMoreHistory,
+  } = useClientHistory(clientId || '');
   const { customFields, outcomeCategories, fetchSettings } = useClientSettings();
   const { addInteraction, isLoading: isAddingInteraction } = useAddInteraction();
   const { appointments, isLoading: isAppointmentsLoading, updateAppointmentLocally, fetchClientAppointments } = useClientAppointments(clientId || '');
@@ -135,10 +143,14 @@ export const ClientDetailContent: React.FC = () => {
 
   useEffect(() => {
     fetchClient();
-    fetchHistory();
     fetchSettings();
     fetchStaff();
-  }, [fetchClient, fetchHistory, fetchSettings, fetchStaff]);
+  }, [fetchClient, fetchSettings, fetchStaff]);
+
+  // Separate so a filter change refetches the timeline alone.
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   if (isClientLoading) return <div className={styles.container}>{t('detail.loading')}</div>;
   if (!client) return <div className={styles.container}>{t('detail.notFound')}</div>;
@@ -410,15 +422,7 @@ export const ClientDetailContent: React.FC = () => {
           ) : shownTab === 'timeline' ? (
             <Card padding="lg" className={styles.timelineCard}>
               <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>{t('detail.interactions')}</h2>
-                <div className={styles.timelineActions}>
-                  <Button variant="outline" className={styles.smallIconButton} disabled title={t('detail.filterSoon')} aria-label={t('detail.filterAria')}>
-                    <Filter size={16} />
-                  </Button>
-                  <Button variant="outline" className={styles.smallIconButton} disabled title={t('detail.searchSoon')} aria-label={t('detail.searchAria')}>
-                    <Search size={16} />
-                  </Button>
-                </div>
+                <h2 className={styles.cardTitle}>{t('detail.timeline.title')}</h2>
               </div>
 
             <div className={styles.logActivityRow}>
@@ -436,41 +440,15 @@ export const ClientDetailContent: React.FC = () => {
               </Button>
             </div>
 
-            <div className={styles.timelineList}>
-              {isHistoryLoading && <div className={styles.emptyMessage}>{t('detail.loadingHistory')}</div>}
-              {!isHistoryLoading && history?.timeline.length === 0 && (
-                <div className={styles.emptyMessage}>{t('detail.noInteractions')}</div>
-              )}
-              {!isHistoryLoading && history?.timeline.map((item, index) => {
-                const config = getActivityConfig(item.type, item.details);
-                
-                let title = item.description;
-                if (item.type === 'INTERACTION_ADDED') {
-                  title = t('detail.interactionTitle', { channel: item.details?.channel });
-                } else if (item.type.startsWith('APPOINTMENT_')) {
-                  title = item.details?.purposeTitle || t('detail.appointmentTitle', { status: config.statusLabel || '' });
-                }
-
-                return (
-                  <TimelineItem
-                    key={item.id}
-                    title={title}
-                    subtitle={t('detail.timelineSubtitle', {
-                      timestamp: dates.dateTime(item.timestamp),
-                      actor: item.actor,
-                    })}
-                    content={item.details?.content}
-                    icon={config.icon}
-                    iconBgColor={config.bg}
-                    iconTextColor={config.color}
-                    statusLabel={config.statusLabel}
-                    statusColor={config.statusColor}
-                    statusBgColor={config.statusBgColor}
-                    isLast={index === history.timeline.length - 1}
-                  />
-                );
-              })}
-            </div>
+            <CompanyTimeline
+              history={history}
+              types={historyTypes}
+              onTypesChange={setHistoryTypes}
+              isLoading={isHistoryLoading}
+              isLoadingMore={isLoadingMoreHistory}
+              error={historyError}
+              onLoadMore={loadMoreHistory}
+            />
           </Card>
           ) : (
             <Card padding="lg">

@@ -160,15 +160,31 @@ export interface Interaction {
   createdAt: string;
 }
 
+/** What the company timeline can be filtered by (FR-CMP-05). */
+export const TIMELINE_CATEGORIES = ['CONTACT', 'NOTE', 'ACTIVITY', 'QUOTATION', 'CONTRACT', 'PAYMENT'] as const;
+export type TimelineCategory = (typeof TIMELINE_CATEGORIES)[number];
+
+export interface TimelineEntry {
+  id: string;
+  category: TimelineCategory;
+  /** The event, e.g. CONTACT_ADDED, INTERACTION_ADDED, APPOINTMENT_COMPLETED. */
+  type: string;
+  timestamp: string;
+  /** `null` for a change no person made (a scheduler) or where none is recorded. */
+  actor: { id: string; name: string } | null;
+  /** Money fields (`amount`, `total`, `paidAmount`) are absent when the viewer may not see them. */
+  details: Record<string, any>;
+}
+
 export interface ClientHistory {
-  timeline: Array<{
-    id: string;
-    timestamp: string;
-    type: string;
-    description: string;
-    actor: string;
-    details?: any;
-  }>;
+  timeline: TimelineEntry[];
+  nextCursor: string | null;
+}
+
+export interface ClientHistoryParams {
+  types?: TimelineCategory[];
+  cursor?: string;
+  limit?: number;
 }
 
 export interface SearchClientsParams {

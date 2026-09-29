@@ -3,6 +3,7 @@ import { PermissionScope } from '../../../../access/domain/PermissionScope';
 import { InteractionChannel } from '../../../domain/enums/InteractionChannel';
 import { FieldType } from '../../../domain/enums/FieldType';
 import { FieldRole } from '../../../domain/enums/FieldRole';
+import { TIMELINE_CATEGORIES } from '../../../../shared/application/timeline/TimelineEntry';
 
 // name/email/phone/status/assignedUserId are no longer top-level fields: a
 // tenant can rename/retype/delete every client field (see FieldRole), so
@@ -140,6 +141,27 @@ export const searchClientsSchema = z.object({
       return undefined;
     }
   }),
+});
+
+/**
+ * The company timeline's query (FR-CMP-05). `type` arrives repeated
+ * (`?type=NOTE&type=CONTRACT`) or comma-separated (`?type=NOTE,CONTRACT`).
+ */
+export const clientHistorySchema = z.object({
+  type: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((value) =>
+      value === undefined
+        ? undefined
+        : (Array.isArray(value) ? value : [value])
+            .flatMap((part) => part.split(','))
+            .map((part) => part.trim())
+            .filter(Boolean)
+    )
+    .pipe(z.array(z.enum(TIMELINE_CATEGORIES)).optional()),
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export const addInteractionSchema = z.object({
