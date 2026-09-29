@@ -12,7 +12,8 @@ import { PAYMENT_AUDIT_FIELDS, paymentLabel, paymentSnapshot } from './contractA
  * A row with money already recorded against it is refused. Deleting one would
  * silently reduce what the business believes it collected, and the record of
  * an actual payment is not the sort of thing a stray click should be able to
- * destroy — reverse it to UNPAID first, which is a deliberate second step.
+ * destroy — reverse it to PAYMENT_PENDING first, which is a deliberate second
+ * step.
  */
 export class DeleteContractPaymentUseCase {
   constructor(

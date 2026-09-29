@@ -23,6 +23,7 @@ import { useClipboard } from './useClipboard';
 import { useAutosave } from './useAutosave';
 import { useSelection } from './useSelection';
 import { useInlineEditing, type EditTarget } from './useInlineEditing';
+import { useDateFormat } from '../../../hooks/useDateFormat';
 import { resolveShortcut, isTextEntryTarget, isArrowNavigableControl } from './keyboard';
 import { alignBoxes, distributeBoxes } from './snapping';
 import {
@@ -101,6 +102,7 @@ const DEFAULT_LINE_HEIGHT = 24;
  */
 export const FormBuilder: React.FC = () => {
   const { t } = useTranslation('settings');
+  const { dateTime } = useDateFormat();
   const navigate = useNavigate();
   const { tenantSlug, formId } = useParams();
 
@@ -1733,7 +1735,7 @@ export const FormBuilder: React.FC = () => {
                       {t('formBuilder.versionNumber', { number: v.versionNumber })}
                     </span>
                     <span className={styles.historyItemDate}>
-                      {new Date(v.publishedAt).toLocaleString()}
+                      {dateTime(v.publishedAt)}
                     </span>
                   </button>
                 </li>

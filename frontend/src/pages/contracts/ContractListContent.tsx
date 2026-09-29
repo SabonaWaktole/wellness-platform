@@ -24,20 +24,40 @@ import { contractReference } from '../../utils/contractReference';
  * about it ("what needs renewing?"), but it has to be translated into
  * `expiringWithinDays` rather than a status on the wire.
  */
-type ContractTab = 'ALL' | 'DRAFT' | 'ACTIVE' | 'EXPIRING' | 'EXPIRED' | 'CANCELLED';
+type ContractTab =
+  | 'ALL'
+  | 'DRAFT'
+  | 'PENDING_SIGNATURE'
+  | 'ACTIVE'
+  | 'SUSPENDED'
+  | 'EXPIRING'
+  | 'EXPIRED'
+  | 'CANCELLED';
 
-const TABS: ContractTab[] = ['ALL', 'DRAFT', 'ACTIVE', 'EXPIRING', 'EXPIRED', 'CANCELLED'];
+const TABS: ContractTab[] = [
+  'ALL',
+  'DRAFT',
+  'PENDING_SIGNATURE',
+  'ACTIVE',
+  'SUSPENDED',
+  'EXPIRING',
+  'EXPIRED',
+  'CANCELLED',
+];
 
 /** Matches ContractRenewalReminderJob's lead time, so the tab and the notification agree. */
 const EXPIRING_WINDOW_DAYS = 30;
 
-const TAB_LABEL_KEY: Record<ContractTab, string> = {
+/**
+ * ALL and EXPIRING aren't contract statuses (see the note above), so they
+ * keep fixed translation keys. Every other tab reads its label from
+ * `statusLabel.contract`, the same tenant-configurable resolver the status
+ * badges use (FR-SET-07 acceptance): renaming a status in Settings →
+ * Statuses changes its tab here too.
+ */
+const FIXED_TAB_LABEL_KEY: Partial<Record<ContractTab, string>> = {
   ALL: 'list.tabAll',
-  DRAFT: 'list.tabDraft',
-  ACTIVE: 'list.tabActive',
   EXPIRING: 'list.tabExpiring',
-  EXPIRED: 'list.tabExpired',
-  CANCELLED: 'list.tabCancelled',
 };
 
 export const ContractListContent: React.FC = () => {
@@ -156,7 +176,7 @@ export const ContractListContent: React.FC = () => {
                 className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {t(TAB_LABEL_KEY[tab])}
+                {FIXED_TAB_LABEL_KEY[tab] ? t(FIXED_TAB_LABEL_KEY[tab]!) : statusLabel.contract(tab)}
               </button>
             ))}
           </div>
