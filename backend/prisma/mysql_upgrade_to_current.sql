@@ -32,6 +32,7 @@
 --  13. mysql_migration_add_sales_lists.sql
 --  14. mysql_migration_add_status_labels.sql
 --  15. mysql_migration_add_client_company_fields.sql
+--  16. mysql_migration_add_contact_persons.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -1285,6 +1286,49 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 16. Contact persons (Slice 12: FR-CMP-04)
+-- ---------------------------------------------------------------
+
+SELECT '16. Contact persons' AS step, NOW() AS at;
+
+CREATE TABLE IF NOT EXISTS `ContactPerson` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `position` VARCHAR(191) NULL,
+    `phone` VARCHAR(191) NULL,
+    `email` VARCHAR(191) NULL,
+    `isPrimary` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    INDEX `ContactPerson_tenantId_clientId_idx`(`tenantId`, `clientId`),
+    INDEX `ContactPerson_tenantId_phone_idx`(`tenantId`, `phone`),
+    INDEX `ContactPerson_tenantId_email_idx`(`tenantId`, `email`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContactPerson' AND CONSTRAINT_NAME = 'ContactPerson_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ContactPerson` ADD CONSTRAINT `ContactPerson_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: ContactPerson.ContactPerson_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContactPerson' AND CONSTRAINT_NAME = 'ContactPerson_clientId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ContactPerson` ADD CONSTRAINT `ContactPerson_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `Client`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: ContactPerson.ContactPerson_clientId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260929182327_add_contact_persons', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260929182327_add_contact_persons'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -1340,6 +1384,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='StatusLabel'
   UNION ALL SELECT 'Client.businessTypeId', COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='businessTypeId'
+  UNION ALL SELECT 'ContactPerson table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContactPerson'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

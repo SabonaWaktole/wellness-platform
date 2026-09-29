@@ -100,6 +100,7 @@ model Tenant {
   ownershipTransfers     OwnershipTransfer[]
   invitations            Invitation[]
   clients                Client[]
+  contactPersons         ContactPerson[]
   customFieldDefinitions CustomFieldDefinition[]
   clientForms            ClientForm[]
   formVersions           FormVersion[]
@@ -519,6 +520,7 @@ model Client {
   quotations        Quotation[]
   invoices          Invoice[]
   contracts         Contract[]
+  contactPersons    ContactPerson[]
 
   @@unique([tenantId, taxId])
   @@index([tenantId, deletedAt])
@@ -527,6 +529,34 @@ model Client {
   @@index([tenantId, name])
   @@index([tenantId, businessTypeId])
   @@index([tenantId, areaId, cityId])
+}
+
+/// A named person at a company (FR-CMP-04, Slice 12): name, position, phone
+/// and email. Exactly one contact per company is primary — enforced in
+/// CompanyContacts, not here, since it's a fact about the set, not one row.
+model ContactPerson {
+  id       String @id
+  tenantId String
+  clientId String
+
+  name     String
+  position String?
+  phone    String?
+  email    String?
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete (NFR-SEC-03): a removed contact is left out of every read
+  /// and out of search, never hard-deleted.
+  deletedAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, clientId])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
 }
 
 model CustomFieldDefinition {

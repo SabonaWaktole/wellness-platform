@@ -41,6 +41,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.invoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.ownershipTransfer.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.quotation.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.contactPerson.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.client.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.user.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.businessType.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -118,6 +119,13 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       },
     });
 
+    // ContactPerson: RESTRICT on its own tenantId FK, must be gone before the
+    // tenant delete (its clientId FK cascades from Client, but that is not
+    // relied on here — see the comment beside contactPerson.deleteMany).
+    await prisma.contactPerson.create({
+      data: { id: randomUUID(), tenantId, clientId, name: 'Jane Doe', phone: '+355691234567', isPrimary: true },
+    });
+
     // OwnershipTransfer: RESTRICT on tenantId AND on two User rows — must be
     // gone before `user.deleteMany()`, not just before the tenant delete.
     await prisma.ownershipTransfer.create({
@@ -162,6 +170,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.followUpInterval.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.lostReason.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.statusLabel.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.contactPerson.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });
