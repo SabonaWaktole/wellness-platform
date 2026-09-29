@@ -19,15 +19,48 @@ import { FieldRole } from '../../../domain/enums/FieldRole';
  */
 const clientNotes = z.string().max(10000).nullish();
 
+/**
+ * The Slice 11 company profile (FR-CMP-01, 02, 03). Required on both create
+ * and update — the company form always sends it — but not by
+ * ImportClientsUseCase or the public-form path, which build the use case DTO
+ * directly rather than through these schemas.
+ */
+const companyProfileSchema = z.object({
+  businessTypeId: z.string().min(1, 'Choose a business type.'),
+  employeeCount: z.coerce.number().int().min(1),
+  areaId: z.string().min(1, 'Choose an area.'),
+  cityId: z.string().min(1, 'Choose a city.'),
+  streetAddress: z.string().max(200).nullish(),
+  taxId: z.string().max(50).nullish(),
+  website: z.string().max(200).nullish(),
+});
+
 export const createClientSchema = z.object({
   customFieldValues: z.record(z.any()).optional(),
   notes: clientNotes,
+  profile: companyProfileSchema.optional(),
 });
 
 export const updateClientSchema = z.object({
   customFieldValues: z.record(z.any()).optional(),
   notes: clientNotes,
+  profile: companyProfileSchema.optional(),
 });
+
+/**
+ * The shape the company form submits to create a company: everything
+ * createClientSchema accepts, but with the Slice 11 profile required. Used
+ * only by the authenticated create HTTP route — not by ImportClientsUseCase
+ * or the public-form path, which build their DTOs without a profile
+ * (decision: those keep creating incomplete companies for Slice 14 to
+ * report on).
+ *
+ * An edit has no equivalent stricter schema: like `notes` and
+ * `customFieldValues`, an update that omits `profile` leaves the company's
+ * existing one untouched (UpdateClientUseCase), so re-sending it on every
+ * unrelated edit was never required.
+ */
+export const createClientHttpSchema = createClientSchema.extend({ profile: companyProfileSchema });
 
 export const searchClientsSchema = z.object({
   skip: z.coerce.number().min(0).default(0),
@@ -40,6 +73,11 @@ export const searchClientsSchema = z.object({
   /** Free text: status is now a tenant-configurable SINGLE_SELECT, not a fixed enum. */
   status: z.string().optional(),
   assignedUserId: z.string().uuid().optional(),
+  /** Slice 11 filters (FR-CMP-06). `riskLevelId` narrows through the business type. */
+  businessTypeId: z.string().optional(),
+  riskLevelId: z.string().optional(),
+  areaId: z.string().optional(),
+  cityId: z.string().optional(),
   /**
    * The list's "mine / team / all" filter (FR-RBAC-11..13). It narrows the
    * viewer's `companies.view` scope and never widens it.

@@ -1,8 +1,9 @@
 {
   "status": {
+    "lead": "Lead",
     "prospect": "Prospect",
-    "active": "Active",
-    "inactive": "Inactive"
+    "client": "Client",
+    "formerClient": "Former client"
   },
   "breadcrumb": "Clients",
   "list": {
@@ -44,7 +45,19 @@
     "restoreFailed": "Could not restore this client. Please try again.",
     "reachMine": "Mine",
     "reachTeam": "Team",
-    "reachAll": "All"
+    "reachAll": "All",
+    "filters": {
+      "businessType": "Business type",
+      "riskLevel": "Risk level",
+      "area": "Area",
+      "city": "City",
+      "salesperson": "Salesperson",
+      "status": "Status",
+      "all": "All",
+      "clear": "Clear filters"
+    },
+    "columnRisk": "Risk",
+    "columnArea": "Area"
   },
   "detail": {
     "loading": "Loading client...",
@@ -99,7 +112,20 @@
     "yes": "Yes",
     "no": "No",
     "internalNotes": "Paragraph",
-    "noNotesYet": "No notes yet."
+    "noNotesYet": "No notes yet.",
+    "profile": {
+      "title": "Company profile",
+      "businessType": "Business type",
+      "riskLevel": "Risk level",
+      "employeeCount": "Employees",
+      "area": "Area",
+      "city": "City",
+      "streetAddress": "Address",
+      "taxId": "NIPT",
+      "website": "Website",
+      "none": "Not set"
+    },
+    "duplicateNameWarning": "Saved. Note: another company already uses this name."
   },
   "form": {
     "createTitle": "Add New Client",
@@ -132,7 +158,34 @@
     "saveClient": "Save Client",
     "notesPlaceholder": "Visible only to your team…",
     "notesHelper": "Private to your workspace. Never shown to the client.",
-    "emptyForm": "This form has no sections yet. A business owner can build it in Settings › Client Management › Form."
+    "emptyForm": "This form has no sections yet. A business owner can build it in Settings › Client Management › Form.",
+    "profile": {
+      "title": "Company profile",
+      "choose": "Choose...",
+      "businessType": "Business type",
+      "riskLevel": "Risk level",
+      "employeeCount": "Number of employees",
+      "area": "Area",
+      "city": "City",
+      "streetAddress": "Street address",
+      "taxId": "NIPT",
+      "website": "Website"
+    },
+    "errors": {
+      "BUSINESS_TYPE_REQUIRED": "Choose a business type.",
+      "BUSINESS_TYPE_INACTIVE": "Choose an active business type.",
+      "EMPLOYEE_COUNT_INVALID": "Number of employees must be a whole number of at least 1.",
+      "AREA_REQUIRED": "Choose an area.",
+      "CITY_REQUIRED": "Choose a city.",
+      "CITY_NOT_IN_AREA": "This city does not belong to the chosen area.",
+      "AREA_INACTIVE": "Choose an active area.",
+      "CITY_INACTIVE": "Choose an active city.",
+      "TAX_ID_TAKEN": "Another company already uses this NIPT.",
+      "EMAIL_INVALID": "Enter a valid email address.",
+      "PHONE_INVALID": "Enter a valid phone number.",
+      "WEBSITE_INVALID": "Enter a valid website address.",
+      "generic": "Something went wrong. Please try again."
+    }
   },
   "import": {
     "importClients": "Import from Excel",

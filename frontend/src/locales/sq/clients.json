@@ -1,8 +1,9 @@
 {
   "status": {
-    "prospect": "Klient potencial",
-    "active": "Aktiv",
-    "inactive": "Joaktiv"
+    "lead": "I mundshëm",
+    "prospect": "Prospekt",
+    "client": "Klient",
+    "formerClient": "Ish-klient"
   },
   "breadcrumb": "Klientët",
   "list": {
@@ -44,7 +45,19 @@
     "restoreFailed": "Klienti nuk u rikthye dot. Provoni sërish.",
     "reachMine": "Të miat",
     "reachTeam": "Ekipi",
-    "reachAll": "Të gjitha"
+    "reachAll": "Të gjitha",
+    "filters": {
+      "businessType": "Lloji i biznesit",
+      "riskLevel": "Niveli i rrezikut",
+      "area": "Zona",
+      "city": "Qyteti",
+      "salesperson": "Shitësi",
+      "status": "Statusi",
+      "all": "Të gjitha",
+      "clear": "Pastro filtrat"
+    },
+    "columnRisk": "Rreziku",
+    "columnArea": "Zona"
   },
   "detail": {
     "loading": "Duke ngarkuar klientin...",
@@ -99,7 +112,20 @@
     "yes": "Po",
     "no": "Jo",
     "internalNotes": "Paragrafi",
-    "noNotesYet": "Ende asnjë shënim."
+    "noNotesYet": "Ende asnjë shënim.",
+    "profile": {
+      "title": "Profili i kompanisë",
+      "businessType": "Lloji i biznesit",
+      "riskLevel": "Niveli i rrezikut",
+      "employeeCount": "Punonjës",
+      "area": "Zona",
+      "city": "Qyteti",
+      "streetAddress": "Adresa",
+      "taxId": "NIPT",
+      "website": "Faqja e internetit",
+      "none": "Pa vendosur"
+    },
+    "duplicateNameWarning": "U ruajt. Vini re: një kompani tjetër përdor tashmë këtë emër."
   },
   "form": {
     "createTitle": "Shto klient të ri",
@@ -132,7 +158,34 @@
     "saveClient": "Ruaj klientin",
     "notesPlaceholder": "I dukshëm vetëm për ekipin tuaj…",
     "notesHelper": "Private për hapësirën tuaj të punës. Nuk i tregohen kurrë klientit.",
-    "emptyForm": "Ky formular nuk ka ende seksione. Pronari i biznesit mund ta ndërtojë te Cilësimet › Menaxhimi i klientëve › Formulari."
+    "emptyForm": "Ky formular nuk ka ende seksione. Pronari i biznesit mund ta ndërtojë te Cilësimet › Menaxhimi i klientëve › Formulari.",
+    "profile": {
+      "title": "Profili i kompanisë",
+      "choose": "Zgjidh...",
+      "businessType": "Lloji i biznesit",
+      "riskLevel": "Niveli i rrezikut",
+      "employeeCount": "Numri i punonjësve",
+      "area": "Zona",
+      "city": "Qyteti",
+      "streetAddress": "Adresa",
+      "taxId": "NIPT",
+      "website": "Faqja e internetit"
+    },
+    "errors": {
+      "BUSINESS_TYPE_REQUIRED": "Zgjidhni një lloj biznesi.",
+      "BUSINESS_TYPE_INACTIVE": "Zgjidhni një lloj biznesi aktiv.",
+      "EMPLOYEE_COUNT_INVALID": "Numri i punonjësve duhet të jetë një numër i plotë, të paktën 1.",
+      "AREA_REQUIRED": "Zgjidhni një zonë.",
+      "CITY_REQUIRED": "Zgjidhni një qytet.",
+      "CITY_NOT_IN_AREA": "Ky qytet nuk i përket zonës së zgjedhur.",
+      "AREA_INACTIVE": "Zgjidhni një zonë aktive.",
+      "CITY_INACTIVE": "Zgjidhni një qytet aktiv.",
+      "TAX_ID_TAKEN": "Një kompani tjetër përdor tashmë këtë NIPT.",
+      "EMAIL_INVALID": "Vendosni një adresë email të vlefshme.",
+      "PHONE_INVALID": "Vendosni një numër telefoni të vlefshëm.",
+      "WEBSITE_INVALID": "Vendosni një adresë interneti të vlefshme.",
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    }
   },
   "import": {
     "importClients": "Importo nga Excel",

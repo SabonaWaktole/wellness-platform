@@ -1,8 +1,6 @@
 {
   "status": {
-    "prospect": "Potenziale cliente",
-    "active": "Attivo",
-    "inactive": "Non attivo"
+    "prospect": "Potenziale cliente"
   },
   "breadcrumb": "Clienti",
   "list": {

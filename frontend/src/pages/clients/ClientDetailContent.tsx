@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Filter, Search, PhoneCall, Video, FileText, Calendar } from 'lucide-react';
 import { useClientDetail, useClientHistory, useClientSettings } from '../../hooks/useClients';
 import { useClientAppointments } from '../../hooks/useAppointments';
@@ -24,6 +24,8 @@ import type { Appointment } from '../../types/appointment';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName, getStaffInitials } from '../../utils/userUtils';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
+import { RiskBadge } from '../../components/clients/RiskBadge';
+import { lookupLabel } from '../../utils/lookupLabel';
 import styles from './ClientDetailContent.module.css';
 import { useDateFormat } from '../../hooks/useDateFormat';
 
@@ -65,11 +67,13 @@ const getAppointmentStatusVariant = (status: Appointment['status']) => {
 
 export const ClientDetailContent: React.FC = () => {
   const dates = useDateFormat();
-  const { t } = useTranslation('clients');
+  const { t, i18n } = useTranslation('clients');
   const { t: tc } = useTranslation('common');
   const statusLabel = useStatusLabel();
   const { clientId, tenantSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const showDuplicateNameWarning = !!(location.state as { duplicateNameWarning?: boolean } | null)?.duplicateNameWarning;
   const [searchParams, setSearchParams] = useSearchParams();
   const { client, isLoading: isClientLoading, fetchClient } = useClientDetail(clientId || '');
   const { history, isLoading: isHistoryLoading, fetchHistory } = useClientHistory(clientId || '');
@@ -149,6 +153,12 @@ export const ClientDetailContent: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      {showDuplicateNameWarning && (
+        <div className={styles.duplicateNameNotice} role="status">
+          {t('detail.duplicateNameWarning')}
+        </div>
+      )}
+
       {/* Header section */}
       <div className={styles.headerArea}>
         <div className={styles.breadcrumbs}>
@@ -242,6 +252,62 @@ export const ClientDetailContent: React.FC = () => {
                   <Phone size={16} /> {client.contactInfo.phone}
                 </a>
               )}
+            </div>
+          </Card>
+
+          {/* Company profile (Slice 11: FR-CMP-01, 02, 03) */}
+          <Card padding="lg">
+            <h2 className={styles.cardTitle}>{t('detail.profile.title')}</h2>
+            <div className={styles.fieldsList}>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.businessType')}</span>
+                <span className={styles.fieldValue}>
+                  {client.profile?.businessType ? lookupLabel(client.profile.businessType, i18n.language) : t('detail.profile.none')}
+                </span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.riskLevel')}</span>
+                <span className={styles.fieldValue}>
+                  <RiskBadge risk={client.profile?.riskLevel ?? null} />
+                  {!client.profile?.riskLevel && t('detail.profile.none')}
+                </span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.employeeCount')}</span>
+                <span className={styles.fieldValue}>{client.profile?.employeeCount ?? t('detail.profile.none')}</span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.area')}</span>
+                <span className={styles.fieldValue}>
+                  {client.profile?.area ? lookupLabel(client.profile.area, i18n.language) : t('detail.profile.none')}
+                </span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.city')}</span>
+                <span className={styles.fieldValue}>
+                  {client.profile?.city ? lookupLabel(client.profile.city, i18n.language) : t('detail.profile.none')}
+                </span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.streetAddress')}</span>
+                <span className={styles.fieldValue}>{client.profile?.streetAddress ?? t('detail.profile.none')}</span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.taxId')}</span>
+                <span className={styles.fieldValue}>{client.profile?.taxId ?? t('detail.profile.none')}</span>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('detail.profile.website')}</span>
+                <span className={styles.fieldValue}>
+                  {client.profile?.website ? (
+                    <a href={client.profile.website} target="_blank" rel="noreferrer">
+                      {client.profile.website}
+                    </a>
+                  ) : (
+                    t('detail.profile.none')
+                  )}
+                </span>
+              </div>
             </div>
           </Card>
 

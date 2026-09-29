@@ -455,6 +455,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     publicFormClientRepo,
     publicFormCustomFieldRepo,
     new EnsureDefaultClientFieldsUseCase(publicFormCustomFieldRepo, publicFormClientRepo),
+    // No lookup store: a public submission never carries a company profile.
+    undefined,
     notificationService
   );
 

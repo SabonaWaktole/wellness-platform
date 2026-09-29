@@ -24,6 +24,8 @@ describe('GetTenantClientMetricsUseCase', () => {
       restore: jest.fn(),
       countRelatedRecords: jest.fn(),
       renameCustomFieldKey: jest.fn(),
+      countByName: jest.fn(),
+      findByTaxId: jest.fn(),
     };
 
     // Unconfigured tenant: the repository answers with the domain defaults,
@@ -67,9 +69,9 @@ describe('GetTenantClientMetricsUseCase', () => {
 
     // Mock 3 clients total. 2 are old (created > 7 days ago), 1 is new (created 2 days ago).
     const mockClients = [
-      Client.create({ id: 'c1', tenantId, name: 'Client 1', status: ClientStatus.ACTIVE, createdAt: tenDaysAgo, ...baseProps }, []),
-      Client.create({ id: 'c2', tenantId, name: 'Client 2', status: ClientStatus.ACTIVE, createdAt: tenDaysAgo, ...baseProps }, []),
-      Client.create({ id: 'c3', tenantId, name: 'Client 3', status: ClientStatus.ACTIVE, createdAt: twoDaysAgo, ...baseProps }, []),
+      Client.create({ id: 'c1', tenantId, name: 'Client 1', status: ClientStatus.CLIENT, createdAt: tenDaysAgo, ...baseProps }, []),
+      Client.create({ id: 'c2', tenantId, name: 'Client 2', status: ClientStatus.CLIENT, createdAt: tenDaysAgo, ...baseProps }, []),
+      Client.create({ id: 'c3', tenantId, name: 'Client 3', status: ClientStatus.CLIENT, createdAt: twoDaysAgo, ...baseProps }, []),
     ];
 
     mockClientRepository.countByTenant.mockResolvedValue(3);

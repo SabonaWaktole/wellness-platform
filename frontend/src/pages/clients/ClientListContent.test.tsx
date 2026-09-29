@@ -113,7 +113,7 @@ describe('ClientListContent', () => {
           tenantId: 'tenant-1',
           name: 'Acme Corp',
           contactInfo: { email: 'contact@acme.com' },
-          status: 'ACTIVE',
+          status: 'FORMER_CLIENT',
           assignedUserId: 'u1',
           customFieldValues: {},
           lastUpdatedByUserId: 'u1',
@@ -130,7 +130,7 @@ describe('ClientListContent', () => {
     renderComponent();
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
     expect(screen.getByText('contact@acme.com')).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Former client')).toBeInTheDocument();
     expect(screen.getByText('Showing 1 of 1 entries')).toBeInTheDocument();
   });
 
@@ -181,7 +181,7 @@ describe('ClientListContent', () => {
     const withClient = (assignedUserId) => {
       vi.mocked(useClientsModule.useClients).mockReturnValue({
         clients: [
-          { id: 'c1', name: 'Acme Corp', status: 'ACTIVE', contactInfo: { email: 'hi@acme.com' }, assignedUserId },
+          { id: 'c1', name: 'Acme Corp', status: 'FORMER_CLIENT', contactInfo: { email: 'hi@acme.com' }, assignedUserId },
         ],
         total: 1,
         isLoading: false,
@@ -232,7 +232,7 @@ describe('ClientListContent', () => {
             id: 'c1',
             name: 'Acme Ltd',
             contactInfo: { email: 'hi@acme.test' },
-            status: 'ACTIVE',
+            status: 'FORMER_CLIENT',
             assignedUserId: 'u1',
             customFieldValues: {},
             lastUpdatedByUserId: 'u1',

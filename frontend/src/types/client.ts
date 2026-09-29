@@ -1,10 +1,53 @@
+/** The fixed client status set (Slice 11, Q9). */
 export const ClientStatus = {
+  LEAD: 'LEAD',
   PROSPECT: 'PROSPECT',
-  ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
+  CLIENT: 'CLIENT',
+  FORMER_CLIENT: 'FORMER_CLIENT',
 } as const;
 
 export type ClientStatus = typeof ClientStatus[keyof typeof ClientStatus];
+
+/** A lookup value as it appears embedded in a company's profile — its label in both languages. */
+export interface EnrichedLookup {
+  id: string;
+  nameSq: string;
+  nameEn: string | null;
+}
+
+export interface EnrichedRisk extends EnrichedLookup {
+  level: number;
+}
+
+/**
+ * The Slice 11 company profile (FR-CMP-01, 02, 03). Every field is nullable:
+ * a legacy company may have none of them yet (Slice 14 backfills them), and
+ * `riskLevel` is never stored — it is always derived from `businessType`.
+ */
+export interface CompanyProfile {
+  businessTypeId: string | null;
+  employeeCount: number | null;
+  areaId: string | null;
+  cityId: string | null;
+  streetAddress: string | null;
+  taxId: string | null;
+  website: string | null;
+  businessType: EnrichedLookup | null;
+  riskLevel: EnrichedRisk | null;
+  area: EnrichedLookup | null;
+  city: EnrichedLookup | null;
+}
+
+/** The company profile fields as the form submits them, before enrichment. */
+export interface CompanyProfileInput {
+  businessTypeId: string;
+  employeeCount: number;
+  areaId: string;
+  cityId: string;
+  streetAddress?: string | null;
+  taxId?: string | null;
+  website?: string | null;
+}
 
 export interface Client {
   id: string;
@@ -18,6 +61,7 @@ export interface Client {
   customFieldValues: Record<string, any>;
   /** Free-text internal notes, private to the workspace. */
   notes?: string | null;
+  profile?: CompanyProfile;
   lastUpdatedByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -110,6 +154,11 @@ export interface SearchClientsParams {
   status?: string;
   assignedUserId?: string;
   customFields?: Record<string, any>;
+  /** Slice 11 filters (FR-CMP-06). `riskLevelId` narrows through the business type. */
+  businessTypeId?: string;
+  riskLevelId?: string;
+  areaId?: string;
+  cityId?: string;
   /** `true` lists archived clients instead of active ones. */
   archived?: boolean;
   /**

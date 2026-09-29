@@ -111,6 +111,30 @@ describe('Client Routes', () => {
     // 'Field "Name" is not defined for this tenant.' — a failure that looks
     // like it belongs to whichever test happens to run first, not to setup.
     await prisma.tenant.update({ where: { id: 't1' }, data: { clientFieldsSeededAt: null } });
+
+    // A minimal Slice 11 profile every POST /clients in this file sends —
+    // this suite is about the client routes generally, not about companies
+    // specifically, so one fixed business type/area/city is enough.
+    await prisma.riskLevel.upsert({
+      where: { id: 'rl-routes-test' },
+      create: { id: 'rl-routes-test', tenantId: 't1', level: 1, nameSq: 'I ulët', updatedAt: new Date() },
+      update: {},
+    });
+    await prisma.businessType.upsert({
+      where: { id: 'bt-routes-test' },
+      create: { id: 'bt-routes-test', tenantId: 't1', nameSq: 'Kafene', riskLevelId: 'rl-routes-test', updatedAt: new Date() },
+      update: {},
+    });
+    await prisma.area.upsert({
+      where: { id: 'area-routes-test' },
+      create: { id: 'area-routes-test', tenantId: 't1', nameSq: 'Tiranë', updatedAt: new Date() },
+      update: {},
+    });
+    await prisma.city.upsert({
+      where: { id: 'city-routes-test' },
+      create: { id: 'city-routes-test', tenantId: 't1', areaId: 'area-routes-test', nameSq: 'Tiranë', updatedAt: new Date() },
+      update: {},
+    });
   });
 
   afterAll(async () => {
@@ -120,8 +144,20 @@ describe('Client Routes', () => {
     await prisma.outcomeCategory.deleteMany({ where: { tenantId: 't1' } });
     await prisma.notification.deleteMany({ where: { recipientUserId: 'u1' } });
     await prisma.user.deleteMany({ where: { id: { in: ['u1', 'u-staff-cr'] } } });
+    await prisma.city.deleteMany({ where: { id: 'city-routes-test' } });
+    await prisma.area.deleteMany({ where: { id: 'area-routes-test' } });
+    await prisma.businessType.deleteMany({ where: { id: 'bt-routes-test' } });
+    await prisma.riskLevel.deleteMany({ where: { id: 'rl-routes-test' } });
     await prisma.$disconnect();
   });
+
+  /** The Slice 11 profile every POST /clients in this file sends. */
+  const validProfile = {
+    businessTypeId: 'bt-routes-test',
+    employeeCount: 5,
+    areaId: 'area-routes-test',
+    cityId: 'city-routes-test',
+  };
 
   it('POST /settings/custom-fields defines a field', async () => {
     const res = await request(app)
@@ -229,7 +265,8 @@ describe('Client Routes', () => {
       .post('/api/t1/clients')
       .set('Authorization', `Bearer ${validToken}`)
       .send({
-        customFieldValues: { Name: 'Routes Test Corp', Status: ClientStatus.PROSPECT, industry: 'Software' }
+        customFieldValues: { Name: 'Routes Test Corp', Status: ClientStatus.PROSPECT, industry: 'Software' },
+        profile: validProfile,
       });
 
     if (res.status !== 201) {
@@ -368,7 +405,7 @@ describe('Client Routes', () => {
     const res = await request(app)
       .post('/api/t1/clients')
       .set('Authorization', `Bearer ${validToken}`)
-      .send({ customFieldValues: { Status: ClientStatus.PROSPECT } });
+      .send({ customFieldValues: { Status: ClientStatus.PROSPECT }, profile: validProfile });
 
     expect(res.status).toBe(400);
   });
@@ -443,7 +480,9 @@ describe('Client Routes', () => {
         'Company Size': 'AB 12',
         Name: 'Imported Alpha',
         Email: 'alpha@example.com',
-        Status: 'ACTIVE',
+        // The sheet still says 'ACTIVE' (the pre-Slice-11 option); the import
+        // remaps it the same way the Slice 11 migration remapped existing rows.
+        Status: 'CLIENT',
       });
     });
 
@@ -526,7 +565,7 @@ describe('Client Routes', () => {
             id: activeId,
             tenantId: 't1',
             name: 'Active Annie',
-            status: ClientStatus.ACTIVE,
+            status: ClientStatus.CLIENT,
             customFieldValues: {},
             lastUpdatedByUserId: 'u1',
             deletedAt: null,
@@ -535,7 +574,7 @@ describe('Client Routes', () => {
             id: archivedId,
             tenantId: 't1',
             name: 'Archived Archie',
-            status: ClientStatus.ACTIVE,
+            status: ClientStatus.CLIENT,
             customFieldValues: {},
             lastUpdatedByUserId: 'u1',
             deletedAt: new Date(),

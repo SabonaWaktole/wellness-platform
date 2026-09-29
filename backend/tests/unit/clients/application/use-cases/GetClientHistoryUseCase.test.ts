@@ -35,7 +35,7 @@ describe('GetClientHistoryUseCase', () => {
     clientRepo.findById.mockResolvedValue(
       Client.create({
         id: 'c1', tenantId: 't1', name: 'Acme', contactInfo: {},
-        status: ClientStatus.ACTIVE, customFieldValues: {},
+        status: ClientStatus.CLIENT, customFieldValues: {},
         lastUpdatedByUserId: 'u1', createdAt: new Date(), updatedAt: new Date()
       }, [])
     );
@@ -92,7 +92,7 @@ describe('GetClientHistoryUseCase', () => {
     clientRepo.findById.mockResolvedValue(
       Client.create({
         id: 'c1', tenantId: 't2', name: 'Acme', contactInfo: {},
-        status: ClientStatus.ACTIVE, customFieldValues: {},
+        status: ClientStatus.CLIENT, customFieldValues: {},
         lastUpdatedByUserId: 'u1', createdAt: new Date(), updatedAt: new Date()
       }, [])
     );
@@ -105,7 +105,7 @@ describe('GetClientHistoryUseCase', () => {
     clientRepo.findById.mockResolvedValue(
       Client.create({
         id: 'c1', tenantId: 't1', name: 'Acme', contactInfo: {},
-        status: ClientStatus.ACTIVE, customFieldValues: {},
+        status: ClientStatus.CLIENT, customFieldValues: {},
         lastUpdatedByUserId: 'u1', createdAt: new Date(), updatedAt: new Date()
       }, [])
     );

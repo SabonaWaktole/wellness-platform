@@ -8,17 +8,30 @@ import type {
   ClientHistory,
   Interaction,
   ImportResult,
-  ClientRelatedCounts
+  ClientRelatedCounts,
+  CompanyProfileInput,
 } from '../types/client';
 
+/** A saved client, plus non-blocking notices about the save (FR-CMP-02: a duplicate name). */
+export type ClientWithWarnings = Client & { warnings: string[] };
+
 export const clientService = {
-  createClient: async (tenantSlug: string, data: { customFieldValues?: Record<string, any>; notes?: string | null }) => {
-    const response = await apiClient.post<Client>(`/${tenantSlug}/clients`, data);
+  /** `profile` is required: the company form always sends it (FR-CMP-01, 02, 03). */
+  createClient: async (
+    tenantSlug: string,
+    data: { customFieldValues?: Record<string, any>; notes?: string | null; profile: CompanyProfileInput }
+  ) => {
+    const response = await apiClient.post<ClientWithWarnings>(`/${tenantSlug}/clients`, data);
     return response.data;
   },
 
-  updateClient: async (tenantSlug: string, clientId: string, data: { customFieldValues?: Record<string, any>; notes?: string | null }) => {
-    const response = await apiClient.put<Client>(`/${tenantSlug}/clients/${clientId}`, data);
+  /** `profile` omitted leaves the company's existing one untouched, like `notes`. */
+  updateClient: async (
+    tenantSlug: string,
+    clientId: string,
+    data: { customFieldValues?: Record<string, any>; notes?: string | null; profile?: CompanyProfileInput }
+  ) => {
+    const response = await apiClient.put<ClientWithWarnings>(`/${tenantSlug}/clients/${clientId}`, data);
     return response.data;
   },
 

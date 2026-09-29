@@ -1,7 +1,9 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { IClientRepository, ClientRelatedCounts } from '../../domain/repositories/IClientRepository';
+import { IClientWriteTransaction } from '../ports/IClientWriteTransaction';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
+import { AuditAction } from '../../../audit/domain/AuditAction';
 
 interface ArchiveClientDTO {
   tenantId: string;
@@ -24,11 +26,13 @@ interface ArchiveClientResult {
  * invoices, silently rewriting past revenue reports. Archiving hides the
  * client from every client-facing read while those records stay valid and
  * still resolve the client's name. Reversible via RestoreClientUseCase.
+ * Audited (FR-AUD-02): if the audit write fails, the archive rolls back.
  */
 export class ArchiveClientUseCase {
   constructor(
     private clientRepo: IClientRepository,
-    private scopes: RecordScopeResolver
+    private scopes: RecordScopeResolver,
+    private writeTx: IClientWriteTransaction
   ) {}
 
   async execute(dto: ArchiveClientDTO): Promise<ArchiveClientResult> {
@@ -43,7 +47,20 @@ export class ArchiveClientUseCase {
     }
 
     const preserved = await this.clientRepo.countRelatedRecords(dto.tenantId, dto.clientId);
-    await this.clientRepo.archive(dto.tenantId, dto.clientId, dto.requestingUserId);
+
+    await this.writeTx.run(async ({ clients, auditTrail }) => {
+      await clients.archive(dto.tenantId, dto.clientId, dto.requestingUserId);
+      await auditTrail.record({
+        tenantId: dto.tenantId,
+        userId: dto.access.userId,
+        userRole: dto.access.auditRole,
+        action: AuditAction.Delete,
+        entityType: 'Client',
+        entityId: dto.clientId,
+        entityLabel: existing.name,
+        changes: [{ field: 'deletedAt', old: null, new: 'archived' }],
+      });
+    });
 
     return { archivedClientName: existing.name, preserved };
   }

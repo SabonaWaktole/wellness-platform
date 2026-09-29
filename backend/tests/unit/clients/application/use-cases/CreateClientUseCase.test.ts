@@ -47,6 +47,8 @@ describe('CreateClientUseCase', () => {
       countByTenant: jest.fn(),
       findRecentByTenant: jest.fn(),
       backfillLegacyBasicFields: jest.fn(),
+      countByName: jest.fn().mockResolvedValue(0),
+      findByTaxId: jest.fn().mockResolvedValue(null),
     } as any;
 
     customFieldRepo = {
@@ -85,8 +87,8 @@ describe('CreateClientUseCase', () => {
       access: administrator(),
     });
 
-    expect(result.id).toBeDefined();
-    expect(result.name).toBe('Acme Corp');
+    expect(result.client.id).toBeDefined();
+    expect(result.client.name).toBe('Acme Corp');
     expect(clientRepo.save).toHaveBeenCalledWith('t1', expect.anything());
   });
 
@@ -112,7 +114,7 @@ describe('CreateClientUseCase', () => {
         authorUserId: 'sales-a', access: salesUser({ userId: 'sales-a' }),
       });
 
-      expect(result.assignedUserId).toBe('sales-a');
+      expect(result.client.assignedUserId).toBe('sales-a');
     });
 
     it('leaves a company created by a wider scope unassigned unless told otherwise', async () => {
@@ -121,7 +123,7 @@ describe('CreateClientUseCase', () => {
         authorUserId: 'adm', access: administrator({ userId: 'adm' }),
       });
 
-      expect(result.assignedUserId ?? null).toBeNull();
+      expect(result.client.assignedUserId ?? null).toBeNull();
     });
 
     it('refuses a Sales User naming someone else as responsible (companies.reassign)', async () => {
@@ -138,7 +140,7 @@ describe('CreateClientUseCase', () => {
         authorUserId: 'owner', access: null,
       });
 
-      expect(result.assignedUserId ?? null).toBeNull();
+      expect(result.client.assignedUserId ?? null).toBeNull();
     });
   });
 });

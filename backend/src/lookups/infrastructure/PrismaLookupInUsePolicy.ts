@@ -15,14 +15,21 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
       case LookupList.RiskLevels:
         return this.prisma.businessType.count({ where: { tenantId, riskLevelId: id } });
       case LookupList.BusinessTypes:
-        // Nothing points at a business type until companies do (Slice 11).
-        return 0;
-      case LookupList.Areas:
-        // Active or not: even an inactive city still holds its area.
-        return this.prisma.city.count({ where: { tenantId, areaId: id } });
+        // A company whose business type this is (Slice 11), active or not:
+        // an archived company still carries a historical classification.
+        return this.prisma.client.count({ where: { tenantId, businessTypeId: id } });
+      case LookupList.Areas: {
+        // Active or not: even an inactive city still holds its area, and an
+        // archived company still holds its area (Slice 11).
+        const [cities, clients] = await Promise.all([
+          this.prisma.city.count({ where: { tenantId, areaId: id } }),
+          this.prisma.client.count({ where: { tenantId, areaId: id } }),
+        ]);
+        return cities + clients;
+      }
       case LookupList.Cities:
-        // Nothing points at a city until companies do (Slice 11).
-        return 0;
+        // A company in this city (Slice 11), active or not.
+        return this.prisma.client.count({ where: { tenantId, cityId: id } });
       case LookupList.FollowUpIntervals:
       case LookupList.LostReasons:
         // Nothing points at either list until deals do (Milestone 2).

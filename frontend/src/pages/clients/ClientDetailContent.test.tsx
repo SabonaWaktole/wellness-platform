@@ -13,6 +13,7 @@ vi.mock('react-router-dom', () => ({
   // The page reads `?logInteraction` to auto-open the interaction slide-over.
   // These tests render outside a router, so an empty param set is enough.
   useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useLocation: () => ({ state: null }),
 }));
 
 vi.mock('../../hooks/useClients', () => ({

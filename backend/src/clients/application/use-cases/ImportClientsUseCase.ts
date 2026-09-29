@@ -37,6 +37,20 @@ const TRUTHY = ['true', 'yes', 'y', '1'];
 const FALSY = ['false', 'no', 'n', '0'];
 
 /**
+ * The status column predates the Slice 11 fixed set (Q9): a spreadsheet
+ * written against the old options still says "active" or "inactive", so
+ * those are remapped the same way the Slice 11 migration remapped existing
+ * rows. Anything else — including the new LEAD/PROSPECT/FORMER_CLIENT
+ * spellings — passes through unchanged, and an option the tenant does not
+ * have fails validation exactly as any other unknown value would.
+ */
+const LEGACY_STATUS_REMAP: Record<string, string> = {
+  ACTIVE: 'CLIENT',
+  INACTIVE: 'FORMER_CLIENT',
+};
+const remapStatus = (value: string): string => LEGACY_STATUS_REMAP[value] ?? value;
+
+/**
  * Spreadsheet cells are always strings; the declared field type decides what
  * they become before the domain sees them. Anything unparseable is reported as
  * a row error rather than silently stored as text.
@@ -105,7 +119,7 @@ export class ImportClientsUseCase {
             if (!fieldName) continue;
             const definition = definitionsByHeader.get(normalise(fieldName));
             customFieldValues[fieldName] = definition
-              ? coerce(definition, key === 'status' ? raw.toUpperCase() : raw)
+              ? coerce(definition, key === 'status' ? remapStatus(raw.toUpperCase()) : raw)
               : raw;
             continue;
           }

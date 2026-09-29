@@ -60,7 +60,7 @@ describe('Dashboard metrics use the tenant timezone for day bounds', () => {
     });
     await prisma.client.create({
       data: {
-        id: clientId, tenantId, name: 'TZ Client', status: ClientStatus.ACTIVE,
+        id: clientId, tenantId, name: 'TZ Client', status: ClientStatus.CLIENT,
         lastUpdatedByUserId: ownerId, customFieldValues: {},
       },
     });

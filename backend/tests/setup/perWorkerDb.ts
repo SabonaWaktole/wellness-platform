@@ -14,8 +14,15 @@ const baseUrl = resolveBaseDatabaseUrl();
 const schema = schemaForWorker(process.env.JEST_WORKER_ID ?? '1');
 
 // Prisma's default pool is (cpus * 2 + 1) per client, and a worker holds two
-// clients (the suite's own plus the app singleton). Across 8 workers that
-// blows past Postgres' default max_connections of 100, and the resulting slow
-// connection acquisition shows up as 5s beforeAll hook timeouts rather than as
-// an explicit pool error. Cap it so the whole run stays well under the limit.
-process.env.DATABASE_URL = urlForSchema(baseUrl, schema, 5);
+// clients (the suite's own plus the app singleton) — sometimes three, since a
+// handful of integration tests build their own extra PrismaClient on top of
+// `createApp()`'s. At 5 each, 8 workers already sustains 60-80 connections
+// against Postgres' default max_connections of 100: correctness-safe, but
+// with only enough headroom to absorb a couple of workers' connect/disconnect
+// transitions overlapping at once. Adding integration test files (each one
+// more connect/disconnect transition point across the run) was enough to
+// occasionally tip a handful of unrelated, already-marginal tests into
+// `FATAL: sorry, too many clients already` under CI's parallel-then-serial
+// double full run. 3 keeps the same per-worker isolation with much more
+// headroom (8 workers x 9 sustained, comfortably under 100).
+process.env.DATABASE_URL = urlForSchema(baseUrl, schema, 3);

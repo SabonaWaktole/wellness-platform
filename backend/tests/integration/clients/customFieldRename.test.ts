@@ -58,6 +58,14 @@ const cleanup = async () => {
   await prisma.customFieldDefinition.deleteMany({ where: { tenantId: TENANT } });
 };
 
+/** The Slice 11 profile every POST /clients in this file sends. */
+const validProfile = {
+  businessTypeId: 'bt-rename-test',
+  employeeCount: 5,
+  areaId: 'area-rename-test',
+  cityId: 'city-rename-test',
+};
+
 describe('Renaming a custom field moves existing client data', () => {
   beforeAll(async () => {
     await prisma.tenant.upsert({
@@ -76,11 +84,35 @@ describe('Renaming a custom field moves existing client data', () => {
       },
       update: {},
     });
+    await prisma.riskLevel.upsert({
+      where: { id: 'rl-rename-test' },
+      create: { id: 'rl-rename-test', tenantId: TENANT, level: 1, nameSq: 'I ulët', updatedAt: new Date() },
+      update: {},
+    });
+    await prisma.businessType.upsert({
+      where: { id: 'bt-rename-test' },
+      create: { id: 'bt-rename-test', tenantId: TENANT, nameSq: 'Kafene', riskLevelId: 'rl-rename-test', updatedAt: new Date() },
+      update: {},
+    });
+    await prisma.area.upsert({
+      where: { id: 'area-rename-test' },
+      create: { id: 'area-rename-test', tenantId: TENANT, nameSq: 'Tiranë', updatedAt: new Date() },
+      update: {},
+    });
+    await prisma.city.upsert({
+      where: { id: 'city-rename-test' },
+      create: { id: 'city-rename-test', tenantId: TENANT, areaId: 'area-rename-test', nameSq: 'Tiranë', updatedAt: new Date() },
+      update: {},
+    });
     await cleanup();
   });
 
   afterAll(async () => {
     await cleanup();
+    await prisma.city.deleteMany({ where: { id: 'city-rename-test' } });
+    await prisma.area.deleteMany({ where: { id: 'area-rename-test' } });
+    await prisma.businessType.deleteMany({ where: { id: 'bt-rename-test' } });
+    await prisma.riskLevel.deleteMany({ where: { id: 'rl-rename-test' } });
     await prisma.user.deleteMany({ where: { id: USER } });
     await prisma.tenant.deleteMany({ where: { id: TENANT } });
     await prisma.$disconnect();
@@ -97,7 +129,7 @@ describe('Renaming a custom field moves existing client data', () => {
     const created = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'Acme', Status: 'PROSPECT', Industry: 'Healthcare' }, notes: '' });
+      .send({ customFieldValues: { Name: 'Acme', Status: 'PROSPECT', Industry: 'Healthcare' }, notes: '', profile: validProfile });
     expect(created.status).toBe(201);
     const clientId = created.body.id;
 
@@ -131,7 +163,7 @@ describe('Renaming a custom field moves existing client data', () => {
     const created = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'Beta', Status: 'PROSPECT' }, notes: '' });
+      .send({ customFieldValues: { Name: 'Beta', Status: 'PROSPECT' }, notes: '', profile: validProfile });
     const clientId = created.body.id;
 
     const rename = await request(app)
@@ -159,11 +191,11 @@ describe('Renaming a custom field moves existing client data', () => {
     const c1 = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'C1', Status: 'PROSPECT', Segment: 'SMB', Notes2: 'keep me' }, notes: '' });
+      .send({ customFieldValues: { Name: 'C1', Status: 'PROSPECT', Segment: 'SMB', Notes2: 'keep me' }, notes: '', profile: validProfile });
     const c2 = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'C2', Status: 'PROSPECT', Notes2: 'also keep me' }, notes: '' });
+      .send({ customFieldValues: { Name: 'C2', Status: 'PROSPECT', Notes2: 'also keep me' }, notes: '', profile: validProfile });
 
     await request(app)
       .patch(`/api/${TENANT}/clients/settings/custom-fields/${defA.body.id}`)

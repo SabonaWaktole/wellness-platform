@@ -14,8 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card/Card';
-import { Badge } from '../../components/ui/Badge/Badge';
-import type { BadgeProps } from '../../components/ui/Badge/Badge';
+import { StatusBadge } from '../../components/ui/StatusBadge/StatusBadge';
 import { Button } from '../../components/ui/Button/Button';
 import { Can } from '../../components/auth/Can';
 import { Modal } from '../../components/ui/Modal';
@@ -35,30 +34,6 @@ import styles from './ContractDetailContent.module.css';
 /** `YYYY-MM-DD` for a date input, which is the only format it accepts. */
 const toDateInput = (value: string | null | undefined): string =>
   value ? new Date(value).toISOString().slice(0, 10) : '';
-
-const statusVariant = (status: string): BadgeProps['variant'] => {
-  switch (status) {
-    case 'DRAFT': return 'secondary';
-    case 'PENDING_SIGNATURE': return 'warning';
-    case 'ACTIVE': return 'success';
-    case 'SUSPENDED': return 'error';
-    case 'EXPIRED': return 'warning';
-    case 'CANCELLED': return 'error';
-    default: return 'secondary';
-  }
-};
-
-const paymentVariant = (status: string): BadgeProps['variant'] => {
-  switch (status) {
-    case 'PAID': return 'success';
-    case 'PARTIALLY_PAID': return 'warning';
-    case 'PAYMENT_PENDING': return 'warning';
-    case 'OVERDUE': return 'error';
-    case 'INVOICE_ISSUED': return 'secondary';
-    case 'WAIVED': return 'secondary';
-    default: return 'secondary';
-  }
-};
 
 /** Draft state for the add/edit payment modal. */
 interface PaymentDraft {
@@ -271,9 +246,7 @@ export const ContractDetailContent: React.FC = () => {
           <div className={styles.breadcrumb}>{t('detail.breadcrumb', { reference })}</div>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{t('detail.title', { reference })}</h1>
-            <Badge variant={statusVariant(contract.status)}>
-              {statusLabel.contract(contract.status)}
-            </Badge>
+            <StatusBadge domain="contract" status={contract.status} />
           </div>
         </div>
 
@@ -517,9 +490,7 @@ export const ContractDetailContent: React.FC = () => {
                             )}
                           </td>
                           <td>
-                            <Badge variant={paymentVariant(payment.status)}>
-                              {statusLabel.contractPayment(payment.status)}
-                            </Badge>
+                            <StatusBadge domain="payment" status={payment.status} />
                           </td>
                           <td className={styles.muted}>
                             {payment.paidAt ? dates.date(payment.paidAt) : '—'}

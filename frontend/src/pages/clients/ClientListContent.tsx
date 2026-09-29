@@ -34,14 +34,18 @@ import {
 } from '../../hooks/useClients';
 import { usePermission, usePermissionScope } from '../../hooks/usePermission';
 import type { Client } from '../../types/client';
+import { ClientStatus } from '../../types/client';
 import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName, getStaffInitials } from '../../utils/userUtils';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
+import { useActiveLookups } from '../../hooks/useActiveLookups';
+import { lookupLabel } from '../../utils/lookupLabel';
+import { RiskBadge } from '../../components/clients/RiskBadge';
 
 export const ClientListContent: React.FC = () => {
-  const { t } = useTranslation('clients');
+  const { t, i18n } = useTranslation('clients');
   const statusLabel = useStatusLabel();
   const [searchTerm, setSearchTerm] = useState('');
   const { tenantSlug } = useParams();
@@ -73,6 +77,33 @@ export const ClientListContent: React.FC = () => {
   const [archivingClient, setArchivingClient] = useState<Client | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // FR-CMP-06: filters on the Slice 11 fields, plus status and salesperson.
+  const [showFilters, setShowFilters] = useState(false);
+  const [businessTypeId, setBusinessTypeId] = useState('');
+  const [riskLevelId, setRiskLevelId] = useState('');
+  const [areaId, setAreaId] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [assignedUserIdFilter, setAssignedUserIdFilter] = useState('');
+  const businessTypes = useActiveLookups('business-types');
+  const riskLevels = useActiveLookups('risk-levels');
+  const areas = useActiveLookups('areas');
+  const cities = useActiveLookups('cities', areaId ? { areaId } : undefined);
+  const hasActiveFilters = !!(businessTypeId || riskLevelId || areaId || cityId || statusFilter || assignedUserIdFilter);
+  const clearFilters = () => {
+    setBusinessTypeId('');
+    setRiskLevelId('');
+    setAreaId('');
+    setCityId('');
+    setStatusFilter('');
+    setAssignedUserIdFilter('');
+  };
+  // Changing the area invalidates any city chosen under the old one.
+  const handleAreaFilterChange = (value: string) => {
+    setAreaId(value);
+    setCityId('');
+  };
+
   /*
    * The staff dashboard's "Log note" quick action has no client of its own, so
    * it sends the user here to pick one and passes the intent along in the URL.
@@ -93,13 +124,25 @@ export const ClientListContent: React.FC = () => {
     fetchStaff();
   }, [fetchStaff]);
 
+  const activeFilters = () => ({
+    search: debouncedSearchTerm,
+    archived: showArchived,
+    reach: reach || undefined,
+    businessTypeId: businessTypeId || undefined,
+    riskLevelId: riskLevelId || undefined,
+    areaId: areaId || undefined,
+    cityId: cityId || undefined,
+    status: statusFilter || undefined,
+    assignedUserId: assignedUserIdFilter || undefined,
+  });
+
   useEffect(() => {
     // One box, matched across name / email / phone — SRS §6.2.
-    fetchClients({ search: debouncedSearchTerm, archived: showArchived, reach: reach || undefined });
-  }, [fetchClients, debouncedSearchTerm, showArchived, reach]);
+    fetchClients(activeFilters());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchClients, debouncedSearchTerm, showArchived, reach, businessTypeId, riskLevelId, areaId, cityId, statusFilter, assignedUserIdFilter]);
 
-  const refresh = () =>
-    fetchClients({ search: debouncedSearchTerm, archived: showArchived, reach: reach || undefined });
+  const refresh = () => fetchClients(activeFilters());
 
   /* Counts are fetched when the dialog opens rather than per row: the list
    * endpoint does not carry them, and four COUNT queries per row would be a
@@ -149,9 +192,10 @@ export const ClientListContent: React.FC = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'active': return 'primary';
-      case 'prospect': return 'outline';
-      case 'inactive': return 'secondary';
+      case 'lead': return 'outline';
+      case 'prospect': return 'warning';
+      case 'client': return 'primary';
+      case 'former_client': return 'secondary';
       default: return 'secondary';
     }
   };
@@ -201,6 +245,16 @@ export const ClientListContent: React.FC = () => {
           </div>
         );
       },
+    },
+    {
+      id: 'risk',
+      header: t('list.columnRisk'),
+      render: (client) => <RiskBadge risk={client.profile?.riskLevel ?? null} />,
+    },
+    {
+      id: 'area',
+      header: t('list.columnArea'),
+      render: (client) => (client.profile?.area ? lookupLabel(client.profile.area, i18n.language) : null),
     },
     /*
       REMOVED: a "Recent Activity" column that rendered the not-set dash on
@@ -270,7 +324,12 @@ export const ClientListContent: React.FC = () => {
             onDownloadTemplate={() => clientService.downloadClientTemplate(tenantSlug!)}
             onImported={() => fetchClients({ search: debouncedSearchTerm })}
           />
-          <Button variant="outline" icon={<Filter size={18} />}>
+          <Button
+            variant={showFilters || hasActiveFilters ? 'primary' : 'outline'}
+            icon={<Filter size={18} />}
+            onClick={() => setShowFilters((v) => !v)}
+            aria-pressed={showFilters}
+          >
             {t('list.filter')}
           </Button>
           <Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate(`/${tenantSlug}/clients/new`)}>
@@ -318,6 +377,96 @@ export const ClientListContent: React.FC = () => {
             </Button>
           )}
         </div>
+
+        {/* FR-CMP-06: business type, risk, area/city (cascading), salesperson, status */}
+        {showFilters && (
+          <div className={styles.filterBar}>
+            <SelectInput
+              aria-label={t('list.filters.businessType')}
+              value={businessTypeId}
+              onChange={(e) => setBusinessTypeId(e.target.value)}
+            >
+              <option value="">{t('list.filters.businessType')}</option>
+              {businessTypes.map((bt) => (
+                <option key={bt.id} value={bt.id}>
+                  {lookupLabel(bt, i18n.language)}
+                </option>
+              ))}
+            </SelectInput>
+
+            <SelectInput
+              aria-label={t('list.filters.riskLevel')}
+              value={riskLevelId}
+              onChange={(e) => setRiskLevelId(e.target.value)}
+            >
+              <option value="">{t('list.filters.riskLevel')}</option>
+              {riskLevels.map((rl) => (
+                <option key={rl.id} value={rl.id}>
+                  {lookupLabel(rl, i18n.language)}
+                </option>
+              ))}
+            </SelectInput>
+
+            <SelectInput
+              aria-label={t('list.filters.area')}
+              value={areaId}
+              onChange={(e) => handleAreaFilterChange(e.target.value)}
+            >
+              <option value="">{t('list.filters.area')}</option>
+              {areas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {lookupLabel(area, i18n.language)}
+                </option>
+              ))}
+            </SelectInput>
+
+            <SelectInput
+              aria-label={t('list.filters.city')}
+              value={cityId}
+              disabled={!areaId}
+              onChange={(e) => setCityId(e.target.value)}
+            >
+              <option value="">{t('list.filters.city')}</option>
+              {cities.map((city) => (
+                <option key={city.id} value={city.id}>
+                  {lookupLabel(city, i18n.language)}
+                </option>
+              ))}
+            </SelectInput>
+
+            <SelectInput
+              aria-label={t('list.filters.salesperson')}
+              value={assignedUserIdFilter}
+              onChange={(e) => setAssignedUserIdFilter(e.target.value)}
+            >
+              <option value="">{t('list.filters.salesperson')}</option>
+              {staff.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {getStaffDisplayName(member)}
+                </option>
+              ))}
+            </SelectInput>
+
+            <SelectInput
+              aria-label={t('list.filters.status')}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">{t('list.filters.status')}</option>
+              {Object.values(ClientStatus).map((status) => (
+                <option key={status} value={status}>
+                  {statusLabel.client(status)}
+                </option>
+              ))}
+            </SelectInput>
+
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={clearFilters}>
+                {t('list.filters.clear')}
+              </Button>
+            )}
+          </div>
+        )}
 
         {(actionError || loadError) && (
           <div className={styles.actionError} role="alert">{actionError ?? loadError}</div>

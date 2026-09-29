@@ -206,7 +206,7 @@ describe('Staff deactivation', () => {
       const clientId = uuidv4();
       await prisma.client.create({
         data: {
-          id: clientId, tenantId, name: 'Held Client', status: ClientStatus.ACTIVE,
+          id: clientId, tenantId, name: 'Held Client', status: ClientStatus.CLIENT,
           assignedUserId: staffId, lastUpdatedByUserId: staffId, customFieldValues: {},
         },
       });
@@ -250,7 +250,7 @@ describe('Staff deactivation', () => {
       const clientId = uuidv4();
       await prisma.client.create({
         data: {
-          id: clientId, tenantId, name: 'Held Client', status: ClientStatus.ACTIVE,
+          id: clientId, tenantId, name: 'Held Client', status: ClientStatus.CLIENT,
           assignedUserId: staffId, lastUpdatedByUserId: staffId, customFieldValues: {},
         },
       });
