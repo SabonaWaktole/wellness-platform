@@ -10,9 +10,13 @@ import {
   CityRequiredError,
   CompanyAreaInactiveError,
   CompanyCityInactiveError,
+  ContactNameRequiredError,
+  ContactReachRequiredError,
+  ContactsRequiredError,
   EmailInvalidError,
   EmployeeCountInvalidError,
   PhoneInvalidError,
+  PrimaryContactRequiredError,
   TaxIdTakenError,
   WebsiteInvalidError,
 } from '../../../domain/errors';
@@ -29,6 +33,10 @@ const BAD_REQUEST_ERRORS = [
   EmailInvalidError,
   PhoneInvalidError,
   WebsiteInvalidError,
+  ContactNameRequiredError,
+  ContactReachRequiredError,
+  ContactsRequiredError,
+  PrimaryContactRequiredError,
 ];
 
 /**

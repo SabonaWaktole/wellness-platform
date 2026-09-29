@@ -66,6 +66,9 @@ const validProfile = {
   cityId: 'city-rename-test',
 };
 
+/** The Slice 12 initial contacts every POST /clients in this file sends. */
+const validContacts = [{ name: 'Jane Doe', phone: '+355691234567' }];
+
 describe('Renaming a custom field moves existing client data', () => {
   beforeAll(async () => {
     await prisma.tenant.upsert({
@@ -129,7 +132,7 @@ describe('Renaming a custom field moves existing client data', () => {
     const created = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'Acme', Status: 'PROSPECT', Industry: 'Healthcare' }, notes: '', profile: validProfile });
+      .send({ customFieldValues: { Name: 'Acme', Status: 'PROSPECT', Industry: 'Healthcare' }, notes: '', profile: validProfile, contacts: validContacts });
     expect(created.status).toBe(201);
     const clientId = created.body.id;
 
@@ -163,7 +166,7 @@ describe('Renaming a custom field moves existing client data', () => {
     const created = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'Beta', Status: 'PROSPECT' }, notes: '', profile: validProfile });
+      .send({ customFieldValues: { Name: 'Beta', Status: 'PROSPECT' }, notes: '', profile: validProfile, contacts: validContacts });
     const clientId = created.body.id;
 
     const rename = await request(app)
@@ -191,11 +194,11 @@ describe('Renaming a custom field moves existing client data', () => {
     const c1 = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'C1', Status: 'PROSPECT', Segment: 'SMB', Notes2: 'keep me' }, notes: '', profile: validProfile });
+      .send({ customFieldValues: { Name: 'C1', Status: 'PROSPECT', Segment: 'SMB', Notes2: 'keep me' }, notes: '', profile: validProfile, contacts: validContacts });
     const c2 = await request(app)
       .post(`/api/${TENANT}/clients`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ customFieldValues: { Name: 'C2', Status: 'PROSPECT', Notes2: 'also keep me' }, notes: '', profile: validProfile });
+      .send({ customFieldValues: { Name: 'C2', Status: 'PROSPECT', Notes2: 'also keep me' }, notes: '', profile: validProfile, contacts: validContacts });
 
     await request(app)
       .patch(`/api/${TENANT}/clients/settings/custom-fields/${defA.body.id}`)

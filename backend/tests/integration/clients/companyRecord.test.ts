@@ -103,10 +103,13 @@ describe('Company record (Slice 11)', () => {
     await prisma.$disconnect();
   });
 
+  const defaultContacts = () => [{ name: 'Jane Doe', phone: '+355691234567' }];
+
   const createCompany = (overrides: Partial<ReturnType<typeof validProfile>> = {}, name = `Acme ${randomUUID().slice(0, 8)}`) =>
     as('admin').post('/clients', {
       customFieldValues: { Name: name, Status: 'PROSPECT' },
       profile: { ...validProfile(), ...overrides },
+      contacts: defaultContacts(),
     });
 
   it('FR-CMP-01, 02, 03 creates a company with every required field, and derives its risk from the business type', async () => {
@@ -138,6 +141,7 @@ describe('Company record (Slice 11)', () => {
     const res = await as('admin').post('/clients', {
       customFieldValues: { Name: 'No Area Ltd', Status: 'PROSPECT' },
       profile: { businessTypeId: businessTypeCafe, employeeCount: 3, areaId: 'no-such-area', cityId: cityTirana },
+      contacts: defaultContacts(),
     });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('AREA_REQUIRED');
@@ -147,6 +151,7 @@ describe('Company record (Slice 11)', () => {
     const res = await as('admin').post('/clients', {
       customFieldValues: { Name: 'Mismatch Ltd', Status: 'PROSPECT' },
       profile: { businessTypeId: businessTypeCafe, employeeCount: 3, areaId: areaTirana, cityId: cityVlora },
+      contacts: defaultContacts(),
     });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('CITY_NOT_IN_AREA');

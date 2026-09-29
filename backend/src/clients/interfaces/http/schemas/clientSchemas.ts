@@ -35,10 +35,22 @@ const companyProfileSchema = z.object({
   website: z.string().max(200).nullish(),
 });
 
+/** One contact on the company form (FR-CMP-04). Server-side validation (name required, at
+ *  least a phone or email) happens domain-side in ContactPerson.create/CompanyContacts.create. */
+export const contactPersonInputSchema = z.object({
+  name: z.string().min(1).max(200),
+  position: z.string().max(120).nullish(),
+  phone: z.string().max(40).nullish(),
+  email: z.string().max(200).nullish(),
+  isPrimary: z.boolean().optional(),
+});
+
 export const createClientSchema = z.object({
   customFieldValues: z.record(z.any()).optional(),
   notes: clientNotes,
   profile: companyProfileSchema.optional(),
+  /** Required only on the company-form path — see createClientHttpSchema below. */
+  contacts: z.array(contactPersonInputSchema).optional(),
 });
 
 export const updateClientSchema = z.object({
@@ -60,7 +72,23 @@ export const updateClientSchema = z.object({
  * existing one untouched (UpdateClientUseCase), so re-sending it on every
  * unrelated edit was never required.
  */
-export const createClientHttpSchema = createClientSchema.extend({ profile: companyProfileSchema });
+export const createClientHttpSchema = createClientSchema.extend({
+  profile: companyProfileSchema,
+  contacts: z.array(contactPersonInputSchema).min(1, 'Add at least one contact person.'),
+});
+
+export const addContactPersonSchema = contactPersonInputSchema.omit({ isPrimary: true });
+
+export const updateContactPersonSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  position: z.string().max(120).nullish(),
+  phone: z.string().max(40).nullish(),
+  email: z.string().max(200).nullish(),
+});
+
+export const removeContactPersonSchema = z.object({
+  newPrimaryContactId: z.string().uuid().optional(),
+});
 
 export const searchClientsSchema = z.object({
   skip: z.coerce.number().min(0).default(0),
