@@ -10,9 +10,10 @@ import { PAYMENT_AUDIT_FIELDS, paymentLabel, paymentSnapshot } from './contractA
  * Marks an instalment paid, part-paid, waived, or back to unpaid.
  *
  * This is the module's whole answer to "did they pay?" — a person asserting a
- * fact, not a gateway reporting one. Every action is reversible (`UNPAID`
- * resets the row) precisely because human bookkeeping is: the point is to make
- * correcting a mistake cheap rather than to guard an irreversible ledger.
+ * fact, not a gateway reporting one. Every action is reversible
+ * (`PAYMENT_PENDING` resets the row) precisely because human bookkeeping is:
+ * the point is to make correcting a mistake cheap rather than to guard an
+ * irreversible ledger.
  */
 export class RecordContractPaymentUseCase {
   constructor(

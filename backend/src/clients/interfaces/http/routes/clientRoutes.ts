@@ -26,6 +26,11 @@ import { CompanyReadModel } from '../../../application/CompanyReadModel';
 import { IMPORT_MIME, MAX_IMPORT_BYTES } from '../../../infrastructure/excel/sheet';
 import { PrismaClientRepository } from '../../../infrastructure/repositories/PrismaClientRepository';
 import { PrismaClientWriteTransaction } from '../../../infrastructure/repositories/PrismaClientWriteTransaction';
+import { PrismaContactPersonRepository } from '../../../infrastructure/repositories/PrismaContactPersonRepository';
+import { AddContactPersonUseCase } from '../../../application/use-cases/AddContactPersonUseCase';
+import { UpdateContactPersonUseCase } from '../../../application/use-cases/UpdateContactPersonUseCase';
+import { RemoveContactPersonUseCase } from '../../../application/use-cases/RemoveContactPersonUseCase';
+import { SetPrimaryContactUseCase } from '../../../application/use-cases/SetPrimaryContactUseCase';
 import { PrismaLookupStore } from '../../../../lookups/infrastructure/PrismaLookupStore';
 import { PrismaCustomFieldDefinitionRepository } from '../../../infrastructure/repositories/PrismaCustomFieldDefinitionRepository';
 import { PrismaCustomFieldWriteTransaction } from '../../../infrastructure/PrismaCustomFieldWriteTransaction';
@@ -99,6 +104,7 @@ export const createClientRouter = (
   // Repositories
   const clientRepo = new PrismaClientRepository(prisma);
   const clientWriteTx = new PrismaClientWriteTransaction(prisma);
+  const contactRepo = new PrismaContactPersonRepository(prisma);
   const lookupStore = new PrismaLookupStore(prisma);
   const customFieldRepo = new PrismaCustomFieldDefinitionRepository(prisma);
   const customFieldWriteTransaction = new PrismaCustomFieldWriteTransaction(prisma);
@@ -113,7 +119,7 @@ export const createClientRouter = (
 
   // Use Cases
   const ensureDefaultClientFieldsUseCase = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
-  const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, lookupStore, notifications);
+  const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, lookupStore, notifications, clientWriteTx);
   const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, scopes, clientWriteTx, lookupStore, notifications);
   const searchClientsUseCase = new SearchClientsUseCase(clientRepo, scopes);
   const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, scopes, appointmentRepo);
@@ -132,6 +138,10 @@ export const createClientRouter = (
   const getClientRelatedCountsUseCase = new GetClientRelatedCountsUseCase(clientRepo, scopes);
   const importClientsUseCase = new ImportClientsUseCase(createClientUseCase, ensureDefaultClientFieldsUseCase);
   const companyReadModel = new CompanyReadModel(lookupStore);
+  const addContactPersonUseCase = new AddContactPersonUseCase(clientRepo, contactRepo, scopes, clientWriteTx);
+  const updateContactPersonUseCase = new UpdateContactPersonUseCase(clientRepo, contactRepo, scopes, clientWriteTx);
+  const removeContactPersonUseCase = new RemoveContactPersonUseCase(clientRepo, contactRepo, scopes, clientWriteTx);
+  const setPrimaryContactUseCase = new SetPrimaryContactUseCase(clientRepo, contactRepo, scopes, clientWriteTx);
 
   // Controller
   const clientController = new ClientController(
@@ -153,7 +163,12 @@ export const createClientRouter = (
     archiveClientUseCase,
     restoreClientUseCase,
     getClientRelatedCountsUseCase,
-    companyReadModel
+    companyReadModel,
+    contactRepo,
+    addContactPersonUseCase,
+    updateContactPersonUseCase,
+    removeContactPersonUseCase,
+    setPrimaryContactUseCase
   );
 
   // Middlewares applied to all routes in this router
@@ -200,6 +215,26 @@ export const createClientRouter = (
   );
   router.delete('/:clientId', requirePermission('companies.delete'), clientController.archiveClient);
   router.post('/:clientId/restore', requirePermission('companies.delete'), clientController.restoreClient);
+
+  // Contact persons (FR-CMP-04): visible under companies.view (Reception
+  // included), writable under companies.edit — same split as the rest of
+  // the company record.
+  router.post('/:clientId/contacts', requirePermission('companies.edit'), clientController.addContactPerson);
+  router.patch(
+    '/:clientId/contacts/:contactId',
+    requirePermission('companies.edit'),
+    clientController.updateContactPerson
+  );
+  router.delete(
+    '/:clientId/contacts/:contactId',
+    requirePermission('companies.edit'),
+    clientController.removeContactPerson
+  );
+  router.post(
+    '/:clientId/contacts/:contactId/primary',
+    requirePermission('companies.edit'),
+    clientController.setPrimaryContact
+  );
 
   router.post('/settings/custom-fields', requirePermission('settings.manage'), clientController.defineCustomField);
   router.patch(

@@ -67,7 +67,7 @@ describe('UpdateClientUseCase', () => {
     };
     ensureDefaultFields = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
     auditTrail = { record: jest.fn() };
-    writeTx = { run: jest.fn((work) => work({ clients: clientRepo, auditTrail })) };
+    writeTx = { run: jest.fn((work) => work({ clients: clientRepo, contacts: {} as any, auditTrail })) };
     useCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultFields, scopeResolver(), writeTx);
   });
 

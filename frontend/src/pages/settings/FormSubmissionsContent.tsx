@@ -6,6 +6,7 @@ import { SettingsLayout } from '../../components/layout/SettingsLayout';
 import { Button } from '../../components/ui/Button/Button';
 import { FormRenderer, ScaledPage } from '../../components/forms/FormRenderer';
 import { useClientForm, useFormSubmissions, useFormSubmission } from '../../hooks/useClientForm';
+import { useDateFormat } from '../../hooks/useDateFormat';
 import type { FormDocument } from '../../types/form';
 import styles from './FormSubmissionsContent.module.css';
 
@@ -29,6 +30,7 @@ const fieldSpecsOf = (doc: FormDocument): { key: string; label: string }[] =>
  */
 export const FormSubmissionsContent: React.FC = () => {
   const { t } = useTranslation('forms');
+  const { dateTime } = useDateFormat();
   const navigate = useNavigate();
   const { tenantSlug, formId } = useParams();
 
@@ -133,7 +135,7 @@ export const FormSubmissionsContent: React.FC = () => {
           <tbody>
             {submissions.map((s) => (
               <tr key={s.id}>
-                <td>{new Date(s.submittedAt).toLocaleString()}</td>
+                <td>{dateTime(s.submittedAt)}</td>
                 <td>{s.source === 'PUBLIC_LINK' ? t('submissions.sourcePublicLink') : t('submissions.sourceInternal')}</td>
                 <td>
                   {s.clientId ? (

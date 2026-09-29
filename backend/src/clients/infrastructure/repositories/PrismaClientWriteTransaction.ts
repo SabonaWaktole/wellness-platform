@@ -4,6 +4,7 @@ import { IClientWriteTransaction, ClientWriteRepos } from '../../application/por
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 import { PrismaAuditTrail } from '../../../audit/infrastructure/PrismaAuditTrail';
 import { PrismaClientRepository } from './PrismaClientRepository';
+import { PrismaContactPersonRepository } from './PrismaContactPersonRepository';
 
 export class PrismaClientWriteTransaction implements IClientWriteTransaction {
   constructor(
@@ -16,7 +17,11 @@ export class PrismaClientWriteTransaction implements IClientWriteTransaction {
   async run<T>(work: (repos: ClientWriteRepos) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(async (tx) => {
       const client = tx as unknown as PrismaClient;
-      return work({ clients: new PrismaClientRepository(client), auditTrail: this.auditTrailFor(client) });
+      return work({
+        clients: new PrismaClientRepository(client),
+        contacts: new PrismaContactPersonRepository(client),
+        auditTrail: this.auditTrailFor(client),
+      });
     });
   }
 }

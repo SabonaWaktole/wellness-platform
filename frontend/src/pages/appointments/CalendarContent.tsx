@@ -42,7 +42,7 @@ const CalendarDesktopView = ({
   appointments: Appointment[],
   onAppointmentClick: (app: Appointment) => void 
 }) => {
-  const { timeZone } = useDateFormat();
+  const { timeZone, custom, time: formatTime } = useDateFormat();
   const { t } = useTranslation('appointments');
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ const CalendarDesktopView = ({
     isSameDayInZone(app.scheduledAt, realToday, timeZone)
   );
   
-  const monthYearString = currentDate.toLocaleDateString([], { month: 'long', year: 'numeric' });
+  const monthYearString = custom(currentDate, { month: 'long', year: 'numeric' });
   
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -96,10 +96,10 @@ const CalendarDesktopView = ({
   // Formatting header string based on view
   let viewTitleString = monthYearString;
   if (viewMode === 'day') {
-    viewTitleString = currentDate.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    viewTitleString = custom(currentDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   } else if (viewMode === 'week') {
     const endOfWeek = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + 6);
-    viewTitleString = `${startOfWeek.toLocaleDateString([], { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    viewTitleString = `${custom(startOfWeek, { month: 'short', day: 'numeric' })} - ${custom(endOfWeek, { month: 'short', day: 'numeric', year: 'numeric' })}`;
   }
 
   return (
@@ -132,7 +132,7 @@ const CalendarDesktopView = ({
           <div className={styles.gridContainer}>
             <div className={styles.gridHeader} style={viewMode === 'day' ? { gridTemplateColumns: '1fr' } : {}}>
               {viewMode === 'day' ? (
-                <div>{currentDate.toLocaleDateString([], { weekday: 'short' }).toUpperCase()}</div>
+                <div>{custom(currentDate, { weekday: 'short' }).toUpperCase()}</div>
               ) : (
                 <><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div><div>SUN</div></>
               )}
@@ -164,11 +164,11 @@ const CalendarDesktopView = ({
                 
                 return (
                   <div key={cellDate.toISOString()} className={styles.cell}>
-                    <span className={styles.dayNumber}>{viewMode !== 'month' ? cellDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) : dayNumber}</span>
+                    <span className={styles.dayNumber}>{viewMode !== 'month' ? custom(cellDate, { month: 'short', day: 'numeric' }) : dayNumber}</span>
                     <div className={styles.eventList}>
                       {dayAppointments.map(app => {
                         const token = getStatusToken(app.status);
-                        const time = new Date(app.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const time = formatTime(app.scheduledAt);
                         const title = app.clientName || 'Appointment';
                         const capToken = token.charAt(0).toUpperCase() + token.slice(1);
                         return (
@@ -204,7 +204,7 @@ const CalendarDesktopView = ({
               {queueAppointments.map(app => {
                 const isCompleted = app.status === 'COMPLETED';
                 const statusToken = getStatusToken(app.status);
-                const time = new Date(app.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const time = formatTime(app.scheduledAt);
                 
                 return (
                   <div key={app.id} className={`${styles.queueCard} ${isCompleted ? styles.completedQueueCard : ''}`} onClick={() => onAppointmentClick(app)} style={{ cursor: 'pointer' }}>
@@ -250,7 +250,7 @@ const CalendarMobileAgenda = ({
   appointments: Appointment[],
   onAppointmentClick: (app: Appointment) => void
 }) => {
-  const { timeZone } = useDateFormat();
+  const { timeZone, custom, time: formatTime } = useDateFormat();
   const { t } = useTranslation('appointments');
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
@@ -265,7 +265,7 @@ const CalendarMobileAgenda = ({
     return d;
   });
 
-  const monthYearString = selectedDate.toLocaleDateString([], { month: 'long', year: 'numeric' });
+  const monthYearString = custom(selectedDate, { month: 'long', year: 'numeric' });
 
   return (
     <div className={styles.mobileView}>
@@ -306,7 +306,7 @@ const CalendarMobileAgenda = ({
                   className={`${styles.dateCard} ${isActive ? styles.activeDateCard : ''}`}
                   onClick={() => setSelectedDate(d)}
                 >
-                  <span>{d.toLocaleDateString([], { weekday: 'short' }).toUpperCase()}</span>
+                  <span>{custom(d, { weekday: 'short' }).toUpperCase()}</span>
                   <strong>{d.getDate()}</strong>
                 </button>
               );
@@ -316,8 +316,7 @@ const CalendarMobileAgenda = ({
 
         <section className={styles.agendaList}>
           {agendaAppointments.map(app => {
-            const timeObj = new Date(app.scheduledAt);
-            const timeStr = timeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const timeStr = formatTime(app.scheduledAt);
             const [time, ampm] = timeStr.split(' ');
             const isCompleted = app.status === 'COMPLETED';
             

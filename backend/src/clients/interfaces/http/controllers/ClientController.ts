@@ -32,6 +32,11 @@ import { DomainError } from '../../../../shared/domain/errors/DomainError';
 import { CompanyReadModel } from '../../../application/CompanyReadModel';
 import { sendClientError } from './sendClientError';
 import { Client } from '../../../domain/entities/Client';
+import { IContactPersonRepository } from '../../../domain/repositories/IContactPersonRepository';
+import { AddContactPersonUseCase } from '../../../application/use-cases/AddContactPersonUseCase';
+import { UpdateContactPersonUseCase } from '../../../application/use-cases/UpdateContactPersonUseCase';
+import { RemoveContactPersonUseCase } from '../../../application/use-cases/RemoveContactPersonUseCase';
+import { SetPrimaryContactUseCase } from '../../../application/use-cases/SetPrimaryContactUseCase';
 import {
   createClientHttpSchema,
   updateClientSchema,
@@ -40,7 +45,10 @@ import {
   defineCustomFieldSchema,
   updateCustomFieldSchema,
   reorderCustomFieldsSchema,
-  defineOutcomeCategorySchema
+  defineOutcomeCategorySchema,
+  addContactPersonSchema,
+  updateContactPersonSchema,
+  removeContactPersonSchema,
 } from '../schemas/clientSchemas';
 
 export class ClientController {
@@ -63,7 +71,12 @@ export class ClientController {
     private archiveClientUseCase: ArchiveClientUseCase,
     private restoreClientUseCase: RestoreClientUseCase,
     private getClientRelatedCountsUseCase: GetClientRelatedCountsUseCase,
-    private companyReadModel: CompanyReadModel
+    private companyReadModel: CompanyReadModel,
+    private contactRepo: IContactPersonRepository,
+    private addContactPersonUseCase: AddContactPersonUseCase,
+    private updateContactPersonUseCase: UpdateContactPersonUseCase,
+    private removeContactPersonUseCase: RemoveContactPersonUseCase,
+    private setPrimaryContactUseCase: SetPrimaryContactUseCase
   ) {}
 
   /**
@@ -155,9 +168,12 @@ export class ClientController {
     }
   };
 
-  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile. */
+  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile and its Slice 12 contacts. */
   private async presentClient(tenantId: string, client: Client) {
-    const profile = await this.companyReadModel.enrichOne(tenantId, client);
+    const [profile, contacts] = await Promise.all([
+      this.companyReadModel.enrichOne(tenantId, client),
+      this.contactRepo.listByClient(tenantId, client.id),
+    ]);
     return {
       id: client.id,
       name: client.name,
@@ -167,6 +183,7 @@ export class ClientController {
       customFieldValues: client.customFieldValues,
       notes: client.notes,
       profile,
+      contacts,
       lastUpdatedByUserId: client.lastUpdatedByUserId,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt,
@@ -255,7 +272,10 @@ export class ClientController {
         take: validatedData.take,
       });
 
-      const profiles = await this.companyReadModel.enrichMany(tenantId, result.items);
+      const [profiles, contactsByClient] = await Promise.all([
+        this.companyReadModel.enrichMany(tenantId, result.items),
+        this.contactRepo.listByClients(tenantId, result.items.map((c) => c.id)),
+      ]);
       res.status(200).json({
         total: result.total,
         items: result.items.map((client, index) => ({
@@ -267,6 +287,8 @@ export class ClientController {
           customFieldValues: client.customFieldValues,
           notes: client.notes,
           profile: profiles[index],
+          // The list stays light: just the primary contact, not the whole set.
+          primaryContact: (contactsByClient.get(client.id) ?? []).find((c) => c.isPrimary) ?? null,
           lastUpdatedByUserId: client.lastUpdatedByUserId,
           createdAt: client.createdAt,
           updatedAt: client.updatedAt,
@@ -505,6 +527,79 @@ export class ClientController {
       res.status(200).json(counts);
     } catch (error: any) {
       res.status(error.message.includes('not found') ? 404 : 400).json({ error: error.message });
+    }
+  };
+
+  public addContactPerson = async (req: Request, res: Response) => {
+    try {
+      const validatedData = addContactPersonSchema.parse(req.body);
+      const tenantId = requireTenantId(req);
+
+      const contact = await this.addContactPersonUseCase.execute({
+        tenantId,
+        clientId: req.params.clientId as string,
+        access: req.access!,
+        ...validatedData,
+      });
+
+      res.status(201).json(contact);
+    } catch (error) {
+      sendClientError(res, error);
+    }
+  };
+
+  public updateContactPerson = async (req: Request, res: Response) => {
+    try {
+      const validatedData = updateContactPersonSchema.parse(req.body);
+      const tenantId = requireTenantId(req);
+
+      const contact = await this.updateContactPersonUseCase.execute({
+        tenantId,
+        clientId: req.params.clientId as string,
+        contactId: req.params.contactId as string,
+        access: req.access!,
+        ...validatedData,
+      });
+
+      res.status(200).json(contact);
+    } catch (error) {
+      sendClientError(res, error);
+    }
+  };
+
+  public removeContactPerson = async (req: Request, res: Response) => {
+    try {
+      const validatedData = removeContactPersonSchema.parse(req.query);
+      const tenantId = requireTenantId(req);
+
+      await this.removeContactPersonUseCase.execute({
+        tenantId,
+        clientId: req.params.clientId as string,
+        contactId: req.params.contactId as string,
+        newPrimaryContactId: validatedData.newPrimaryContactId,
+        access: req.access!,
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      sendClientError(res, error);
+    }
+  };
+
+  public setPrimaryContact = async (req: Request, res: Response) => {
+    try {
+      const tenantId = requireTenantId(req);
+
+      await this.setPrimaryContactUseCase.execute({
+        tenantId,
+        clientId: req.params.clientId as string,
+        contactId: req.params.contactId as string,
+        access: req.access!,
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      sendClientError(res, error);
     }
   };
 }

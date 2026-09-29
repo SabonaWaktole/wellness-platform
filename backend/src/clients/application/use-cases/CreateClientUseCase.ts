@@ -11,6 +11,17 @@ import { CompanyProfileInput } from '../../domain/value-objects/CompanyProfile';
 import { loadCompanyProfile } from '../loadCompanyProfile';
 import { TaxIdTakenError } from '../../domain/errors';
 import { randomUUID } from 'crypto';
+import { ContactPerson } from '../../domain/entities/ContactPerson';
+import { CompanyContacts } from '../../domain/value-objects/CompanyContacts';
+import { IClientWriteTransaction } from '../ports/IClientWriteTransaction';
+
+export interface ContactPersonInput {
+  name: string;
+  position?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  isPrimary?: boolean;
+}
 
 interface CreateClientDTO {
   tenantId: string;
@@ -29,6 +40,13 @@ interface CreateClientDTO {
    * companies, which Slice 14's "needs completion" report picks up).
    */
   profile?: CompanyProfileInput;
+  /**
+   * The company's initial contacts (FR-CMP-04). Required whenever `profile`
+   * is given — the company-form path — so a company created through that
+   * form can never be saved with zero contacts. Omitted, like `profile`,
+   * by ImportClientsUseCase and the public-form path.
+   */
+  contacts?: ContactPersonInput[];
   authorUserId: string;
   /** `null` for a system actor (a public form submission), which is bound by neither rule below. */
   access: AccessContext | null;
@@ -46,7 +64,9 @@ export class CreateClientUseCase {
     private customFieldRepo: ICustomFieldDefinitionRepository,
     private ensureDefaultFields: EnsureDefaultClientFieldsUseCase,
     private lookupStore?: ILookupStore,
-    private notifications?: NotificationService
+    private notifications?: NotificationService,
+    /** Only required on the company-form path (`dto.profile` present), to save the client and its contacts atomically. */
+    private writeTx?: IClientWriteTransaction
   ) {}
 
   async execute(dto: CreateClientDTO): Promise<CreateClientResult> {
@@ -85,7 +105,30 @@ export class CreateClientUseCase {
       warnings.push('DUPLICATE_NAME');
     }
 
-    await this.clientRepo.save(dto.tenantId, client);
+    if (dto.profile) {
+      const initialContacts = CompanyContacts.create(
+        (dto.contacts ?? []).map((c) =>
+          ContactPerson.create({
+            id: randomUUID(),
+            tenantId: dto.tenantId,
+            clientId: client.id,
+            name: c.name,
+            position: c.position,
+            phone: c.phone,
+            email: c.email,
+            isPrimary: c.isPrimary ?? false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+        )
+      );
+      await this.requireWriteTx().run(async ({ clients, contacts }) => {
+        await clients.save(dto.tenantId, client);
+        await contacts.saveMany(dto.tenantId, initialContacts);
+      });
+    } else {
+      await this.clientRepo.save(dto.tenantId, client);
+    }
 
     // A client can be assigned at creation, so this is the second assignment
     // site, not a duplicate of the one in UpdateClientUseCase. There is no
@@ -110,6 +153,13 @@ export class CreateClientUseCase {
       throw new Error('CreateClientUseCase received a company profile but has no lookup store wired.');
     }
     return this.lookupStore;
+  }
+
+  private requireWriteTx(): IClientWriteTransaction {
+    if (!this.writeTx) {
+      throw new Error('CreateClientUseCase received a company profile but has no write transaction wired.');
+    }
+    return this.writeTx;
   }
 
   /**

@@ -10,16 +10,27 @@ import type {
   ImportResult,
   ClientRelatedCounts,
   CompanyProfileInput,
+  ContactPerson,
+  ContactPersonInput,
 } from '../types/client';
 
 /** A saved client, plus non-blocking notices about the save (FR-CMP-02: a duplicate name). */
 export type ClientWithWarnings = Client & { warnings: string[] };
 
 export const clientService = {
-  /** `profile` is required: the company form always sends it (FR-CMP-01, 02, 03). */
+  /**
+   * `profile` and `contacts` are both required: the company form always
+   * sends them (FR-CMP-01, 02, 03, 04). A company can never be saved with
+   * zero contacts.
+   */
   createClient: async (
     tenantSlug: string,
-    data: { customFieldValues?: Record<string, any>; notes?: string | null; profile: CompanyProfileInput }
+    data: {
+      customFieldValues?: Record<string, any>;
+      notes?: string | null;
+      profile: CompanyProfileInput;
+      contacts: ContactPersonInput[];
+    }
   ) => {
     const response = await apiClient.post<ClientWithWarnings>(`/${tenantSlug}/clients`, data);
     return response.data;
@@ -139,6 +150,35 @@ export const clientService = {
       responseType: 'blob',
     });
     return response.data;
+  },
+
+  addContact: async (tenantSlug: string, clientId: string, data: ContactPersonInput) => {
+    const response = await apiClient.post<ContactPerson>(`/${tenantSlug}/clients/${clientId}/contacts`, data);
+    return response.data;
+  },
+
+  updateContact: async (
+    tenantSlug: string,
+    clientId: string,
+    contactId: string,
+    data: Partial<Omit<ContactPersonInput, 'isPrimary'>>
+  ) => {
+    const response = await apiClient.patch<ContactPerson>(
+      `/${tenantSlug}/clients/${clientId}/contacts/${contactId}`,
+      data
+    );
+    return response.data;
+  },
+
+  /** `newPrimaryContactId` is required when removing the company's current primary contact. */
+  removeContact: async (tenantSlug: string, clientId: string, contactId: string, newPrimaryContactId?: string) => {
+    await apiClient.delete<void>(`/${tenantSlug}/clients/${clientId}/contacts/${contactId}`, {
+      params: newPrimaryContactId ? { newPrimaryContactId } : undefined,
+    });
+  },
+
+  setPrimaryContact: async (tenantSlug: string, clientId: string, contactId: string) => {
+    await apiClient.post<void>(`/${tenantSlug}/clients/${clientId}/contacts/${contactId}/primary`);
   },
 
   getOutcomeCategories: async (tenantSlug: string) => {

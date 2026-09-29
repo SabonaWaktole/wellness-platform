@@ -159,6 +159,9 @@ describe('Client Routes', () => {
     cityId: 'city-routes-test',
   };
 
+  /** The Slice 12 initial contacts every POST /clients in this file sends. */
+  const validContacts = [{ name: 'Jane Doe', phone: '+355691234567' }];
+
   it('POST /settings/custom-fields defines a field', async () => {
     const res = await request(app)
       .post('/api/t1/clients/settings/custom-fields')
@@ -267,6 +270,7 @@ describe('Client Routes', () => {
       .send({
         customFieldValues: { Name: 'Routes Test Corp', Status: ClientStatus.PROSPECT, industry: 'Software' },
         profile: validProfile,
+        contacts: validContacts,
       });
 
     if (res.status !== 201) {
@@ -405,7 +409,7 @@ describe('Client Routes', () => {
     const res = await request(app)
       .post('/api/t1/clients')
       .set('Authorization', `Bearer ${validToken}`)
-      .send({ customFieldValues: { Status: ClientStatus.PROSPECT }, profile: validProfile });
+      .send({ customFieldValues: { Status: ClientStatus.PROSPECT }, profile: validProfile, contacts: validContacts });
 
     expect(res.status).toBe(400);
   });

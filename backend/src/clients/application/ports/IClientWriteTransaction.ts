@@ -1,8 +1,10 @@
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
+import { IContactPersonRepository } from '../../domain/repositories/IContactPersonRepository';
 
 export interface ClientWriteRepos {
   clients: IClientRepository;
+  contacts: IContactPersonRepository;
   auditTrail: IAuditTrail;
 }
 

@@ -72,9 +72,24 @@ describe('Company search performance (NFR-PERF-01)', () => {
     // Batched: a single 10,000-row createMany is well within Postgres' and
     // MySQL's per-statement limits here (no relations, one insert each).
     await prisma.client.createMany({ data: rows });
+
+    // One contact per company (FR-CMP-06 contact search), so the EXISTS
+    // subquery the search adds is measured under the same load, not just
+    // the plain name/email/phone columns.
+    const contactRows = rows.map((r, i) => ({
+      id: `perf-contact-${i}`,
+      tenantId,
+      clientId: r.id,
+      name: `Perf Contact ${i}`,
+      phone: `+35569${String(i).padStart(7, '0')}`,
+      isPrimary: true,
+      updatedAt: now,
+    }));
+    await prisma.contactPerson.createMany({ data: contactRows });
   }, 120_000);
 
   afterAll(async () => {
+    await prisma.contactPerson.deleteMany({ where: { tenantId } });
     await prisma.client.deleteMany({ where: { tenantId } });
     await prisma.user.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -105,6 +120,14 @@ describe('Company search performance (NFR-PERF-01)', () => {
     const { res, elapsedMs } = await timed(`/search?businessTypeId=${businessTypeId}&areaId=${areaId}&cityId=${cityId}`);
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(SEED_COUNT);
+    expect(elapsedMs).toBeLessThan(MAX_MS);
+  });
+
+  it('FR-CMP-06 a search matching only a contact phone returns in under 1s', async () => {
+    const phone = `+35569${String(SEED_COUNT - 1).padStart(7, '0')}`;
+    const { res, elapsedMs } = await timed(`/search?search=${encodeURIComponent(phone)}`);
+    expect(res.status).toBe(200);
+    expect(res.body.items.length).toBeGreaterThan(0);
     expect(elapsedMs).toBeLessThan(MAX_MS);
   });
 });

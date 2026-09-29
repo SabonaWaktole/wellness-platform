@@ -10,7 +10,7 @@
     "title": "Direktoria e klientëve",
     "breadcrumb": "CRM > Klientët",
     "subtitle": "Menaxhoni dhe ndiqni të gjitha marrëdhëniet me klientët.",
-    "searchPlaceholder": "Kërko sipas emrit, email-it ose telefonit…",
+    "searchPlaceholder": "Kërko sipas emrit, email-it, telefonit ose kontaktit…",
     "newClient": "Klient i ri",
     "columnClient": "Klienti",
     "columnContact": "Kontakti",
@@ -125,7 +125,12 @@
       "website": "Faqja e internetit",
       "none": "Pa vendosur"
     },
-    "duplicateNameWarning": "U ruajt. Vini re: një kompani tjetër përdor tashmë këtë emër."
+    "duplicateNameWarning": "U ruajt. Vini re: një kompani tjetër përdor tashmë këtë emër.",
+    "contacts": {
+      "title": "Kontaktet",
+      "primary": "Kryesor",
+      "none": "Ende pa kontakte."
+    }
   },
   "form": {
     "createTitle": "Shto klient të ri",
@@ -171,6 +176,21 @@
       "taxId": "NIPT",
       "website": "Faqja e internetit"
     },
+    "contacts": {
+      "title": "Personat e kontaktit",
+      "primary": "Kryesor",
+      "rowLabel": "Kontakti {{number}}",
+      "name": "Emri",
+      "position": "Pozicioni",
+      "phone": "Telefoni",
+      "email": "Email",
+      "add": "Shto kontakt",
+      "remove": "Hiq kontaktin",
+      "save": "Ruaj",
+      "cancel": "Anulo",
+      "makePrimary": "Bëje kryesor",
+      "chooseReplacement": "Zgjidhni cili kontakt bëhet kryesor para se ta hiqni këtë."
+    },
     "errors": {
       "BUSINESS_TYPE_REQUIRED": "Zgjidhni një lloj biznesi.",
       "BUSINESS_TYPE_INACTIVE": "Zgjidhni një lloj biznesi aktiv.",
@@ -184,6 +204,10 @@
       "EMAIL_INVALID": "Vendosni një adresë email të vlefshme.",
       "PHONE_INVALID": "Vendosni një numër telefoni të vlefshëm.",
       "WEBSITE_INVALID": "Vendosni një adresë interneti të vlefshme.",
+      "CONTACT_NAME_REQUIRED": "Shkruani emrin e kontaktit.",
+      "CONTACT_REACH_REQUIRED": "Vendosni një numër telefoni ose email për këtë kontakt.",
+      "CONTACTS_REQUIRED": "Shtoni të paktën një person kontakti.",
+      "PRIMARY_CONTACT_REQUIRED": "Zgjidhni cili kontakt bëhet kryesor para se ta hiqni këtë.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
     }
   },

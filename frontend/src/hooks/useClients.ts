@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { clientService } from '../services/clientService';
 import { useParams } from 'react-router-dom';
-import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory, ClientRelatedCounts } from '../types/client';
+import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory, ClientRelatedCounts, ContactPersonInput } from '../types/client';
 import { extractApiErrorMessage } from '../utils/apiError';
 
 export const useClients = () => {
@@ -334,6 +334,45 @@ export const useReorderCustomFields = () => {
   };
 
   return { reorderCustomFields, isLoading, error };
+};
+
+/**
+ * Contact person writes (FR-CMP-04): add, edit, remove and set-primary,
+ * each against the caller-supplied clientId — the editor calls these once
+ * per row rather than resubmitting the whole company form.
+ */
+export const useContactPersons = () => {
+  const { tenantSlug } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const guard = async <T,>(work: () => Promise<T>, fallback: string): Promise<T> => {
+    if (!tenantSlug) throw new Error('Missing tenant context');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await work();
+    } catch (err: any) {
+      setError(extractApiErrorMessage(err, fallback));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addContact = (clientId: string, data: ContactPersonInput) =>
+    guard(() => clientService.addContact(tenantSlug!, clientId, data), 'Failed to add contact');
+
+  const updateContact = (clientId: string, contactId: string, data: Partial<Omit<ContactPersonInput, 'isPrimary'>>) =>
+    guard(() => clientService.updateContact(tenantSlug!, clientId, contactId, data), 'Failed to update contact');
+
+  const removeContact = (clientId: string, contactId: string, newPrimaryContactId?: string) =>
+    guard(() => clientService.removeContact(tenantSlug!, clientId, contactId, newPrimaryContactId), 'Failed to remove contact');
+
+  const setPrimaryContact = (clientId: string, contactId: string) =>
+    guard(() => clientService.setPrimaryContact(tenantSlug!, clientId, contactId), 'Failed to set the primary contact');
+
+  return { addContact, updateContact, removeContact, setPrimaryContact, isLoading, error };
 };
 
 export const useDefineOutcomeCategory = () => {

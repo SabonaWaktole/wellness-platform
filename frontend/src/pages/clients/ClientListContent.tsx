@@ -256,6 +256,17 @@ export const ClientListContent: React.FC = () => {
       header: t('list.columnArea'),
       render: (client) => (client.profile?.area ? lookupLabel(client.profile.area, i18n.language) : null),
     },
+    {
+      id: 'contact',
+      header: t('list.columnContact'),
+      render: (client) =>
+        client.primaryContact ? (
+          <div className={styles.clientInfo}>
+            <span className={styles.clientName}>{client.primaryContact.name}</span>
+            <span className={styles.clientEmail}>{client.primaryContact.phone}</span>
+          </div>
+        ) : null,
+    },
     /*
       REMOVED: a "Recent Activity" column that rendered the not-set dash on
       every row, always — it was never wired to any source. Removed rather than

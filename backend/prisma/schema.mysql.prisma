@@ -86,6 +86,7 @@ model Tenant {
   ownershipTransfers     OwnershipTransfer[]
   invitations            Invitation[]
   clients                Client[]
+  contactPersons         ContactPerson[]
   customFieldDefinitions CustomFieldDefinition[]
   clientForms            ClientForm[]
   formVersions           FormVersion[]
@@ -446,6 +447,7 @@ model Client {
   quotations        Quotation[]
   invoices          Invoice[]
   contracts         Contract[]
+  contactPersons    ContactPerson[]
 
   @@unique([tenantId, taxId])
   @@index([tenantId, deletedAt])
@@ -454,6 +456,34 @@ model Client {
   @@index([tenantId, name])
   @@index([tenantId, businessTypeId])
   @@index([tenantId, areaId, cityId])
+}
+
+/// A named person at a company (FR-CMP-04, Slice 12): name, position, phone
+/// and email. Exactly one contact per company is primary — enforced in
+/// CompanyContacts, not here, since it's a fact about the set, not one row.
+model ContactPerson {
+  id       String @id
+  tenantId String
+  clientId String
+
+  name     String
+  position String?
+  phone    String?
+  email    String?
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete (NFR-SEC-03): a removed contact is left out of every read
+  /// and out of search, never hard-deleted.
+  deletedAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, clientId])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
 }
 
 model CustomFieldDefinition {
@@ -1113,10 +1143,10 @@ model Contract {
   /// migration is the wrong unit of work for "we renamed Gold to Premium".
   planName String
 
-  /// DRAFT | ACTIVE | EXPIRED | CANCELLED — see ContractStatus in
-  /// src/contracts/domain/Contract.ts. A String column for the same reason
-  /// every other status here is one: the authoritative list is the TypeScript
-  /// enum, and adding a value needs no migration.
+  /// DRAFT | PENDING_SIGNATURE | ACTIVE | SUSPENDED | EXPIRED | CANCELLED —
+  /// see ContractStatus in src/contracts/domain/Contract.ts. A String column
+  /// for the same reason every other status here is one: the authoritative
+  /// list is the TypeScript enum, and adding a value needs no migration.
   status String
 
   /// Price for ONE billing period, not for the whole term. A 1200/year plan
@@ -1213,8 +1243,10 @@ model ContractPayment {
   /// rewrite instalments the customer already paid at the old rate.
   amount  Float
 
-  /// UNPAID | PAID | PARTIAL | WAIVED — see PaymentStatus in
-  /// src/contracts/domain/ContractPayment.ts.
+  /// NOT_INVOICED | INVOICE_ISSUED | PAYMENT_PENDING | PARTIALLY_PAID | PAID |
+  /// OVERDUE — see PaymentStatus in src/contracts/domain/ContractPayment.ts.
+  /// WAIVED is a hidden legacy key (D6): rows already on it keep it, but it
+  /// is not offered for new payments.
   status String @default("PAYMENT_PENDING")
 
   /// How much has actually landed. Equals `amount` for PAID and 0 for UNPAID;

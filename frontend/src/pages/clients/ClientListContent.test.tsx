@@ -148,7 +148,7 @@ describe('ClientListContent', () => {
     
     mockFetchClients.mockClear();
 
-    const searchInput = screen.getByPlaceholderText(/Search by name, email or phone/i);
+    const searchInput = screen.getByPlaceholderText(/Search by name, email/i);
     
     // Type rapidly
     fireEvent.change(searchInput, { target: { value: 'A' } });

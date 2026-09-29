@@ -10,7 +10,7 @@
     "title": "Client Directory",
     "breadcrumb": "CRM > Clients",
     "subtitle": "Manage and track all your client relationships.",
-    "searchPlaceholder": "Search by name, email or phone…",
+    "searchPlaceholder": "Search by name, email, phone or contact…",
     "newClient": "New Client",
     "columnClient": "Client",
     "columnContact": "Contact",
@@ -125,7 +125,12 @@
       "website": "Website",
       "none": "Not set"
     },
-    "duplicateNameWarning": "Saved. Note: another company already uses this name."
+    "duplicateNameWarning": "Saved. Note: another company already uses this name.",
+    "contacts": {
+      "title": "Contacts",
+      "primary": "Primary",
+      "none": "No contacts yet."
+    }
   },
   "form": {
     "createTitle": "Add New Client",
@@ -171,6 +176,21 @@
       "taxId": "NIPT",
       "website": "Website"
     },
+    "contacts": {
+      "title": "Contact persons",
+      "primary": "Primary",
+      "rowLabel": "Contact {{number}}",
+      "name": "Name",
+      "position": "Position",
+      "phone": "Phone",
+      "email": "Email",
+      "add": "Add contact",
+      "remove": "Remove contact",
+      "save": "Save",
+      "cancel": "Cancel",
+      "makePrimary": "Make primary",
+      "chooseReplacement": "Choose which contact becomes primary before removing this one."
+    },
     "errors": {
       "BUSINESS_TYPE_REQUIRED": "Choose a business type.",
       "BUSINESS_TYPE_INACTIVE": "Choose an active business type.",
@@ -184,6 +204,10 @@
       "EMAIL_INVALID": "Enter a valid email address.",
       "PHONE_INVALID": "Enter a valid phone number.",
       "WEBSITE_INVALID": "Enter a valid website address.",
+      "CONTACT_NAME_REQUIRED": "Enter the contact’s name.",
+      "CONTACT_REACH_REQUIRED": "Enter a phone number or an email for this contact.",
+      "CONTACTS_REQUIRED": "Add at least one contact person.",
+      "PRIMARY_CONTACT_REQUIRED": "Choose which contact becomes primary before removing this one.",
       "generic": "Something went wrong. Please try again."
     }
   },

@@ -69,6 +69,10 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.stockLevel.deleteMany({ where: { tenantId } });
       await tx.product.deleteMany({ where: { tenantId } });
       await tx.category.deleteMany({ where: { tenantId } });
+      // Cascades from Client on Postgres, but its own tenantId FK is RESTRICT
+      // and MySQL's cascade ordering is not to be relied on — same reasoning
+      // as BusinessType/City below, explicit rather than implicit.
+      await tx.contactPerson.deleteMany({ where: { tenantId } });
       await tx.client.deleteMany({ where: { tenantId } });
       await tx.customFieldDefinition.deleteMany({ where: { tenantId } });
       await tx.outcomeCategory.deleteMany({ where: { tenantId } });

@@ -87,7 +87,11 @@ export class PrismaClientRepository implements IClientRepository {
         ? Prisma.sql`
             WHERE \`tenantId\` = ${tenantId}
             ${filters.archived ? Prisma.sql`AND \`deletedAt\` IS NOT NULL` : Prisma.sql`AND \`deletedAt\` IS NULL`}
-            ${filters.search ? Prisma.sql`AND (name LIKE ${like(filters.search)} OR email LIKE ${like(filters.search)} OR phone LIKE ${like(filters.search)})` : Prisma.empty}
+            ${filters.search ? Prisma.sql`AND (name LIKE ${like(filters.search)} OR email LIKE ${like(filters.search)} OR phone LIKE ${like(filters.search)} OR EXISTS (
+              SELECT 1 FROM \`ContactPerson\` cp
+              WHERE cp.\`clientId\` = \`Client\`.\`id\` AND cp.\`tenantId\` = \`Client\`.\`tenantId\` AND cp.\`deletedAt\` IS NULL
+                AND (cp.\`name\` LIKE ${like(filters.search)} OR cp.\`phone\` LIKE ${like(filters.search)} OR cp.\`email\` LIKE ${like(filters.search)})
+            ))` : Prisma.empty}
             ${filters.name ? Prisma.sql`AND name LIKE ${like(filters.name)}` : Prisma.empty}
             ${filters.email ? Prisma.sql`AND email LIKE ${like(filters.email)}` : Prisma.empty}
             ${filters.phone ? Prisma.sql`AND phone LIKE ${like(filters.phone)}` : Prisma.empty}
@@ -106,7 +110,11 @@ export class PrismaClientRepository implements IClientRepository {
         : Prisma.sql`
             WHERE "tenantId" = ${tenantId}
             ${filters.archived ? Prisma.sql`AND "deletedAt" IS NOT NULL` : Prisma.sql`AND "deletedAt" IS NULL`}
-            ${filters.search ? Prisma.sql`AND (name ILIKE ${like(filters.search)} OR email ILIKE ${like(filters.search)} OR phone ILIKE ${like(filters.search)})` : Prisma.empty}
+            ${filters.search ? Prisma.sql`AND (name ILIKE ${like(filters.search)} OR email ILIKE ${like(filters.search)} OR phone ILIKE ${like(filters.search)} OR EXISTS (
+              SELECT 1 FROM "ContactPerson" cp
+              WHERE cp."clientId" = "Client"."id" AND cp."tenantId" = "Client"."tenantId" AND cp."deletedAt" IS NULL
+                AND (cp."name" ILIKE ${like(filters.search)} OR cp."phone" ILIKE ${like(filters.search)} OR cp."email" ILIKE ${like(filters.search)})
+            ))` : Prisma.empty}
             ${filters.name ? Prisma.sql`AND name ILIKE ${like(filters.name)}` : Prisma.empty}
             ${filters.email ? Prisma.sql`AND email ILIKE ${like(filters.email)}` : Prisma.empty}
             ${filters.phone ? Prisma.sql`AND phone ILIKE ${like(filters.phone)}` : Prisma.empty}
@@ -157,6 +165,18 @@ export class PrismaClientRepository implements IClientRepository {
           { name: insensitiveContains(filters.search) },
           { email: insensitiveContains(filters.search) },
           { phone: insensitiveContains(filters.search) },
+          {
+            contactPersons: {
+              some: {
+                deletedAt: null,
+                OR: [
+                  { name: insensitiveContains(filters.search) },
+                  { phone: insensitiveContains(filters.search) },
+                  { email: insensitiveContains(filters.search) },
+                ],
+              },
+            },
+          },
         ];
       }
       if (filters.name) where.name = insensitiveContains(filters.name);
