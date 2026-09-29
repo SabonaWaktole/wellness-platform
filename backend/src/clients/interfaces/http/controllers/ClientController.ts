@@ -49,6 +49,7 @@ import {
   addContactPersonSchema,
   updateContactPersonSchema,
   removeContactPersonSchema,
+  clientHistorySchema,
 } from '../schemas/clientSchemas';
 
 export class ClientController {
@@ -304,10 +305,19 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const clientId = req.params.clientId as string;
 
-      const result = await this.getClientHistoryUseCase.execute({ tenantId, clientId, access: req.access! });
+      const query = clientHistorySchema.parse(req.query);
+
+      const result = await this.getClientHistoryUseCase.execute({
+        tenantId,
+        clientId,
+        access: req.access!,
+        types: query.type,
+        cursor: query.cursor,
+        limit: query.limit,
+      });
       res.status(200).json(result);
-    } catch (error: any) {
-      res.status(404).json({ error: error.message });
+    } catch (error) {
+      sendClientError(res, error);
     }
   };
 

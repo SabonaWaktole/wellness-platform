@@ -20,6 +20,7 @@ import {
   TaxIdTakenError,
   WebsiteInvalidError,
 } from '../../../domain/errors';
+import { InvalidTimelineCursorError } from '../../../../shared/application/timeline/TimelineEntry';
 
 const BAD_REQUEST_ERRORS = [
   BusinessTypeRequiredError,
@@ -37,6 +38,7 @@ const BAD_REQUEST_ERRORS = [
   ContactReachRequiredError,
   ContactsRequiredError,
   PrimaryContactRequiredError,
+  InvalidTimelineCursorError,
 ];
 
 /**

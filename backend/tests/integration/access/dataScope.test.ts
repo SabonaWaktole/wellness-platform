@@ -326,10 +326,13 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
 
     it('D3 Reception\'s timeline shows the note and not the call', async () => {
       const res = await get('reception', `/clients/${clients.ofB}/history`);
-      const contents = res.body.timeline.map((entry: any) => entry.content ?? entry.description ?? entry.title);
+      // Slice 13 adds contract validity events to Reception's timeline; D3 is
+      // about notes versus activities, so count those alone.
+      const categories = res.body.timeline.map((entry: any) => entry.category);
       expect(JSON.stringify(res.body)).toContain('Prefers mornings');
       expect(JSON.stringify(res.body)).not.toContain('Discussed renewal price');
-      expect(contents.length).toBe(1);
+      expect(categories.filter((c: string) => c === 'NOTE')).toHaveLength(1);
+      expect(categories).not.toContain('ACTIVITY');
     });
 
     it('the Administrator gets the same contract with its money', async () => {
