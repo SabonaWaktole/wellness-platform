@@ -64,7 +64,7 @@ describe('ClientDetailContent Timeline', () => {
     });
   });
 
-  it('renders APPOINTMENT_COMPLETED with the correct mapped status from activityMapper', () => {
+  it('FR-CMP-05 renders APPOINTMENT_COMPLETED with its translated status', () => {
     const mockClient = { id: 'client-1', name: 'Test Client', status: 'ACTIVE', contactInfo: {} };
     
     vi.mocked(clientsHooks.useClientDetail).mockReturnValue({
@@ -75,28 +75,28 @@ describe('ClientDetailContent Timeline', () => {
     
     vi.mocked(clientsHooks.useClientHistory).mockReturnValue({
       history: {
+        nextCursor: null,
         timeline: [
           {
-            id: 't-1',
+            id: 'appointment:COMPLETED',
+            category: 'ACTIVITY',
             type: 'APPOINTMENT_COMPLETED',
             timestamp: new Date().toISOString(),
-            actor: 'System',
-            description: 'Appointment (COMPLETED)',
-            details: {}
+            actor: null,
+            details: { status: 'COMPLETED' }
           }
         ]
       },
       isLoading: false,
-      fetchHistory: vi.fn()
+      types: [], setTypes: vi.fn(), isLoadingMore: false, error: null, loadMore: vi.fn(), fetchHistory: vi.fn()
     } as any);
 
     render(<ClientDetailContent />);
 
-    // Assert that the explicit status label from activityMapper renders, NOT the fallback empty state
     expect(screen.getByText('Completed')).toBeInTheDocument();
   });
   
-  it('renders APPOINTMENT_CANCELLED with the correct mapped status from activityMapper', () => {
+  it('FR-CMP-05 renders APPOINTMENT_CANCELLED with its translated status', () => {
     const mockClient = { id: 'client-1', name: 'Test Client', status: 'ACTIVE', contactInfo: {} };
     
     vi.mocked(clientsHooks.useClientDetail).mockReturnValue({
@@ -107,19 +107,20 @@ describe('ClientDetailContent Timeline', () => {
     
     vi.mocked(clientsHooks.useClientHistory).mockReturnValue({
       history: {
+        nextCursor: null,
         timeline: [
           {
-            id: 't-2',
+            id: 'appointment:CANCELLED',
+            category: 'ACTIVITY',
             type: 'APPOINTMENT_CANCELLED',
             timestamp: new Date().toISOString(),
-            actor: 'System',
-            description: 'Appointment (CANCELLED)',
-            details: {}
+            actor: null,
+            details: { status: 'CANCELLED' }
           }
         ]
       },
       isLoading: false,
-      fetchHistory: vi.fn()
+      types: [], setTypes: vi.fn(), isLoadingMore: false, error: null, loadMore: vi.fn(), fetchHistory: vi.fn()
     } as any);
 
     render(<ClientDetailContent />);
@@ -155,7 +156,7 @@ describe('ClientDetailContent Timeline', () => {
       vi.mocked(clientsHooks.useClientHistory).mockReturnValue({
         history: { timeline: [] },
         isLoading: false,
-        fetchHistory: vi.fn(),
+        types: [], setTypes: vi.fn(), isLoadingMore: false, error: null, loadMore: vi.fn(), fetchHistory: vi.fn(),
       } as any);
 
       render(<ClientDetailContent />);
@@ -194,7 +195,7 @@ describe('ClientDetailContent Contracts tab', () => {
     vi.mocked(clientsHooks.useClientDetail).mockReturnValue({
       client: { id: 'client-1', name: 'Test Client', status: 'ACTIVE', contactInfo: {} }, isLoading: false, fetchClient: vi.fn(),
     } as any);
-    vi.mocked(clientsHooks.useClientHistory).mockReturnValue({ history: { timeline: [] }, isLoading: false, fetchHistory: vi.fn() } as any);
+    vi.mocked(clientsHooks.useClientHistory).mockReturnValue({ history: { timeline: [] }, isLoading: false, types: [], setTypes: vi.fn(), isLoadingMore: false, error: null, loadMore: vi.fn(), fetchHistory: vi.fn() } as any);
     render(<ClientDetailContent />);
   };
 

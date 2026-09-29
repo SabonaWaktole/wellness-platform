@@ -137,24 +137,51 @@ describe('useClients Hooks', () => {
   });
 
   describe('useClientHistory', () => {
-    it('fetches history successfully', async () => {
+    const entry = (id: string, category = 'NOTE') => ({
+      id, category, type: 'INTERACTION_ADDED', timestamp: '2026-01-01T00:00:00.000Z', actor: null, details: {},
+    });
+
+    it('FR-CMP-05 fetches the first page', async () => {
       server.use(
-        http.get('http://localhost:3000/api/tenant-1/clients/c1/history', () => {
-          return HttpResponse.json({
-            client: { id: 'c1', name: 'Acme Corp' },
-            interactions: [{ id: 'i1', content: 'Call notes' }],
-            appointments: []
-          });
-        })
+        http.get('http://localhost:3000/api/tenant-1/clients/c1/history', () =>
+          HttpResponse.json({ timeline: [entry('a')], nextCursor: null })
+        )
       );
 
       const { result } = renderHook(() => useClientHistory('c1'));
-
       await act(async () => {
         await result.current.fetchHistory();
       });
 
-      expect(result.current.history?.interactions.length).toBe(1);
+      expect(result.current.history?.timeline.map((e) => e.id)).toEqual(['a']);
+    });
+
+    it('FR-CMP-05 sends the chosen types and appends the next page by cursor', async () => {
+      const requests: URLSearchParams[] = [];
+      server.use(
+        http.get('http://localhost:3000/api/tenant-1/clients/c1/history', ({ request }) => {
+          const params = new URL(request.url).searchParams;
+          requests.push(params);
+          return params.get('cursor')
+            ? HttpResponse.json({ timeline: [entry('c', 'CONTRACT')], nextCursor: null })
+            : HttpResponse.json({ timeline: [entry('b', 'CONTRACT')], nextCursor: 'next-1' });
+        })
+      );
+
+      const { result } = renderHook(() => useClientHistory('c1'));
+      act(() => result.current.setTypes(['CONTRACT', 'NOTE']));
+      await act(async () => {
+        await result.current.fetchHistory();
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(requests[0].get('type')).toBe('CONTRACT,NOTE');
+      expect(requests[1].get('cursor')).toBe('next-1');
+      expect(requests[1].get('type')).toBe('CONTRACT,NOTE');
+      expect(result.current.history?.timeline.map((e) => e.id)).toEqual(['b', 'c']);
+      expect(result.current.history?.nextCursor).toBeNull();
     });
   });
 
