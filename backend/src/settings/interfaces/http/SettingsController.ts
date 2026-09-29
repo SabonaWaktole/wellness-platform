@@ -62,6 +62,7 @@ export class SettingsController {
         coverImageUrl: profile?.coverImageUrl ?? null,
       });
     } catch (error: any) {
+      console.error('[DIAG] getSettings failed:', error);
       res.status(400).json({ error: error.message });
     }
   }
@@ -92,6 +93,7 @@ export class SettingsController {
       if (error instanceof ZodError) {
         return res.status(400).json({ issues: error.issues });
       }
+      console.error('[DIAG] updateSettings failed:', error);
       res.status(400).json({ error: error.message });
     }
   }
