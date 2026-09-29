@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FileText, Save } from 'lucide-react';
+import { Building2, FileText, Save } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
+import { TextInput } from '../../components/ui/TextInput/TextInput';
+import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { Controller } from 'react-hook-form';
 import { FormRenderer } from '../../components/forms/FormRenderer';
@@ -12,15 +14,31 @@ import { isBlank } from '../../components/forms/FormRenderer/fieldControl';
 import { useCreateClient, useUpdateClient, useClientDetail } from '../../hooks/useClients';
 import { useClientForm } from '../../hooks/useClientForm';
 import { useTeam } from '../../hooks/useTeam';
+import { useActiveLookups } from '../../hooks/useActiveLookups';
 import { getStaffDisplayName } from '../../utils/userUtils';
+import { lookupLabel } from '../../utils/lookupLabel';
+import { RiskBadge } from '../../components/clients/RiskBadge';
+import { clientErrorMessage, clientErrorField } from './clientErrorMessage';
 import type { FormElement } from '../../types/form';
+import type { CompanyProfileInput } from '../../types/client';
 import styles from './ClientFormContent.module.css';
 
 interface ClientFormValues {
   customFieldValues: Record<string, unknown>;
   /** Internal notes — a system field, not one of the tenant's custom fields. */
   notes: string;
+  profile: {
+    businessTypeId: string;
+    employeeCount: string;
+    areaId: string;
+    cityId: string;
+    streetAddress: string;
+    taxId: string;
+    website: string;
+  };
 }
+
+const PROFILE_FIELDS = new Set(['businessTypeId', 'employeeCount', 'areaId', 'cityId', 'taxId', 'website']);
 
 export const ClientFormContent: React.FC = () => {
   const navigate = useNavigate();
@@ -35,10 +53,37 @@ export const ClientFormContent: React.FC = () => {
   const { staff, fetchStaff } = useTeam();
 
   const [requiredErrors, setRequiredErrors] = useState<Record<string, string>>({});
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { control, handleSubmit, reset, getValues } = useForm<ClientFormValues>({
-    defaultValues: { customFieldValues: {}, notes: '' },
+  const { control, handleSubmit, reset, getValues, watch, setValue } = useForm<ClientFormValues>({
+    defaultValues: {
+      customFieldValues: {},
+      notes: '',
+      profile: { businessTypeId: '', employeeCount: '', areaId: '', cityId: '', streetAddress: '', taxId: '', website: '' },
+    },
   });
+
+  const businessTypes = useActiveLookups('business-types');
+  const riskLevels = useActiveLookups('risk-levels');
+  const areas = useActiveLookups('areas');
+  const selectedAreaId = watch('profile.areaId');
+  const selectedBusinessTypeId = watch('profile.businessTypeId');
+  const cities = useActiveLookups('cities', selectedAreaId ? { areaId: selectedAreaId } : undefined);
+
+  const derivedRisk = useMemo(() => {
+    const businessType = businessTypes.find((bt) => bt.id === selectedBusinessTypeId);
+    if (!businessType) return null;
+    const riskLevel = riskLevels.find((rl) => rl.id === businessType.riskLevelId);
+    return riskLevel ? { id: riskLevel.id, nameSq: riskLevel.nameSq, nameEn: riskLevel.nameEn, level: riskLevel.level } : null;
+  }, [businessTypes, riskLevels, selectedBusinessTypeId]);
+
+  // Changing the area invalidates any city chosen under the old one — never
+  // let the form submit a city that no longer matches its area.
+  const handleAreaChange = (areaId: string) => {
+    setValue('profile.areaId', areaId);
+    setValue('profile.cityId', '');
+  };
 
   useEffect(() => {
     fetchForm();
@@ -48,9 +93,9 @@ export const ClientFormContent: React.FC = () => {
     }
   }, [fetchForm, fetchStaff, isEdit, fetchClient]);
 
-  const { t } = useTranslation('clients');
+  const { t, i18n } = useTranslation('clients');
   const { t: tc } = useTranslation('common');
-  const error = createError || updateError || formError;
+  const error = submitError || createError || updateError || formError;
   const isLoading = isCreating || isUpdating;
 
   /**
@@ -120,7 +165,20 @@ export const ClientFormContent: React.FC = () => {
       if (definition.fieldName in stored) byKey[field.key] = stored[definition.fieldName];
     }
 
-    reset({ customFieldValues: byKey, notes: client.notes ?? '' });
+    const profile = client.profile;
+    reset({
+      customFieldValues: byKey,
+      notes: client.notes ?? '',
+      profile: {
+        businessTypeId: profile?.businessTypeId ?? '',
+        employeeCount: profile?.employeeCount != null ? String(profile.employeeCount) : '',
+        areaId: profile?.areaId ?? '',
+        cityId: profile?.cityId ?? '',
+        streetAddress: profile?.streetAddress ?? '',
+        taxId: profile?.taxId ?? '',
+        website: profile?.website ?? '',
+      },
+    });
   }, [client, isEdit, reset, renderedFields]);
 
   const onSubmit = async (values: ClientFormValues) => {
@@ -173,23 +231,46 @@ export const ClientFormContent: React.FC = () => {
       ...collected,
     };
 
+    const profile: CompanyProfileInput = {
+      businessTypeId: values.profile.businessTypeId,
+      employeeCount: Number(values.profile.employeeCount),
+      areaId: values.profile.areaId,
+      cityId: values.profile.cityId,
+      streetAddress: values.profile.streetAddress?.trim() || null,
+      taxId: values.profile.taxId?.trim() || null,
+      website: values.profile.website?.trim() || null,
+    };
+
     const data = {
       customFieldValues: merged,
       // Trimmed, and '' rather than undefined so clearing the box actually
       // clears the stored notes instead of leaving the old text in place.
       notes: values.notes?.trim() ?? '',
+      profile,
     };
+
+    setSubmitError(null);
+    setProfileErrors({});
 
     try {
       if (isEdit && clientId) {
-        await updateClient(clientId, data);
-        navigate(`/${tenantSlug}/clients/${clientId}`);
+        const saved = await updateClient(clientId, data);
+        navigate(`/${tenantSlug}/clients/${clientId}`, {
+          state: saved.warnings?.includes('DUPLICATE_NAME') ? { duplicateNameWarning: true } : undefined,
+        });
       } else {
         const newClient = await createClient(data);
-        navigate(`/${tenantSlug}/clients/${newClient.id}`);
+        navigate(`/${tenantSlug}/clients/${newClient.id}`, {
+          state: newClient.warnings?.includes('DUPLICATE_NAME') ? { duplicateNameWarning: true } : undefined,
+        });
       }
-    } catch {
-      // error state is set by the hook
+    } catch (err: any) {
+      const field = clientErrorField(err);
+      if (field && PROFILE_FIELDS.has(field)) {
+        setProfileErrors({ [field]: clientErrorMessage(err, t) });
+      } else {
+        setSubmitError(clientErrorMessage(err, t));
+      }
     }
   };
 
@@ -241,6 +322,142 @@ export const ClientFormContent: React.FC = () => {
             values={getValues('customFieldValues')}
           />
         )}
+
+        {/* Company profile (Slice 11: FR-CMP-01, 02, 03) */}
+        <Card className={styles.sectionCard} padding="xl">
+          <div className={styles.sectionHeader}>
+            <div className={styles.iconWrapper}>
+              <Building2 size={20} />
+            </div>
+            <h2 className={styles.sectionTitle}>{t('form.profile.title')}</h2>
+          </div>
+          <div className={styles.grid2}>
+            <Controller
+              name="profile.businessTypeId"
+              control={control}
+              render={({ field }) => (
+                <SelectInput
+                  label={t('form.profile.businessType')}
+                  required
+                  value={field.value}
+                  error={profileErrors.businessTypeId}
+                  onChange={(e) => field.onChange(e.target.value)}
+                >
+                  <option value="">{t('form.profile.choose')}</option>
+                  {businessTypes.map((bt) => (
+                    <option key={bt.id} value={bt.id}>
+                      {lookupLabel(bt, i18n.language)}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            />
+
+            <div className={styles.riskRow}>
+              <span>{t('form.profile.riskLevel')}</span>
+              <RiskBadge risk={derivedRisk} />
+            </div>
+
+            <Controller
+              name="profile.employeeCount"
+              control={control}
+              render={({ field }) => (
+                <TextInput
+                  label={t('form.profile.employeeCount')}
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={field.value}
+                  error={profileErrors.employeeCount}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              )}
+            />
+
+            <Controller
+              name="profile.areaId"
+              control={control}
+              render={({ field }) => (
+                <SelectInput
+                  label={t('form.profile.area')}
+                  required
+                  value={field.value}
+                  error={profileErrors.areaId}
+                  onChange={(e) => handleAreaChange(e.target.value)}
+                >
+                  <option value="">{t('form.profile.choose')}</option>
+                  {areas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {lookupLabel(area, i18n.language)}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            />
+
+            <Controller
+              name="profile.cityId"
+              control={control}
+              render={({ field }) => (
+                <SelectInput
+                  label={t('form.profile.city')}
+                  required
+                  disabled={!selectedAreaId}
+                  value={field.value}
+                  error={profileErrors.cityId}
+                  onChange={(e) => field.onChange(e.target.value)}
+                >
+                  <option value="">{t('form.profile.choose')}</option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {lookupLabel(city, i18n.language)}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            />
+
+            <Controller
+              name="profile.streetAddress"
+              control={control}
+              render={({ field }) => (
+                <TextInput
+                  label={t('form.profile.streetAddress')}
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              )}
+            />
+
+            <Controller
+              name="profile.taxId"
+              control={control}
+              render={({ field }) => (
+                <TextInput
+                  label={t('form.profile.taxId')}
+                  value={field.value}
+                  error={profileErrors.taxId}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              )}
+            />
+
+            <Controller
+              name="profile.website"
+              control={control}
+              render={({ field }) => (
+                <TextInput
+                  label={t('form.profile.website')}
+                  placeholder="https://"
+                  value={field.value}
+                  error={profileErrors.website}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              )}
+            />
+          </div>
+        </Card>
 
         {/* Internal Notes */}
         <Card className={styles.sectionCard} padding="xl">

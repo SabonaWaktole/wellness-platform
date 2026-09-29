@@ -102,6 +102,20 @@
   }
 }
 
+.filterBar {
+  padding: var(--spacing-base) var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  background-color: var(--color-surface-container-low);
+}
+
+.filterBar > * {
+  min-width: 160px;
+}
+
 .searchWrapper {
   width: 100%;
 }

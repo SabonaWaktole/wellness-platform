@@ -15,6 +15,14 @@
   width: 100%;
 }
 
+.duplicateNameNotice {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-warning-container, color-mix(in srgb, orange 15%, transparent));
+  color: var(--text-primary);
+  font-size: var(--font-size-body-sm);
+}
+
 /* ----------------------------------------------------------- header area */
 
 .headerArea {

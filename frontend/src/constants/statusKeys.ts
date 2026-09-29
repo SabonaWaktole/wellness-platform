@@ -105,9 +105,10 @@ export const BILLING_PERIOD_KEYS: Record<string, string> = {
 };
 
 export const CLIENT_STATUS_KEYS: Record<ClientStatus, string> = {
+  LEAD: 'clients:status.lead',
   PROSPECT: 'clients:status.prospect',
-  ACTIVE: 'clients:status.active',
-  INACTIVE: 'clients:status.inactive',
+  CLIENT: 'clients:status.client',
+  FORMER_CLIENT: 'clients:status.formerClient',
 };
 
 /** Mirrors the backend's Appointment status column. */

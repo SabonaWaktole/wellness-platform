@@ -1,8 +1,6 @@
 {
   "status": {
-    "prospect": "Δυνητικός πελάτης",
-    "active": "Ενεργός",
-    "inactive": "Ανενεργός"
+    "prospect": "Δυνητικός πελάτης"
   },
   "breadcrumb": "Πελάτες",
   "list": {

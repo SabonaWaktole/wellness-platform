@@ -8,7 +8,7 @@ const mockClients = [
     id: 'c1',
     name: 'Acme Corp',
     contactInfo: { email: 'contact@acme.com', phone: '123-456-7890' },
-    status: ClientStatus.ACTIVE,
+    status: ClientStatus.CLIENT,
     assignedUserId: 'u1',
     customFieldValues: { industry: 'Tech' },
     lastUpdatedByUserId: 'u1',
