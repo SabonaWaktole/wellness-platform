@@ -113,3 +113,52 @@ export class WebsiteInvalidError extends DomainError {
     super('Enter a valid website address.');
   }
 }
+
+/**
+ * Coded errors for the Slice 12 contact persons (FR-CMP-04), following the
+ * same pattern as the company-profile errors above.
+ */
+
+export class ContactNameRequiredError extends DomainError {
+  readonly code = 'CONTACT_NAME_REQUIRED';
+  readonly field = 'name';
+
+  constructor() {
+    super('Enter the contact’s name.');
+  }
+}
+
+/** A contact needs at least a phone or an email to be reachable by. */
+export class ContactReachRequiredError extends DomainError {
+  readonly code = 'CONTACT_REACH_REQUIRED';
+
+  constructor() {
+    super('Enter a phone number or an email for this contact.');
+  }
+}
+
+/** A company must be saved with at least one contact (FR-CMP-04). */
+export class ContactsRequiredError extends DomainError {
+  readonly code = 'CONTACTS_REQUIRED';
+
+  constructor() {
+    super('Add at least one contact person.');
+  }
+}
+
+/** Removing the primary contact, or the last contact, without naming a replacement. */
+export class PrimaryContactRequiredError extends DomainError {
+  readonly code = 'PRIMARY_CONTACT_REQUIRED';
+
+  constructor() {
+    super('Choose which contact becomes primary before removing this one.');
+  }
+}
+
+export class ContactNotFoundError extends DomainError {
+  readonly code = 'CONTACT_NOT_FOUND';
+
+  constructor() {
+    super('Contact not found');
+  }
+}
