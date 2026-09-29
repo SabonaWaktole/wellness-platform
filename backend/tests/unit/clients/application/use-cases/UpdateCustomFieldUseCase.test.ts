@@ -63,6 +63,8 @@ describe('UpdateCustomFieldUseCase', () => {
       countRelatedRecords: jest.fn(),
       backfillLegacyBasicFields: jest.fn(),
       renameCustomFieldKey: jest.fn(),
+      countByName: jest.fn(),
+      findByTaxId: jest.fn(),
     };
 
     useCase = new UpdateCustomFieldUseCase(

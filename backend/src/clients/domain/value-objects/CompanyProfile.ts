@@ -30,12 +30,29 @@ export interface CompanyProfileLookups {
 }
 
 /**
+ * The shape a company profile has once loaded from persistence, where every
+ * field may still be null — either because a legacy company has none yet
+ * (Slice 14 backfills them) or because it is being read before ever being
+ * validated. `CompanyProfile` (below) is the stricter, validated version of
+ * this same shape, produced only by `create`.
+ */
+export interface CompanyProfileData {
+  businessTypeId: string | null;
+  employeeCount: number | null;
+  areaId: string | null;
+  cityId: string | null;
+  streetAddress: string | null;
+  taxId: string | null;
+  website: string | null;
+}
+
+/**
  * The Slice 11 company profile (FR-CMP-01, 02, 03): everything about a
  * company beyond its contact details. Risk level is not part of this value
  * object — it is derived from `businessTypeId` on read (see CompanyRisk),
  * never stored.
  */
-export class CompanyProfile {
+export class CompanyProfile implements CompanyProfileData {
   private constructor(
     public readonly businessTypeId: string,
     public readonly employeeCount: number,

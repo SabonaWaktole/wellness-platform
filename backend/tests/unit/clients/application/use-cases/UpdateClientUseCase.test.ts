@@ -9,12 +9,15 @@ import { FieldRole } from '../../../../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../../../../src/clients/domain/enums/ClientStatus';
 import { administrator, salesManager, salesUser, scopeResolver } from '../../../../support/access';
 import { PermissionDeniedError } from '../../../../../src/access/domain/errors';
+import { IClientWriteTransaction } from '../../../../../src/clients/application/ports/IClientWriteTransaction';
 
 describe('UpdateClientUseCase', () => {
   let useCase: UpdateClientUseCase;
   let clientRepo: jest.Mocked<IClientRepository>;
   let customFieldRepo: jest.Mocked<ICustomFieldDefinitionRepository>;
   let ensureDefaultFields: EnsureDefaultClientFieldsUseCase;
+  let auditTrail: { record: jest.Mock };
+  let writeTx: IClientWriteTransaction;
 
   const defaultDefinitions = [
     CustomFieldDefinition.create({
@@ -48,6 +51,8 @@ describe('UpdateClientUseCase', () => {
       countByTenant: jest.fn(),
       findRecentByTenant: jest.fn(),
       backfillLegacyBasicFields: jest.fn(),
+      countByName: jest.fn().mockResolvedValue(0),
+      findByTaxId: jest.fn().mockResolvedValue(null),
     } as any;
     customFieldRepo = {
       findByTenantId: jest.fn().mockResolvedValue(defaultDefinitions),
@@ -61,7 +66,9 @@ describe('UpdateClientUseCase', () => {
       markDefaultsSeeded: jest.fn(),
     };
     ensureDefaultFields = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
-    useCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultFields, scopeResolver());
+    auditTrail = { record: jest.fn() };
+    writeTx = { run: jest.fn((work) => work({ clients: clientRepo, auditTrail })) };
+    useCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultFields, scopeResolver(), writeTx);
   });
 
   it('updates a client and records the updater', async () => {
@@ -88,8 +95,8 @@ describe('UpdateClientUseCase', () => {
     });
 
     expect(clientRepo.update).toHaveBeenCalledWith('t1', expect.anything());
-    expect(result.name).toBe('New Name');
-    expect(result.lastUpdatedByUserId).toBe('u2');
+    expect(result.client.name).toBe('New Name');
+    expect(result.client.lastUpdatedByUserId).toBe('u2');
   });
 
   it('prevents updating a client from another tenant', async () => {
@@ -174,7 +181,7 @@ describe('UpdateClientUseCase', () => {
         notes: 'Prefers email contact. Renewal due in March.',
       });
 
-      expect(result.notes).toBe('Prefers email contact. Renewal due in March.');
+      expect(result.client.notes).toBe('Prefers email contact. Renewal due in March.');
     });
 
     it('leaves existing notes alone when the update omits them', async () => {
@@ -186,7 +193,7 @@ describe('UpdateClientUseCase', () => {
         customFieldValues: { Name: 'Acme Renamed' },
       });
 
-      expect(result.notes).toBe('Existing note');
+      expect(result.client.notes).toBe('Existing note');
     });
 
     it('clears notes when an empty string is sent', async () => {
@@ -196,7 +203,7 @@ describe('UpdateClientUseCase', () => {
         tenantId: 't1', clientId: 'c1', updatingUserId: 'u2', access: administrator(), notes: '',
       });
 
-      expect(result.notes).toBe('');
+      expect(result.client.notes).toBe('');
     });
   });
 });

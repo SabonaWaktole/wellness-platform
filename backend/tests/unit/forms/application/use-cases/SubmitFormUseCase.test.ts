@@ -198,7 +198,7 @@ describe('SubmitFormUseCase', () => {
     userRepo.findActiveByTenantAndRole.mockResolvedValue([
       User.create({ id: 'owner1', tenantId: 't1', email: 'o@x.com', hashedPassword: 'h', role: UserRole.BUSINESS_OWNER, createdAt: new Date() }),
     ]);
-    createClientUseCase.execute.mockResolvedValue({ id: 'client1' } as any);
+    createClientUseCase.execute.mockResolvedValue({ client: { id: 'client1' }, warnings: [] } as any);
 
     const result = await useCase.execute({ token: 'tok123', data: { full_name: 'Ada Lovelace' } });
 

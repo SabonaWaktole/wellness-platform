@@ -136,7 +136,7 @@ export class SubmitFormUseCase {
     if (Object.keys(customFieldValues).length === 0) return null;
 
     try {
-      const client = await this.createClientUseCase.execute({
+      const { client } = await this.createClientUseCase.execute({
         tenantId,
         customFieldValues,
         authorUserId,

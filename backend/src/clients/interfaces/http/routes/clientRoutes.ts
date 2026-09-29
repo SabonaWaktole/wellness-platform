@@ -22,8 +22,11 @@ import { GetClientRelatedCountsUseCase } from '../../../application/use-cases/Ge
 import { GetOutcomeCategoriesUseCase } from '../../../application/use-cases/GetOutcomeCategoriesUseCase';
 import { ImportCustomFieldsUseCase } from '../../../application/use-cases/ImportCustomFieldsUseCase';
 import { ImportClientsUseCase } from '../../../application/use-cases/ImportClientsUseCase';
+import { CompanyReadModel } from '../../../application/CompanyReadModel';
 import { IMPORT_MIME, MAX_IMPORT_BYTES } from '../../../infrastructure/excel/sheet';
 import { PrismaClientRepository } from '../../../infrastructure/repositories/PrismaClientRepository';
+import { PrismaClientWriteTransaction } from '../../../infrastructure/repositories/PrismaClientWriteTransaction';
+import { PrismaLookupStore } from '../../../../lookups/infrastructure/PrismaLookupStore';
 import { PrismaCustomFieldDefinitionRepository } from '../../../infrastructure/repositories/PrismaCustomFieldDefinitionRepository';
 import { PrismaCustomFieldWriteTransaction } from '../../../infrastructure/PrismaCustomFieldWriteTransaction';
 import { PrismaInteractionRepository } from '../../../infrastructure/repositories/PrismaInteractionRepository';
@@ -95,6 +98,8 @@ export const createClientRouter = (
 
   // Repositories
   const clientRepo = new PrismaClientRepository(prisma);
+  const clientWriteTx = new PrismaClientWriteTransaction(prisma);
+  const lookupStore = new PrismaLookupStore(prisma);
   const customFieldRepo = new PrismaCustomFieldDefinitionRepository(prisma);
   const customFieldWriteTransaction = new PrismaCustomFieldWriteTransaction(prisma);
   const interactionRepo = new PrismaInteractionRepository(prisma);
@@ -108,8 +113,8 @@ export const createClientRouter = (
 
   // Use Cases
   const ensureDefaultClientFieldsUseCase = new EnsureDefaultClientFieldsUseCase(customFieldRepo, clientRepo);
-  const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, notifications);
-  const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, scopes, notifications);
+  const createClientUseCase = new CreateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, lookupStore, notifications);
+  const updateClientUseCase = new UpdateClientUseCase(clientRepo, customFieldRepo, ensureDefaultClientFieldsUseCase, scopes, clientWriteTx, lookupStore, notifications);
   const searchClientsUseCase = new SearchClientsUseCase(clientRepo, scopes);
   const getClientHistoryUseCase = new GetClientHistoryUseCase(clientRepo, interactionRepo, scopes, appointmentRepo);
   const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo, scopes);
@@ -122,10 +127,11 @@ export const createClientRouter = (
   const getCustomFieldsUseCase = new GetCustomFieldsUseCase(ensureDefaultClientFieldsUseCase);
   const getOutcomeCategoriesUseCase = new GetOutcomeCategoriesUseCase(outcomeCategoryRepo);
   const importCustomFieldsUseCase = new ImportCustomFieldsUseCase(customFieldRepo);
-  const archiveClientUseCase = new ArchiveClientUseCase(clientRepo, scopes);
-  const restoreClientUseCase = new RestoreClientUseCase(clientRepo, scopes);
+  const archiveClientUseCase = new ArchiveClientUseCase(clientRepo, scopes, clientWriteTx);
+  const restoreClientUseCase = new RestoreClientUseCase(clientRepo, scopes, clientWriteTx);
   const getClientRelatedCountsUseCase = new GetClientRelatedCountsUseCase(clientRepo, scopes);
   const importClientsUseCase = new ImportClientsUseCase(createClientUseCase, ensureDefaultClientFieldsUseCase);
+  const companyReadModel = new CompanyReadModel(lookupStore);
 
   // Controller
   const clientController = new ClientController(
@@ -146,7 +152,8 @@ export const createClientRouter = (
     importClientsUseCase,
     archiveClientUseCase,
     restoreClientUseCase,
-    getClientRelatedCountsUseCase
+    getClientRelatedCountsUseCase,
+    companyReadModel
   );
 
   // Middlewares applied to all routes in this router

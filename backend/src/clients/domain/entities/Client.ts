@@ -1,7 +1,7 @@
 import { CustomFieldDefinition } from './CustomFieldDefinition';
 import { FieldType } from '../enums/FieldType';
 import { FieldRole } from '../enums/FieldRole';
-import { CompanyProfile } from '../value-objects/CompanyProfile';
+import { CompanyProfileData } from '../value-objects/CompanyProfile';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
 import { EmailInvalidError, PhoneInvalidError } from '../errors';
 
@@ -30,7 +30,7 @@ export interface ClientProps {
    * backfills a legacy company; every company created or edited through the
    * company form carries one.
    */
-  profile?: CompanyProfile | null;
+  profile?: CompanyProfileData | null;
   lastUpdatedByUserId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -47,7 +47,7 @@ export class Client {
   public readonly assignedUserId?: string | null;
   public readonly customFieldValues: Record<string, any>;
   public readonly notes?: string | null;
-  public readonly profile: CompanyProfile | null;
+  public readonly profile: CompanyProfileData | null;
   public readonly lastUpdatedByUserId: string;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;

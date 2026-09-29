@@ -24,6 +24,8 @@ describe('GetTenantClientMetricsUseCase', () => {
       restore: jest.fn(),
       countRelatedRecords: jest.fn(),
       renameCustomFieldKey: jest.fn(),
+      countByName: jest.fn(),
+      findByTaxId: jest.fn(),
     };
 
     // Unconfigured tenant: the repository answers with the domain defaults,

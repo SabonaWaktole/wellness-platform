@@ -31,8 +31,9 @@ describe('ArchiveClientUseCase', () => {
       archive: jest.fn(),
       restore: jest.fn(),
     } as any;
-    archive = new ArchiveClientUseCase(repo, scopeResolver());
-    restore = new RestoreClientUseCase(repo, scopeResolver());
+    const writeTx = { run: jest.fn((work: any) => work({ clients: repo, auditTrail: { record: jest.fn() } })) };
+    archive = new ArchiveClientUseCase(repo, scopeResolver(), writeTx as any);
+    restore = new RestoreClientUseCase(repo, scopeResolver(), writeTx as any);
   });
 
   const owner = { tenantId: 't1', access: administrator(), requestingUserId: 'u1', clientId: 'c1' };

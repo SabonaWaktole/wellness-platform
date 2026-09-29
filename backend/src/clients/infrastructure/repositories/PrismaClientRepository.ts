@@ -4,8 +4,9 @@ import { RecordScope, admits, ALL_RECORDS } from '../../../access/domain/RecordS
 import { ownerSql, ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import { Client } from '../../domain/entities/Client';
 import { FieldRole } from '../../domain/enums/FieldRole';
-import { insensitiveContains } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
+import { insensitiveContains, insensitiveEquals } from '../../../shared/infrastructure/prisma/caseInsensitiveFilter';
 import { IS_MYSQL } from '../../../shared/infrastructure/prisma/provider';
+import { TaxIdTakenError } from '../../domain/errors';
 
 /** Legacy Client column each role mirrors into — see backfillLegacyBasicFields. */
 const LEGACY_COLUMN_BY_ROLE: Record<FieldRole, string> = {
@@ -36,6 +37,15 @@ export class PrismaClientRepository implements IClientRepository {
         ? JSON.parse(record.customFieldValues) 
         : record.customFieldValues,
       notes: record.notes ?? null,
+      profile: {
+        businessTypeId: record.businessTypeId ?? null,
+        employeeCount: record.employeeCount ?? null,
+        areaId: record.areaId ?? null,
+        cityId: record.cityId ?? null,
+        streetAddress: record.streetAddress ?? null,
+        taxId: record.taxId ?? null,
+        website: record.website ?? null,
+      },
       lastUpdatedByUserId: record.lastUpdatedByUserId,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
@@ -83,6 +93,10 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.phone ? Prisma.sql`AND phone LIKE ${like(filters.phone)}` : Prisma.empty}
             ${filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty}
             ${filters.assignedUserId ? Prisma.sql`AND \`assignedUserId\` = ${filters.assignedUserId}` : Prisma.empty}
+            ${filters.businessTypeId ? Prisma.sql`AND \`businessTypeId\` = ${filters.businessTypeId}` : Prisma.empty}
+            ${filters.areaId ? Prisma.sql`AND \`areaId\` = ${filters.areaId}` : Prisma.empty}
+            ${filters.cityId ? Prisma.sql`AND \`cityId\` = ${filters.cityId}` : Prisma.empty}
+            ${filters.riskLevelId ? Prisma.sql`AND \`businessTypeId\` IN (SELECT id FROM \`BusinessType\` WHERE \`riskLevelId\` = ${filters.riskLevelId})` : Prisma.empty}
             ${ownerSql(scope, Prisma.raw('`assignedUserId`'))}
             AND JSON_CONTAINS(\`customFieldValues\`, CAST(${customFieldsJson} AS JSON))
           `
@@ -98,6 +112,10 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.phone ? Prisma.sql`AND phone ILIKE ${like(filters.phone)}` : Prisma.empty}
             ${filters.status ? Prisma.sql`AND status = ${filters.status}` : Prisma.empty}
             ${filters.assignedUserId ? Prisma.sql`AND "assignedUserId" = ${filters.assignedUserId}` : Prisma.empty}
+            ${filters.businessTypeId ? Prisma.sql`AND "businessTypeId" = ${filters.businessTypeId}` : Prisma.empty}
+            ${filters.areaId ? Prisma.sql`AND "areaId" = ${filters.areaId}` : Prisma.empty}
+            ${filters.cityId ? Prisma.sql`AND "cityId" = ${filters.cityId}` : Prisma.empty}
+            ${filters.riskLevelId ? Prisma.sql`AND "businessTypeId" IN (SELECT id FROM "BusinessType" WHERE "riskLevelId" = ${filters.riskLevelId})` : Prisma.empty}
             ${ownerSql(scope, Prisma.raw('"assignedUserId"'))}
             AND "customFieldValues" @> ${customFieldsJson}::jsonb
           `;
@@ -146,6 +164,10 @@ export class PrismaClientRepository implements IClientRepository {
       if (filters.phone) where.phone = insensitiveContains(filters.phone);
       if (filters.status) where.status = filters.status;
       if (filters.assignedUserId) where.assignedUserId = filters.assignedUserId;
+      if (filters.businessTypeId) where.businessTypeId = filters.businessTypeId;
+      if (filters.areaId) where.areaId = filters.areaId;
+      if (filters.cityId) where.cityId = filters.cityId;
+      if (filters.riskLevelId) where.businessType = { riskLevelId: filters.riskLevelId };
       // Its own AND entry: the scope may carry an OR of its own, beside search's.
       where.AND = [ownerWhere(scope, 'assignedUserId')];
 
@@ -180,22 +202,45 @@ export class PrismaClientRepository implements IClientRepository {
   }
 
   async save(tenantId: string, client: Client): Promise<void> {
-    await this.prisma.client.create({
-      data: {
-        id: client.id,
-        tenantId: client.tenantId,
-        name: client.name,
-        email: client.contactInfo.email,
-        phone: client.contactInfo.phone,
-        status: client.status,
-        assignedUserId: client.assignedUserId,
-        customFieldValues: client.customFieldValues,
-        notes: client.notes,
-        lastUpdatedByUserId: client.lastUpdatedByUserId,
-        createdAt: client.createdAt,
-        updatedAt: client.updatedAt,
+    try {
+      await this.prisma.client.create({
+        data: {
+          id: client.id,
+          tenantId: client.tenantId,
+          name: client.name,
+          email: client.contactInfo.email,
+          phone: client.contactInfo.phone,
+          status: client.status,
+          assignedUserId: client.assignedUserId,
+          customFieldValues: client.customFieldValues,
+          notes: client.notes,
+          ...profileColumns(client),
+          lastUpdatedByUserId: client.lastUpdatedByUserId,
+          createdAt: client.createdAt,
+          updatedAt: client.updatedAt,
+        },
+      });
+    } catch (error) {
+      throw mapTaxIdViolation(error);
+    }
+  }
+
+  async countByName(tenantId: string, name: string, excludeId?: string): Promise<number> {
+    return this.prisma.client.count({
+      where: {
+        tenantId,
+        deletedAt: null,
+        name: insensitiveEquals(name),
+        ...(excludeId ? { id: { not: excludeId } } : {}),
       },
     });
+  }
+
+  async findByTaxId(tenantId: string, taxId: string, excludeId?: string): Promise<Client | null> {
+    const record = await this.prisma.client.findFirst({
+      where: { tenantId, taxId, ...(excludeId ? { id: { not: excludeId } } : {}) },
+    });
+    return record ? this.mapToDomain(record) : null;
   }
 
   async backfillLegacyBasicFields(tenantId: string, fieldNameByRole: Partial<Record<FieldRole, string>>): Promise<void> {
@@ -265,20 +310,25 @@ export class PrismaClientRepository implements IClientRepository {
   }
 
   async update(tenantId: string, client: Client): Promise<void> {
-    await this.prisma.client.update({
-      where: { id: client.id },
-      data: {
-        name: client.name,
-        email: client.contactInfo.email,
-        phone: client.contactInfo.phone,
-        status: client.status,
-        assignedUserId: client.assignedUserId,
-        customFieldValues: client.customFieldValues,
-        notes: client.notes,
-        lastUpdatedByUserId: client.lastUpdatedByUserId,
-        updatedAt: client.updatedAt,
-      },
-    });
+    try {
+      await this.prisma.client.update({
+        where: { id: client.id },
+        data: {
+          name: client.name,
+          email: client.contactInfo.email,
+          phone: client.contactInfo.phone,
+          status: client.status,
+          assignedUserId: client.assignedUserId,
+          customFieldValues: client.customFieldValues,
+          notes: client.notes,
+          ...profileColumns(client),
+          lastUpdatedByUserId: client.lastUpdatedByUserId,
+          updatedAt: client.updatedAt,
+        },
+      });
+    } catch (error) {
+      throw mapTaxIdViolation(error);
+    }
   }
 
   async archive(tenantId: string, id: string, archivedByUserId: string): Promise<void> {
@@ -307,4 +357,33 @@ export class PrismaClientRepository implements IClientRepository {
     ]);
     return { interactions, appointments, quotations, invoices };
   }
+}
+
+/** The Slice 11 profile columns, from whatever `client.profile` currently holds (possibly all null). */
+function profileColumns(client: Client) {
+  const profile = client.profile;
+  return {
+    businessTypeId: profile?.businessTypeId ?? null,
+    employeeCount: profile?.employeeCount ?? null,
+    areaId: profile?.areaId ?? null,
+    cityId: profile?.cityId ?? null,
+    streetAddress: profile?.streetAddress ?? null,
+    taxId: profile?.taxId ?? null,
+    website: profile?.website ?? null,
+  };
+}
+
+/** `@@unique([tenantId, taxId])` violated concurrently with the use case's own check. */
+function mapTaxIdViolation(error: unknown): unknown {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    // `target` is an array of column names on Postgres, or the index name as
+    // a string on MySQL (e.g. "Client_tenantId_taxId_key") — `includes`
+    // matches either shape, since it means "has this element" on an array
+    // and "contains this substring" on a string.
+    const target = (error.meta?.target as string[] | string | undefined) ?? '';
+    if (target.includes('taxId')) {
+      return new TaxIdTakenError();
+    }
+  }
+  return error;
 }

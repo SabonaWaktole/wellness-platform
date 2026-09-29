@@ -16,6 +16,11 @@ export interface SearchClientsFilters {
   assignedUserId?: string;
   status?: string;
   customFields?: Record<string, any>;
+  /** Slice 11 filters (FR-CMP-06). `riskLevelId` narrows through the business type. */
+  businessTypeId?: string;
+  riskLevelId?: string;
+  areaId?: string;
+  cityId?: string;
   /**
    * Which side of the soft-delete line to search. Defaults to `false` —
    * active clients only — so every existing caller keeps its current
@@ -46,6 +51,10 @@ export interface ClientRelatedCounts {
 }
 
 export interface IClientRepository {
+  /** Another active company of this tenant with this name, other than `excludeId` (FR-CMP-02: a warning, not an error). */
+  countByName(tenantId: string, name: string, excludeId?: string): Promise<number>;
+  /** Another company of this tenant already holding this NIPT, other than `excludeId` (Q8). */
+  findByTaxId(tenantId: string, taxId: string, excludeId?: string): Promise<Client | null>;
   /**
    * Active clients only unless `includeArchived` is set. The option exists for
    * the archive/restore paths, which must be able to load a client that

@@ -1,7 +1,9 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
+import { IClientWriteTransaction } from '../ports/IClientWriteTransaction';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
+import { AuditAction } from '../../../audit/domain/AuditAction';
 
 interface RestoreClientDTO {
   tenantId: string;
@@ -11,11 +13,12 @@ interface RestoreClientDTO {
 }
 
 /** Brings an archived client back into the active list. Same permission as
- *  archiving — see ArchiveClientUseCase. */
+ *  archiving — see ArchiveClientUseCase. Audited the same way (FR-AUD-02). */
 export class RestoreClientUseCase {
   constructor(
     private clientRepo: IClientRepository,
-    private scopes: RecordScopeResolver
+    private scopes: RecordScopeResolver,
+    private writeTx: IClientWriteTransaction
   ) {}
 
   async execute(dto: RestoreClientDTO): Promise<{ restoredClientName: string }> {
@@ -30,7 +33,20 @@ export class RestoreClientUseCase {
       throw new DomainError('Client is not archived');
     }
 
-    await this.clientRepo.restore(dto.tenantId, dto.clientId, dto.requestingUserId);
+    await this.writeTx.run(async ({ clients, auditTrail }) => {
+      await clients.restore(dto.tenantId, dto.clientId, dto.requestingUserId);
+      await auditTrail.record({
+        tenantId: dto.tenantId,
+        userId: dto.access.userId,
+        userRole: dto.access.auditRole,
+        action: AuditAction.Update,
+        entityType: 'Client',
+        entityId: dto.clientId,
+        entityLabel: existing.name,
+        changes: [{ field: 'deletedAt', old: 'archived', new: null }],
+      });
+    });
+
     return { restoredClientName: existing.name };
   }
 }

@@ -3,9 +3,13 @@ import { FieldRole } from '../../domain/enums/FieldRole';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { ICustomFieldDefinitionRepository } from '../../domain/repositories/ICustomFieldDefinitionRepository';
+import { ILookupStore } from '../../../lookups/application/ports/ILookupStore';
 import { EnsureDefaultClientFieldsUseCase } from './EnsureDefaultClientFieldsUseCase';
 import { ClientFieldResolver } from '../../domain/services/ClientFieldResolver';
 import { Client } from '../../domain/entities/Client';
+import { CompanyProfileInput } from '../../domain/value-objects/CompanyProfile';
+import { loadCompanyProfile } from '../loadCompanyProfile';
+import { TaxIdTakenError } from '../../domain/errors';
 import { randomUUID } from 'crypto';
 
 interface CreateClientDTO {
@@ -18,9 +22,22 @@ interface CreateClientDTO {
   customFieldValues?: Record<string, any>;
   /** Internal notes. A system field, not one of the tenant's custom fields. */
   notes?: string | null;
+  /**
+   * The Slice 11 company profile. Required by the HTTP schema for a company
+   * created through the company form; omitted by ImportClientsUseCase and
+   * the public-form path (decision: those keep creating incomplete
+   * companies, which Slice 14's "needs completion" report picks up).
+   */
+  profile?: CompanyProfileInput;
   authorUserId: string;
   /** `null` for a system actor (a public form submission), which is bound by neither rule below. */
   access: AccessContext | null;
+}
+
+export interface CreateClientResult {
+  client: Client;
+  /** Non-blocking notices about the save — currently just a duplicate name (FR-CMP-02). */
+  warnings: string[];
 }
 
 export class CreateClientUseCase {
@@ -28,12 +45,22 @@ export class CreateClientUseCase {
     private clientRepo: IClientRepository,
     private customFieldRepo: ICustomFieldDefinitionRepository,
     private ensureDefaultFields: EnsureDefaultClientFieldsUseCase,
+    private lookupStore?: ILookupStore,
     private notifications?: NotificationService
   ) {}
 
-  async execute(dto: CreateClientDTO): Promise<Client> {
+  async execute(dto: CreateClientDTO): Promise<CreateClientResult> {
     const definitions = await this.ensureDefaultFields.execute(dto.tenantId);
     const customFieldValues = this.withResponsibleSalesperson(dto, definitions);
+
+    const profile = dto.profile
+      ? await loadCompanyProfile(this.requireLookupStore(), dto.tenantId, dto.profile)
+      : null;
+
+    if (profile?.taxId) {
+      const clash = await this.clientRepo.findByTaxId(dto.tenantId, profile.taxId);
+      if (clash) throw new TaxIdTakenError();
+    }
 
     const client = Client.create({
       id: randomUUID(),
@@ -47,10 +74,16 @@ export class CreateClientUseCase {
       assignedUserId: ClientFieldResolver.resolveAssignedUserId(customFieldValues, definitions) ?? null,
       customFieldValues,
       notes: dto.notes ?? null,
+      profile,
       lastUpdatedByUserId: dto.authorUserId,
       createdAt: new Date(),
       updatedAt: new Date(),
     }, definitions);
+
+    const warnings: string[] = [];
+    if ((await this.clientRepo.countByName(dto.tenantId, client.name)) > 0) {
+      warnings.push('DUPLICATE_NAME');
+    }
 
     await this.clientRepo.save(dto.tenantId, client);
 
@@ -69,7 +102,14 @@ export class CreateClientUseCase {
       });
     }
 
-    return client;
+    return { client, warnings };
+  }
+
+  private requireLookupStore(): ILookupStore {
+    if (!this.lookupStore) {
+      throw new Error('CreateClientUseCase received a company profile but has no lookup store wired.');
+    }
+    return this.lookupStore;
   }
 
   /**

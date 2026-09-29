@@ -29,8 +29,11 @@ import { parseSheet, buildTemplate } from '../../../infrastructure/excel/sheet';
 import { FieldType } from '../../../domain/enums/FieldType';
 import { ClientStatus } from '../../../domain/enums/ClientStatus';
 import { DomainError } from '../../../../shared/domain/errors/DomainError';
+import { CompanyReadModel } from '../../../application/CompanyReadModel';
+import { sendClientError } from './sendClientError';
+import { Client } from '../../../domain/entities/Client';
 import {
-  createClientSchema,
+  createClientHttpSchema,
   updateClientSchema,
   searchClientsSchema,
   addInteractionSchema,
@@ -59,7 +62,8 @@ export class ClientController {
     private importClientsUseCase: ImportClientsUseCase,
     private archiveClientUseCase: ArchiveClientUseCase,
     private restoreClientUseCase: RestoreClientUseCase,
-    private getClientRelatedCountsUseCase: GetClientRelatedCountsUseCase
+    private getClientRelatedCountsUseCase: GetClientRelatedCountsUseCase,
+    private companyReadModel: CompanyReadModel
   ) {}
 
   /**
@@ -151,43 +155,49 @@ export class ClientController {
     }
   };
 
+  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile. */
+  private async presentClient(tenantId: string, client: Client) {
+    const profile = await this.companyReadModel.enrichOne(tenantId, client);
+    return {
+      id: client.id,
+      name: client.name,
+      contactInfo: client.contactInfo,
+      status: client.status,
+      assignedUserId: client.assignedUserId,
+      customFieldValues: client.customFieldValues,
+      notes: client.notes,
+      profile,
+      lastUpdatedByUserId: client.lastUpdatedByUserId,
+      createdAt: client.createdAt,
+      updatedAt: client.updatedAt,
+    };
+  }
+
   public createClient = async (req: Request, res: Response) => {
     try {
-      const validatedData = createClientSchema.parse(req.body);
+      const validatedData = createClientHttpSchema.parse(req.body);
       const tenantId = requireTenantId(req);
       const authorUserId = req.user!.userId;
 
-      const client = await this.createClientUseCase.execute({
+      const { client, warnings } = await this.createClientUseCase.execute({
         ...validatedData,
         tenantId,
         authorUserId,
         access: req.access!,
       });
 
-      res.status(201).json(client);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      res.status(201).json({ ...(await this.presentClient(tenantId, client)), warnings });
+    } catch (error) {
+      sendClientError(res, error);
     }
   };
 
   public getClient = async (req: Request, res: Response) => {
     try {
       const tenantId = requireTenantId(req);
-      const updatingUserId = req.user!.userId;
       const clientId = req.params.clientId as string;
       const client = await this.getClientUseCase.execute(tenantId, clientId, req.access!);
-      res.status(200).json({
-        id: client.id,
-        name: client.name,
-        contactInfo: client.contactInfo,
-        status: client.status,
-        assignedUserId: client.assignedUserId,
-        customFieldValues: client.customFieldValues,
-        notes: client.notes,
-        lastUpdatedByUserId: client.lastUpdatedByUserId,
-        createdAt: client.createdAt,
-        updatedAt: client.updatedAt,
-      });
+      res.status(200).json(await this.presentClient(tenantId, client));
     } catch (error: any) {
       if (error instanceof DomainError) {
         res.status(404).json({ error: error.message });
@@ -204,7 +214,7 @@ export class ClientController {
       const updatingUserId = req.user!.userId;
       const clientId = req.params.clientId as string;
 
-      const client = await this.updateClientUseCase.execute({
+      const { client, warnings } = await this.updateClientUseCase.execute({
         tenantId,
         clientId,
         updatingUserId,
@@ -212,13 +222,9 @@ export class ClientController {
         ...validatedData
       });
 
-      res.status(200).json(client);
-    } catch (error: any) {
-      if (error.message === 'Client not found or access denied') {
-        res.status(404).json({ error: error.message });
-      } else {
-        res.status(400).json({ error: error.message });
-      }
+      res.status(200).json({ ...(await this.presentClient(tenantId, client)), warnings });
+    } catch (error) {
+      sendClientError(res, error);
     }
   };
 
@@ -240,14 +246,34 @@ export class ClientController {
           assignedUserId: validatedData.assignedUserId,
           archived: validatedData.archived,
           customFields: validatedData.customFields,
+          businessTypeId: validatedData.businessTypeId,
+          riskLevelId: validatedData.riskLevelId,
+          areaId: validatedData.areaId,
+          cityId: validatedData.cityId,
         },
         skip: validatedData.skip,
         take: validatedData.take,
       });
 
-      res.status(200).json(result);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      const profiles = await this.companyReadModel.enrichMany(tenantId, result.items);
+      res.status(200).json({
+        total: result.total,
+        items: result.items.map((client, index) => ({
+          id: client.id,
+          name: client.name,
+          contactInfo: client.contactInfo,
+          status: client.status,
+          assignedUserId: client.assignedUserId,
+          customFieldValues: client.customFieldValues,
+          notes: client.notes,
+          profile: profiles[index],
+          lastUpdatedByUserId: client.lastUpdatedByUserId,
+          createdAt: client.createdAt,
+          updatedAt: client.updatedAt,
+        })),
+      });
+    } catch (error) {
+      sendClientError(res, error);
     }
   };
 
