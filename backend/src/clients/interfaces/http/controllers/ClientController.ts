@@ -268,6 +268,7 @@ export class ClientController {
           riskLevelId: validatedData.riskLevelId,
           areaId: validatedData.areaId,
           cityId: validatedData.cityId,
+          needsCompletion: validatedData.needsCompletion,
         },
         skip: validatedData.skip,
         take: validatedData.take,

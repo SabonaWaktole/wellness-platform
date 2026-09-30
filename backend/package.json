@@ -18,6 +18,7 @@
     "seed:superadmin": "ts-node -r tsconfig-paths/register scratch/seed-super-admin.ts",
     "seed:demo": "ts-node -r tsconfig-paths/register scratch/seed-demo.ts",
     "seed:wellness": "ts-node -r tsconfig-paths/register scripts/seed-wellness-workspace.ts",
+    "migrate:legacy-clients": "ts-node -r tsconfig-paths/register scripts/migrate-legacy-clients.ts",
     "typecheck": "tsc -p tsconfig.test.json"
   },
   "dependencies": {

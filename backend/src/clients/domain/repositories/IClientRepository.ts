@@ -22,6 +22,14 @@ export interface SearchClientsFilters {
   areaId?: string;
   cityId?: string;
   /**
+   * Slice 14 (FR-CMP-08): `true` narrows to companies still missing a
+   * business type, employee count, area, city or a live contact — the same
+   * gaps the legacy migration's CSV report lists. Applied inside the query
+   * (a `NOT EXISTS` for the contact check), so counts and pagination stay
+   * correct alongside every other filter.
+   */
+  needsCompletion?: boolean;
+  /**
    * Which side of the soft-delete line to search. Defaults to `false` —
    * active clients only — so every existing caller keeps its current
    * behaviour without change. `true` returns ONLY archived clients, which is

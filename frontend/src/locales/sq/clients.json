@@ -54,10 +54,12 @@
       "salesperson": "Shitësi",
       "status": "Statusi",
       "all": "Të gjitha",
-      "clear": "Pastro filtrat"
+      "clear": "Pastro filtrat",
+      "needsCompletion": "Kërkon plotësim"
     },
     "columnRisk": "Rreziku",
-    "columnArea": "Zona"
+    "columnArea": "Zona",
+    "incompleteBadge": "I paplotë"
   },
   "detail": {
     "loading": "Duke ngarkuar klientin...",

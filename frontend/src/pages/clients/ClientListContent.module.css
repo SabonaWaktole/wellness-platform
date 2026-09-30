@@ -149,6 +149,13 @@
   min-width: 0;
 }
 
+.clientNameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs, 4px);
+  min-width: 0;
+}
+
 .clientName {
   font-family: var(--font-family-base);
   font-size: var(--font-size-body-md);
@@ -158,6 +165,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.incompleteBadge {
+  flex-shrink: 0;
 }
 
 .clientEmail {

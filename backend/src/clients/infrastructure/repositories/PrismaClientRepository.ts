@@ -17,6 +17,23 @@ const LEGACY_COLUMN_BY_ROLE: Record<FieldRole, string> = {
   [FieldRole.ASSIGNEE]: 'assignedUserId',
 };
 
+/**
+ * Slice 14 (FR-CMP-08): the same gaps the legacy migration's CSV lists —
+ * missing business type, employee count, area, city, or no live contact.
+ */
+const NEEDS_COMPLETION_MYSQL = Prisma.sql`
+  AND (
+    \`businessTypeId\` IS NULL OR \`employeeCount\` IS NULL OR \`areaId\` IS NULL OR \`cityId\` IS NULL
+    OR NOT EXISTS (SELECT 1 FROM \`ContactPerson\` cp WHERE cp.\`clientId\` = \`Client\`.\`id\` AND cp.\`deletedAt\` IS NULL)
+  )
+`;
+const NEEDS_COMPLETION_POSTGRES = Prisma.sql`
+  AND (
+    "businessTypeId" IS NULL OR "employeeCount" IS NULL OR "areaId" IS NULL OR "cityId" IS NULL
+    OR NOT EXISTS (SELECT 1 FROM "ContactPerson" cp WHERE cp."clientId" = "Client"."id" AND cp."deletedAt" IS NULL)
+  )
+`;
+
 export class PrismaClientRepository implements IClientRepository {
   constructor(private prisma: PrismaClient) {}
 
@@ -101,6 +118,7 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.areaId ? Prisma.sql`AND \`areaId\` = ${filters.areaId}` : Prisma.empty}
             ${filters.cityId ? Prisma.sql`AND \`cityId\` = ${filters.cityId}` : Prisma.empty}
             ${filters.riskLevelId ? Prisma.sql`AND \`businessTypeId\` IN (SELECT id FROM \`BusinessType\` WHERE \`riskLevelId\` = ${filters.riskLevelId})` : Prisma.empty}
+            ${filters.needsCompletion ? NEEDS_COMPLETION_MYSQL : Prisma.empty}
             ${ownerSql(scope, Prisma.raw('`assignedUserId`'))}
             AND JSON_CONTAINS(\`customFieldValues\`, CAST(${customFieldsJson} AS JSON))
           `
@@ -124,6 +142,7 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.areaId ? Prisma.sql`AND "areaId" = ${filters.areaId}` : Prisma.empty}
             ${filters.cityId ? Prisma.sql`AND "cityId" = ${filters.cityId}` : Prisma.empty}
             ${filters.riskLevelId ? Prisma.sql`AND "businessTypeId" IN (SELECT id FROM "BusinessType" WHERE "riskLevelId" = ${filters.riskLevelId})` : Prisma.empty}
+            ${filters.needsCompletion ? NEEDS_COMPLETION_POSTGRES : Prisma.empty}
             ${ownerSql(scope, Prisma.raw('"assignedUserId"'))}
             AND "customFieldValues" @> ${customFieldsJson}::jsonb
           `;
@@ -190,6 +209,19 @@ export class PrismaClientRepository implements IClientRepository {
       if (filters.riskLevelId) where.businessType = { riskLevelId: filters.riskLevelId };
       // Its own AND entry: the scope may carry an OR of its own, beside search's.
       where.AND = [ownerWhere(scope, 'assignedUserId')];
+      // A second, independent OR (nested under AND, not merged into `where.OR`
+      // above) — `search` and `needsCompletion` must both hold, not either one.
+      if (filters.needsCompletion) {
+        where.AND.push({
+          OR: [
+            { businessTypeId: null },
+            { employeeCount: null },
+            { areaId: null },
+            { cityId: null },
+            { contactPersons: { none: { deletedAt: null } } },
+          ],
+        });
+      }
 
       const [records, total] = await Promise.all([
         this.prisma.client.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),

@@ -85,11 +85,16 @@ export const ClientListContent: React.FC = () => {
   const [cityId, setCityId] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [assignedUserIdFilter, setAssignedUserIdFilter] = useState('');
+  // Slice 14 (FR-CMP-08): narrows to companies the legacy migration's report
+  // would still flag — missing a profile field or a contact.
+  const [needsCompletion, setNeedsCompletion] = useState(false);
   const businessTypes = useActiveLookups('business-types');
   const riskLevels = useActiveLookups('risk-levels');
   const areas = useActiveLookups('areas');
   const cities = useActiveLookups('cities', areaId ? { areaId } : undefined);
-  const hasActiveFilters = !!(businessTypeId || riskLevelId || areaId || cityId || statusFilter || assignedUserIdFilter);
+  const hasActiveFilters = !!(
+    businessTypeId || riskLevelId || areaId || cityId || statusFilter || assignedUserIdFilter || needsCompletion
+  );
   const clearFilters = () => {
     setBusinessTypeId('');
     setRiskLevelId('');
@@ -97,6 +102,7 @@ export const ClientListContent: React.FC = () => {
     setCityId('');
     setStatusFilter('');
     setAssignedUserIdFilter('');
+    setNeedsCompletion(false);
   };
   // Changing the area invalidates any city chosen under the old one.
   const handleAreaFilterChange = (value: string) => {
@@ -134,13 +140,14 @@ export const ClientListContent: React.FC = () => {
     cityId: cityId || undefined,
     status: statusFilter || undefined,
     assignedUserId: assignedUserIdFilter || undefined,
+    needsCompletion: needsCompletion || undefined,
   });
 
   useEffect(() => {
     // One box, matched across name / email / phone — SRS §6.2.
     fetchClients(activeFilters());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchClients, debouncedSearchTerm, showArchived, reach, businessTypeId, riskLevelId, areaId, cityId, statusFilter, assignedUserIdFilter]);
+  }, [fetchClients, debouncedSearchTerm, showArchived, reach, businessTypeId, riskLevelId, areaId, cityId, statusFilter, assignedUserIdFilter, needsCompletion]);
 
   const refresh = () => fetchClients(activeFilters());
 
@@ -203,6 +210,15 @@ export const ClientListContent: React.FC = () => {
 
   type ClientRow = (typeof clients)[number];
 
+  // Slice 14 (FR-CMP-08): the same gaps the "needs completion" filter and
+  // the legacy migration's report flag.
+  const isIncomplete = (client: ClientRow) =>
+    !client.profile?.businessTypeId ||
+    !client.profile?.employeeCount ||
+    !client.profile?.areaId ||
+    !client.profile?.cityId ||
+    !client.primaryContact;
+
   const columns: DataTableColumn<ClientRow>[] = [
     {
       id: 'client',
@@ -216,7 +232,14 @@ export const ClientListContent: React.FC = () => {
             size="md"
           />
           <div className={styles.clientInfo}>
-            <span className={styles.clientName}>{client.name}</span>
+            <span className={styles.clientNameRow}>
+              <span className={styles.clientName}>{client.name}</span>
+              {isIncomplete(client) && (
+                <Badge variant="warning" className={styles.incompleteBadge}>
+                  {t('list.incompleteBadge')}
+                </Badge>
+              )}
+            </span>
             <span className={styles.clientEmail}>{client.contactInfo?.email}</span>
           </div>
         </div>
@@ -470,6 +493,14 @@ export const ClientListContent: React.FC = () => {
                 </option>
               ))}
             </SelectInput>
+
+            <Button
+              variant={needsCompletion ? 'primary' : 'outline'}
+              aria-pressed={needsCompletion}
+              onClick={() => setNeedsCompletion((v) => !v)}
+            >
+              {t('list.filters.needsCompletion')}
+            </Button>
 
             {hasActiveFilters && (
               <Button variant="outline" onClick={clearFilters}>

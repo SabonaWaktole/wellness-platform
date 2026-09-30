@@ -350,5 +350,76 @@ describe('ClientListContent', () => {
     });
   });
 
+  describe('the needs-completion filter (FR-CMP-08)', () => {
+    it('sends needsCompletion=true when toggled on, and Clear resets it', () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+
+      fireEvent.click(screen.getByText('Needs completion'));
+      expect(mockFetchClients).toHaveBeenLastCalledWith(
+        expect.objectContaining({ needsCompletion: true })
+      );
+
+      fireEvent.click(screen.getByText('Clear filters'));
+      expect(mockFetchClients).toHaveBeenLastCalledWith(
+        expect.objectContaining({ needsCompletion: undefined })
+      );
+    });
+
+    it('shows an incomplete badge for a company missing a profile field or a contact', () => {
+      vi.mocked(useClientsModule.useClients).mockReturnValue({
+        clients: [
+          {
+            id: 'c1',
+            tenantId: 'tenant-1',
+            name: 'Incomplete Co',
+            contactInfo: {},
+            status: 'CLIENT',
+            assignedUserId: 'u1',
+            customFieldValues: {},
+            lastUpdatedByUserId: 'u1',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'c2',
+            tenantId: 'tenant-1',
+            name: 'Complete Co',
+            contactInfo: {},
+            status: 'CLIENT',
+            assignedUserId: 'u1',
+            customFieldValues: {},
+            lastUpdatedByUserId: 'u1',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            profile: {
+              businessTypeId: 'bt1',
+              employeeCount: 5,
+              areaId: 'a1',
+              cityId: 'c1',
+              streetAddress: null,
+              taxId: null,
+              website: null,
+              businessType: { id: 'bt1', nameSq: 'Kafene', nameEn: 'Cafe' },
+              riskLevel: null,
+              area: { id: 'a1', nameSq: 'Tiranë', nameEn: null },
+              city: { id: 'c1', nameSq: 'Tiranë', nameEn: null },
+            },
+            primaryContact: { id: 'ct1', name: 'Owner', isPrimary: true, createdAt: '', updatedAt: '' },
+          },
+        ],
+        total: 2,
+        isLoading: false,
+        error: null,
+        fetchClients: mockFetchClients,
+      });
+
+      renderComponent();
+      expect(screen.getByText('Incomplete Co')).toBeInTheDocument();
+      expect(screen.getByText('Complete Co')).toBeInTheDocument();
+      expect(screen.getAllByText('Incomplete')).toHaveLength(1);
+    });
+  });
+
 });
 // @ts-nocheck
