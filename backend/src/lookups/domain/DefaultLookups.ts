@@ -7,7 +7,9 @@
  * `mysql_migration_add_lookup_lists.sql` (risk levels, business types),
  * `mysql_migration_add_areas_cities.sql` (areas, cities) and
  * `mysql_migration_add_sales_lists.sql` (follow-up intervals, lost-deal
- * reasons) seed the same values for workspaces that already exist;
+ * reasons) seed the same values for workspaces that already exist, and
+ * `20260930200000_m2_pricing_config` adds the cities marked `since: 'M2'`
+ * (Vorë, for the Kamëz and Vorë price zone);
  * `DefaultLookups.test.ts` keeps them all in step.
  */
 export interface DefaultRiskLevel {
@@ -24,10 +26,21 @@ export interface DefaultBusinessType {
   riskLevel: number;
 }
 
+export interface DefaultCity {
+  nameSq: string;
+  nameEn: string;
+  /**
+   * Set on a city added after Milestone 1. Existing workspaces receive it
+   * from that milestone's migration, not from the M1 area/city migration,
+   * which stays as it was applied.
+   */
+  since?: 'M2';
+}
+
 export interface DefaultArea {
   nameSq: string;
   nameEn: string;
-  cities: { nameSq: string; nameEn: string }[];
+  cities: DefaultCity[];
 }
 
 export interface DefaultFollowUpInterval {
@@ -71,7 +84,7 @@ export const DEFAULT_AREAS: DefaultArea[] = [
   { nameSq: 'Kukës', nameEn: 'Kukës', cities: [{ nameSq: 'Kukës', nameEn: 'Kukës' }, { nameSq: 'Krumë', nameEn: 'Krumë' }, { nameSq: 'Has', nameEn: 'Has' }] },
   { nameSq: 'Lezhë', nameEn: 'Lezhë', cities: [{ nameSq: 'Lezhë', nameEn: 'Lezhë' }, { nameSq: 'Laç', nameEn: 'Laç' }, { nameSq: 'Rrëshen', nameEn: 'Rrëshen' }] },
   { nameSq: 'Shkodër', nameEn: 'Shkodër', cities: [{ nameSq: 'Shkodër', nameEn: 'Shkodër' }, { nameSq: 'Koplik', nameEn: 'Koplik' }, { nameSq: 'Vau i Dejës', nameEn: 'Vau i Dejës' }] },
-  { nameSq: 'Tiranë', nameEn: 'Tirana', cities: [{ nameSq: 'Tiranë', nameEn: 'Tirana' }, { nameSq: 'Kamëz', nameEn: 'Kamëz' }, { nameSq: 'Kavajë', nameEn: 'Kavajë' }] },
+  { nameSq: 'Tiranë', nameEn: 'Tirana', cities: [{ nameSq: 'Tiranë', nameEn: 'Tirana' }, { nameSq: 'Kamëz', nameEn: 'Kamëz' }, { nameSq: 'Kavajë', nameEn: 'Kavajë' }, { nameSq: 'Vorë', nameEn: 'Vorë', since: 'M2' }] },
   { nameSq: 'Vlorë', nameEn: 'Vlorë', cities: [{ nameSq: 'Vlorë', nameEn: 'Vlorë' }, { nameSq: 'Sarandë', nameEn: 'Sarandë' }, { nameSq: 'Himarë', nameEn: 'Himarë' }] },
 ];
 

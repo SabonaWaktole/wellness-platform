@@ -27,9 +27,15 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
         ]);
         return cities + clients;
       }
-      case LookupList.Cities:
-        // A company in this city (Slice 11), active or not.
-        return this.prisma.client.count({ where: { tenantId, cityId: id } });
+      case LookupList.Cities: {
+        // A company in this city (Slice 11), active or not, or a price zone
+        // that lists it (M2 Slice 3, FR-PCF-05).
+        const [clients, zones] = await Promise.all([
+          this.prisma.client.count({ where: { tenantId, cityId: id } }),
+          this.prisma.priceZoneCity.count({ where: { cityId: id, zone: { tenantId } } }),
+        ]);
+        return clients + zones;
+      }
       case LookupList.FollowUpIntervals:
       case LookupList.LostReasons:
         // Nothing points at either list until deals do (Milestone 2).

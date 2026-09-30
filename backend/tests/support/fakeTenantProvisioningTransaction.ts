@@ -7,6 +7,7 @@ import { IUserRepository } from '../../src/auth/domain/repositories/IUserReposit
 import { ISystemRoleSeeder } from '../../src/access/application/ports/ISystemRoleSeeder';
 import { RoleKey } from '../../src/access/domain/RoleKey';
 import { ILookupSeeder } from '../../src/lookups/application/ports/ILookupSeeder';
+import { IPricingSeeder } from '../../src/pricing/application/ports/IPricingSeeder';
 
 export interface TenantProvisioningHarness {
   provisioningTx: ITenantProvisioningTransaction;
@@ -14,6 +15,7 @@ export interface TenantProvisioningHarness {
   userRepo: jest.Mocked<IUserRepository>;
   roleSeeder: jest.Mocked<ISystemRoleSeeder>;
   lookupSeeder: jest.Mocked<ILookupSeeder>;
+  pricingSeeder: jest.Mocked<IPricingSeeder>;
 }
 
 /**
@@ -65,11 +67,12 @@ export function makeTenantProvisioningHarness(): TenantProvisioningHarness {
   } as jest.Mocked<ISystemRoleSeeder>;
 
   const lookupSeeder = { seed: jest.fn().mockResolvedValue(undefined) } as jest.Mocked<ILookupSeeder>;
+  const pricingSeeder = { seed: jest.fn().mockResolvedValue(undefined) } as jest.Mocked<IPricingSeeder>;
 
   const provisioningTx: ITenantProvisioningTransaction = {
     run: <T>(work: (repos: TenantProvisioningRepos) => Promise<T>): Promise<T> =>
-      work({ tenantRepo, userRepo, roleSeeder, lookupSeeder }),
+      work({ tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder }),
   };
 
-  return { provisioningTx, tenantRepo, userRepo, roleSeeder, lookupSeeder };
+  return { provisioningTx, tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder };
 }

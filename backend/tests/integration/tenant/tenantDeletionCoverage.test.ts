@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
 import { PrismaLookupSeeder } from '../../../src/lookups/infrastructure/PrismaLookupSeeder';
+import { PrismaPricingSeeder } from '../../../src/pricing/infrastructure/PrismaPricingSeeder';
 
 /**
  * PRODUCTION INCIDENT, SEP 11 2026: deleting ANY tenant failed with
@@ -44,6 +45,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.contactPerson.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.client.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.user.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.priceZone.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.businessType.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.riskLevel.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.city.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -145,6 +147,9 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // from Tenant. The seeder creates both pairs, plus follow-up intervals
     // and lost-deal reasons, for every tenant.
     await new PrismaLookupSeeder(prisma).seed(tenantId);
+    // PriceZoneCity holds RESTRICT on its City (M2 Slice 3); the pricing seed
+    // gives every tenant zones with cities.
+    await new PrismaPricingSeeder(prisma).seed(tenantId);
 
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
     // covered here so a tenant with an edited status label is proven clean too.
@@ -171,6 +176,11 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.lostReason.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.statusLabel.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.contactPerson.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.priceZone.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.riskSurcharge.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.visitFrequency.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.employeeBand.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.pricingSettings.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });

@@ -69,7 +69,7 @@ export class CreateTenantWithOwnerUseCase {
     const platformDefaults = await this.platformSettingsRepository?.get();
 
     try {
-      return await this.provisioningTx.run(async ({ tenantRepo, userRepo, roleSeeder, lookupSeeder }) => {
+      return await this.provisioningTx.run(async ({ tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder }) => {
         /*
          * The slug check runs INSIDE the transaction, unlike the original,
          * which checked before opening one. That does not by itself make the
@@ -108,6 +108,8 @@ export class CreateTenantWithOwnerUseCase {
         await tenantRepo.create(tenant);
         const roles = await roleSeeder.seed(tenant.id);
         await lookupSeeder.seed(tenant.id);
+        // After the lookups: the pricing seed points at their risk levels and cities.
+        await pricingSeeder.seed(tenant.id);
 
         const user = User.create({
           id: uuidv4(),
