@@ -54,10 +54,12 @@
       "salesperson": "Salesperson",
       "status": "Status",
       "all": "All",
-      "clear": "Clear filters"
+      "clear": "Clear filters",
+      "needsCompletion": "Needs completion"
     },
     "columnRisk": "Risk",
-    "columnArea": "Area"
+    "columnArea": "Area",
+    "incompleteBadge": "Incomplete"
   },
   "detail": {
     "loading": "Loading client...",

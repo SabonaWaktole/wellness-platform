@@ -201,6 +201,8 @@ export interface SearchClientsParams {
   riskLevelId?: string;
   areaId?: string;
   cityId?: string;
+  /** Slice 14 (FR-CMP-08): narrows to companies still missing a profile field or a contact. */
+  needsCompletion?: boolean;
   /** `true` lists archived clients instead of active ones. */
   archived?: boolean;
   /**
