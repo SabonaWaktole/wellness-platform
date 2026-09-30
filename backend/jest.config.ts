@@ -9,6 +9,7 @@ const config: Config = {
   // clobber each other's fixtures. See tests/setup/perWorkerDb.ts.
   globalSetup: '<rootDir>/tests/setup/globalSetup.ts',
   setupFiles: ['<rootDir>/tests/setup/perWorkerDb.ts', '<rootDir>/tests/setup/testEnv.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup/releaseSharedPrisma.ts'],
   moduleNameMapper: {
     '^@auth/(.*)$': '<rootDir>/src/auth/$1',
     '^@tenant/(.*)$': '<rootDir>/src/tenant/$1',
