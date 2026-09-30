@@ -14,7 +14,7 @@
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
 --                                    column can become NOT NULL.
 --
--- It replaces running these eleven by hand, in this order (the order matters —
+-- It replaces running these sixteen by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql

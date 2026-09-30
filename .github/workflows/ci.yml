@@ -68,6 +68,61 @@ jobs:
       - name: Test (serial)
         run: npm test -- --runInBand
 
+  # NFR-OPS-01: the Hostinger target is MySQL, which `prisma migrate deploy`
+  # cannot migrate (prisma/migrations is Postgres SQL). The hand-written
+  # upgrade script is what production runs, so it is proven here on every
+  # change: baseline → upgrade → upgrade again (idempotent) → no drift from
+  # schema.mysql.prisma.
+  mysql:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wellness
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -uroot -proot --silent"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MYSQL_URL: mysql://root:root@127.0.0.1:3306/wellness
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      - name: Import the Hostinger baseline
+        run: mysql -h 127.0.0.1 -uroot -proot wellness < prisma/nevacrm_full_import.sql
+
+      - name: Upgrade to current, twice (the second run must only skip)
+        run: |
+          set -o pipefail
+          for run in 1 2; do
+            mysql -h 127.0.0.1 -uroot -proot wellness < prisma/mysql_upgrade_to_current.sql | tee "upgrade-$run.txt"
+          done
+          if grep -q 'STILL MISSING' upgrade-2.txt; then
+            echo "::error::mysql_upgrade_to_current.sql left objects missing (see the report above)."
+            exit 1
+          fi
+
+      - name: No drift from schema.mysql.prisma
+        run: npx prisma migrate diff --from-url "$MYSQL_URL" --to-schema-datamodel prisma/schema.mysql.prisma --exit-code
+
   # FR-BR-04: nothing a Wellness Albania user can reach, and no email the
   # system sends, may name Neva CRM, the SaaS product this edition was forked
   # from. Case-insensitive, so "NevaCRM", "Neva CRM" and "nevacrm.eu" all fail;
