@@ -8,7 +8,7 @@ vi.mock('../../../hooks/useRoleAdmin');
 const CATALOGUE = [
   { key: 'companies.view', group: 'companies', supportsScope: true },
   { key: 'contracts.validity.view', group: 'contracts', supportsScope: true },
-  { key: 'commercial.view', group: 'commercial', supportsScope: true, milestone: 'M2' },
+  { key: 'commercial.view', group: 'sales', supportsScope: true, milestone: 'M2' },
   { key: 'notes.add', group: 'activities', supportsScope: true },
   { key: 'roles.manage', group: 'admin', supportsScope: false },
   { key: 'audit.view', group: 'admin', supportsScope: false },
@@ -95,7 +95,7 @@ describe('RolesSettingsContent', () => {
   it('marks permissions whose feature arrives in a later milestone', () => {
     renderRoles();
 
-    const row = screen.getByLabelText(/View commercial terms/).closest('li')!;
+    const row = screen.getByLabelText(/View commercial details/).closest('li')!;
     expect(within(row).getByText('Available from Milestone 2')).toBeDefined();
   });
 
@@ -128,9 +128,9 @@ describe('RolesSettingsContent', () => {
   it('grants a newly ticked scoped permission at Own, the narrowest reach', async () => {
     renderRoles();
 
-    fireEvent.click(screen.getByLabelText(/View commercial terms/));
+    fireEvent.click(screen.getByLabelText(/View commercial details/));
 
-    expect((screen.getByLabelText(/Reach of View commercial terms/) as HTMLSelectElement).value).toBe('OWN');
+    expect((screen.getByLabelText(/Reach of View commercial details/) as HTMLSelectElement).value).toBe('OWN');
   });
 
   it('Discard puts the saved permissions back', () => {

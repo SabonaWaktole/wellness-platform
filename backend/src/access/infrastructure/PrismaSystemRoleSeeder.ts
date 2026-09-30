@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { ISystemRoleSeeder } from '../application/ports/ISystemRoleSeeder';
 import { DEFAULT_ROLE_MATRIX } from '../domain/DefaultRoleMatrix';
 import { PermissionScope } from '../domain/PermissionScope';
+import { PERMISSION_UPGRADES } from '../domain/PermissionUpgrades';
 import { RoleKey, SYSTEM_ROLE_NAMES } from '../domain/RoleKey';
 
 export class PrismaSystemRoleSeeder implements ISystemRoleSeeder {
@@ -32,6 +33,10 @@ export class PrismaSystemRoleSeeder implements ISystemRoleSeeder {
         },
       });
     }
+    // Born with the full matrix, so no permission upgrade may run for it later (D7).
+    await this.prisma.appliedPermissionUpgrade.createMany({
+      data: PERMISSION_UPGRADES.map(({ key }) => ({ tenantId, key })),
+    });
     return ids;
   }
 }
