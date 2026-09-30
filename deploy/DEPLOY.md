@@ -32,7 +32,7 @@ mysql -u USER -p DBNAME < backend/prisma/nevacrm_full_import.sql
 mysql -u USER -p DBNAME < backend/prisma/mysql_upgrade_to_current.sql
 ```
 
-`mysql_upgrade_to_current.sql` replaces the sixteen older hand-written
+`mysql_upgrade_to_current.sql` replaces the seventeen older hand-written
 `mysql_*migration*.sql` files it lists in its header — do not run those as
 well. Every statement in it
 is guarded against `information_schema`, so it is safe on a fresh baseline, on a

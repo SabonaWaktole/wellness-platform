@@ -315,7 +315,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Business Owner ownership transfer). Distinct actor and scope from the
   // Business-Owner-only deactivate/reactivate above — see PlatformSuspendUserUseCase.
   const ownershipTransferRepository = new PrismaOwnershipTransferRepository();
-  const ownershipTransactions = new PrismaOwnershipTransactions();
+  const ownershipTransactions = new PrismaOwnershipTransactions(undefined, accessCache);
   const getOwnershipTransferCandidatesUseCase = new GetOwnershipTransferCandidatesUseCase(userRepository);
   const platformSuspendUserUseCase = new PlatformSuspendUserUseCase(
     userRepository,

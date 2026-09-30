@@ -361,6 +361,10 @@ model OwnershipTransfer {
   // them back exactly where they were.
   previousActingRole        String
   previousActingWarehouseId String?
+  // The acting owner's permission role (User.roleId) before promotion, so a
+  // restore gives back exactly the role they held. Null on transfers recorded
+  // before Slice 15; restore then maps previousActingRole (D2).
+  previousActingRoleId      String?
   status                    String // 'ACTIVE' | 'RESTORED' | 'KEPT' | 'KEPT_BOTH'
   createdAt                 DateTime  @default(now())
   createdByUserId           String
