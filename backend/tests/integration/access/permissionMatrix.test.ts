@@ -6,7 +6,8 @@ import { createApp } from '../../../src/main/app';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
 import { DEFAULT_ROLE_MATRIX, PermissionGrant } from '../../../src/access/domain/DefaultRoleMatrix';
 import { RoleKey, SYSTEM_ROLE_NAMES } from '../../../src/access/domain/RoleKey';
-import { PermissionScope } from '../../../src/access/domain/PermissionScope';
+import { PermissionScope, scopeAtLeast } from '../../../src/access/domain/PermissionScope';
+import { routeTable, RouteEntry } from '../../support/routeTable';
 
 const prisma = new PrismaClient();
 const tokenService = new JwtTokenService();
@@ -21,12 +22,12 @@ const tokenService = new JwtTokenService();
 const LEGACY_ROLE = 'STAFF';
 
 /**
- * FR-RBAC-01, 05, 09; NFR-SEC-01. For each of the five system roles, exactly
- * one representative endpoint per module either 200s or 403s according to
+ * FR-RBAC-01, 05, 09; NFR-SEC-01. For each of the five system roles, every
+ * permission-gated tenant route (walked from the live router, so a new route
+ * cannot be forgotten) is either allowed or 403'd according to
  * `DEFAULT_ROLE_MATRIX` — the same matrix `generate-role-seed-sql.ts` seeds
- * every tenant with. This is not an exhaustive router walk; it is one load-
- * bearing check per module, chosen so a regression in the matrix or in a
- * route's `requirePermission(...)` call shows up here first.
+ * every tenant with. `routeCoverage.test.ts` makes sure no route escapes the
+ * walk by being ungated. The SMOKE cases send real bodies to a few endpoints.
  */
 describe('Permission matrix (SRS §4.2)', () => {
   const tenantId = `t-matrix-${randomUUID()}`;
@@ -119,7 +120,52 @@ describe('Permission matrix (SRS §4.2)', () => {
     return scope ? grants[key] === scope : grants[key] !== undefined;
   }
 
-  const CASES: Array<{ label: string; permissionKey: string; request: (t: string) => request.Test }> = [
+  const FAKE_ID = '00000000-0000-4000-8000-000000000000';
+  /** Path params the router validates before the gate runs, so a fake value would 404 first. */
+  const REAL_PARAMS: Record<string, string> = { list: 'business-types', domain: 'contract', key: 'ACTIVE' };
+
+  /** Whether `role` passes the route's gate, per the same rules as requirePermission.ts. */
+  function gateAllows(roleKey: RoleKey, gate: Extract<RouteEntry['gate'], { kind: 'permission' }>): boolean {
+    const grants = DEFAULT_ROLE_MATRIX[roleKey] as Readonly<Record<string, PermissionGrant>>;
+    return gate.key.split('|').some((key) => {
+      const grant = grants[key];
+      if (grant === undefined) return false;
+      if (!gate.minScope || grant === true) return true;
+      return scopeAtLeast(grant as PermissionScope, gate.minScope);
+    });
+  }
+
+  const gatedRoutes = routeTable(createApp()).filter(
+    (route): route is RouteEntry & { gate: Extract<RouteEntry['gate'], { kind: 'permission' }> } =>
+      route.path.startsWith('/api/:tenantSlug/') && route.gate.kind === 'permission'
+  );
+
+  describe('NFR-SEC-01 every gated tenant route, generated from the router', () => {
+    it('covers the routes (guards the walk)', () => {
+      expect(gatedRoutes.length).toBeGreaterThan(100);
+    });
+
+    for (const route of gatedRoutes) {
+      const url = route.path.replace(':tenantSlug', tenantSlug).replace(/:([A-Za-z]+)/g, (_, name: string) => REAL_PARAMS[name] ?? FAKE_ID);
+      const label = `${route.method} ${route.path} [${route.gate.key}${route.gate.minScope ? `:${route.gate.minScope}` : ''}]`;
+      for (const roleKey of Object.values(RoleKey)) {
+        const allowed = gateAllows(roleKey, route.gate);
+        it(`${label} — ${roleKey} ${allowed ? 'is allowed (not 403)' : 'is forbidden (403)'}`, async () => {
+          const method = route.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete';
+          let req = request(app)[method](url).set('Authorization', `Bearer ${tokens[roleKey]}`);
+          if (method !== 'get' && method !== 'delete') req = req.send({});
+          const res = await req;
+          if (allowed) {
+            expect(res.status).not.toBe(403);
+          } else {
+            expect(res.status).toBe(403);
+          }
+        });
+      }
+    }
+  });
+
+  const SMOKE: Array<{ label: string; permissionKey: string; request: (t: string) => request.Test }> = [
     {
       label: 'companies.view — GET /clients/search',
       permissionKey: 'companies.view',
@@ -230,7 +276,7 @@ describe('Permission matrix (SRS §4.2)', () => {
     },
   ];
 
-  for (const testCase of CASES) {
+  for (const testCase of SMOKE) {
     describe(testCase.label, () => {
       for (const roleKey of Object.values(RoleKey)) {
         const allowed = matrixAllows(roleKey, testCase.permissionKey);

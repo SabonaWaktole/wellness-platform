@@ -166,10 +166,13 @@ export const createFormRouter = (
   router.post('/:formId/publish', requirePermission('forms.manage'), formController.publishForm);
   router.get('/:formId/versions', requirePermission('companies.view'), formController.listVersions);
   router.get('/:formId/versions/:versionNumber', requirePermission('companies.view'), formController.getVersion);
-  router.get('/:formId/submissions', requirePermission('companies.view'), formController.listSubmissions);
+  // Submissions hold respondents' personal data: the use case requires
+  // forms.manage, so the route does too (a companies.view holder got a 403
+  // from inside the use case instead of at the gate).
+  router.get('/:formId/submissions', requirePermission('forms.manage'), formController.listSubmissions);
   router.get(
     '/:formId/submissions/:submissionId',
-    requirePermission('companies.view'),
+    requirePermission('forms.manage'),
     formController.getSubmission
   );
 
