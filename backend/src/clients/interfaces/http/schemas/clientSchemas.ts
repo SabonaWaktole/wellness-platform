@@ -107,6 +107,15 @@ export const searchClientsSchema = z.object({
   riskLevelId: z.string().optional(),
   areaId: z.string().optional(),
   cityId: z.string().optional(),
+  /** Slice 14 (FR-CMP-08): narrows to companies still missing a profile field or a contact. */
+  needsCompletion: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined) return undefined;
+      if (typeof value === 'boolean') return value;
+      return value.trim().toLowerCase() === 'true';
+    }),
   /**
    * The list's "mine / team / all" filter (FR-RBAC-11..13). It narrows the
    * viewer's `companies.view` scope and never widens it.
