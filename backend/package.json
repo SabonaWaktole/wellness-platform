@@ -18,7 +18,9 @@
     "seed:superadmin": "ts-node -r tsconfig-paths/register scratch/seed-super-admin.ts",
     "seed:demo": "ts-node -r tsconfig-paths/register scratch/seed-demo.ts",
     "seed:wellness": "ts-node -r tsconfig-paths/register scripts/seed-wellness-workspace.ts",
+    "seed:uat": "ts-node -r tsconfig-paths/register scripts/seed-uat.ts",
     "migrate:legacy-clients": "ts-node -r tsconfig-paths/register scripts/migrate-legacy-clients.ts",
+    "perf:staging": "ts-node -r tsconfig-paths/register scripts/measure-performance.ts",
     "typecheck": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "decimal.js": "^10.6.0",
     "dotenv": "^16.4.7",
     "exceljs": "^4.4.0",
     "express": "^4.21.2",

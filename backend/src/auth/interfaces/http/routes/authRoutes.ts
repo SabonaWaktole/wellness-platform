@@ -42,9 +42,9 @@ export const createGlobalAuthRoutes = (
   router.post('/exit-workspace', authMw, authController.exitWorkspace);
 
 
-  router.post('/invitations/accept', validateRequest(authSchemas.acceptInvitation), authController.acceptInvitation);
+  router.post('/invitations/accept', authLimiter, validateRequest(authSchemas.acceptInvitation), authController.acceptInvitation);
   router.post('/password-reset/request', authLimiter, validateRequest(authSchemas.requestPasswordReset), authController.requestPasswordResetGlobal);
-  router.post('/password-reset/reset', validateRequest(authSchemas.resetPassword), authController.resetPassword);
+  router.post('/password-reset/reset', authLimiter, validateRequest(authSchemas.resetPassword), authController.resetPassword);
 
   // Profile endpoints
   router.get('/me', optionalAuthMw, authController.getMe);
@@ -52,7 +52,7 @@ export const createGlobalAuthRoutes = (
   // It resolves from the token's own tenant, so it works on this slug-less
   // route, and the platform operator resolves without one.
   router.put('/me', authMw, loadAccessMw, validateRequest(authSchemas.updateProfile), authController.updateMe);
-  router.put('/me/password', authMw, validateRequest(authSchemas.changePassword), authController.changeMyPassword);
+  router.put('/me/password', authLimiter, authMw, validateRequest(authSchemas.changePassword), authController.changeMyPassword);
 
   return router;
 };

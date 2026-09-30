@@ -19,7 +19,7 @@ describe('AppLayout branding', () => {
     document.title = '';
   });
 
-  it('FR-BR-01 shows the Wellness Plus logo in the application header', () => {
+  it('FR-BR-01, UAT-4 shows the Wellness Plus logo in the application header', () => {
     renderShell();
 
     const logo = screen.getByRole('img', { name: 'Wellness Albania' });

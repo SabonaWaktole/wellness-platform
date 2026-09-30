@@ -14,7 +14,7 @@
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
 --                                    column can become NOT NULL.
 --
--- It replaces running these eleven by hand, in this order (the order matters —
+-- It replaces running these seventeen by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql
@@ -33,6 +33,7 @@
 --  14. mysql_migration_add_status_labels.sql
 --  15. mysql_migration_add_client_company_fields.sql
 --  16. mysql_migration_add_contact_persons.sql
+--  17. mysql_migration_ownership_transfer_role_id.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -1329,6 +1330,40 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 17. Ownership handovers move the permission role (Slice 15 security review)
+-- ---------------------------------------------------------------
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'OwnershipTransfer' AND COLUMN_NAME = 'previousActingRoleId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `OwnershipTransfer` ADD COLUMN `previousActingRoleId` VARCHAR(191) NULL', 'SELECT ''skip: OwnershipTransfer.previousActingRoleId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Repair users the old handover code left inconsistent. The legacy mirror is
+-- BUSINESS_OWNER exactly when the role is (or was copied from) Administrator.
+-- Both updates match nothing on a consistent database, so a re-run is a no-op.
+-- 1. An owner demoted by "keep current ownership" kept the Administrator role.
+UPDATE `User` u
+JOIN `Role` adm ON adm.`tenantId` = u.`tenantId` AND adm.`key` = 'ADMINISTRATOR' AND adm.`isSystem` = 1
+JOIN `Role` sales ON sales.`tenantId` = u.`tenantId` AND sales.`key` = 'SALES_USER' AND sales.`isSystem` = 1
+SET u.`roleId` = sales.`id`
+WHERE u.`role` = 'STAFF' AND u.`roleId` = adm.`id`;
+
+-- 2. A stand-in promoted to BUSINESS_OWNER kept their old, non-Administrator role.
+UPDATE `User` u
+JOIN `Role` cur ON cur.`id` = u.`roleId`
+JOIN `Role` adm ON adm.`tenantId` = u.`tenantId` AND adm.`key` = 'ADMINISTRATOR' AND adm.`isSystem` = 1
+SET u.`roleId` = adm.`id`
+WHERE u.`role` = 'BUSINESS_OWNER'
+  AND cur.`key` <> 'ADMINISTRATOR'
+  AND COALESCE(cur.`baseKey`, '') <> 'ADMINISTRATOR';
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260930100000_ownership_transfer_role_id', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260930100000_ownership_transfer_role_id'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -1386,6 +1421,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='businessTypeId'
   UNION ALL SELECT 'ContactPerson table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContactPerson'
+  UNION ALL SELECT 'OwnershipTransfer.previousActingRoleId', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='OwnershipTransfer' AND COLUMN_NAME='previousActingRoleId'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

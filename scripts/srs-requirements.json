@@ -1,0 +1,351 @@
+{
+  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026)",
+  "note": "Extracted once from the SRS and reviewed by hand. Update it when the SRS changes; scripts/check-traceability.mjs reads it.",
+  "requirements": [
+    {
+      "id": "FR-AUD-01",
+      "priority": "Must",
+      "requirement": "The system shall record an audit entry for every sensitive change."
+    },
+    {
+      "id": "FR-AUD-02",
+      "priority": "Must",
+      "requirement": "In Milestone 1 the following shall be audited: users (create, role change, activation), role permissions, all admin settings lists, company responsible-salesperson changes and deletions, contract status and commercial terms, contract payments."
+    },
+    {
+      "id": "FR-AUD-03",
+      "priority": "Must",
+      "requirement": "The audit mechanism shall be generic so that Milestone 2 and 3 entities (pricing rules, discounts, discount approvals, deals, payments) are added without changing the audit design."
+    },
+    {
+      "id": "FR-AUD-04",
+      "priority": "Must",
+      "requirement": "Audit entries shall be written in the same database transaction as the change, so a change is never saved without its audit entry."
+    },
+    {
+      "id": "FR-AUD-05",
+      "priority": "Must",
+      "requirement": "Audit entries shall be append-only: no user, including the Administrator, can edit or delete them through the application."
+    },
+    {
+      "id": "FR-AUD-06",
+      "priority": "Must",
+      "requirement": "Users with \"Audit log: view\" shall see the audit log in the admin panel with filters by date range, user, entity type and action, and can open an entry to see the old/new values side by side."
+    },
+    {
+      "id": "FR-AUD-07",
+      "priority": "Must",
+      "requirement": "Secrets (passwords, tokens) shall never be stored in audit entries; such fields are shown as \"changed\"."
+    },
+    {
+      "id": "FR-AUD-08",
+      "priority": "Could",
+      "requirement": "The audit log shall be exportable to CSV for the filtered range."
+    },
+    {
+      "id": "FR-BR-01",
+      "priority": "Must",
+      "requirement": "The platform shall display the Wellness Plus – Better Living logo (provided in \"revizedtWELLNESS PLUS.docx\", reproduced in section 3.1) in the login page, application header, browser tab (favicon, using the leaf-and-cross symbol) and emails sent by the system."
+    },
+    {
+      "id": "FR-BR-02",
+      "priority": "Must",
+      "requirement": "The platform shall use the Wellness Albania colour palette and fonts from the branding guidelines, applied through the design tokens in tokens.css (light and dark mode)."
+    },
+    {
+      "id": "FR-BR-03",
+      "priority": "Must",
+      "requirement": "The login, forgot-password and reset-password pages shall be redesigned with Wellness Albania branding (logo, colours, background image if provided)."
+    },
+    {
+      "id": "FR-BR-04",
+      "priority": "Must",
+      "requirement": "The product name shall read \"Wellness Albania\" in page titles, header and system emails."
+    },
+    {
+      "id": "FR-BR-05",
+      "priority": "Should",
+      "requirement": "Self-service tenant sign-up, subscription and SaaS marketing screens inherited from the SaaS CRM shall be hidden or disabled."
+    },
+    {
+      "id": "FR-CMP-01",
+      "priority": "Must",
+      "requirement": "Authorised users shall create and edit companies with the fields in the table above, with validation messages in the user's language."
+    },
+    {
+      "id": "FR-CMP-02",
+      "priority": "Must",
+      "requirement": "When the user selects the business type, the system shall set the risk level automatically from the business type configuration."
+    },
+    {
+      "id": "FR-CMP-03",
+      "priority": "Must",
+      "requirement": "The location shall be captured as Area and City chosen from predefined lists, plus an optional free-text street address."
+    },
+    {
+      "id": "FR-CMP-04",
+      "priority": "Must",
+      "requirement": "A company shall have one or more contact persons, each with name, position/title, phone and email."
+    },
+    {
+      "id": "FR-CMP-05",
+      "priority": "Must",
+      "requirement": "The company page shall show the complete history in one timeline: contacts added, notes, activities (calls, emails, visits, meetings), offers, deals and contracts, newest first, filterable by type."
+    },
+    {
+      "id": "FR-CMP-06",
+      "priority": "Must",
+      "requirement": "The company list shall support search by name, contact name, phone and email, and filters by business type, risk level, area, city, salesperson and status."
+    },
+    {
+      "id": "FR-CMP-07",
+      "priority": "Should",
+      "requirement": "If the configured risk level of a business type changes, companies of that type shall show the new risk level."
+    },
+    {
+      "id": "FR-CMP-08",
+      "priority": "Must",
+      "requirement": "Existing client data shall be migrated: legacy fields and relevant custom field values map to the new columns; unmapped values stay visible as custom fields."
+    },
+    {
+      "id": "FR-CMP-09",
+      "priority": "Must",
+      "requirement": "Deleting a company shall be a soft delete (existing deletedAt), restricted per section 4.2, and written to the audit log."
+    },
+    {
+      "id": "FR-LNG-01",
+      "priority": "Must",
+      "requirement": "Albanian (sq) shall be the default language; English (en) shall be the second main language."
+    },
+    {
+      "id": "FR-LNG-02",
+      "priority": "Must",
+      "requirement": "Every new screen, message, validation error and email introduced in Milestone 1 shall be translated in sq and en."
+    },
+    {
+      "id": "FR-LNG-03",
+      "priority": "Must",
+      "requirement": "Lookup values managed by the Administrator (business types, risk levels, areas, cities, reasons, statuses) shall have an Albanian and an English label."
+    },
+    {
+      "id": "FR-LNG-04",
+      "priority": "Should",
+      "requirement": "Dates, numbers and currency shall follow the workspace locale (default: Albania, EUR/ALL as configured)."
+    },
+    {
+      "id": "FR-RBAC-01",
+      "priority": "Must",
+      "requirement": "The system shall support the roles Sales User, Sales Manager, Reception / Operational Staff, Administrator and CEO, seeded with the default permissions in section 4.2."
+    },
+    {
+      "id": "FR-RBAC-02",
+      "priority": "Must",
+      "requirement": "A role shall be a set of permissions."
+    },
+    {
+      "id": "FR-RBAC-03",
+      "priority": "Must",
+      "requirement": "The Administrator shall edit, from the admin panel, which permissions each role has and, where applicable, its data scope (Own / Team / All)."
+    },
+    {
+      "id": "FR-RBAC-04",
+      "priority": "Could",
+      "requirement": "The Administrator shall be able to create additional custom roles by copying an existing role."
+    },
+    {
+      "id": "FR-RBAC-05",
+      "priority": "Must",
+      "requirement": "Every API endpoint shall check the required permission and data scope on the server."
+    },
+    {
+      "id": "FR-RBAC-06",
+      "priority": "Must",
+      "requirement": "Fields a role may not see (e.g."
+    },
+    {
+      "id": "FR-RBAC-07",
+      "priority": "Must",
+      "requirement": "The menu, pages and actions shown in the frontend shall be derived from the user's permissions."
+    },
+    {
+      "id": "FR-RBAC-08",
+      "priority": "Must",
+      "requirement": "The system shall prevent removing the last user with \"Manage roles & permissions\" (lock-out protection)."
+    },
+    {
+      "id": "FR-RBAC-09",
+      "priority": "Must",
+      "requirement": "Global visibility (\"view all data\") and system configuration (\"manage settings\") shall be separate permissions."
+    },
+    {
+      "id": "FR-RBAC-10",
+      "priority": "Must",
+      "requirement": "Every change to role permissions shall be written to the audit log, listing the permissions added and removed."
+    },
+    {
+      "id": "FR-RBAC-11",
+      "priority": "Must",
+      "requirement": "\"Own\" scope shall mean companies where the user is the responsible salesperson, and the activities, contacts, notes and (later) offers, deals and contracts of those companies."
+    },
+    {
+      "id": "FR-RBAC-12",
+      "priority": "Must",
+      "requirement": "\"Team\" scope shall mean all records of users holding the Sales User role, plus unassigned companies."
+    },
+    {
+      "id": "FR-RBAC-13",
+      "priority": "Must",
+      "requirement": "Search results, lists, counts and exports shall respect the data scope."
+    },
+    {
+      "id": "FR-RBAC-14",
+      "priority": "Must",
+      "requirement": "A new company created by a Sales User shall be assigned to that user by default."
+    },
+    {
+      "id": "FR-SET-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage Business types, each linked to exactly one risk level (e.g."
+    },
+    {
+      "id": "FR-SET-02",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage Risk levels (name/level number, description, order)."
+    },
+    {
+      "id": "FR-SET-03",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the predefined list of Areas (e.g."
+    },
+    {
+      "id": "FR-SET-04",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the predefined list of Cities, each belonging to one Area."
+    },
+    {
+      "id": "FR-SET-05",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage Follow-up intervals in days (default 3, 5, 7)."
+    },
+    {
+      "id": "FR-SET-06",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the Lost-deal reasons (e.g."
+    },
+    {
+      "id": "FR-SET-07",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the labels, order and colour of Contract statuses: Draft, Pending Signature, Active, Expired, Suspended, Cancelled."
+    },
+    {
+      "id": "FR-SET-08",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the labels, order and colour of Payment statuses: Not Invoiced, Invoice Issued, Payment Pending, Partially Paid, Paid, Overdue (fixed set, as FR-SET-07)."
+    },
+    {
+      "id": "FR-SET-09",
+      "priority": "Should",
+      "requirement": "The Administrator shall edit general workspace settings: company name, default language, time zone, date format, currency."
+    },
+    {
+      "id": "FR-SET-10",
+      "priority": "Must",
+      "requirement": "Seed data shall provide placeholder values for all lists, to be replaced by Wellness Albania's real lists (section 8)."
+    },
+    {
+      "id": "FR-USR-01",
+      "priority": "Must",
+      "requirement": "Users shall log in with email and password."
+    },
+    {
+      "id": "FR-USR-02",
+      "priority": "Must",
+      "requirement": "The Administrator shall create users (name, email, phone, language, role) and the system shall send an invitation email to set a password."
+    },
+    {
+      "id": "FR-USR-03",
+      "priority": "Must",
+      "requirement": "Each user shall have exactly one role."
+    },
+    {
+      "id": "FR-USR-04",
+      "priority": "Must",
+      "requirement": "The Administrator shall deactivate and reactivate users."
+    },
+    {
+      "id": "FR-USR-05",
+      "priority": "Should",
+      "requirement": "Before a Sales User with assigned companies is deactivated, the system shall ask the Administrator or Sales Manager to reassign those companies to another Sales User."
+    },
+    {
+      "id": "FR-USR-06",
+      "priority": "Must",
+      "requirement": "Role changes, activation/deactivation and user creation shall be written to the audit log (section 6)."
+    },
+    {
+      "id": "NFR-I18N-01",
+      "priority": "Must",
+      "requirement": "No hard-coded user-facing text; all strings through i18next."
+    },
+    {
+      "id": "NFR-MNT-01",
+      "priority": "Must",
+      "requirement": "Code follows .agentrules (Clean Architecture, TDD)."
+    },
+    {
+      "id": "NFR-OPS-01",
+      "priority": "Must",
+      "requirement": "Database migrations shall be reversible or backed up, and run on both PostgreSQL and MySQL targets."
+    },
+    {
+      "id": "NFR-PERF-01",
+      "priority": "Should",
+      "requirement": "Company list and search shall return in under 1 second for 10,000 companies; permission checks add no noticeable delay."
+    },
+    {
+      "id": "NFR-SEC-01",
+      "priority": "Must",
+      "requirement": "Permissions and data scope shall be enforced in the application layer for every request; repositories keep structural tenant isolation."
+    },
+    {
+      "id": "NFR-SEC-02",
+      "priority": "Must",
+      "requirement": "Passwords hashed with bcrypt; sessions via the existing JWT mechanism; all traffic over HTTPS."
+    },
+    {
+      "id": "NFR-SEC-03",
+      "priority": "Must",
+      "requirement": "Personal data (contact persons) shall be processed in line with GDPR and the Albanian data protection law; data is stored in the EU."
+    },
+    {
+      "id": "NFR-USE-01",
+      "priority": "Must",
+      "requirement": "All Milestone 1 screens shall work on desktop and mobile (from 360 px wide)."
+    },
+    {
+      "id": "FR-PRC-07",
+      "priority": "Must",
+      "requirement": "The platform shall calculate the monthly list price with the rules in section 4.1 and the current pricing configuration. If no employee band covers the number of employees, or the city belongs to no price zone, the platform shall show \"Price on request\" and not calculate a price."
+    },
+    {
+      "id": "FR-PRC-08",
+      "priority": "Must",
+      "requirement": "Each component shall be rounded to the cent (half up) and the monthly list price is the sum of the rounded components, so the breakdown always adds up to the total."
+    },
+    {
+      "id": "FR-PRC-10",
+      "priority": "Should",
+      "requirement": "The pricing screen shall show the price per employee and the annual value (monthly net price × contract months, default 12, FR-PCF-08) for information."
+    },
+    {
+      "id": "NFR-ACC-01",
+      "priority": "Must",
+      "requirement": "The price calculation shall reproduce every value of the proposed pricing model (Figure 1) and both worked examples in 4.1 to the cent."
+    },
+    {
+      "id": "NFR-ACC-02",
+      "priority": "Must",
+      "requirement": "Money shall be stored and calculated as Decimal (two decimals, half-up rounding), never as Float."
+    }
+  ]
+}

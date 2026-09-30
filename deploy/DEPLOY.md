@@ -32,8 +32,9 @@ mysql -u USER -p DBNAME < backend/prisma/nevacrm_full_import.sql
 mysql -u USER -p DBNAME < backend/prisma/mysql_upgrade_to_current.sql
 ```
 
-`mysql_upgrade_to_current.sql` replaces the five older hand-written
-`mysql_migration_*.sql` files — do not run those as well. Every statement in it
+`mysql_upgrade_to_current.sql` replaces the seventeen older hand-written
+`mysql_*migration*.sql` files it lists in its header — do not run those as
+well. Every statement in it
 is guarded against `information_schema`, so it is safe on a fresh baseline, on a
 part-migrated database, and on one that is already current; a second run prints
 `skip:` for each step and changes nothing.
@@ -88,9 +89,25 @@ the Prisma client for the installed platform.
 Required environment (`backend/.env`, which is deliberately not in the archive):
 
 ```
+NODE_ENV="production"
 DATABASE_URL="mysql://user:password@host:3306/dbname"
-JWT_SECRET="<a long random string>"
+JWT_SECRET="<a long random string, at least 32 characters>"
+JWT_EXPIRATION="24h"
+FRONTEND_URL="https://<the frontend's own origin>"
 ```
+
+- **`NODE_ENV=production` is not optional**, on staging as much as on
+  production. It is what makes the session cookie `Secure; SameSite=None`
+  (`src/main/interfaces/http/authCookie.ts`) and what stops CORS from accepting
+  `http://localhost:*` origins (`src/main/app.ts`). A staging server without it
+  sends its session cookie over plain HTTP.
+- **`FRONTEND_URL`** is the only origin CORS lets call the API with
+  credentials. It must match exactly, scheme included.
+- **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
+  also the longest a stolen token stays usable; deactivation and suspension are
+  enforced on every request regardless.
+- `AUTH_RATE_LIMIT_MAX` / `AUTH_RATE_LIMIT_WINDOW_MS` are for tests only. Leave
+  them unset: the default is 10 attempts per 15 minutes per IP.
 
 `backend/uploads/` is not in the archive either — customer media belongs on the
 server. Create it if this is a fresh install, and make sure the Node process can
@@ -123,6 +140,40 @@ adds `https://` — because some hosting panels strip the scheme.)
 
 ---
 
+---
+
+## 4. Staging (Milestone 1 UAT)
+
+Staging is a second Hostinger site with its own MySQL database, set up exactly
+as sections 1–3 describe; nothing about it differs from production except the
+data. See `deploy/hosting-and-data-protection.md` for where it is hosted and
+`deploy/uat-milestone-1.md` for the UAT run itself.
+
+1. **HTTPS.** In hPanel, install the SSL certificate and turn on *Force HTTPS*
+   for both the frontend and the API domains. `frontend/public/.htaccess` also
+   redirects HTTP → HTTPS and sends `Strict-Transport-Security`; the API sends
+   its own through helmet. Check both:
+
+   ```bash
+   curl -sI http://<frontend-domain>/ | grep -i '^location'        # → https://…
+   curl -sI https://<frontend-domain>/ | grep -i strict-transport  # present
+   curl -sI https://<api-domain>/api/auth/me | grep -i strict-transport
+   ```
+
+2. **Environment**, as in section 2, with `NODE_ENV=production`.
+3. **Database**: baseline + `mysql_upgrade_to_current.sql`, then provision the
+   workspace and the UAT users and data:
+
+   ```bash
+   cd backend
+   npm run seed:wellness -- --owner-email <admin email> --owner-password <pw>
+   npm run seed:uat -- --password <pw for the UAT users>
+   ```
+
+4. **Performance**: `npm run perf:staging` (see `deploy/uat-milestone-1.md`).
+
+---
+
 ## What was verified before packaging
 
 Against MySQL 8.0 in a throwaway container, using the real archive contents:
@@ -130,7 +181,7 @@ Against MySQL 8.0 in a throwaway container, using the real archive contents:
 - baseline import → `migrate diff` lists the full set of missing objects;
 - baseline + upgrade → **`No difference detected.`** against
   `schema.mysql.prisma`;
-- the upgrade run a second time → 30 `skip:` notices, still no difference;
+- the upgrade run a second time → only `skip:` notices, still no difference;
 - live Prisma round-trip on the upgraded database: a v3 form document written to
   and read back from the `ClientForm.layout` JSON column with section geometry
   intact, plus `FormVersion`, `FormSubmission`, a nullable-name/status `Client`
@@ -154,6 +205,12 @@ built archives rather than the source tree:
 - `deploy/package.py`'s own archive contents checked directly: no `.env`, no
   `node_modules`, no `*.test.*`, `backend/prisma/mysql_upgrade_to_current.sql`
   present.
+
+**Re-verified** (2026-09-30, Milestone 1 Slice 15) after the Slice 2–14 schema
+changes: baseline → upgrade → upgrade again → `No difference detected.` against
+`schema.mysql.prisma`, with no `STILL MISSING` row. The `mysql` job in
+`.github/workflows/ci.yml` now repeats exactly this on every push, so it can no
+longer drift unnoticed.
 
 ## Rebuilding the archives
 

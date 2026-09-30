@@ -38,6 +38,48 @@ describe('security middleware', () => {
     it('removes the x-powered-by header that advertises Express', () => {
       expect(headers['x-powered-by']).toBeUndefined();
     });
+
+    it('NFR-SEC-02 sends Strict-Transport-Security so browsers stay on HTTPS', () => {
+      expect(headers['strict-transport-security']).toMatch(/max-age=\d+/);
+    });
+  });
+
+  describe('CORS (NFR-SEC-02)', () => {
+    const originalEnv = process.env.NODE_ENV;
+    afterEach(() => {
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    const preflight = (origin: string) =>
+      request(createApp())
+        .options('/api/auth/me')
+        .set('Origin', origin)
+        .set('Access-Control-Request-Method', 'GET');
+
+    it('NFR-SEC-02 does not allow a localhost origin in production', async () => {
+      process.env.NODE_ENV = 'production';
+      const res = await preflight('http://localhost:5173');
+      expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    });
+
+    it('allows a localhost origin outside production, for local development', async () => {
+      process.env.NODE_ENV = 'development';
+      const res = await preflight('http://localhost:5173');
+      expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    });
+
+    it('allows the configured FRONTEND_URL in production', async () => {
+      process.env.NODE_ENV = 'production';
+      const originalUrl = process.env.FRONTEND_URL;
+      process.env.FRONTEND_URL = 'https://app.wellness.example';
+      try {
+        const res = await preflight('https://app.wellness.example');
+        expect(res.headers['access-control-allow-origin']).toBe('https://app.wellness.example');
+      } finally {
+        if (originalUrl === undefined) delete process.env.FRONTEND_URL;
+        else process.env.FRONTEND_URL = originalUrl;
+      }
+    });
   });
 
   describe('auth rate limiting', () => {
@@ -99,6 +141,20 @@ describe('security middleware', () => {
       const second = buildAppWithLimit(2);
       const fresh = await request(second).post('/api/auth/login').send(payload);
       expect(fresh.status).not.toBe(429);
+    });
+
+    it.each([
+      ['POST', '/api/auth/password-reset/reset', { token: 'x', newPassword: 'NewPass123' }],
+      ['POST', '/api/auth/invitations/accept', { token: 'x', newPassword: 'NewPass123' }],
+      ['PUT', '/api/auth/me/password', { currentPassword: 'OldPass123', newPassword: 'NewPass123' }],
+    ])('NFR-SEC-02 returns 429 on %s %s once exceeded (credential-accepting endpoint)', async (method, path, payload) => {
+      const app = buildAppWithLimit(3);
+      const send = () => (method === 'PUT' ? request(app).put(path) : request(app).post(path)).send(payload);
+
+      for (let i = 0; i < 3; i++) {
+        expect((await send()).status).not.toBe(429);
+      }
+      expect((await send()).status).toBe(429);
     });
 
     it('does not rate limit non-auth endpoints', async () => {

@@ -27,6 +27,9 @@ dist-ssr
 storybook-static
 
 playwright-report/
+test-results/
+# Saved e2e sessions (tests/e2e/setup) hold a live session cookie.
+tests/e2e/.auth/
 design/
 
 # Local env files

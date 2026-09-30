@@ -17,7 +17,7 @@
  *   npm run migrate:legacy-clients -- --tenant <slug> --config <file.json> --apply [--manifest out.json]
  *       Writes the changes and a manifest recording exactly what each
  *       client's write touched, for `--revert`. TAKE A DATABASE BACKUP
- *       FIRST (see docs/legacy-client-migration.md).
+ *       FIRST (see deploy/legacy-client-migration.md).
  *
  *   npm run migrate:legacy-clients -- --revert <manifest.json>
  *       Undoes a previous `--apply` run using its manifest.

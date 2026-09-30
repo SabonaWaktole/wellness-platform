@@ -13,6 +13,13 @@
   RewriteEngine On
   RewriteBase /
 
+  # NFR-SEC-02: plain HTTP is redirected to HTTPS before anything else. The
+  # X-Forwarded-Proto check keeps this from looping behind a TLS-terminating
+  # proxy that talks plain HTTP to the origin.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
   # Real files and directories are served as-is. Without these two conditions
   # the rule below would swallow /assets/*.js and hand back index.html with a
   # 200, which surfaces as "Unexpected token '<'" rather than as a 404.
@@ -29,6 +36,12 @@
 # points at assets that no longer exist after a redeploy. The hashed assets
 # themselves are immutable and safe to cache hard.
 <IfModule mod_headers.c>
+  # NFR-SEC-02: once a browser has seen the site over HTTPS it refuses plain
+  # HTTP for a year (browsers ignore this header on a plain-HTTP response).
+  # No includeSubDomains: other subdomains of the client's domain are not ours.
+  # The API sets its own header through helmet.
+  Header always set Strict-Transport-Security "max-age=31536000"
+
   <FilesMatch "index\.html$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>

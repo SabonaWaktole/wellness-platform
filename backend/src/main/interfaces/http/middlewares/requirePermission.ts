@@ -10,6 +10,8 @@ import { PermissionScope, scopeAtLeast } from '../../../../access/domain/Permiss
 export interface PermissionCheckingMiddleware {
   (req: Request, res: Response, next: NextFunction): void;
   permissionKey: string;
+  /** Set by `requireScope` only, so the generated permission matrix can tell a scope-gated route apart. */
+  minScope?: PermissionScope;
 }
 
 /**
@@ -80,5 +82,6 @@ export function requireScope(key: string, minScope: PermissionScope): Permission
     next();
   };
   middleware.permissionKey = key;
+  middleware.minScope = minScope;
   return middleware;
 }

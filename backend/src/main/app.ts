@@ -181,7 +181,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         'https://www.nevacrm.eu',
         process.env.FRONTEND_URL
       ];
-      if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
+      const devOrigin = process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin ?? '');
+      if (!origin || devOrigin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -314,7 +315,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Business Owner ownership transfer). Distinct actor and scope from the
   // Business-Owner-only deactivate/reactivate above — see PlatformSuspendUserUseCase.
   const ownershipTransferRepository = new PrismaOwnershipTransferRepository();
-  const ownershipTransactions = new PrismaOwnershipTransactions();
+  const ownershipTransactions = new PrismaOwnershipTransactions(undefined, accessCache);
   const getOwnershipTransferCandidatesUseCase = new GetOwnershipTransferCandidatesUseCase(userRepository);
   const platformSuspendUserUseCase = new PlatformSuspendUserUseCase(
     userRepository,

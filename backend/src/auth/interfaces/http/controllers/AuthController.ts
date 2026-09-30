@@ -84,7 +84,7 @@ export class AuthController {
     try {
       const result = await this.loginUseCase.execute({ ...req.body, tenantSlug: requireTenant(req).urlSlug });
       res.cookie('jwt', result.token, { ...authCookieOptions(), maxAge: AUTH_COOKIE_MAX_AGE_MS });
-      res.status(200).json({ message: 'Login successful', token: result.token });
+      res.status(200).json({ message: 'Login successful' });
     } catch (error: any) {
       res.status(401).json({ error: error.message });
     }
@@ -94,7 +94,7 @@ export class AuthController {
     try {
       const result = await this.loginUseCase.execute({ ...req.body, tenantSlug: null });
       res.cookie('jwt', result.token, { ...authCookieOptions(), maxAge: AUTH_COOKIE_MAX_AGE_MS });
-      res.status(200).json({ message: 'Login successful', token: result.token, tenantSlug: result.tenantSlug });
+      res.status(200).json({ message: 'Login successful', tenantSlug: result.tenantSlug });
     } catch (error: any) {
       res.status(401).json({ error: error.message });
     }
@@ -158,7 +158,7 @@ export class AuthController {
       // so it is where a deactivated account can still be caught. The
       // authenticate middleware only verifies the JWT signature and never hits
       // the database, so an already-issued token keeps working against other
-      // endpoints until it expires (JWT_EXPIRATION, currently 1h). Rejecting
+      // endpoints until it expires (JWT_EXPIRATION, 24h by default). Rejecting
       // here drops the browser session on the next load; it is a practical
       // shortening of exposure, not true revocation. See TD-010.
       if (!user.isActive) {

@@ -246,12 +246,20 @@ describe('Company record (Slice 11)', () => {
     expect(log.body.data.some((e: any) => e.entityId === clientId)).toBe(true);
   });
 
-  it('FR-AUD-02 archiving a company is audited', async () => {
+  it('FR-CMP-09, FR-AUD-02 deleting a company is an audited soft delete, refused without companies.delete', async () => {
     const created = await createCompany();
     const clientId = created.body.id;
 
+    const refused = await as('salesA').delete(`/clients/${clientId}`);
+    expect(refused.status).toBe(403);
+
     const archived = await as('admin').delete(`/clients/${clientId}`);
     expect(archived.status).toBe(200);
+
+    const row = await prisma.client.findUniqueOrThrow({ where: { id: clientId } });
+    expect(row.deletedAt).not.toBeNull();
+    const active = await as('admin').get(`/clients/search?take=100`);
+    expect(active.body.items.map((c: any) => c.id)).not.toContain(clientId);
 
     const log = await as('admin').get(`/audit?entityType=Client&action=DELETE`);
     expect(log.status).toBe(200);
