@@ -62,9 +62,9 @@ export const resolveTenant = (
      * Blocking only at login would not be enough. `authenticate` never reads
      * the database — it verifies the JWT signature and trusts the payload — and
      * there is no revocation, so an already-issued token stays valid until it
-     * expires (JWT_EXPIRATION, currently 1h). Login-only enforcement would
-     * therefore leave a suspended tenant's users fully operational for up to an
-     * hour after the suspension. See TD-010.
+     * expires (JWT_EXPIRATION, 24h by default). Login-only enforcement would
+     * therefore leave a suspended tenant's users fully operational until
+     * their tokens expire. See TD-010.
      *
      * Here the tenant is re-read from the database on every single request
      * regardless of what the token claims, so suspension takes effect at once

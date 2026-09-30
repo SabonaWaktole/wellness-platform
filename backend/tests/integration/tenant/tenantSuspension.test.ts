@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { cookieJwt } from '../../support/cookieJwt';
 import { createApp } from '../../../src/main/app';
 import { PrismaClient } from '@prisma/client';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
@@ -150,7 +151,7 @@ describe('Tenant suspension enforcement', () => {
       // TenantSuspendedError.
       expect(res.body.error).toMatch(/suspended/i);
       expect(res.body.error).not.toMatch(/invalid email or password/i);
-      expect(res.body.token).toBeUndefined();
+      expect(cookieJwt(res)).toBeUndefined();
     });
 
     it('still refuses a WRONG password on a suspended workspace with the generic error', async () => {
@@ -177,7 +178,7 @@ describe('Tenant suspension enforcement', () => {
         .send({ email: ownerEmail, password: ownerPassword });
 
       expect(res.status).toBe(200);
-      expect(res.body.token).toBeDefined();
+      expect(cookieJwt(res)).toBeDefined();
     });
 
     it('blocks the REST of the tenant auth router when suspended', async () => {

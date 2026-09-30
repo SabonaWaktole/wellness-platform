@@ -1,4 +1,5 @@
 ﻿import request from 'supertest';
+import { cookieJwt, jwtCookieLine } from '../../support/cookieJwt';
 import express from 'express';
 import { createApp, AppDependencies } from '@main/app';
 import {
@@ -622,15 +623,45 @@ describe('Auth Integration Tests', () => {
       await provisionTenant({ name: 'Acme Corp', slug: 'acme', ownerEmail: 'owner@acme.com', ownerPassword: 'Password1' });
     });
 
-    it('should login with valid credentials and return a token (200)', async () => {
+    it('should login with valid credentials and set the session cookie (200)', async () => {
       const res = await request(app)
         .post('/api/acme/auth/login')
         .send({ email: 'owner@acme.com', password: 'Password1' })
         .expect(200);
 
-      expect(res.body.token).toBeDefined();
-      const payload = tokenService.verify(res.body.token);
+      const token = cookieJwt(res);
+      expect(token).toBeDefined();
+      const payload = tokenService.verify(token!);
       expect(payload.role).toBe(UserRole.BUSINESS_OWNER);
+    });
+
+    it('NFR-SEC-02 keeps the session token out of the login response body, in an HttpOnly cookie only', async () => {
+      const res = await request(app)
+        .post('/api/acme/auth/login')
+        .send({ email: 'owner@acme.com', password: 'Password1' })
+        .expect(200);
+
+      expect(res.body.token).toBeUndefined();
+      expect(JSON.stringify(res.body)).not.toContain(cookieJwt(res)!);
+      expect(jwtCookieLine(res)).toMatch(/;\s*HttpOnly/i);
+    });
+
+    it('NFR-SEC-02 marks the session cookie Secure and SameSite=None in production', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        const res = await request(app)
+          .post('/api/acme/auth/login')
+          .send({ email: 'owner@acme.com', password: 'Password1' })
+          .expect(200);
+
+        const line = jwtCookieLine(res)!;
+        expect(line).toMatch(/;\s*HttpOnly/i);
+        expect(line).toMatch(/;\s*Secure/i);
+        expect(line).toMatch(/;\s*SameSite=None/i);
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
     });
 
     it('should reject invalid password (401)', async () => {
@@ -670,7 +701,7 @@ describe('Auth Integration Tests', () => {
         .post('/api/acme/auth/login')
         .send({ email: 'owner@acme.com', password: 'Password1' });
 
-      ownerToken = loginRes.body.token;
+      ownerToken = cookieJwt(loginRes)!;
     });
 
     it('should allow BUSINESS_OWNER to invite staff (200)', async () => {
@@ -842,7 +873,7 @@ describe('Auth Integration Tests', () => {
 
       const res = await request(app)
         .get('/api/auth/me')
-        .set('Authorization', `Bearer ${loginRes.body.token}`)
+        .set('Authorization', `Bearer ${cookieJwt(loginRes)}`)
         .expect(200);
 
       // BUSINESS_OWNER -> Administrator (D2): holds users.manage.
@@ -933,7 +964,7 @@ describe('Auth Integration Tests', () => {
           .send({ email: 'user@acme.com', password: 'NewPassword1' });
 
         expect(loginRes.status).toBe(200);
-        expect(loginRes.body.token).toBeDefined();
+        expect(cookieJwt(loginRes)).toBeDefined();
       });
 
       it('should reject an already-used token (400)', async () => {
@@ -972,13 +1003,13 @@ describe('Auth Integration Tests', () => {
       const loginA = await request(app)
         .post('/api/tenant-a/auth/login')
         .send({ email: 'owner@tenant-a.com', password: 'Password1' });
-      tenantAOwnerToken = loginA.body.token;
+      tenantAOwnerToken = cookieJwt(loginA)!;
 
       // Login as Tenant B owner
       const loginB = await request(app)
         .post('/api/tenant-b/auth/login')
         .send({ email: 'owner@tenant-b.com', password: 'Password1' });
-      tenantBOwnerToken = loginB.body.token;
+      tenantBOwnerToken = cookieJwt(loginB)!;
     });
 
     it('should return 403 when Tenant A owner tries to access Tenant B', async () => {

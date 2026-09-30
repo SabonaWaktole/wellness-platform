@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { cookieJwt } from '../../support/cookieJwt';
 import { createApp } from '../../../src/main/app';
 import { PrismaClient } from '@prisma/client';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
@@ -159,7 +160,7 @@ describe('Tenant admin routes', () => {
         .post(`/api/${payload.urlSlug}/auth/login`)
         .send({ email: payload.ownerEmail, password: payload.ownerPassword });
       expect(login.status).toBe(200);
-      expect(login.body.token).toBeDefined();
+      expect(cookieJwt(login)).toBeDefined();
     });
 
     it('never echoes the password or its hash', async () => {
