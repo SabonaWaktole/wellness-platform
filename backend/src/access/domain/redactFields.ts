@@ -1,6 +1,19 @@
 import { AccessContext } from './AccessContext';
 
 /**
+ * The money and percentage field names `commercial.view` guards. Every slice
+ * that adds such a field to a response adds its name here (FR-RBAC-17).
+ */
+export const COMMERCIAL_FIELDS: readonly string[] = [
+  // Milestone 1
+  'amount', 'price', 'unitPrice', 'lineTotal', 'subtotal', 'grandTotal', 'total', 'revenue',
+  // Milestone 2: pricing breakdown, offers, discounts, deals
+  'listPrice', 'netMonthlyPrice', 'discountAmount', 'discountPercent', 'baseFee', 'riskFee', 'visitFee',
+  'locationFee', 'annualValue', 'pricePerEmployee', 'agreedMonthlyPrice', 'agreedAnnualValue',
+  'requestedPercent', 'approvedPercent', 'surchargePercent',
+];
+
+/**
  * The response fields each permission guards (FR-RBAC-06: "fields a role may
  * not see shall be removed from API responses, not only hidden in the UI").
  * Matched by key name, at any depth, so a nested line item loses its price
@@ -9,7 +22,7 @@ import { AccessContext } from './AccessContext';
 const GUARDED_FIELDS: ReadonlyArray<{ permission: string; keys: ReadonlySet<string> }> = [
   {
     permission: 'commercial.view',
-    keys: new Set(['amount', 'price', 'unitPrice', 'lineTotal', 'subtotal', 'grandTotal', 'total', 'revenue']),
+    keys: new Set(COMMERCIAL_FIELDS),
   },
   {
     permission: 'payments.view',
