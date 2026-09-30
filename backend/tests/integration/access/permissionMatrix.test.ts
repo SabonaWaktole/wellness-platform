@@ -8,6 +8,7 @@ import { DEFAULT_ROLE_MATRIX, PermissionGrant } from '../../../src/access/domain
 import { RoleKey, SYSTEM_ROLE_NAMES } from '../../../src/access/domain/RoleKey';
 import { PermissionScope, scopeAtLeast } from '../../../src/access/domain/PermissionScope';
 import { routeTable, RouteEntry } from '../../support/routeTable';
+import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
 
 const prisma = new PrismaClient();
 const tokenService = new JwtTokenService();
@@ -100,13 +101,11 @@ describe('Permission matrix (SRS §4.2)', () => {
     }
   });
 
+  // The generated cases run every allowed route for real, and some of them
+  // create rows (GET /forms/default seeds a form, for one), so the cleanup is
+  // the same one that deletes a whole workspace.
   afterAll(async () => {
-    await prisma.user.deleteMany({ where: { tenantId } });
-    await prisma.rolePermission.deleteMany({ where: { roleId: { in: Object.values(roleIds) } } });
-    await prisma.role.deleteMany({ where: { tenantId } });
-    await prisma.outcomeCategory.deleteMany({ where: { tenantId } });
-    await prisma.warehouse.deleteMany({ where: { tenantId } });
-    await prisma.tenant.deleteMany({ where: { id: tenantId } });
+    await new PrismaTenantDeletionTransaction(prisma).run(tenantId);
     await prisma.$disconnect();
   });
 
