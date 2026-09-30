@@ -196,6 +196,18 @@ jobs:
             exit 1
           fi
 
+  # NFR-MNT-01: every Must requirement in the SRS (scripts/srs-requirements.json)
+  # is named by at least one test title, so coverage can be read off the suite.
+  traceability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Every Must requirement has a test (NFR-MNT-01)
+        run: node scripts/check-traceability.mjs
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
