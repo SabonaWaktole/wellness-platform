@@ -12,8 +12,8 @@ import { AuditController } from './AuditController';
  * `/api/:tenantSlug/audit` — every route here is `audit.view` (Administrator
  * and CEO). Only `GET` routes exist, and there is no route at all for
  * `/:id` other than `GET`: an entry can be read but never changed
- * (FR-AUD-05). `export.csv` is registered before `/:id` so it is never
- * swallowed by the id route.
+ * (FR-AUD-05). `export.csv` and `entity-types` are registered before `/:id`
+ * so they are never swallowed by the id route.
  */
 export const createAuditRouter = (
   controller: AuditController,
@@ -29,6 +29,7 @@ export const createAuditRouter = (
   const view = requirePermission('audit.view');
   router.get('/', view, controller.search);
   router.get('/export.csv', view, controller.exportCsv);
+  router.get('/entity-types', view, controller.entityTypes);
   router.get('/:id', view, controller.get);
 
   return router;

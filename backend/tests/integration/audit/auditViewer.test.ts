@@ -6,6 +6,7 @@ import { createApp } from '../../../src/main/app';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
 import { DEFAULT_ROLE_MATRIX } from '../../../src/access/domain/DefaultRoleMatrix';
 import { RoleKey } from '../../../src/access/domain/RoleKey';
+import { AUDITED_ENTITY_TYPES } from '../../../src/audit/domain/AuditQuery';
 import { seedSystemRoles } from '../../support/seedRoles';
 
 const prisma = new PrismaClient();
@@ -110,6 +111,30 @@ describe('Audit log viewer (FR-AUD-06, 08)', () => {
     const future = new Date(Date.now() + 60_000).toISOString();
     const byDate = await as('admin').get(`/audit?from=${future}`).expect(200);
     expect(byDate.body.data).toHaveLength(0);
+  });
+
+  it('FR-AUD-10 serves every audited entity type, grouped, to the filter', async () => {
+    const res = await as('admin').get('/audit/entity-types').expect(200);
+    const types = res.body.groups.flatMap((group: any) => group.types);
+    expect([...types].sort()).toEqual([...AUDITED_ENTITY_TYPES].sort());
+    expect(res.body.groups.map((group: any) => group.group)).toEqual(['access', 'clients', 'contracts', 'lists']);
+    await as('reception').get('/audit/entity-types').expect(403);
+  });
+
+  it('FR-AUD-10 filtering by a group returns only that group\'s entries', async () => {
+    const access = await as('admin').get('/audit?entityGroup=access').expect(200);
+    expect(access.body.data.map((entry: any) => entry.id)).toEqual(expect.arrayContaining([roleEntryId, userEntryId]));
+
+    const lists = await as('admin').get('/audit?entityGroup=lists').expect(200);
+    expect(lists.body.data).toHaveLength(0);
+
+    const narrowed = await as('admin').get('/audit?entityGroup=access&entityType=Role').expect(200);
+    expect(narrowed.body.data.map((entry: any) => entry.id)).toEqual([roleEntryId]);
+
+    const outside = await as('admin').get('/audit?entityGroup=contracts&entityType=Role').expect(200);
+    expect(outside.body.data).toHaveLength(0);
+
+    await as('admin').get('/audit?entityGroup=nope').expect(400);
   });
 
   it('paginates', async () => {

@@ -16,8 +16,8 @@ import { useDateFormat } from '../../../hooks/useDateFormat';
 import { dayBoundsInZone } from '../../../utils/tenantDay';
 import { getStaffDisplayName } from '../../../utils/userUtils';
 import { roleLabel } from '../../../utils/roleLabel';
-import { AUDITED_ENTITY_TYPES } from '../../../services/auditService';
-import type { AuditAction, AuditEntityType, AuditEntry } from '../../../services/auditService';
+import { useAuditEntityTypes } from '../../../hooks/useAuditEntityTypes';
+import type { AuditAction, AuditEntry, AuditFilters } from '../../../services/auditService';
 import { AuditEntryDetail } from './AuditEntryDetail';
 import styles from './AuditLogContent.module.css';
 
@@ -29,6 +29,20 @@ const ACTION_BADGE: Record<AuditAction, BadgeProps['variant']> = {
   DELETE: 'error',
   STATUS_CHANGE: 'warning',
 };
+
+/** The record-type select's value: a whole group (`group:<key>`) or one type (`type:<key>`). */
+function recordTypeValue(filters: AuditFilters): string {
+  if (filters.entityGroup) return `group:${filters.entityGroup}`;
+  if (filters.entityType) return `type:${filters.entityType}`;
+  return '';
+}
+
+function recordTypeFilter(value: string): Pick<AuditFilters, 'entityGroup' | 'entityType'> {
+  const [kind, key] = value.split(':');
+  if (kind === 'group') return { entityGroup: key, entityType: undefined };
+  if (kind === 'type') return { entityGroup: undefined, entityType: key };
+  return { entityGroup: undefined, entityType: undefined };
+}
 
 /** A tenant-local `YYYY-MM-DD` (from `<input type="date">`) resolved to the instant its day starts or ends at. */
 function dayBoundsFor(dateString: string, timeZone: string): { start: Date; end: Date } {
@@ -47,6 +61,7 @@ export const AuditLogContent: React.FC = () => {
   const { timeZone, dateTime } = useDateFormat();
   const { filters, updateFilters, page, setPage, limit, entries, total, loading, loadFailed, fetchEntries, exportCsv } = useAuditLog();
   const { staff, fetchStaff } = useTeam();
+  const { groups: entityGroups } = useAuditEntityTypes();
   const [openEntry, setOpenEntry] = useState<AuditEntry | null>(null);
   const [exporting, setExporting] = useState(false);
   const [fromInput, setFromInput] = useState('');
@@ -158,13 +173,21 @@ export const AuditLogContent: React.FC = () => {
         </SelectInput>
         <SelectInput
           label={t('filters.entityType')}
-          value={filters.entityType ?? ''}
-          onChange={(e) => updateFilters({ ...filters, entityType: (e.target.value || undefined) as AuditEntityType | undefined })}
+          value={recordTypeValue(filters)}
+          onChange={(e) => updateFilters({ ...filters, ...recordTypeFilter(e.target.value) })}
         >
           <option value="">{t('filters.allEntityTypes')}</option>
-          {AUDITED_ENTITY_TYPES.map((type) => (
-            <option key={type} value={type}>{t(`entityTypes.${type}`, { defaultValue: type })}</option>
-          ))}
+          {entityGroups.map(({ group, types }) => {
+            const groupLabel = t(`entityGroups.${group}`, { defaultValue: group });
+            return (
+              <optgroup key={group} label={groupLabel}>
+                <option value={`group:${group}`}>{t('filters.allInGroup', { group: groupLabel })}</option>
+                {types.map((type) => (
+                  <option key={type} value={`type:${type}`}>{t(`entityTypes.${type}`, { defaultValue: type })}</option>
+                ))}
+              </optgroup>
+            );
+          })}
         </SelectInput>
         <SelectInput
           label={t('filters.action')}

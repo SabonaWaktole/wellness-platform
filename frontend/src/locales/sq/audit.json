@@ -13,6 +13,7 @@
     "system": "Sistemi",
     "entityType": "Lloji i regjistrimit",
     "allEntityTypes": "Të gjitha llojet",
+    "allInGroup": "Të gjitha: {{group}}",
     "action": "Veprimi",
     "allActions": "Të gjitha veprimet"
   },
@@ -41,7 +42,14 @@
     "City": "Qytet",
     "FollowUpInterval": "Interval ndjekjeje",
     "LostReason": "Arsye humbjeje",
-    "StatusLabel": "Etiketë statusi"
+    "StatusLabel": "Etiketë statusi",
+    "Workspace": "Hapësirë pune"
+  },
+  "entityGroups": {
+    "access": "Përdoruesit, rolet dhe hapësira e punës",
+    "clients": "Kompanitë",
+    "contracts": "Kontratat dhe pagesat",
+    "lists": "Listat e cilësimeve"
   },
   "actors": {
     "system": "Sistemi",

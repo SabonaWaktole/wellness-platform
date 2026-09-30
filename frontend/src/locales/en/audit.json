@@ -13,6 +13,7 @@
     "system": "System",
     "entityType": "Record type",
     "allEntityTypes": "All record types",
+    "allInGroup": "All in {{group}}",
     "action": "Action",
     "allActions": "All actions"
   },
@@ -41,7 +42,14 @@
     "City": "City",
     "FollowUpInterval": "Follow-up interval",
     "LostReason": "Lost-deal reason",
-    "StatusLabel": "Status label"
+    "StatusLabel": "Status label",
+    "Workspace": "Workspace"
+  },
+  "entityGroups": {
+    "access": "Users, roles & workspace",
+    "clients": "Companies",
+    "contracts": "Contracts & payments",
+    "lists": "Settings lists"
   },
   "actors": {
     "system": "System",

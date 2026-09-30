@@ -27,6 +27,30 @@ export const AUDITED_ENTITY_TYPES = [
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
 
+/**
+ * The audit log viewer's filter groups (FR-AUD-10), served to the frontend by
+ * `GET /audit/entity-types`. Every audited type belongs to exactly one group,
+ * so a slice that starts auditing a new entity type registers it here too.
+ * Group and type labels are translations in the frontend's audit.json.
+ */
+export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists'] as const;
+
+export type AuditEntityGroup = (typeof AUDIT_ENTITY_GROUP_KEYS)[number];
+
+export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types: readonly AuditedEntityType[] }> = [
+  { group: 'access', types: ['User', 'Invitation', 'Role', 'Workspace'] },
+  { group: 'clients', types: ['Client'] },
+  { group: 'contracts', types: ['Contract', 'ContractPayment'] },
+  {
+    group: 'lists',
+    types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'StatusLabel'],
+  },
+];
+
+export function typesForGroup(group: AuditEntityGroup): readonly AuditedEntityType[] {
+  return AUDIT_ENTITY_GROUPS.find((candidate) => candidate.group === group)?.types ?? [];
+}
+
 /** The audit log viewer's search filter (FR-AUD-06), newest first. */
 export interface AuditQuery {
   from?: Date;
@@ -34,6 +58,8 @@ export interface AuditQuery {
   /** A user id, or the literal `'SYSTEM'` for scheduler-driven entries (`userId IS NULL`). */
   userId?: string;
   entityType?: AuditedEntityType;
+  /** Every entity type of one filter group (FR-AUD-10). */
+  entityGroup?: AuditEntityGroup;
   action?: AuditAction;
   page: number;
   limit: number;

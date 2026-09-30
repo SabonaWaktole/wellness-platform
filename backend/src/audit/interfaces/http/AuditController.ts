@@ -4,6 +4,7 @@ import { SearchAuditEntriesUseCase } from '../../application/use-cases/SearchAud
 import { GetAuditEntryUseCase } from '../../application/use-cases/GetAuditEntryUseCase';
 import { ExportAuditEntriesUseCase } from '../../application/use-cases/ExportAuditEntriesUseCase';
 import { AuditEntryNotFoundError } from '../../domain/errors';
+import { AUDIT_ENTITY_GROUPS } from '../../domain/AuditQuery';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { auditExportQuerySchema, auditQuerySchema } from './auditSchemas';
 import { csvRow, UTF8_BOM } from '../../../shared/infrastructure/csv/csvWriter';
@@ -59,6 +60,11 @@ export class AuditController {
     } catch (error) {
       sendAuditError(res, next, error);
     }
+  };
+
+  /** The filter groups and their entity types (FR-AUD-10). Static, so no use case. */
+  entityTypes = (_req: Request, res: Response) => {
+    res.status(200).json({ groups: AUDIT_ENTITY_GROUPS });
   };
 
   get = async (req: Request, res: Response, next: NextFunction) => {
