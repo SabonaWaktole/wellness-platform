@@ -1,5 +1,5 @@
 {
-  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6",
+  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026)",
   "note": "Extracted once from the SRS and reviewed by hand. Update it when the SRS changes; scripts/check-traceability.mjs reads it.",
   "requirements": [
     {
@@ -321,6 +321,31 @@
       "id": "NFR-USE-01",
       "priority": "Must",
       "requirement": "All Milestone 1 screens shall work on desktop and mobile (from 360 px wide)."
+    },
+    {
+      "id": "FR-PRC-07",
+      "priority": "Must",
+      "requirement": "The platform shall calculate the monthly list price with the rules in section 4.1 and the current pricing configuration. If no employee band covers the number of employees, or the city belongs to no price zone, the platform shall show \"Price on request\" and not calculate a price."
+    },
+    {
+      "id": "FR-PRC-08",
+      "priority": "Must",
+      "requirement": "Each component shall be rounded to the cent (half up) and the monthly list price is the sum of the rounded components, so the breakdown always adds up to the total."
+    },
+    {
+      "id": "FR-PRC-10",
+      "priority": "Should",
+      "requirement": "The pricing screen shall show the price per employee and the annual value (monthly net price × contract months, default 12, FR-PCF-08) for information."
+    },
+    {
+      "id": "NFR-ACC-01",
+      "priority": "Must",
+      "requirement": "The price calculation shall reproduce every value of the proposed pricing model (Figure 1) and both worked examples in 4.1 to the cent."
+    },
+    {
+      "id": "NFR-ACC-02",
+      "priority": "Must",
+      "requirement": "Money shall be stored and calculated as Decimal (two decimals, half-up rounding), never as Float."
     }
   ]
 }
