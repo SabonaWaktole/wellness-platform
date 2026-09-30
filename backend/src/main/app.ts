@@ -123,6 +123,23 @@ import { SetLookupItemActiveUseCase } from '../lookups/application/use-cases/Set
 import { DeleteLookupItemUseCase } from '../lookups/application/use-cases/DeleteLookupItemUseCase';
 import { LookupsController } from '../lookups/interfaces/http/LookupsController';
 import { createLookupRouter } from '../lookups/interfaces/http/lookupRoutes';
+import { IPricingWriteTransaction } from '../pricing/application/ports/IPricingWriteTransaction';
+import { PrismaPricingStore } from '../pricing/infrastructure/PrismaPricingStore';
+import { PrismaPricingWriteTransaction } from '../pricing/infrastructure/PrismaPricingWriteTransaction';
+import { GetPricingConfigurationUseCase } from '../pricing/application/use-cases/GetPricingConfigurationUseCase';
+import { CreatePricingItemUseCase } from '../pricing/application/use-cases/CreatePricingItemUseCase';
+import { UpdatePricingItemUseCase } from '../pricing/application/use-cases/UpdatePricingItemUseCase';
+import { ReorderPricingItemsUseCase } from '../pricing/application/use-cases/ReorderPricingItemsUseCase';
+import { SetPricingItemActiveUseCase } from '../pricing/application/use-cases/SetPricingItemActiveUseCase';
+import { DeletePricingItemUseCase } from '../pricing/application/use-cases/DeletePricingItemUseCase';
+import { SetPriceZoneCitiesUseCase } from '../pricing/application/use-cases/SetPriceZoneCitiesUseCase';
+import { SetRiskSurchargeUseCase } from '../pricing/application/use-cases/SetRiskSurchargeUseCase';
+import { SetDiscountCapUseCase } from '../pricing/application/use-cases/SetDiscountCapUseCase';
+import { ListCitiesWithoutZoneUseCase } from '../pricing/application/use-cases/ListCitiesWithoutZoneUseCase';
+import { LoadPricingConfigUseCase } from '../pricing/application/use-cases/LoadPricingConfigUseCase';
+import { TestPriceCalculationUseCase } from '../pricing/application/use-cases/TestPriceCalculationUseCase';
+import { PricingController } from '../pricing/interfaces/http/PricingController';
+import { createPricingRouter } from '../pricing/interfaces/http/pricingRoutes';
 import { PrismaStatusLabelStore } from '../statuses/infrastructure/PrismaStatusLabelStore';
 import { PrismaStatusLabelWriteTransaction } from '../statuses/infrastructure/PrismaStatusLabelWriteTransaction';
 import { ListStatusLabelsUseCase } from '../statuses/application/use-cases/ListStatusLabelsUseCase';
@@ -160,6 +177,8 @@ export interface AppDependencies {
   auditEntryReader: IAuditEntryReader;
   /** Slice 8: the transaction list writes and their audit entries share. */
   lookupWriteTransaction: ILookupWriteTransaction;
+  /** M2 Slice 3: the transaction pricing writes and their audit entries share. */
+  pricingWriteTransaction: IPricingWriteTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -231,6 +250,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const roleAdminTransaction = overrides?.roleAdminTransaction ?? new PrismaRoleAdminTransaction();
   const auditEntryReader = overrides?.auditEntryReader ?? new PrismaAuditEntryReader();
   const lookupWriteTransaction = overrides?.lookupWriteTransaction ?? new PrismaLookupWriteTransaction();
+  const pricingWriteTransaction = overrides?.pricingWriteTransaction ?? new PrismaPricingWriteTransaction();
 
   // Use Cases
   //
@@ -408,6 +428,24 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DeleteLookupItemUseCase(lookupStore, lookupRules, new PrismaLookupInUsePolicy(), lookupWriteTransaction)
   );
   app.use('/api/:tenantSlug/lookups', createLookupRouter(lookupsController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Settings → Pricing: bands, risk surcharges, visit frequencies, price zones,
+  // discount cap and the test calculator (M2 Slice 3: FR-PCF-01..05, 07, 09).
+  const pricingStore = new PrismaPricingStore();
+  const pricingController = new PricingController(
+    new GetPricingConfigurationUseCase(pricingStore),
+    new CreatePricingItemUseCase(pricingStore, pricingWriteTransaction),
+    new UpdatePricingItemUseCase(pricingStore, pricingWriteTransaction),
+    new ReorderPricingItemsUseCase(pricingStore, pricingWriteTransaction),
+    new SetPricingItemActiveUseCase(pricingStore, pricingWriteTransaction),
+    new DeletePricingItemUseCase(pricingStore, pricingWriteTransaction),
+    new SetPriceZoneCitiesUseCase(pricingStore, pricingWriteTransaction),
+    new SetRiskSurchargeUseCase(pricingStore, pricingWriteTransaction),
+    new SetDiscountCapUseCase(pricingStore, pricingWriteTransaction),
+    new ListCitiesWithoutZoneUseCase(pricingStore),
+    new TestPriceCalculationUseCase(new LoadPricingConfigUseCase(pricingStore))
+  );
+  app.use('/api/:tenantSlug/pricing', createPricingRouter(pricingController, tokenService, tenantRepository, resolveAccessContext));
 
   // Settings → Statuses: contract and payment status labels (Slice 10: FR-SET-07, 08).
   const statusLabelStore = new PrismaStatusLabelStore();

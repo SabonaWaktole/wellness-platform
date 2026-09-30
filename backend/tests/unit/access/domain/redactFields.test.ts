@@ -75,6 +75,26 @@ describe('redactFields (FR-RBAC-06)', () => {
       expect(redactFields(offer, administrator())).toEqual(offer);
     });
 
+    it('guards the pricing configuration fields of Settings → Pricing (M2 Slice 3)', () => {
+      const config = {
+        currency: 'EUR',
+        discountCapPercent: '10.00',
+        bands: [{ id: 'b1', minEmployees: 1, maxEmployees: 10, baseFee: '30.00', perEmployeeFee: '8.00' }],
+        riskSurcharges: [{ riskLevelId: 'r1', level: 2, riskSurchargePercent: '10.00' }],
+        frequencies: [{ id: 'f1', pricingType: 'PERCENT', frequencyValue: '20.00' }],
+        zones: [{ id: 'z1', surchargePercent: '15.00', cityIds: ['c1'] }],
+      };
+      const view = redactFields(config, reception());
+      expectNoCommercialFields(view);
+      expect(view).toEqual({
+        currency: 'EUR',
+        bands: [{ id: 'b1', minEmployees: 1, maxEmployees: 10 }],
+        riskSurcharges: [{ riskLevelId: 'r1', level: 2 }],
+        frequencies: [{ id: 'f1', pricingType: 'PERCENT' }],
+        zones: [{ id: 'z1', cityIds: ['c1'] }],
+      });
+    });
+
     it('expectNoCommercialFields fails on a guarded name nested in an array', () => {
       expect(() => expectNoCommercialFields({ items: [{ id: 'x', listPrice: '1.00' }] })).toThrow(/listPrice/);
     });

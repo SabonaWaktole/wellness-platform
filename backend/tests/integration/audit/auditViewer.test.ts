@@ -6,7 +6,7 @@ import { createApp } from '../../../src/main/app';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
 import { DEFAULT_ROLE_MATRIX } from '../../../src/access/domain/DefaultRoleMatrix';
 import { RoleKey } from '../../../src/access/domain/RoleKey';
-import { AUDITED_ENTITY_TYPES } from '../../../src/audit/domain/AuditQuery';
+import { AUDIT_ENTITY_GROUP_KEYS, AUDITED_ENTITY_TYPES } from '../../../src/audit/domain/AuditQuery';
 import { seedSystemRoles } from '../../support/seedRoles';
 
 const prisma = new PrismaClient();
@@ -117,7 +117,10 @@ describe('Audit log viewer (FR-AUD-06, 08)', () => {
     const res = await as('admin').get('/audit/entity-types').expect(200);
     const types = res.body.groups.flatMap((group: any) => group.types);
     expect([...types].sort()).toEqual([...AUDITED_ENTITY_TYPES].sort());
-    expect(res.body.groups.map((group: any) => group.group)).toEqual(['access', 'clients', 'contracts', 'lists']);
+    expect(res.body.groups.map((group: any) => group.group)).toEqual([...AUDIT_ENTITY_GROUP_KEYS]);
+    expect(res.body.groups.find((group: any) => group.group === 'pricing').types).toEqual([
+      'EmployeeBand', 'RiskSurcharge', 'VisitFrequency', 'PriceZone', 'PricingSettings',
+    ]);
     await as('reception').get('/audit/entity-types').expect(403);
   });
 
