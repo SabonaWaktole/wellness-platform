@@ -123,6 +123,60 @@ jobs:
       - name: No drift from schema.mysql.prisma
         run: npx prisma migrate diff --from-url "$MYSQL_URL" --to-schema-datamodel prisma/schema.mysql.prisma --exit-code
 
+  # NFR-USE-01: every Milestone 1 screen at 360 px, against a real API seeded
+  # the way staging is (seed:wellness + seed:uat). Playwright starts both dev
+  # servers itself (frontend/playwright.config.ts).
+  e2e-mobile:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wellness_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/wellness_e2e?schema=public
+      JWT_SECRET: ci-only-secret-not-used-outside-this-job
+      PORT: '3000'
+      SCHEDULER_ENABLED: 'false'
+      E2E_ADMIN_EMAIL: admin@wellness-albania.al
+      E2E_ADMIN_PASSWORD: CiAdminPassword1
+      UAT_PASSWORD: CiUatPassword1
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Backend — install, migrate, seed
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run seed:wellness -- --owner-email "$E2E_ADMIN_EMAIL" --owner-password "$E2E_ADMIN_PASSWORD"
+          npm run seed:uat
+
+      - name: Frontend — install and browsers
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Every M1 screen at 360 px (NFR-USE-01)
+        working-directory: frontend
+        run: npx playwright test --project=mobile-360
+
   # FR-BR-04: nothing a Wellness Albania user can reach, and no email the
   # system sends, may name Neva CRM, the SaaS product this edition was forked
   # from. Case-insensitive, so "NevaCRM", "Neva CRM" and "nevacrm.eu" all fail;
