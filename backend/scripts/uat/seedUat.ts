@@ -20,7 +20,7 @@ import { UserRole } from '../../src/auth/domain/enums/UserRole';
  */
 
 export interface UatUserSpec {
-  key: 'salesA' | 'salesB' | 'manager' | 'reception' | 'ceo' | 'leaver';
+  key: 'salesA' | 'salesB' | 'manager' | 'reception' | 'ceo' | 'roleChange' | 'leaver';
   local: string;
   firstName: string;
   lastName: string;
@@ -33,8 +33,10 @@ export const UAT_USERS: UatUserSpec[] = [
   { key: 'manager', local: 'uat.manager', firstName: 'Mira', lastName: 'Menaxhere', roleKey: RoleKey.SalesManager },
   { key: 'reception', local: 'uat.reception', firstName: 'Rea', lastName: 'Recepsioni', roleKey: RoleKey.Reception },
   { key: 'ceo', local: 'uat.ceo', firstName: 'Cela', lastName: 'Drejtore', roleKey: RoleKey.Ceo },
-  // UAT-5 changes this user's role and deactivates them with a reassignment,
-  // so the users UAT-1 relies on are never the ones disturbed.
+  // UAT-5 turns this user from Sales User into Reception (step 1) and
+  // deactivates the next one with a reassignment (step 2), so the users UAT-1
+  // relies on are never the ones disturbed.
+  { key: 'roleChange', local: 'uat.rolechange', firstName: 'Dea', lastName: 'Ndryshim', roleKey: RoleKey.SalesUser },
   { key: 'leaver', local: 'uat.leaver', firstName: 'Leka', lastName: 'Largohet', roleKey: RoleKey.SalesUser },
 ];
 
