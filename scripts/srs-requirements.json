@@ -346,6 +346,31 @@
       "id": "NFR-ACC-02",
       "priority": "Must",
       "requirement": "Money shall be stored and calculated as Decimal (two decimals, half-up rounding), never as Float."
+    },
+    {
+      "id": "FR-RBAC-15",
+      "priority": "Must",
+      "requirement": "The permission catalogue shall add: Sales script: view / edit; Deals: view, create / edit (scoped Own/Team/All), reopen, delete; Offers: create / edit (scoped); Discounts: approve (scoped); Follow-ups: manage (scoped); Activity results: manage. The Administrator can assign them from the M1 roles screen."
+    },
+    {
+      "id": "FR-RBAC-16",
+      "priority": "Must",
+      "requirement": "The default roles shall receive the permissions in the matrix in 9.2 on upgrade, without changing permissions the Administrator already customised for Milestone 1."
+    },
+    {
+      "id": "FR-RBAC-17",
+      "priority": "Must",
+      "requirement": "Deals, offers, discounts, pricing and follow-up amounts shall be removed from API responses for users without \"Commercial details: view\" (extends M1 FR-RBAC-06). Deal and offer items are hidden from the company history for them."
+    },
+    {
+      "id": "FR-AUD-10",
+      "priority": "Must",
+      "requirement": "The audit log viewer shall offer filters for the new entity types (Pricing, Offer, Deal, Discount approval, Sales script)."
+    },
+    {
+      "id": "NFR-SEC-04",
+      "priority": "Must",
+      "requirement": "The discount cap, approval state, stage rules and data scope shall be enforced on the server for every request."
     }
   ]
 }
