@@ -1,0 +1,33 @@
+{
+  "tenant": "wellness-albania",
+  "fields": {
+    "businessType": {
+      "from": ["Business type", "Lloji i biznesit", "Industry"],
+      "values": {
+        "Hospitality": "Kafene",
+        "Manufacturing": "Fabrikë"
+      }
+    },
+    "employeeCount": {
+      "from": ["Employees", "Nr. punonjësish"]
+    },
+    "area": {
+      "from": ["Area", "Qarku"]
+    },
+    "city": {
+      "from": ["City", "Qyteti"]
+    },
+    "streetAddress": {
+      "from": ["Address", "Adresa"]
+    },
+    "taxId": {
+      "from": ["NIPT", "TIN Number"]
+    },
+    "website": {
+      "from": ["Website"]
+    },
+    "contactName": {
+      "from": ["Contact person", "Personi i kontaktit"]
+    }
+  }
+}
