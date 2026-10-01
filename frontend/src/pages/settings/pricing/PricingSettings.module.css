@@ -1,0 +1,215 @@
+/* Settings → Pricing (M2 Slice 3). Tables reuse the lists editor's styles,
+ * which already turn into cards below 640px; this file holds what the pricing
+ * screens add around them. Everything works from 360px. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.headerTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-headline-sm);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.mutedText,
+.errorText,
+.successText {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  text-wrap: pretty;
+}
+
+.mutedText {
+  color: var(--text-tertiary);
+}
+
+.errorText {
+  color: var(--color-error);
+}
+
+.successText {
+  color: var(--color-success);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+/* A label above its input, for the cap, the surcharges and the calculator. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-label-sm);
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+.inlineForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.inlineForm .field {
+  flex: 0 1 200px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+/* The zone city picker: areas as groups of checkboxes. */
+.cityPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+
+.cityPickerTitle {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cityGroup {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.cityGroup legend {
+  padding: 0;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cityOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-xs) var(--spacing-md);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* Cities in no zone (FR-PCF-05). */
+.warning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background-color: var(--color-warning-container);
+  border: 1px solid var(--color-warning);
+  color: var(--color-on-warning-container);
+}
+
+.warning p {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+}
+
+.warningTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+}
+
+.warningList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The test calculator's result. */
+.breakdown {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-xs) var(--spacing-md);
+  margin: 0;
+  max-width: 420px;
+  font-size: var(--font-size-body-md);
+}
+
+.breakdown dt {
+  color: var(--text-secondary);
+}
+
+.breakdown dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.breakdownTotal {
+  font-weight: 650;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--spacing-xs);
+}
+
+@media (max-width: 480px) {
+  .inlineForm .field {
+    flex: 1 1 100%;
+  }
+}

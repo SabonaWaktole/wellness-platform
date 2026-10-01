@@ -43,13 +43,19 @@
     "FollowUpInterval": "Follow-up interval",
     "LostReason": "Lost-deal reason",
     "StatusLabel": "Status label",
-    "Workspace": "Workspace"
+    "Workspace": "Workspace",
+    "EmployeeBand": "Employee band",
+    "RiskSurcharge": "Risk surcharge",
+    "VisitFrequency": "Visit frequency",
+    "PriceZone": "Price zone",
+    "PricingSettings": "Pricing settings"
   },
   "entityGroups": {
     "access": "Users, roles & workspace",
     "clients": "Companies",
     "contracts": "Contracts & payments",
-    "lists": "Settings lists"
+    "lists": "Settings lists",
+    "pricing": "Pricing"
   },
   "actors": {
     "system": "System",
@@ -101,7 +107,18 @@
     "labelEn": "English label",
     "colour": "Colour",
     "order": "Order",
-    "active": "Active"
+    "active": "Active",
+    "minEmployees": "From (employees)",
+    "maxEmployees": "To (employees)",
+    "baseFee": "Base fee",
+    "perEmployeeFee": "Fee per extra employee",
+    "riskSurchargePercent": "Risk surcharge (%)",
+    "visitsPerYear": "Visits per year",
+    "pricingType": "Pricing type",
+    "frequencyValue": "Value",
+    "surchargePercent": "Surcharge (%)",
+    "cities": "Cities",
+    "discountCapPercent": "Discount cap (%)"
   },
   "empty": {
     "title": "No entries match these filters",

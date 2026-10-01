@@ -14,6 +14,9 @@ const TENANT = process.env.E2E_TENANT ?? 'wellness-albania';
 
 const LISTS = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons'];
 
+/** Settings → Pricing's tabs (M2 Slice 3; NFR-USE-02). */
+const PRICING_TABS = ['bands', 'risk', 'frequencies', 'zones', 'cap', 'calculator'];
+
 async function expectNoHorizontalOverflow(page: Page, screen: string) {
   // Let late-loading data (tables, timelines) lay out before measuring.
   await page.waitForLoadState('networkidle');
@@ -61,6 +64,7 @@ test.describe('NFR-USE-01 M1 screens have no horizontal overflow at 360px', () =
       ['settings → audit log', () => 'settings/audit'],
       ['settings → statuses', () => 'settings/statuses'],
       ...LISTS.map((list): [string, () => string] => [`settings → lists → ${list}`, () => `settings/lists/${list}`]),
+      ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
     ];
 
     for (const [screen, path] of screens) {

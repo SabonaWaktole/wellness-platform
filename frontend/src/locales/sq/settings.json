@@ -13,7 +13,8 @@
     "integrations": "Integrimet",
     "warehouses": "Magazinat",
     "categories": "Kategoritë",
-    "audit": "Regjistri i auditimit"
+    "audit": "Regjistri i auditimit",
+    "pricing": "Çmimet"
   },
   "company": {
     "title": "Cilësimet e kompanisë",
@@ -647,6 +648,112 @@
       "AREA_INACTIVE": "Zgjidhni një zonë aktive.",
       "AREA_HAS_ACTIVE_CITIES_one": "Kjo zonë ka {{count}} qytet aktiv. Çaktivizojeni edhe atë, ose zhvendoseni më parë.",
       "AREA_HAS_ACTIVE_CITIES_other": "Kjo zonë ka {{count}} qytete aktive. Çaktivizojini edhe ato, ose zhvendosini më parë.",
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    }
+  },
+  "pricing": {
+    "breadcrumb": "Çmimet",
+    "title": "Çmimet",
+    "subtitle": "Çdo numër i modelit të çmimeve. Një ndryshim vlen për llogaritjen e radhës; ofertat e krijuara ruajnë çmimet e tyre.",
+    "loading": "Po ngarkohet konfigurimi i çmimeve…",
+    "loadFailed": "Konfigurimi i çmimeve nuk u ngarkua.",
+    "tabs": {
+      "bands": "Grupet sipas punonjësve",
+      "risk": "Shtesat për rrezikun",
+      "frequencies": "Frekuencat e vizitave",
+      "zones": "Zonat e çmimeve",
+      "cap": "Kufiri i zbritjes",
+      "calculator": "Llogaritësi provë"
+    },
+    "hints": {
+      "bands": "Tarifa bazë është çmimi për punonjësin e parë të grupit, dhe çdo punonjës shtesë shton tarifën për punonjës. Grupet aktive nuk mund të mbivendosen. Mbi grupin e fundit, çmimi jepet \"me kërkesë\".",
+      "risk": "Një shtesë mbi tarifën bazë për çdo nivel rreziku. Niveli i rrezikut të një kompanie vjen nga lloji i biznesit.",
+      "frequencies": "Një përqindje e tarifës bazë, ose një shumë fikse mujore, si për vizitat sipas nevojës.",
+      "zones": "Një shtesë mbi tarifën bazë për qytetet e çdo zone. Një qytet mund të jetë në më shumë se një zonë; zgjedh shitësi.",
+      "cap": "Zbritja më e lartë që një shitës mund të japë pa miratim.",
+      "calculator": "Provoni konfigurimin aktual. Asgjë nuk ruhet dhe nuk krijohet asnjë ofertë."
+    },
+    "columns": {
+      "minEmployees": "Nga (punonjës)",
+      "maxEmployees": "Deri (punonjës)",
+      "baseFee": "Tarifa bazë",
+      "perEmployeeFee": "Për çdo punonjës shtesë",
+      "riskLevel": "Niveli i rrezikut",
+      "surcharge": "Shtesa (%)",
+      "pricingType": "Çmimi",
+      "value": "Vlera",
+      "visitsPerYear": "Vizita në vit",
+      "cities": "Qytetet"
+    },
+    "employeesRange": "{{min}}–{{max}} punonjës",
+    "addBand": "Shto grup",
+    "editBand": "Ndrysho grupin {{range}}",
+    "deleteBand": "Fshi grupin {{range}}",
+    "deactivateBand": "Çaktivizo grupin {{range}}",
+    "reactivateBand": "Riaktivizo grupin {{range}}",
+    "deleteBandConfirm": "Të fshihet grupi {{range}}? Ofertat e krijuara ruajnë çmimet e tyre.",
+    "pricingTypes": {
+      "PERCENT": "% e tarifës bazë",
+      "FIXED": "Shumë fikse mujore"
+    },
+    "percent": "{{value}}%",
+    "notSet": "Pa vendosur",
+    "notSetHint": "Pa shtesë, kompanitë me këtë nivel rreziku marrin \"Çmim me kërkesë\".",
+    "save": "Ruaj",
+    "saved": "U ruajt.",
+    "zoneCities": {
+      "button": "Qytetet e {{name}}",
+      "title": "Qytetet e {{name}}",
+      "area": "Zona",
+      "allAreas": "Të gjitha zonat",
+      "save": "Ruaj qytetet",
+      "cancel": "Anulo",
+      "count_one": "{{count}} qytet",
+      "count_other": "{{count}} qytete",
+      "none": "Asnjë qytet"
+    },
+    "citiesWithoutZone": {
+      "title_one": "{{count}} qytet aktiv nuk është në asnjë zonë çmimi",
+      "title_other": "{{count}} qytete aktive nuk janë në asnjë zonë çmimi",
+      "description": "Një kompani në një nga këto qytete merr \"Çmim me kërkesë\".",
+      "none": "Çdo qytet aktiv është në një zonë çmimi.",
+      "item": "{{city}} ({{area}})"
+    },
+    "cap": {
+      "label": "Kufiri i zbritjes (%)"
+    },
+    "calculator": {
+      "employees": "Punonjës",
+      "riskLevel": "Niveli i rrezikut",
+      "frequency": "Frekuenca e vizitave",
+      "zone": "Zona e çmimit",
+      "choose": "Zgjidhni…",
+      "calculate": "Llogarit",
+      "result": "Rezultati",
+      "baseFee": "Tarifa bazë",
+      "riskFee": "Shtesa për rrezikun",
+      "visitFee": "Frekuenca e vizitave",
+      "locationFee": "Shtesa për vendndodhjen",
+      "listPrice": "Çmimi mujor i listës",
+      "pricePerEmployee": "Çmimi për punonjës",
+      "annualValue": "Vlera vjetore",
+      "priceOnRequest": "Çmim me kërkesë",
+      "reasons": {
+        "NO_BAND": "Asnjë grup aktiv nuk mbulon këtë numër punonjësish.",
+        "NO_ZONE": "Kjo zonë çmimi nuk është aktive.",
+        "NO_RISK_SURCHARGE": "Për këtë nivel rreziku nuk është vendosur shtesë."
+      }
+    },
+    "errors": {
+      "INVALID_FEE": "Vendosni një shumë 0 ose më të madhe, me deri në dy shifra dhjetore.",
+      "INVALID_PERCENT": "Vendosni një përqindje nga 0 deri në 1000 (0 deri në 100 për kufirin e zbritjes), me deri në dy shifra dhjetore.",
+      "INVALID_BAND_RANGE": "Numri i fundit i punonjësve nuk mund të jetë më i vogël se i pari.",
+      "BANDS_OVERLAP": "Ky grup mbivendoset me grupin {{min}}–{{max}} punonjës.",
+      "INVALID_PRICING_VALUE": "Kontrolloni vlerat dhe provoni përsëri.",
+      "CITY_NOT_ACTIVE": "Zgjidhni qytete aktive nga lista.",
+      "PRICING_VALUE_TAKEN": "Një vlerë tjetër në këtë listë e ka tashmë këtë emër.",
+      "PRICING_ITEM_NOT_FOUND": "Kjo vlerë nuk ekziston më. Ringarkoni faqen.",
+      "INVALID_PRICING_ORDER": "Lista ndryshoi ndërsa po e rirendisnit. Ringarkoni faqen dhe provoni përsëri.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
     }
   },
