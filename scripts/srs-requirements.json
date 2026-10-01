@@ -373,6 +373,11 @@
       "requirement": "The discount cap, approval state, stage rules and data scope shall be enforced on the server for every request."
     },
     {
+      "id": "NFR-SEC-05",
+      "priority": "Must",
+      "requirement": "Rich text from the sales script and offer texts shall be sanitized on the server before storing and before rendering."
+    },
+    {
       "id": "FR-PCF-01",
       "priority": "Must",
       "requirement": "The Administrator shall manage employee bands: from and to number of employees, base fee for the first employee of the band's formula, and fee per extra employee. Bands cannot overlap. Seed: 1–10 employees, €30.00, €8.00."
@@ -398,9 +403,19 @@
       "requirement": "The Administrator shall manage price zones: label, surcharge %, and the list of predefined cities in the zone (picked from the M1 City list). A city may be in more than one zone (FR-PRC-06). The admin screen lists active cities that are in no zone."
     },
     {
+      "id": "FR-PCF-06",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage services (label and description, sq/en) and service packages (label, description, list of services, default package)."
+    },
+    {
       "id": "FR-PCF-07",
       "priority": "Must",
       "requirement": "The Administrator shall set the discount cap: the highest discount % a salesperson may apply without approval (section 5)."
+    },
+    {
+      "id": "FR-PCF-08",
+      "priority": "Must",
+      "requirement": "The Administrator shall set offer settings: validity in days (default 30), default contract length in months (default 12), number prefix, Wellness Albania company details printed on the offer (name, NIPT, address, phone, email, website, bank details) and the standard offer texts (introduction, terms, closing) in sq and en."
     },
     {
       "id": "FR-PCF-09",
