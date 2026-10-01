@@ -145,6 +145,18 @@ import { ListActivePackagesUseCase } from '../pricing/application/use-cases/List
 import { UpdateOfferSettingsUseCase } from '../pricing/application/use-cases/UpdateOfferSettingsUseCase';
 import { PricingController } from '../pricing/interfaces/http/PricingController';
 import { createPricingRouter } from '../pricing/interfaces/http/pricingRoutes';
+import { ISalesScriptWriteTransaction } from '../salesScript/application/ports/ISalesScriptWriteTransaction';
+import { PrismaSalesScriptStore } from '../salesScript/infrastructure/PrismaSalesScriptStore';
+import { PrismaSalesScriptWriteTransaction } from '../salesScript/infrastructure/PrismaSalesScriptWriteTransaction';
+import { GetPublishedScriptUseCase } from '../salesScript/application/use-cases/GetPublishedScriptUseCase';
+import { GetScriptDraftUseCase } from '../salesScript/application/use-cases/GetScriptDraftUseCase';
+import { SaveScriptDraftUseCase } from '../salesScript/application/use-cases/SaveScriptDraftUseCase';
+import { PublishScriptUseCase } from '../salesScript/application/use-cases/PublishScriptUseCase';
+import { ListScriptVersionsUseCase } from '../salesScript/application/use-cases/ListScriptVersionsUseCase';
+import { GetScriptVersionUseCase } from '../salesScript/application/use-cases/GetScriptVersionUseCase';
+import { RestoreScriptVersionUseCase } from '../salesScript/application/use-cases/RestoreScriptVersionUseCase';
+import { SalesScriptController } from '../salesScript/interfaces/http/SalesScriptController';
+import { createSalesScriptRouter } from '../salesScript/interfaces/http/salesScriptRoutes';
 import { PrismaStatusLabelStore } from '../statuses/infrastructure/PrismaStatusLabelStore';
 import { PrismaStatusLabelWriteTransaction } from '../statuses/infrastructure/PrismaStatusLabelWriteTransaction';
 import { ListStatusLabelsUseCase } from '../statuses/application/use-cases/ListStatusLabelsUseCase';
@@ -184,6 +196,8 @@ export interface AppDependencies {
   lookupWriteTransaction: ILookupWriteTransaction;
   /** M2 Slice 3: the transaction pricing writes and their audit entries share. */
   pricingWriteTransaction: IPricingWriteTransaction;
+  /** M2 Slice 5: the transaction script writes, and a publish with its audit entry, share. */
+  salesScriptWriteTransaction: ISalesScriptWriteTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -256,6 +270,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const auditEntryReader = overrides?.auditEntryReader ?? new PrismaAuditEntryReader();
   const lookupWriteTransaction = overrides?.lookupWriteTransaction ?? new PrismaLookupWriteTransaction();
   const pricingWriteTransaction = overrides?.pricingWriteTransaction ?? new PrismaPricingWriteTransaction();
+  const salesScriptWriteTransaction = overrides?.salesScriptWriteTransaction ?? new PrismaSalesScriptWriteTransaction();
 
   // Use Cases
   //
@@ -456,6 +471,24 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new UpdateOfferSettingsUseCase(pricingStore, pricingWriteTransaction)
   );
   app.use('/api/:tenantSlug/pricing', createPricingRouter(pricingController, tokenService, tenantRepository, resolveAccessContext));
+
+  // The sales script: the panel salespeople read, and Settings → Sales script
+  // where the Administrator edits, publishes and restores it (M2 Slice 5:
+  // FR-SCR-03..07).
+  const salesScriptStore = new PrismaSalesScriptStore();
+  const salesScriptController = new SalesScriptController(
+    new GetPublishedScriptUseCase(salesScriptStore),
+    new GetScriptDraftUseCase(salesScriptStore),
+    new SaveScriptDraftUseCase(salesScriptWriteTransaction),
+    new PublishScriptUseCase(salesScriptWriteTransaction),
+    new ListScriptVersionsUseCase(salesScriptStore),
+    new GetScriptVersionUseCase(salesScriptStore),
+    new RestoreScriptVersionUseCase(salesScriptWriteTransaction)
+  );
+  app.use(
+    '/api/:tenantSlug/sales-script',
+    createSalesScriptRouter(salesScriptController, tokenService, tenantRepository, resolveAccessContext)
+  );
 
   // Settings → Statuses: contract and payment status labels (Slice 10: FR-SET-07, 08).
   const statusLabelStore = new PrismaStatusLabelStore();
