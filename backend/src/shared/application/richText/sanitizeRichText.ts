@@ -32,7 +32,7 @@ const LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
 /** Only absolute http(s) and mailto links: no `javascript:`, `data:` or relative ones. */
 export function isAllowedHref(href: unknown): href is string {
-  if (typeof href !== 'string' || href.length > 2000 || href !== href.trim() || /[\s\u0000-\u001f]/.test(href)) {
+  if (typeof href !== 'string' || href.length > 2000 || href !== href.trim() || /[\s\p{Cc}]/u.test(href)) {
     return false;
   }
   try {

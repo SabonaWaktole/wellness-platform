@@ -663,6 +663,9 @@
       "frequencies": "Frekuencat e vizitave",
       "zones": "Zonat e çmimeve",
       "cap": "Kufiri i zbritjes",
+      "services": "Shërbimet",
+      "packages": "Paketat",
+      "offer": "Cilësimet e ofertës",
       "calculator": "Llogaritësi provë"
     },
     "hints": {
@@ -671,6 +674,9 @@
       "frequencies": "Një përqindje e tarifës bazë, ose një shumë fikse mujore, si për vizitat sipas nevojës.",
       "zones": "Një shtesë mbi tarifën bazë për qytetet e çdo zone. Një qytet mund të jetë në më shumë se një zonë; zgjedh shitësi.",
       "cap": "Zbritja më e lartë që një shitës mund të japë pa miratim.",
+      "services": "Çfarë përshkruan oferta. Një shërbim nuk ka çmim më vete: çmimin e cakton modeli i çmimeve. Një shërbim në një paketë mund të çaktivizohet, por jo të fshihet.",
+      "packages": "Paketa është një grup shërbimesh me emër që shitësi zgjedh në ekranin e çmimit. Ajo përshkruan ofertën dhe nuk e ndryshon çmimin. Një paketë aktive është e paracaktuar.",
+      "offer": "Si numërohen ofertat dhe sa kohë mbeten të vlefshme, të dhënat e kompanisë që shtypen në çdo ofertë dhe tekstet e saj standarde.",
       "calculator": "Provoni konfigurimin aktual. Asgjë nuk ruhet dhe nuk krijohet asnjë ofertë."
     },
     "columns": {
@@ -683,7 +689,11 @@
       "pricingType": "Çmimi",
       "value": "Vlera",
       "visitsPerYear": "Vizita në vit",
-      "cities": "Qytetet"
+      "cities": "Qytetet",
+      "descriptionSq": "Përshkrimi në shqip",
+      "descriptionEn": "Përshkrimi në anglisht",
+      "services": "Shërbimet",
+      "default": "E paracaktuar"
     },
     "employeesRange": "{{min}}–{{max}} punonjës",
     "addBand": "Shto grup",
@@ -754,7 +764,79 @@
       "PRICING_VALUE_TAKEN": "Një vlerë tjetër në këtë listë e ka tashmë këtë emër.",
       "PRICING_ITEM_NOT_FOUND": "Kjo vlerë nuk ekziston më. Ringarkoni faqen.",
       "INVALID_PRICING_ORDER": "Lista ndryshoi ndërsa po e rirendisnit. Ringarkoni faqen dhe provoni përsëri.",
-      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri.",
+      "SERVICE_NOT_ACTIVE": "Zgjidhni shërbime aktive nga lista.",
+      "PACKAGE_NEEDS_SERVICE": "Një paketë ka nevojë për të paktën një shërbim aktiv.",
+      "INVALID_RICH_TEXT": "Ky tekst ka formatim që nuk lejohet.",
+      "PRICING_ITEM_IN_USE_one": "Ky shërbim është në paketën {{names}}. Hiqeni nga paketa ose çaktivizojeni.",
+      "PRICING_ITEM_IN_USE_other": "Ky shërbim është në paketat {{names}}. Hiqeni prej tyre ose çaktivizojeni.",
+      "DEFAULT_PACKAGE_REQUIRED": "{{names}} është paketa e paracaktuar. Bëni fillimisht një paketë tjetër të paracaktuar.",
+      "SERVICE_LAST_IN_PACKAGE_one": "Kjo do ta linte paketën {{names}} pa asnjë shërbim aktiv. Shtoni fillimisht një shërbim tjetër.",
+      "SERVICE_LAST_IN_PACKAGE_other": "Kjo do t'i linte paketat {{names}} pa asnjë shërbim aktiv. Shtoni fillimisht një shërbim tjetër."
+    },
+    "services": {
+      "deactivateTitle": "Të çaktivizohet {{name}}?",
+      "deactivateMessage_one": "Paketa {{names}} e përfshin këtë shërbim. Ofertat e reja me këtë paketë nuk do ta listojnë më; ofertat e krijuara e ruajnë.",
+      "deactivateMessage_other": "Paketat {{names}} e përfshijnë këtë shërbim. Ofertat e reja me këto paketa nuk do ta listojnë më; ofertat e krijuara e ruajnë.",
+      "deactivateConfirm": "Çaktivizo"
+    },
+    "packages": {
+      "servicesButton": "Shërbimet e {{name}}",
+      "count_one": "{{count}} shërbim",
+      "count_other": "{{count}} shërbime",
+      "servicesInPicker": "Ndryshoni shërbimet me butonin Shërbimet.",
+      "default": "E paracaktuar",
+      "makeDefault": "Bëje të paracaktuar",
+      "makeDefaultFor": "Bëje {{name}} paketën e paracaktuar",
+      "pickerTitle": "Shërbimet e {{name}}",
+      "inPackage": "Shërbimet në këtë paketë, në rendin që i liston oferta",
+      "empty": "Kjo paketë nuk ka ende shërbime.",
+      "add": "Shto një shërbim",
+      "remove": "Hiq {{name}} nga paketa",
+      "save": "Ruaj shërbimet"
+    },
+    "offer": {
+      "sections": {
+        "offer": "Oferta",
+        "company": "Të dhënat e kompanisë",
+        "texts": "Tekstet standarde"
+      },
+      "companyHint": "Shtypen në çdo ofertë.",
+      "textsHint": "Shtypen në çdo ofertë në gjuhën në të cilën është shkruar. Vetëm i trashë, i pjerrët, lista dhe lidhje.",
+      "language": "Gjuha e teksteve",
+      "languages": {
+        "Sq": "Shqip",
+        "En": "Anglisht"
+      },
+      "texts": {
+        "intro": "Hyrja ({{language}})",
+        "terms": "Kushtet ({{language}})",
+        "closing": "Mbyllja ({{language}})"
+      },
+      "fields": {
+        "offerValidityDays": "E vlefshme (ditë pas dërgimit)",
+        "contractMonthsDefault": "Kohëzgjatja e kontratës (muaj)",
+        "offerNumberPrefix": "Parashtesa e numrit të ofertës",
+        "companyName": "Emri i kompanisë",
+        "nipt": "NIPT",
+        "address": "Adresa",
+        "phone": "Telefoni",
+        "email": "Email",
+        "website": "Faqja e internetit",
+        "bankDetails": "Të dhënat bankare"
+      },
+      "errors": {
+        "offerValidityDays": "Shkruani një numër të plotë ditësh nga 1 deri në 365.",
+        "contractMonthsDefault": "Shkruani një numër të plotë muajsh nga 1 deri në 60.",
+        "offerNumberPrefix": "Përdorni një deri në gjashtë shkronja të mëdha, p.sh. OF.",
+        "email": "Shkruani një adresë email-i.",
+        "website": "Shkruani një adresë interneti, p.sh. wellness.al.",
+        "companyName": "Është shumë i gjatë.",
+        "nipt": "Është shumë i gjatë.",
+        "address": "Është shumë e gjatë.",
+        "phone": "Është shumë i gjatë.",
+        "bankDetails": "Janë shumë të gjata."
+      }
     }
   },
   "statuses": {

@@ -145,5 +145,17 @@
     "dark": "Dark",
     "system": "System",
     "triggerLabel": "Theme: {{current}}. Change theme"
+  },
+  "richText": {
+    "toolbar": "Formatting: {{label}}",
+    "bold": "Bold",
+    "italic": "Italic",
+    "bulletList": "Bulleted list",
+    "orderedList": "Numbered list",
+    "link": "Add a link",
+    "unlink": "Remove the link",
+    "linkAddress": "Link address",
+    "applyLink": "Add link",
+    "invalidLink": "Enter a web address (https://…) or an email address."
   }
 }

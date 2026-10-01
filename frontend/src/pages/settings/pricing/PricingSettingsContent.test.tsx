@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
+import type { Editor } from '@tiptap/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { PricingSettingsContent } from './PricingSettingsContent';
 import { usePricingConfig } from '../../../hooks/usePricingConfig';
@@ -28,6 +29,43 @@ const CONFIG: PricingConfiguration = {
     { id: 'zc', nameSq: 'Tirana qendër', nameEn: 'Tirana centre', surchargePercent: '0.00', cityIds: ['c-tirane'], order: 1, active: true },
     { id: 'zk', nameSq: 'Kamëz dhe Vorë', nameEn: 'Kamëz and Vorë', surchargePercent: '30.00', cityIds: ['c-kamez'], order: 2, active: true },
   ],
+  services: [
+    { id: 's1', nameSq: 'Vlerësimi i riskut', nameEn: 'Risk assessment', descriptionSq: null, descriptionEn: 'On site', order: 1, active: true },
+    { id: 's2', nameSq: 'Vizita mjekësore', nameEn: 'Health visits', descriptionSq: null, descriptionEn: null, order: 2, active: true },
+    { id: 's3', nameSq: 'Trajnim', nameEn: 'Training', descriptionSq: null, descriptionEn: null, order: 3, active: true },
+  ],
+  packages: [
+    {
+      id: 'p1',
+      nameSq: 'Standart',
+      nameEn: 'Standard',
+      descriptionSq: null,
+      descriptionEn: null,
+      serviceIds: ['s1', 's2'],
+      isDefault: true,
+      order: 1,
+      active: true,
+    },
+    { id: 'p2', nameSq: 'Plus', nameEn: 'Plus', descriptionSq: null, descriptionEn: null, serviceIds: ['s3'], isDefault: false, order: 2, active: true },
+  ],
+  offerSettings: {
+    offerValidityDays: 30,
+    contractMonthsDefault: 12,
+    offerNumberPrefix: 'OF',
+    companyName: 'Wellness Albania',
+    nipt: null,
+    address: null,
+    phone: null,
+    email: null,
+    website: null,
+    bankDetails: null,
+    introSq: null,
+    introEn: null,
+    termsSq: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'TVSH nuk përfshihet.' }] }] },
+    termsEn: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'VAT not included.' }] }] },
+    closingSq: null,
+    closingEn: null,
+  },
 };
 
 const AREAS = [
@@ -56,6 +94,9 @@ const pricing = {
   setZoneCities: vi.fn(),
   setRiskSurcharge: vi.fn(),
   setDiscountCap: vi.fn(),
+  setPackageServices: vi.fn(),
+  setDefaultPackage: vi.fn(),
+  updateOfferSettings: vi.fn(),
   testCalculation: vi.fn(),
 };
 
@@ -87,7 +128,18 @@ describe('PricingSettingsContent', () => {
     pricing.loadFailed = false;
     (usePricingConfig as any).mockImplementation(() => pricing);
     (useActiveLookups as any).mockImplementation((list: string) => (list === 'areas' ? AREAS : CITIES));
-    for (const write of ['create', 'update', 'setZoneCities', 'setRiskSurcharge', 'setDiscountCap'] as const) {
+    for (const write of [
+      'create',
+      'update',
+      'setActive',
+      'remove',
+      'setZoneCities',
+      'setRiskSurcharge',
+      'setDiscountCap',
+      'setPackageServices',
+      'setDefaultPackage',
+      'updateOfferSettings',
+    ] as const) {
       pricing[write].mockResolvedValue(undefined);
     }
     useAuthStore.setState({ user: { tenantCurrency: 'EUR', tenantLocale: 'en-US' } as any });
@@ -254,5 +306,144 @@ describe('PricingSettingsContent', () => {
 
     expect(await screen.findByText('Price on request')).toBeDefined();
     expect(screen.getByText('No active employee band covers this number of employees.')).toBeDefined();
+  });
+  it('FR-PCF-06 adds a service with its descriptions', async () => {
+    renderAt('/acme/settings/pricing/services');
+
+    expect(within(screen.getByTestId('lookup-row-s1')).getByText('On site')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Add value' }));
+    fireEvent.change(screen.getByLabelText('Albanian name'), { target: { value: 'Monitorim' } });
+    fireEvent.change(screen.getByLabelText('Albanian description'), { target: { value: ' Matje në vend ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(pricing.create).toHaveBeenCalledWith('services', {
+        nameSq: 'Monitorim',
+        nameEn: null,
+        descriptionSq: 'Matje në vend',
+        descriptionEn: null,
+      })
+    );
+  });
+
+  it('FR-PCF-06 asks before deactivating a service that an active package holds, naming the package', async () => {
+    renderAt('/acme/settings/pricing/services');
+
+    fireEvent.click(screen.getByRole('button', { name: /Deactivate Risk assessment/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/The package Standard includes this service/)).toBeDefined();
+    expect(pricing.setActive).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+
+    await waitFor(() => expect(pricing.setActive).toHaveBeenCalledWith('services', 's1', false));
+  });
+
+  it('FR-PCF-06 explains a service in a package cannot be deleted, naming the package', async () => {
+    pricing.remove.mockRejectedValue(apiError(409, { code: 'PRICING_ITEM_IN_USE', names: ['Standart'] }));
+    renderAt('/acme/settings/pricing/services');
+
+    fireEvent.click(screen.getByRole('button', { name: /Delete Risk assessment/ }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: /Delete/ }));
+
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'This service is in the package Standart. Remove it from the package, or deactivate it instead.'
+    );
+  });
+
+  it('FR-PCF-06 creates a package with the services ticked', async () => {
+    renderAt('/acme/settings/pricing/packages');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add value' }));
+    fireEvent.change(screen.getByLabelText('Albanian name'), { target: { value: 'Premium' } });
+    fireEvent.click(screen.getByLabelText('Training'));
+    fireEvent.click(screen.getByLabelText('Risk assessment'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(pricing.create).toHaveBeenCalledWith('packages', {
+        nameSq: 'Premium',
+        nameEn: null,
+        descriptionSq: null,
+        descriptionEn: null,
+        serviceIds: ['s3', 's1'],
+      })
+    );
+  });
+
+  it("FR-PCF-06 orders a package's services, adds one, and saves them", async () => {
+    renderAt('/acme/settings/pricing/packages');
+
+    expect(within(screen.getByTestId('lookup-row-p1')).getByText('Default')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Services of Standard' }));
+    const picker = screen.getByRole('region', { name: 'Services of Standard' });
+    fireEvent.click(within(picker).getByRole('button', { name: 'Move Health visits up' }));
+    fireEvent.click(within(picker).getByLabelText('Training'));
+    expect(within(picker).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Health visits',
+      'Risk assessment',
+      'Training',
+    ]);
+    fireEvent.click(within(picker).getByRole('button', { name: 'Save services' }));
+
+    await waitFor(() => expect(pricing.setPackageServices).toHaveBeenCalledWith('p1', ['s2', 's1', 's3']));
+  });
+
+  it('FR-PCF-06 makes another package the default', async () => {
+    renderAt('/acme/settings/pricing/packages');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make Plus the default package' }));
+
+    await waitFor(() => expect(pricing.setDefaultPackage).toHaveBeenCalledWith('p2'));
+  });
+
+  it('FR-PCF-08 saves only the offer settings that changed', async () => {
+    renderAt('/acme/settings/pricing/offer');
+
+    expect((screen.getByLabelText('Company name') as HTMLInputElement).value).toBe('Wellness Albania');
+    fireEvent.change(screen.getByLabelText('Valid for (days after sending)'), { target: { value: '15' } });
+    fireEvent.change(screen.getByLabelText('Offer number prefix'), { target: { value: 'wa' } });
+    fireEvent.change(screen.getByLabelText('NIPT'), { target: { value: 'L12345678A' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(pricing.updateOfferSettings).toHaveBeenCalledWith({ offerValidityDays: 15, offerNumberPrefix: 'WA', nipt: 'L12345678A' })
+    );
+    expect((await screen.findByRole('status')).textContent).toBe('Saved.');
+  });
+
+  it('FR-PCF-08 shows a refused setting under its field', async () => {
+    pricing.updateOfferSettings.mockRejectedValue(apiError(400, { code: 'INVALID_OFFER_SETTING', field: 'offerValidityDays' }));
+    renderAt('/acme/settings/pricing/offer');
+
+    fireEvent.change(screen.getByLabelText('Valid for (days after sending)'), { target: { value: '400' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Enter a whole number of days from 1 to 365.');
+  });
+
+  it('FR-PCF-08 edits the English terms as rich text and sends them as TipTap JSON', async () => {
+    renderAt('/acme/settings/pricing/offer');
+
+    expect(screen.getByRole('textbox', { name: 'Terms (Albanian)' }).textContent).toBe('TVSH nuk përfshihet.');
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    const terms = screen.getByRole('textbox', { name: 'Terms (English)' });
+    expect(terms.textContent).toBe('VAT not included.');
+
+    await act(async () => {
+      const editor = (terms as HTMLElement & { editor: Editor }).editor;
+      editor.commands.selectAll();
+      editor.commands.toggleBold();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(pricing.updateOfferSettings).toHaveBeenCalledWith({
+        termsEn: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'VAT not included.', marks: [{ type: 'bold' }] }] }],
+        },
+      })
+    );
   });
 });

@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, Color, FontFamily, FontSize, BackgroundColor, LineHeight } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import { isAllowedHref } from '../../../utils/safeHref';
 
 /**
  * The extension set for the TEXT component's editor (spec §10).
@@ -63,6 +64,37 @@ export const RICH_TEXT_EXTENSIONS = [
   TextAlign.configure({
     types: ['paragraph', 'heading'],
     alignments: ['left', 'center', 'right', 'justify'],
+  }),
+];
+
+/**
+ * The extension set for the offer texts (M2 Slice 4) and the sales script
+ * (Slice 5): paragraphs, lists, bold, italic and links, with undo. It
+ * produces exactly what the server's document whitelist accepts
+ * (`backend/src/shared/application/richText/sanitizeRichText.ts`), which is
+ * narrower than the form TEXT component's: no colours, fonts, sizes,
+ * alignment, headings, underline or strike, since the offer's layout owns
+ * the look. Links are http, https or mailto only (NFR-SEC-05), never opened
+ * by a click while editing.
+ */
+export const DOCUMENT_TEXT_EXTENSIONS = [
+  StarterKit.configure({
+    blockquote: false,
+    code: false,
+    codeBlock: false,
+    heading: false,
+    horizontalRule: false,
+    strike: false,
+    underline: false,
+    link: {
+      openOnClick: false,
+      autolink: true,
+      linkOnPaste: true,
+      defaultProtocol: 'https',
+      protocols: ['mailto'],
+      isAllowedUri: (url) => isAllowedHref(url),
+      shouldAutoLink: (url) => isAllowedHref(url) || isAllowedHref(`https://${url}`),
+    },
   }),
 ];
 

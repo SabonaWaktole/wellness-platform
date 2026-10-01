@@ -105,4 +105,31 @@ describe('RichTextReadOnly', () => {
     ).not.toThrow();
     expect(screen.getByText('still here')).toBeInTheDocument();
   });
+
+  it('NFR-SEC-05 renders an http, https or mailto link as a link that opens apart, and any other href as text', () => {
+    const link = (href: string) => ({ type: 'link', attrs: { href } });
+    const { container } = render(
+      <RichTextReadOnly
+        content={doc([
+          {
+            type: 'paragraph',
+            content: [
+              { type: 'text', text: 'site', marks: [link('https://wellness.al')] },
+              { type: 'text', text: 'mail', marks: [link('mailto:info@wellness.al')] },
+              { type: 'text', text: 'bad', marks: [link('javascript:alert(1)')] },
+              { type: 'text', text: 'data', marks: [link('data:text/html,x')] },
+            ],
+          },
+        ])}
+      />
+    );
+    const anchors = [...container.querySelectorAll('a')];
+    expect(anchors.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['site', 'https://wellness.al'],
+      ['mail', 'mailto:info@wellness.al'],
+    ]);
+    expect(anchors[0].getAttribute('rel')).toBe('noopener noreferrer');
+    // The refused links keep their text, as plain text.
+    expect(container.querySelector('p')?.textContent).toBe('sitemailbaddata');
+  });
 });

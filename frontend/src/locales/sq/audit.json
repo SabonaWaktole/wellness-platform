@@ -48,7 +48,9 @@
     "RiskSurcharge": "Shtesë për rrezikun",
     "VisitFrequency": "Frekuencë vizitash",
     "PriceZone": "Zonë çmimi",
-    "PricingSettings": "Cilësimet e çmimeve"
+    "PricingSettings": "Cilësimet e çmimeve",
+    "Service": "Shërbim",
+    "ServicePackage": "Paketë shërbimesh"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
@@ -118,7 +120,26 @@
     "frequencyValue": "Vlera",
     "surchargePercent": "Shtesa (%)",
     "cities": "Qytetet",
-    "discountCapPercent": "Kufiri i zbritjes (%)"
+    "discountCapPercent": "Kufiri i zbritjes (%)",
+    "descriptionSq": "Përshkrimi në shqip",
+    "descriptionEn": "Përshkrimi në anglisht",
+    "services": "Shërbimet",
+    "isDefault": "Paketa e paracaktuar",
+    "offerValidityDays": "Vlefshmëria e ofertës (ditë)",
+    "contractMonthsDefault": "Kohëzgjatja e kontratës (muaj)",
+    "offerNumberPrefix": "Parashtesa e numrit të ofertës",
+    "companyName": "Emri i kompanisë",
+    "nipt": "NIPT",
+    "address": "Adresa",
+    "phone": "Telefoni",
+    "website": "Faqja e internetit",
+    "bankDetails": "Të dhënat bankare",
+    "introSq": "Hyrja (shqip)",
+    "introEn": "Hyrja (anglisht)",
+    "termsSq": "Kushtet (shqip)",
+    "termsEn": "Kushtet (anglisht)",
+    "closingSq": "Mbyllja (shqip)",
+    "closingEn": "Mbyllja (anglisht)"
   },
   "empty": {
     "title": "Asnjë hyrje nuk përputhet me këto filtra",
