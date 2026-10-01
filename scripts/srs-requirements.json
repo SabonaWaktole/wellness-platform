@@ -471,6 +471,81 @@
       "id": "NFR-USE-02",
       "priority": "Must",
       "requirement": "All Milestone 2 screens, including the board, calendar, pricing screen and script panel, shall work on desktop and mobile from 360 px wide."
+    },
+    {
+      "id": "FR-DEAL-01",
+      "priority": "Must",
+      "requirement": "A user with \"Deals: create / edit\" shall create a deal for a company with: type (New contract, Renewal, Extra services), title (default \"<company> – <type>\"), responsible salesperson (default: the company's), expected close date (optional) and notes. A company can have several deals, open or closed."
+    },
+    {
+      "id": "FR-DEAL-02",
+      "priority": "Should",
+      "requirement": "Creating a company shall offer to create its first deal in stage New Lead at the same time."
+    },
+    {
+      "id": "FR-DEAL-03",
+      "priority": "Must",
+      "requirement": "The deal page shall show: company, contact persons, stage, value (net monthly and annual from the latest offer), offers with their versions and statuses, activities and follow-ups for this deal, stage history and notes. The sales script button is available on it."
+    },
+    {
+      "id": "FR-DEAL-04",
+      "priority": "Must",
+      "requirement": "Deals follow the data scope of Milestone 1: Own for Sales User, Team for Sales Manager, All for Administrator and CEO. Reception has no access to deals."
+    },
+    {
+      "id": "FR-DEAL-05",
+      "priority": "Must",
+      "requirement": "Changing the responsible salesperson of a deal requires \"Companies: reassign\" and is audited."
+    },
+    {
+      "id": "FR-DEAL-06",
+      "priority": "Must",
+      "requirement": "The pipeline stages shall be New Lead, Contacted, Interested, Offer Prepared, Offer Sent, Follow-Up, Negotiation, Won and Lost. The set is fixed in code (the platform logic depends on Won and Lost); the Administrator can change labels, order and colour, as for contract statuses in M1 FR-SET-07."
+    },
+    {
+      "id": "FR-DEAL-07",
+      "priority": "Must",
+      "requirement": "The salesperson shall move an open deal to any other open stage, forwards or backwards (Q10). Won and Lost are reached only through the win and lose actions (7.3)."
+    },
+    {
+      "id": "FR-DEAL-08",
+      "priority": "Should",
+      "requirement": "The platform shall move a deal forward automatically: creating its first offer → Offer Prepared; marking an offer as sent → Offer Sent; scheduling a follow-up when the deal is in Offer Sent → Follow-Up; logging the first activity on a New Lead → Contacted. It never moves a deal backwards automatically."
+    },
+    {
+      "id": "FR-DEAL-09",
+      "priority": "Must",
+      "requirement": "Every stage change shall be recorded in the stage history: from, to, user (or \"automatic\"), date and time. The time spent in each stage and from creation to close is kept for Milestone 3 reports."
+    },
+    {
+      "id": "FR-DEAL-10",
+      "priority": "Must",
+      "requirement": "The pipeline shall be shown as a board with one column per open stage (and Won / Lost this month), cards showing company, deal title, net monthly value, salesperson and next follow-up date. Cards can be dragged between columns. Each column shows the number of deals and their total value."
+    },
+    {
+      "id": "FR-DEAL-11",
+      "priority": "Must",
+      "requirement": "The pipeline shall also be shown as a list with sorting and filters by salesperson, stage, deal type, business type, area, city, expected close date and value."
+    },
+    {
+      "id": "FR-DEAL-13",
+      "priority": "Must",
+      "requirement": "On a phone the board scrolls horizontally inside the board area and cards can be moved with a \"Move to stage\" action instead of dragging."
+    },
+    {
+      "id": "FR-DEAL-19",
+      "priority": "Should",
+      "requirement": "A deal can be deleted (soft delete) only by a user with \"Deals: delete\" and only if it has no offer marked as sent."
+    },
+    {
+      "id": "FR-DEAL-20",
+      "priority": "Must",
+      "requirement": "Deals and their stage changes shall appear in the company history timeline (M1 FR-CMP-05)."
+    },
+    {
+      "id": "NFR-PERF-03",
+      "priority": "Should",
+      "requirement": "The pipeline board and calendar shall load in under 2 seconds with 2,000 open deals and 5,000 follow-ups."
     }
   ]
 }
