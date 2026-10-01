@@ -20,6 +20,8 @@ const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
   Service: [],
   ServicePackage: [],
   PackageService: [],
+  // Slice 5: the sales script holds no money.
+  SalesScript: [],
 };
 
 /** Field name → type, for one model block of a Prisma schema. */
