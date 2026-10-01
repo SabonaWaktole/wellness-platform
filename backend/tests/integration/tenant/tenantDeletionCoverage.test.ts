@@ -148,7 +148,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // and lost-deal reasons, for every tenant.
     await new PrismaLookupSeeder(prisma).seed(tenantId);
     // PriceZoneCity holds RESTRICT on its City (M2 Slice 3); the pricing seed
-    // gives every tenant zones with cities.
+    // gives every tenant zones with cities, and a package with services.
     await new PrismaPricingSeeder(prisma).seed(tenantId);
 
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
@@ -181,6 +181,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.visitFrequency.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.employeeBand.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.pricingSettings.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.servicePackage.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.service.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });

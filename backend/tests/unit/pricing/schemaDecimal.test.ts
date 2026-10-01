@@ -16,6 +16,10 @@ const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
   VisitFrequency: ['value'],
   PriceZone: ['surchargePercent'],
   PriceZoneCity: [],
+  // Slice 4: services and packages carry no price (Q11).
+  Service: [],
+  ServicePackage: [],
+  PackageService: [],
 };
 
 /** Field name → type, for one model block of a Prisma schema. */

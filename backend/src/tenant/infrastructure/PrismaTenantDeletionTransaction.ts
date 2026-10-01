@@ -101,6 +101,9 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.visitFrequency.deleteMany({ where: { tenantId } });
       await tx.employeeBand.deleteMany({ where: { tenantId } });
       await tx.pricingSettings.deleteMany({ where: { tenantId } });
+      // Services and packages (M2 Slice 4): their links cascade from both.
+      await tx.servicePackage.deleteMany({ where: { tenantId } });
+      await tx.service.deleteMany({ where: { tenantId } });
       // Same situation: City holds RESTRICT on its Area.
       await tx.city.deleteMany({ where: { tenantId } });
       await tx.area.deleteMany({ where: { tenantId } });

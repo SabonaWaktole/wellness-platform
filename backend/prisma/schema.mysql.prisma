@@ -149,6 +149,10 @@ model Tenant {
   riskSurcharges   RiskSurcharge[]
   visitFrequencies VisitFrequency[]
   priceZones       PriceZone[]
+
+  // M2 Slice 4: services and packages
+  services        Service[]
+  servicePackages ServicePackage[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -1466,15 +1470,36 @@ model StatusLabel {
   @@id([tenantId, domain, key])
 }
 
-/// M2 Slice 3: the workspace-wide pricing values (FR-PCF-07). One row per
-/// workspace; Slice 4 adds the offer settings to it. Money and percentages
-/// are Decimal, never Float (NFR-ACC-02).
+/// M2 Slice 3: the workspace-wide pricing values (FR-PCF-07), and from Slice 4
+/// the offer settings (FR-PCF-08). One row per workspace. Money and
+/// percentages are Decimal, never Float (NFR-ACC-02).
 model PricingSettings {
-  tenantId           String   @id
-  currency           String   @default("EUR")
+  tenantId              String   @id
+  currency              String   @default("EUR")
   /// The highest discount % a salesperson may apply without approval.
-  discountCapPercent Decimal  @default(10) @db.Decimal(7, 2)
-  updatedAt          DateTime @updatedAt
+  discountCapPercent    Decimal  @default(10) @db.Decimal(7, 2)
+  /// Days an offer stays valid after it is marked as sent (Q9).
+  offerValidityDays     Int      @default(30)
+  /// Contract length the annual value is calculated over (Q6).
+  contractMonthsDefault Int      @default(12)
+  /// Prefix of the offer number, e.g. "OF" in OF-2026-0001 (Slice 9).
+  offerNumberPrefix     String   @default("OF")
+  /// The company details printed on the offer.
+  companyName           String?
+  nipt                  String?
+  address               String? @db.Text
+  phone                 String?
+  email                 String?
+  website               String?
+  bankDetails           String? @db.Text
+  /// The standard offer texts as sanitised TipTap JSON (plan D10, NFR-SEC-05).
+  introSq               Json?
+  introEn               Json?
+  termsSq               Json?
+  termsEn               Json?
+  closingSq             Json?
+  closingEn             Json?
+  updatedAt             DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
@@ -1570,4 +1595,65 @@ model PriceZoneCity {
 
   @@id([zoneId, cityId])
   @@index([cityId])
+}
+
+/// M2 Slice 4: a service the offer describes (FR-PCF-06). It has no price:
+/// packages describe what the client gets, the pricing model sets the price
+/// (Q11).
+model Service {
+  id            String   @id
+  tenantId      String
+  nameSq        String
+  nameEn        String?
+  descriptionSq String? @db.Text
+  descriptionEn String? @db.Text
+  order         Int      @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  packages PackageService[]
+
+  @@index([tenantId, order])
+}
+
+/// A named set of services the salesperson picks for an offer (FR-PCF-06).
+/// Exactly one active package is the default; that rule lives in the
+/// application layer.
+model ServicePackage {
+  id            String   @id
+  tenantId      String
+  nameSq        String
+  nameEn        String?
+  descriptionSq String? @db.Text
+  descriptionEn String? @db.Text
+  isDefault     Boolean  @default(false)
+  order         Int      @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  services PackageService[]
+
+  @@index([tenantId, order])
+}
+
+/// The services of a package, in the order the offer lists them. A service in
+/// a package is in use: it can be deactivated but not deleted, which
+/// DeletePricingItemUseCase enforces. The service side cascades rather than
+/// restricts because deleting a workspace cascades to Service and
+/// ServicePackage in no fixed order, and Postgres checks a RESTRICT (or NO
+/// ACTION) key inside each cascade step.
+model PackageService {
+  packageId String
+  serviceId String
+  order     Int    @default(0)
+
+  package ServicePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  service Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([packageId, serviceId])
+  @@index([serviceId])
 }

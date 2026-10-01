@@ -9,7 +9,9 @@ export type PricingValueErrorCode =
   | 'INVALID_PERCENT'
   | 'INVALID_BAND_RANGE'
   | 'INVALID_PRICING_VALUE'
-  | 'CITY_NOT_ACTIVE';
+  | 'CITY_NOT_ACTIVE'
+  | 'INVALID_OFFER_SETTING'
+  | 'INVALID_RICH_TEXT';
 
 /**
  * A pricing value failed a rule of the model: a fee that is negative, not a
