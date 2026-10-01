@@ -30,6 +30,44 @@
 .toolbar {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Shqip / English before sign-in. */
+.languageSwitch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.languageSwitch button {
+  min-height: 36px;
+  padding: 0 var(--spacing-sm);
+  font: inherit;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.languageSwitch button:hover {
+  color: var(--text-primary);
+}
+
+.languageSwitch button[aria-pressed='true'] {
+  background-color: var(--color-surface-container-high);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.languageSwitch button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-tight);
 }
 
 .content {
