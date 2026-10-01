@@ -6,6 +6,7 @@ import {
   BandsOverlapError,
   InvalidPricingOrderError,
   InvalidPricingValueError,
+  PricingConflictError,
   PricingItemNotFoundError,
   PricingNameTakenError,
 } from '../../domain/errors';
@@ -21,6 +22,11 @@ import { SetRiskSurchargeUseCase } from '../../application/use-cases/SetRiskSurc
 import { SetDiscountCapUseCase } from '../../application/use-cases/SetDiscountCapUseCase';
 import { ListCitiesWithoutZoneUseCase } from '../../application/use-cases/ListCitiesWithoutZoneUseCase';
 import { TestPriceCalculationUseCase } from '../../application/use-cases/TestPriceCalculationUseCase';
+import { CreateServicePackageUseCase } from '../../application/use-cases/CreateServicePackageUseCase';
+import { SetPackageServicesUseCase } from '../../application/use-cases/SetPackageServicesUseCase';
+import { SetDefaultPackageUseCase } from '../../application/use-cases/SetDefaultPackageUseCase';
+import { ListActivePackagesUseCase } from '../../application/use-cases/ListActivePackagesUseCase';
+import { UpdateOfferSettingsUseCase } from '../../application/use-cases/UpdateOfferSettingsUseCase';
 
 /** Maps the pricing module's errors to a status; anything else goes to the app's error handler. */
 function sendPricingError(res: Response, next: NextFunction, error: unknown) {
@@ -42,13 +48,16 @@ function sendPricingError(res: Response, next: NextFunction, error: unknown) {
   if (error instanceof PricingNameTakenError) {
     return res.status(409).json({ error: error.message, code: error.code, field: error.field });
   }
+  if (error instanceof PricingConflictError) {
+    return res.status(409).json({ error: error.message, code: error.code, names: error.names });
+  }
   return next(error);
 }
 
 const listOf = (req: Request) => req.params.list as PricingList;
 
 /**
- * Settings → Pricing (M2 Slice 3). Parses, calls one use case, and sends the
+ * Settings → Pricing (M2 Slices 3 and 4). Parses, calls one use case, and sends the
  * result through `redactFields`, so a custom role holding `pricing.manage`
  * without `commercial.view` still receives no amounts (FR-RBAC-17).
  */
@@ -64,7 +73,12 @@ export class PricingController {
     private readonly setRiskSurcharge: SetRiskSurchargeUseCase,
     private readonly setDiscountCap: SetDiscountCapUseCase,
     private readonly listCitiesWithoutZone: ListCitiesWithoutZoneUseCase,
-    private readonly testCalculation: TestPriceCalculationUseCase
+    private readonly testCalculation: TestPriceCalculationUseCase,
+    private readonly createServicePackage: CreateServicePackageUseCase,
+    private readonly setPackageServices: SetPackageServicesUseCase,
+    private readonly setDefaultPackage: SetDefaultPackageUseCase,
+    private readonly listActivePackages: ListActivePackagesUseCase,
+    private readonly updateOfferSettings: UpdateOfferSettingsUseCase
   ) {}
 
   private handle =
@@ -144,6 +158,34 @@ export class PricingController {
       tenantId: requireTenantId(req),
       discountCapPercent: req.body.discountCapPercent,
     }),
+  }));
+
+  createPackage = this.handle(201, async (req) => {
+    const { serviceIds, ...values } = req.body;
+    return {
+      item: await this.createServicePackage.execute({ access: req.access!, tenantId: requireTenantId(req), values, serviceIds }),
+    };
+  });
+
+  packageServices = this.handle(200, async (req) => ({
+    item: await this.setPackageServices.execute({
+      access: req.access!,
+      tenantId: requireTenantId(req),
+      packageId: req.params.id as string,
+      serviceIds: req.body.serviceIds,
+    }),
+  }));
+
+  defaultPackage = this.handle(200, async (req) => ({
+    item: await this.setDefaultPackage.execute({ access: req.access!, tenantId: requireTenantId(req), packageId: req.params.id as string }),
+  }));
+
+  activePackages = this.handle(200, async (req) => ({
+    data: await this.listActivePackages.execute({ access: req.access!, tenantId: requireTenantId(req) }),
+  }));
+
+  offerSettings = this.handle(200, async (req) => ({
+    data: await this.updateOfferSettings.execute({ access: req.access!, tenantId: requireTenantId(req), values: req.body }),
   }));
 
   private async setActive(req: Request, active: boolean) {

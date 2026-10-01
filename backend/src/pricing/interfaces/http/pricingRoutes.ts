@@ -9,6 +9,7 @@ import { validateRequest } from '../../../main/interfaces/http/middlewares/valid
 import { ResolveAccessContextUseCase } from '../../../access/application/use-cases/ResolveAccessContextUseCase';
 import { isPricingList, ORDERED_PRICING_LISTS, PricingList } from '../../domain/PricingLists';
 import { MANAGE_PRICING } from '../../application/pricingAdmin';
+import { EDIT_OFFERS } from '../../application/use-cases/ListActivePackagesUseCase';
 import { PricingController } from './PricingController';
 import { pricingSchemas } from './pricingSchemas';
 
@@ -17,10 +18,11 @@ const validateFor = (schemaOf: (list: PricingList) => Parameters<typeof validate
   (req: Request, res: Response, next: NextFunction) => validateRequest(schemaOf(req.params.list as PricingList))(req, res, next);
 
 /**
- * `/api/:tenantSlug/pricing`. Every route, reads included, is the
+ * `/api/:tenantSlug/pricing`. Every admin route, reads included, is the
  * Administrator's `pricing.manage`: the pricing model is commercial, so none
  * of it is readable by the rest of the workspace (Slice 3). Salespeople get
- * what they need through the pricing screen's own endpoint (Slice 8).
+ * what they need through the pricing screen's own endpoint (Slice 8), and
+ * the active packages, which carry no price, with `offers.edit` (Slice 4).
  */
 export const createPricingRouter = (
   controller: PricingController,
@@ -40,6 +42,12 @@ export const createPricingRouter = (
   router.put('/risk-surcharges/:riskLevelId', manage, validateRequest(pricingSchemas.riskSurcharge), controller.riskSurcharge);
   router.put('/discount-cap', manage, validateRequest(pricingSchemas.discountCap), controller.discountCap);
   router.put('/zones/:id/cities', manage, validateRequest(pricingSchemas.zoneCities), controller.zoneCities);
+  router.put('/offer-settings', manage, validateRequest(pricingSchemas.offerSettings), controller.offerSettings);
+  // Packages: read for an offer, created with their services, one default.
+  router.get('/packages/active', requirePermission(EDIT_OFFERS), controller.activePackages);
+  router.post('/packages', manage, validateRequest(pricingSchemas.createPackage), controller.createPackage);
+  router.put('/packages/:id/services', manage, validateRequest(pricingSchemas.packageServices), controller.packageServices);
+  router.post('/packages/:id/default', manage, controller.defaultPackage);
 
   // The gate runs before the list check, so a caller without pricing.manage
   // learns nothing about which lists exist.

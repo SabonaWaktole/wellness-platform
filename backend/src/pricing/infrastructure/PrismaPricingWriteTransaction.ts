@@ -1,10 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 import { IAuditTrail } from '../../audit/application/ports/IAuditTrail';
 import { PrismaAuditTrail } from '../../audit/infrastructure/PrismaAuditTrail';
 import { IPricingWrites, IPricingWriteTransaction, PricingWriteRepos } from '../application/ports/IPricingWriteTransaction';
-import { EmployeeBand, PriceZone, PricingItemOf, PricingList, VisitFrequency } from '../domain/PricingLists';
-import { bandData, frequencyData, zoneData } from './prismaPricingRows';
+import { OfferSettings } from '../domain/OfferSettings';
+import { EmployeeBand, PriceZone, PricingItemOf, PricingList, Service, ServicePackage, VisitFrequency } from '../domain/PricingLists';
+import { bandData, frequencyData, offerSettingsData, packageData, serviceData, zoneData } from './prismaPricingRows';
 
 class PrismaPricingWrites implements IPricingWrites {
   constructor(private readonly prisma: PrismaClient) {}
@@ -20,6 +21,15 @@ class PrismaPricingWrites implements IPricingWrites {
       case PricingList.Zones:
         await this.prisma.priceZone.create({ data: { id: item.id, tenantId, ...zoneData(item as PriceZone) } });
         return;
+      case PricingList.Services:
+        await this.prisma.service.create({ data: { id: item.id, tenantId, ...serviceData(item as Service) } });
+        return;
+      case PricingList.Packages: {
+        const pkg = item as ServicePackage;
+        await this.prisma.servicePackage.create({ data: { id: pkg.id, tenantId, ...packageData(pkg), isDefault: pkg.isDefault } });
+        await this.setPackageServices(tenantId, pkg.id, pkg.serviceIds);
+        return;
+      }
     }
   }
 
@@ -34,6 +44,12 @@ class PrismaPricingWrites implements IPricingWrites {
         return;
       case PricingList.Zones:
         await this.prisma.priceZone.updateMany({ where, data: zoneData(item as PriceZone) });
+        return;
+      case PricingList.Services:
+        await this.prisma.service.updateMany({ where, data: serviceData(item as Service) });
+        return;
+      case PricingList.Packages:
+        await this.prisma.servicePackage.updateMany({ where, data: packageData(item as ServicePackage) });
         return;
     }
   }
@@ -50,6 +66,13 @@ class PrismaPricingWrites implements IPricingWrites {
       case PricingList.Zones:
         // The zone's city links cascade with it.
         await this.prisma.priceZone.deleteMany({ where });
+        return;
+      case PricingList.Services:
+        await this.prisma.service.deleteMany({ where });
+        return;
+      case PricingList.Packages:
+        // The package's service links cascade with it.
+        await this.prisma.servicePackage.deleteMany({ where });
         return;
     }
   }
@@ -75,6 +98,32 @@ class PrismaPricingWrites implements IPricingWrites {
       where: { tenantId },
       create: { tenantId, discountCapPercent },
       update: { discountCapPercent },
+    });
+  }
+
+  async setPackageServices(tenantId: string, packageId: string, serviceIds: string[]): Promise<void> {
+    // Scoped through the package's tenant, so no write can reach another workspace's package.
+    await this.prisma.packageService.deleteMany({ where: { packageId, package: { tenantId } } });
+    if (serviceIds.length > 0) {
+      await this.prisma.packageService.createMany({
+        data: serviceIds.map((serviceId, index) => ({ packageId, serviceId, order: index + 1 })),
+      });
+    }
+  }
+
+  async setDefaultPackage(tenantId: string, packageId: string): Promise<void> {
+    await this.prisma.servicePackage.updateMany({ where: { tenantId, isDefault: true, id: { not: packageId } }, data: { isDefault: false } });
+    await this.prisma.servicePackage.updateMany({ where: { tenantId, id: packageId }, data: { isDefault: true } });
+  }
+
+  async updateOfferSettings(tenantId: string, changes: Partial<OfferSettings>): Promise<void> {
+    // Every workspace has its row from the seed or the migration; the upsert
+    // only guards a database restored from before them.
+    const data = offerSettingsData(changes);
+    await this.prisma.pricingSettings.upsert({
+      where: { tenantId },
+      create: { ...(data as Prisma.PricingSettingsUncheckedCreateInput), tenantId },
+      update: data,
     });
   }
 }

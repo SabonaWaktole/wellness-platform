@@ -138,6 +138,11 @@ import { SetDiscountCapUseCase } from '../pricing/application/use-cases/SetDisco
 import { ListCitiesWithoutZoneUseCase } from '../pricing/application/use-cases/ListCitiesWithoutZoneUseCase';
 import { LoadPricingConfigUseCase } from '../pricing/application/use-cases/LoadPricingConfigUseCase';
 import { TestPriceCalculationUseCase } from '../pricing/application/use-cases/TestPriceCalculationUseCase';
+import { CreateServicePackageUseCase } from '../pricing/application/use-cases/CreateServicePackageUseCase';
+import { SetPackageServicesUseCase } from '../pricing/application/use-cases/SetPackageServicesUseCase';
+import { SetDefaultPackageUseCase } from '../pricing/application/use-cases/SetDefaultPackageUseCase';
+import { ListActivePackagesUseCase } from '../pricing/application/use-cases/ListActivePackagesUseCase';
+import { UpdateOfferSettingsUseCase } from '../pricing/application/use-cases/UpdateOfferSettingsUseCase';
 import { PricingController } from '../pricing/interfaces/http/PricingController';
 import { createPricingRouter } from '../pricing/interfaces/http/pricingRoutes';
 import { PrismaStatusLabelStore } from '../statuses/infrastructure/PrismaStatusLabelStore';
@@ -443,7 +448,12 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new SetRiskSurchargeUseCase(pricingStore, pricingWriteTransaction),
     new SetDiscountCapUseCase(pricingStore, pricingWriteTransaction),
     new ListCitiesWithoutZoneUseCase(pricingStore),
-    new TestPriceCalculationUseCase(new LoadPricingConfigUseCase(pricingStore))
+    new TestPriceCalculationUseCase(new LoadPricingConfigUseCase(pricingStore)),
+    new CreateServicePackageUseCase(pricingStore, pricingWriteTransaction),
+    new SetPackageServicesUseCase(pricingStore, pricingWriteTransaction),
+    new SetDefaultPackageUseCase(pricingStore, pricingWriteTransaction),
+    new ListActivePackagesUseCase(pricingStore),
+    new UpdateOfferSettingsUseCase(pricingStore, pricingWriteTransaction)
   );
   app.use('/api/:tenantSlug/pricing', createPricingRouter(pricingController, tokenService, tenantRepository, resolveAccessContext));
 

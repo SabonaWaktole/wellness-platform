@@ -4,14 +4,16 @@ import { BandsOverlapError, InvalidPricingValueError, PricingNameTakenError } fr
 import { parseFee, parsePercent, parseWholeNumber } from './PricingValues';
 
 /**
- * The three pricing lists the Administrator edits row by row (FR-PCF-01, 04,
- * 05). The values are URL segments: `/pricing/bands`, `/pricing/frequencies`,
- * `/pricing/zones`.
+ * The pricing lists the Administrator edits row by row (FR-PCF-01, 04, 05,
+ * 06). The values are URL segments: `/pricing/bands`, `/pricing/frequencies`,
+ * `/pricing/zones`, `/pricing/services`, `/pricing/packages`.
  */
 export enum PricingList {
   Bands = 'bands',
   Frequencies = 'frequencies',
   Zones = 'zones',
+  Services = 'services',
+  Packages = 'packages',
 }
 
 export const PRICING_LISTS: readonly PricingList[] = Object.values(PricingList);
@@ -25,6 +27,8 @@ export const PRICING_AUDIT_ENTITY: Record<PricingList, string> = {
   [PricingList.Bands]: 'EmployeeBand',
   [PricingList.Frequencies]: 'VisitFrequency',
   [PricingList.Zones]: 'PriceZone',
+  [PricingList.Services]: 'Service',
+  [PricingList.Packages]: 'ServicePackage',
 };
 
 /** Amounts and percentages are strings with two decimals, as stored (NFR-ACC-02). */
@@ -62,10 +66,41 @@ export interface PriceZone {
   active: boolean;
 }
 
+/** A service the offer describes (FR-PCF-06). It has no price (Q11). */
+export interface Service {
+  id: string;
+  nameSq: string;
+  nameEn: string | null;
+  descriptionSq: string | null;
+  descriptionEn: string | null;
+  order: number;
+  active: boolean;
+}
+
+/**
+ * A named set of services (FR-PCF-06). Exactly one active package is the
+ * default. Its services and the default flag have their own use cases, as a
+ * zone's cities do.
+ */
+export interface ServicePackage {
+  id: string;
+  nameSq: string;
+  nameEn: string | null;
+  descriptionSq: string | null;
+  descriptionEn: string | null;
+  /** In the order the offer lists them. */
+  serviceIds: string[];
+  isDefault: boolean;
+  order: number;
+  active: boolean;
+}
+
 export interface PricingItemOf {
   [PricingList.Bands]: EmployeeBand;
   [PricingList.Frequencies]: VisitFrequency;
   [PricingList.Zones]: PriceZone;
+  [PricingList.Services]: Service;
+  [PricingList.Packages]: ServicePackage;
 }
 
 export type PricingItem = PricingItemOf[PricingList];
@@ -92,7 +127,9 @@ const has = (values: Record<string, unknown>, field: string) => field in values 
 const pick = <T>(values: Record<string, unknown>, field: string, current: T | undefined): unknown =>
   has(values, field) ? values[field] : current;
 
-function checkNames<T extends VisitFrequency | PriceZone>(item: T, siblings: T[]) {
+type NamedItem = VisitFrequency | PriceZone | Service | ServicePackage;
+
+function checkNames<T extends NamedItem>(item: T, siblings: T[]) {
   if (findNameClash(siblings, { nameSq: item.nameSq, nameEn: item.nameEn }, item.id)) {
     throw new PricingNameTakenError();
   }
@@ -112,7 +149,7 @@ function labelsOf(values: Record<string, unknown>, current: { nameSq: string; na
   }
 }
 
-const sortByOrder = <T extends VisitFrequency | PriceZone>(items: T[]) =>
+const sortByOrder = <T extends NamedItem>(items: T[]) =>
   [...items].sort((a, b) => a.order - b.order || a.nameSq.localeCompare(b.nameSq, 'sq'));
 
 /** The most employees a band may cover; far above any micro-business, it only keeps the number sane. */
@@ -203,11 +240,91 @@ export const zoneRules: PricingListRules<PriceZone> = {
   sort: sortByOrder,
 };
 
+/** The longest description of a service or package, as the offer prints it. */
+export const MAX_DESCRIPTION_LENGTH = 2000;
+
+/** Optional sq/en descriptions: trimmed, an empty one cleared. */
+function descriptionsOf(values: Record<string, unknown>, current: { descriptionSq: string | null; descriptionEn: string | null } | null) {
+  const parse = (field: 'descriptionSq' | 'descriptionEn') => {
+    const value = pick(values, field, current?.[field] ?? null);
+    if (value === null) return null;
+    if (typeof value !== 'string' || value.trim().length > MAX_DESCRIPTION_LENGTH) {
+      throw new InvalidPricingValueError(
+        'INVALID_PRICING_VALUE',
+        field,
+        `Enter a description of at most ${MAX_DESCRIPTION_LENGTH} characters.`
+      );
+    }
+    return value.trim() || null;
+  };
+  return { descriptionSq: parse('descriptionSq'), descriptionEn: parse('descriptionEn') };
+}
+
+const describedAudit = (item: Service | ServicePackage) => ({
+  nameSq: item.nameSq,
+  nameEn: item.nameEn,
+  descriptionSq: item.descriptionSq,
+  descriptionEn: item.descriptionEn,
+});
+
+export const serviceRules: PricingListRules<Service> = {
+  build: (values, current) => ({ ...labelsOf(values, current), ...descriptionsOf(values, current) }),
+  validate: checkNames,
+  audited: describedAudit,
+  label: (service) => service.nameSq,
+  sort: sortByOrder,
+};
+
+export const packageRules: PricingListRules<ServicePackage> = {
+  build: (values, current) => ({
+    ...labelsOf(values, current),
+    ...descriptionsOf(values, current),
+    // Services and the default flag have their own use cases, with their own audit entries.
+    serviceIds: current?.serviceIds ?? [],
+    isDefault: current?.isDefault ?? false,
+  }),
+  validate: checkNames,
+  audited: describedAudit,
+  label: (pkg) => pkg.nameSq,
+  sort: sortByOrder,
+};
+
 export const PRICING_RULES: { [L in PricingList]: PricingListRules<PricingItemOf[L]> } = {
   [PricingList.Bands]: bandRules,
   [PricingList.Frequencies]: frequencyRules,
   [PricingList.Zones]: zoneRules,
+  [PricingList.Services]: serviceRules,
+  [PricingList.Packages]: packageRules,
 };
 
 /** Lists the Administrator can put in their own order; bands are always shown by employee range. */
-export const ORDERED_PRICING_LISTS: readonly PricingList[] = [PricingList.Frequencies, PricingList.Zones];
+export const ORDERED_PRICING_LISTS: readonly PricingList[] = [
+  PricingList.Frequencies,
+  PricingList.Zones,
+  PricingList.Services,
+  PricingList.Packages,
+];
+
+/**
+ * The services a package may hold (FR-PCF-06): ids of this workspace's
+ * services, without repeats, at least one of them active. A service already
+ * in the package may stay after it was deactivated; only additions must be
+ * active. Returns the ids in the order given.
+ */
+export function checkPackageServices(serviceIds: string[], services: Service[], current: string[] = []): string[] {
+  const byId = new Map(services.map((service) => [service.id, service]));
+  const kept = new Set(current);
+  if (new Set(serviceIds).size !== serviceIds.length) {
+    throw new InvalidPricingValueError('INVALID_PRICING_VALUE', 'serviceIds', 'List each service once.');
+  }
+  for (const id of serviceIds) {
+    const service = byId.get(id);
+    if (!service || (!service.active && !kept.has(id))) {
+      throw new InvalidPricingValueError('SERVICE_NOT_ACTIVE', 'serviceIds', 'Choose active services from the list.');
+    }
+  }
+  if (!serviceIds.some((id) => byId.get(id)!.active)) {
+    throw new InvalidPricingValueError('PACKAGE_NEEDS_SERVICE', 'serviceIds', 'A package needs at least one active service.');
+  }
+  return serviceIds;
+}

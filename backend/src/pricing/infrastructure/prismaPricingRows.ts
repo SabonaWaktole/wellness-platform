@@ -1,6 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { FrequencyPricingType } from '../domain/DefaultPricing';
-import { EmployeeBand, PriceZone, VisitFrequency } from '../domain/PricingLists';
+import { EmployeeBand, PriceZone, Service, ServicePackage, VisitFrequency } from '../domain/PricingLists';
+import { OfferSettings } from '../domain/OfferSettings';
+import { OFFER_TEXT_FIELDS } from '../domain/DefaultOfferSettings';
 import type { RichTextDoc } from '../../shared/domain/richText';
 
 /**
@@ -25,6 +27,10 @@ type BandRow = Prisma.EmployeeBandGetPayload<object>;
 type FrequencyRow = Prisma.VisitFrequencyGetPayload<object>;
 export const zoneInclude = { cities: { select: { cityId: true } } } as const;
 type ZoneRow = Prisma.PriceZoneGetPayload<{ include: typeof zoneInclude }>;
+type ServiceRow = Prisma.ServiceGetPayload<object>;
+export const packageInclude = { services: { select: { serviceId: true }, orderBy: { order: 'asc' } } } as const;
+type PackageRow = Prisma.ServicePackageGetPayload<{ include: typeof packageInclude }>;
+type SettingsRow = Prisma.PricingSettingsGetPayload<object>;
 
 export const bandFromRow = (row: BandRow): EmployeeBand => ({
   id: row.id,
@@ -82,3 +88,72 @@ export const zoneData = (zone: PriceZone) => ({
   order: zone.order,
   active: zone.active,
 });
+
+export const serviceFromRow = (row: ServiceRow): Service => ({
+  id: row.id,
+  nameSq: row.nameSq,
+  nameEn: row.nameEn,
+  descriptionSq: row.descriptionSq,
+  descriptionEn: row.descriptionEn,
+  order: row.order,
+  active: row.active,
+});
+
+export const packageFromRow = (row: PackageRow): ServicePackage => ({
+  id: row.id,
+  nameSq: row.nameSq,
+  nameEn: row.nameEn,
+  descriptionSq: row.descriptionSq,
+  descriptionEn: row.descriptionEn,
+  serviceIds: row.services.map((link) => link.serviceId),
+  isDefault: row.isDefault,
+  order: row.order,
+  active: row.active,
+});
+
+export const serviceData = (service: Service) => ({
+  nameSq: service.nameSq,
+  nameEn: service.nameEn,
+  descriptionSq: service.descriptionSq,
+  descriptionEn: service.descriptionEn,
+  order: service.order,
+  active: service.active,
+});
+
+/** A package's own fields; its services and default flag are written by their own methods. */
+export const packageData = (pkg: ServicePackage) => ({
+  nameSq: pkg.nameSq,
+  nameEn: pkg.nameEn,
+  descriptionSq: pkg.descriptionSq,
+  descriptionEn: pkg.descriptionEn,
+  order: pkg.order,
+  active: pkg.active,
+});
+
+export const offerSettingsFromRow = (row: SettingsRow): OfferSettings => ({
+  offerValidityDays: row.offerValidityDays,
+  contractMonthsDefault: row.contractMonthsDefault,
+  offerNumberPrefix: row.offerNumberPrefix,
+  companyName: row.companyName,
+  nipt: row.nipt,
+  address: row.address,
+  phone: row.phone,
+  email: row.email,
+  website: row.website,
+  bankDetails: row.bankDetails,
+  introSq: richTextFromRow(row.introSq),
+  introEn: richTextFromRow(row.introEn),
+  termsSq: richTextFromRow(row.termsSq),
+  termsEn: richTextFromRow(row.termsEn),
+  closingSq: richTextFromRow(row.closingSq),
+  closingEn: richTextFromRow(row.closingEn),
+});
+
+/** Offer settings changes as Prisma writes them: the texts as JSON or SQL NULL. */
+export function offerSettingsData(changes: Partial<OfferSettings>): Prisma.PricingSettingsUncheckedUpdateInput {
+  const data: Record<string, unknown> = { ...changes };
+  for (const field of OFFER_TEXT_FIELDS) {
+    if (field in changes) data[field] = richTextData(changes[field] ?? null);
+  }
+  return data as Prisma.PricingSettingsUncheckedUpdateInput;
+}

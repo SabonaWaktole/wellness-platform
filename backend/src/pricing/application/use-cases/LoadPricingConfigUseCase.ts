@@ -4,9 +4,6 @@ import { FrequencyPricing, PricingConfig } from '../../domain/PricingConfig';
 import { PricingList } from '../../domain/PricingLists';
 import { IPricingStore } from '../ports/IPricingStore';
 
-/** Until Slice 4 adds the offer settings, contracts run the SRS default of 12 months (FR-PCF-08). */
-export const DEFAULT_CONTRACT_MONTHS = 12;
-
 /**
  * The only way the calculator gets its configuration (SRS §4 developer
  * note): the workspace's active bands, frequencies and zones and every risk
@@ -53,7 +50,8 @@ export class LoadPricingConfigUseCase {
       ),
       zones: Object.fromEntries(zones.filter((zone) => zone.active).map((zone) => [zone.id, Percent.of(zone.surchargePercent)])),
       discountCap: Percent.of(settings.discountCapPercent),
-      contractMonths: DEFAULT_CONTRACT_MONTHS,
+      // FR-PCF-08: the annual value is the monthly price over the configured contract length (Q6).
+      contractMonths: settings.offerSettings.contractMonthsDefault,
     };
   }
 }

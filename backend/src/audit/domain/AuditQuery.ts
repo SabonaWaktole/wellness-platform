@@ -29,6 +29,8 @@ export const AUDITED_ENTITY_TYPES = [
   'VisitFrequency',
   'PriceZone',
   'PricingSettings',
+  'Service',
+  'ServicePackage',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -51,7 +53,10 @@ export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types
     group: 'lists',
     types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'StatusLabel'],
   },
-  { group: 'pricing', types: ['EmployeeBand', 'RiskSurcharge', 'VisitFrequency', 'PriceZone', 'PricingSettings'] },
+  {
+    group: 'pricing',
+    types: ['EmployeeBand', 'RiskSurcharge', 'VisitFrequency', 'PriceZone', 'PricingSettings', 'Service', 'ServicePackage'],
+  },
 ];
 
 export function typesForGroup(group: AuditEntityGroup): readonly AuditedEntityType[] {
