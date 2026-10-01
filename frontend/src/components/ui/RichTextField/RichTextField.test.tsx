@@ -78,4 +78,33 @@ describe('RichTextField', () => {
     });
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
+
+  it('FR-SCR-04 offers section headings and subheadings only when asked to, as H2 and H3', async () => {
+    const onChange = vi.fn();
+    const { unmount } = render(<RichTextField label="Offer" value={doc('Intro')} onChange={onChange} />);
+    expect(screen.queryByRole('button', { name: 'Section heading' })).toBeNull();
+    unmount();
+
+    render(<RichTextField label="Script (Albanian)" value={doc('Hapja')} onChange={onChange} headings />);
+    await act(async () => {
+      liveEditor().commands.setTextSelection(2);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Section heading' }));
+    });
+    expect(screen.getByRole('button', { name: 'Section heading' }).getAttribute('aria-pressed')).toBe('true');
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: 'doc',
+      // After a heading, StarterKit keeps an empty paragraph to type on in.
+      content: [{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Hapja' }] }, { type: 'paragraph' }],
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Subheading' }));
+    });
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: 'doc',
+      content: [{ type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Hapja' }] }, { type: 'paragraph' }],
+    });
+  });
 });

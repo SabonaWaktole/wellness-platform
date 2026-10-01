@@ -21,6 +21,7 @@ import { RolesSettingsPage } from '../pages/settings/roles/RolesSettingsPage';
 import { AuditLogSettingsPage } from '../pages/settings/audit/AuditLogSettingsPage';
 import { ListsSettingsPage } from '../pages/settings/lists/ListsSettingsPage';
 import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPage';
+import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -182,6 +183,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="settings.manage">
               <ListsSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M2 Slice 5: the Administrator edits and publishes the sales script (FR-SCR-04, 07).
+        path: 'settings/sales-script',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="script.edit">
+              <SalesScriptSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

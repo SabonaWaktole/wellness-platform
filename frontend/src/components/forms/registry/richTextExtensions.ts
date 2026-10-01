@@ -67,22 +67,13 @@ export const RICH_TEXT_EXTENSIONS = [
   }),
 ];
 
-/**
- * The extension set for the offer texts (M2 Slice 4) and the sales script
- * (Slice 5): paragraphs, lists, bold, italic and links, with undo. It
- * produces exactly what the server's document whitelist accepts
- * (`backend/src/shared/application/richText/sanitizeRichText.ts`), which is
- * narrower than the form TEXT component's: no colours, fonts, sizes,
- * alignment, headings, underline or strike, since the offer's layout owns
- * the look. Links are http, https or mailto only (NFR-SEC-05), never opened
- * by a click while editing.
- */
-export const DOCUMENT_TEXT_EXTENSIONS = [
+/** StarterKit for text written once and shown on documents, with or without headings. */
+const documentStarterKit = (headingLevels: Array<2 | 3> | null) =>
   StarterKit.configure({
     blockquote: false,
     code: false,
     codeBlock: false,
-    heading: false,
+    heading: headingLevels ? { levels: headingLevels } : false,
     horizontalRule: false,
     strike: false,
     underline: false,
@@ -95,8 +86,26 @@ export const DOCUMENT_TEXT_EXTENSIONS = [
       isAllowedUri: (url) => isAllowedHref(url),
       shouldAutoLink: (url) => isAllowedHref(url) || isAllowedHref(`https://${url}`),
     },
-  }),
-];
+  });
+
+/**
+ * The extension set for the offer texts (M2 Slice 4): paragraphs, lists,
+ * bold, italic and links, with undo. It produces exactly what the server's
+ * document whitelist accepts
+ * (`backend/src/shared/application/richText/sanitizeRichText.ts`), which is
+ * narrower than the form TEXT component's: no colours, fonts, sizes,
+ * alignment, headings, underline or strike, since the offer's layout owns
+ * the look. Links are http, https or mailto only (NFR-SEC-05), never opened
+ * by a click while editing.
+ */
+export const DOCUMENT_TEXT_EXTENSIONS = [documentStarterKit(null)];
+
+/**
+ * The same set plus section headings (H2) and subheadings (H3), for the
+ * sales script (M2 Slice 5, FR-SCR-04). Each H2 starts a section the panel
+ * lists (FR-SCR-03). The server accepts H1 too; the script does not offer it.
+ */
+export const SCRIPT_TEXT_EXTENSIONS = [documentStarterKit([2, 3])];
 
 /** What the slash-menu extension needs from RichTextEditor on every
  *  keystroke it might intercept. Read through a ref (see below), never

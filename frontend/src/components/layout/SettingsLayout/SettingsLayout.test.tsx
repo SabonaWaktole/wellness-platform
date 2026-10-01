@@ -68,4 +68,14 @@ describe('SettingsLayout', () => {
 
     expect(screen.queryByRole('link', { name: 'Statuses' })).toBeNull();
   });
+
+  it('FR-SCR-07 links to Sales script for the Administrator, who edits it, and not for a salesperson, who only reads it', () => {
+    renderAs({ 'script.edit': true, 'script.view': true });
+    expect(screen.getAllByRole('link', { name: 'Sales script' })[0].getAttribute('href')).toBe('/acme/settings/sales-script');
+  });
+
+  it('FR-SCR-07 hides Sales script from a salesperson', () => {
+    renderAs({ 'script.view': true, 'users.manage': true });
+    expect(screen.queryByRole('link', { name: 'Sales script' })).toBeNull();
+  });
 });

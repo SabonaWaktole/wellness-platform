@@ -149,6 +149,8 @@
   },
   "richText": {
     "toolbar": "Formatting: {{label}}",
+    "heading2": "Section heading",
+    "heading3": "Subheading",
     "bold": "Bold",
     "italic": "Italic",
     "bulletList": "Bulleted list",
@@ -158,5 +160,17 @@
     "linkAddress": "Link address",
     "applyLink": "Add link",
     "invalidLink": "Enter a web address (https://…) or an email address."
+  },
+  "salesScript": {
+    "button": "Sales script",
+    "title": "Sales script",
+    "close": "Close the sales script",
+    "sections": "Sections",
+    "search": "Search the script",
+    "searchPlaceholder": "Search the script…",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches",
+    "loading": "Loading the script…",
+    "loadFailed": "The script could not be loaded. Close the panel and open it again."
   }
 }

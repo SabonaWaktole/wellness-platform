@@ -1,0 +1,100 @@
+/* ============================================================================
+ * SalesScriptContent — the script as salespeople read it: a section list,
+ * then the text. Used in the panel and in the Administrator's preview.
+ * ========================================================================= */
+
+.script {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.sections ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sectionLink {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-md);
+  font-weight: 540;
+  color: var(--color-primary);
+  background-color: var(--color-surface-container-low);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.sectionLink:hover {
+  background-color: var(--color-surface-container);
+  border-color: var(--color-primary);
+}
+
+.sectionLink:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-tight);
+}
+
+.text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.text h2 {
+  /* Clear of the panel's search bar when a section link scrolls to it. */
+  scroll-margin-top: var(--spacing-md);
+  margin: var(--spacing-lg) 0 var(--spacing-xs);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-md);
+  font-weight: 640;
+  letter-spacing: -0.01em;
+}
+
+.text h2:first-child {
+  margin-top: 0;
+}
+
+.text h3 {
+  margin: var(--spacing-md) 0 var(--spacing-xs);
+  font-size: var(--font-size-headline-sm);
+  font-weight: 600;
+}
+
+.text p {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.text ul,
+.text ol {
+  margin: 0 0 var(--spacing-sm);
+  padding-left: 1.4em;
+}
+
+.text li > p {
+  margin: 0;
+}
+
+.text a {
+  color: var(--color-primary);
+}
+
+.text mark {
+  padding: 0 1px;
+  color: inherit;
+  background-color: color-mix(in srgb, var(--color-warning) 32%, transparent);
+  border-radius: 2px;
+}

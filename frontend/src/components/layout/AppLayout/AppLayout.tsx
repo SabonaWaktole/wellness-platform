@@ -12,6 +12,9 @@ import { NotificationBell } from '../../notifications/NotificationBell';
 import { ImpersonationBanner } from '../ImpersonationBanner';
 import { BrandLogo } from '../BrandLogo';
 import { usePageTitle } from '../../../hooks/usePageTitle';
+import { SalesScriptButton } from '../../salesScript/SalesScriptButton';
+import { useSalesScriptStore } from '../../../store/useSalesScriptStore';
+import { usePermission } from '../../../hooks/usePermission';
 import { useTranslation } from 'react-i18next';
 
 export interface AppLayoutProps {
@@ -35,6 +38,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   usePageTitle();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  // The open sales script panel takes the right of the screen; the page makes room for it (FR-SCR-02).
+  const scriptPanelOpen = useSalesScriptStore((state) => state.isOpen);
+  const canViewScript = usePermission('script.view');
+  const isScriptOpen = scriptPanelOpen && canViewScript;
 
   // The header avatar comes from the signed-in user unless a caller passes an
   // explicit override. Reading it here rather than in each page means the
@@ -101,6 +108,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             notification bell.
           */}
           <NotificationBell />
+          <SalesScriptButton className={styles.iconBtn} />
           <button className={`${styles.iconBtn} ${styles.helpBtn}`} aria-label={t('header.help')}>
             <HelpCircle size={20} />
           </button>
@@ -143,7 +151,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         })}
         
         {/* Main Content Area */}
-        <main className={styles.mainContent}>
+        <main className={`${styles.mainContent} ${isScriptOpen ? styles.mainContentBesideScript : ''}`}>
           {children}
         </main>
       </div>

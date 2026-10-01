@@ -1,8 +1,8 @@
 import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor, type Editor, type JSONContent } from '@tiptap/react';
-import { Bold, Italic, Link2, Link2Off, List, ListOrdered } from 'lucide-react';
-import { DOCUMENT_TEXT_EXTENSIONS } from '../../forms/registry/richTextExtensions';
+import { Bold, Heading2, Heading3, Italic, Link2, Link2Off, List, ListOrdered } from 'lucide-react';
+import { DOCUMENT_TEXT_EXTENSIONS, SCRIPT_TEXT_EXTENSIONS } from '../../forms/registry/richTextExtensions';
 import type { RichTextDoc } from '../../../types/form';
 import { isAllowedHref } from '../../../utils/safeHref';
 import styles from './RichTextField.module.css';
@@ -15,6 +15,8 @@ export interface RichTextFieldProps {
   onChange: (value: RichTextDoc | null) => void;
   helperText?: string;
   error?: string;
+  /** Offers section headings (H2) and subheadings (H3), for the sales script (FR-SCR-04). */
+  headings?: boolean;
 }
 
 /** A typed address as a link: as given when it is one, otherwise read as a web address ("wellness.al"). */
@@ -45,11 +47,12 @@ function useEditorVersion(editor: Editor | null) {
 /**
  * A labelled rich-text field for text written once and shown on documents:
  * the offer texts (M2 Slice 4) and the sales script (Slice 5). Bold, italic,
- * lists and links only, matching what the server stores (NFR-SEC-05); the
+ * lists and links, plus headings for the script, matching what the server
+ * stores (NFR-SEC-05); the
  * value is TipTap JSON, never HTML. Unlike the forms canvas editor it has its
  * own undo and no slash menu.
  */
-export const RichTextField = ({ label, value, onChange, helperText, error }: RichTextFieldProps) => {
+export const RichTextField = ({ label, value, onChange, helperText, error, headings = false }: RichTextFieldProps) => {
   const { t } = useTranslation('common');
   const labelId = useId();
   const messageId = useId();
@@ -58,7 +61,7 @@ export const RichTextField = ({ label, value, onChange, helperText, error }: Ric
   const message = error || helperText;
 
   const editor = useEditor({
-    extensions: DOCUMENT_TEXT_EXTENSIONS,
+    extensions: headings ? SCRIPT_TEXT_EXTENSIONS : DOCUMENT_TEXT_EXTENSIONS,
     content: (value as JSONContent | null) ?? '',
     editorProps: {
       attributes: {
@@ -110,6 +113,22 @@ export const RichTextField = ({ label, value, onChange, helperText, error }: Ric
       </span>
       <div className={`${styles.frame} ${error ? styles.frameError : ''}`}>
         <div className={styles.toolbar} role="toolbar" aria-label={t('richText.toolbar', { label })}>
+          {headings && (
+            <>
+              {button(
+                'heading2',
+                editor?.isActive('heading', { level: 2 }) ?? false,
+                () => chain().toggleHeading({ level: 2 }).run(),
+                <Heading2 size={16} aria-hidden="true" />
+              )}
+              {button(
+                'heading3',
+                editor?.isActive('heading', { level: 3 }) ?? false,
+                () => chain().toggleHeading({ level: 3 }).run(),
+                <Heading3 size={16} aria-hidden="true" />
+              )}
+            </>
+          )}
           {button('bold', editor?.isActive('bold') ?? false, () => chain().toggleBold().run(), <Bold size={16} aria-hidden="true" />)}
           {button('italic', editor?.isActive('italic') ?? false, () => chain().toggleItalic().run(), <Italic size={16} aria-hidden="true" />)}
           {button('bulletList', editor?.isActive('bulletList') ?? false, () => chain().toggleBulletList().run(), <List size={16} aria-hidden="true" />)}

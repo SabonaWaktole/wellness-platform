@@ -14,7 +14,8 @@
     "warehouses": "Magazinat",
     "categories": "Kategoritë",
     "audit": "Regjistri i auditimit",
-    "pricing": "Çmimet"
+    "pricing": "Çmimet",
+    "salesScript": "Skripti i shitjes"
   },
   "company": {
     "title": "Cilësimet e kompanisë",
@@ -869,6 +870,57 @@
       "INVALID_STATUS_LABEL": "Kontrolloni vlerat: etiketa në shqip është e detyrueshme dhe ngjyra duhet të jetë një vlerë hex e vlefshme.",
       "INVALID_STATUS_ORDER": "Lista ndryshoi ndërkohë që po e rendisnit. Ringarkoni faqen dhe provoni përsëri.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    }
+  },
+  "salesScript": {
+    "breadcrumb": "Skripti i shitjes",
+    "title": "Skripti i shitjes",
+    "subtitle": "Skripti që shitësit lexojnë në panelin anësor gjatë telefonatave, takimeve dhe vizitave. Ruajtja e një drafti nuk ndryshon atë që shohin; publikimi po, dhe çdo publikim ruhet si version.",
+    "loading": "Skripti i shitjes po ngarkohet…",
+    "loadFailed": "Skripti i shitjes nuk u ngarkua. Ringarkoni faqen për të provuar përsëri.",
+    "language": "Gjuha",
+    "languages": {
+      "Sq": "Shqip",
+      "En": "Anglisht"
+    },
+    "mode": "Ndrysho ose shiko paraprakisht",
+    "edit": "Ndrysho",
+    "preview": "Pamje paraprake",
+    "previewLabel": "Pamje paraprake, si do ta shohin shitësit",
+    "textLabel": "Skripti ({{language}})",
+    "editorHint": "Filloni çdo seksion me një titull seksioni; paneli i liston seksionet në krye.",
+    "englishHint": "Shitësit që lexojnë në anglisht shohin tekstin shqip derisa teksti anglisht të jetë bosh.",
+    "draftStatus": "Drafti, versioni {{version}}, i ruajtur më {{date}}. Ende i papublikuar: shitësit shohin ende versionin e publikuar.",
+    "publishedStatus": "Versioni {{version}} është i publikuar që nga {{date}}. Nuk ka draft.",
+    "noScript": "Ende nuk ka skript të publikuar.",
+    "saveDraft": "Ruaj draftin",
+    "draftSaved": "Drafti u ruajt. Shitësit shohin ende versionin e publikuar.",
+    "publish": "Publiko",
+    "published": "U publikua. Shitësit tani shohin këtë version.",
+    "publishTitle": "Të publikohet skripti?",
+    "publishMessage": "Shitësit do ta shohin këtë tekst herën tjetër që hapin panelin. Versioni që zëvendësohet ruhet dhe mund të rikthehet.",
+    "versions": "Versionet",
+    "versionsHint": "Çdo version i publikuar, nga më i riu, me kush e publikoi dhe kur.",
+    "noVersions": "Ende nuk është publikuar asgjë.",
+    "versionName": "Versioni {{version}}",
+    "current": "Aktual",
+    "publishedBy": "Publikuar më {{date}} nga {{name}}",
+    "system": "sistemi",
+    "view": "Shiko",
+    "viewVersion": "Shiko versionin {{version}}",
+    "restore": "Rikthe",
+    "restoreVersion": "Rikthe versionin {{version}}",
+    "restoreTitle": "Të rikthehet versioni {{version}}?",
+    "restoreMessage": "Drafti do të marrë tekstin e versionit {{version}}, në të dyja gjuhët. Shitësit nuk shohin ndryshim derisa ta publikoni.",
+    "restored": "Versioni {{version}} tani është drafti. Publikojeni që të bëhet aktual.",
+    "emptyLanguage": "Nuk ka tekst në këtë gjuhë.",
+    "errors": {
+      "generic": "Nuk funksionoi. Provoni përsëri.",
+      "SCRIPT_EMPTY": "Shkruani tekstin shqip para se ta publikoni.",
+      "INVALID_RICH_TEXT": "Teksti përmban formatim që nuk lejohet.",
+      "NO_SCRIPT_DRAFT": "Nuk ka draft për të publikuar.",
+      "SALES_SCRIPT_CONFLICT": "Dikush tjetër e ndryshoi skriptin. U ngarkua versioni më i fundit; kontrollojeni dhe provoni përsëri.",
+      "SALES_SCRIPT_NOT_FOUND": "Ky version nuk ekziston më."
     }
   }
 }
