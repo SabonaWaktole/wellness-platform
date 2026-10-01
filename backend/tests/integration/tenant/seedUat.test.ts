@@ -10,7 +10,7 @@ import { BcryptPasswordHasher } from '../../../src/auth/infrastructure/BcryptPas
 import { CreateTenantWithOwnerUseCase } from '../../../src/tenant/application/use-cases/CreateTenantWithOwnerUseCase';
 import { PrismaTenantProvisioningTransaction } from '../../../src/tenant/infrastructure/PrismaTenantProvisioningTransaction';
 import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
-import { BULK_PREFIX, seedUat, SeedUatResult, UAT_COMPANIES, UAT_USERS } from '../../../scripts/uat/seedUat';
+import { BULK_DEAL_PREFIX, BULK_PREFIX, seedUat, SeedUatResult, UAT_COMPANIES, UAT_USERS } from '../../../scripts/uat/seedUat';
 import { cookieJwt } from '../../support/cookieJwt';
 
 const prisma = new PrismaClient();
@@ -39,6 +39,7 @@ describe('UAT seed (Slice 15)', () => {
       password,
       emailDomain: `${slug}.example.com`,
       bulkCompanies: 30,
+      bulkDeals: 40,
     });
 
   const signIn = async (email: string) => {
@@ -76,8 +77,28 @@ describe('UAT seed (Slice 15)', () => {
     expect(Object.values(second.users).filter((u) => u.created)).toHaveLength(0);
     expect(second.companiesCreated).toBe(0);
     expect(second.bulkCreated).toBe(0);
+    expect(second.dealsCreated).toBe(0);
+    expect(second.bulkDealsCreated).toBe(0);
     expect(await prisma.client.count({ where: { tenantId } })).toBe(UAT_COMPANIES.length + 30);
     expect(await prisma.client.count({ where: { tenantId, name: { startsWith: BULK_PREFIX } } })).toBe(30);
+  });
+
+  it('UAT-2 each company of Sales User A or B has one New contract deal, owned by its salesperson', async () => {
+    const owned = UAT_COMPANIES.filter((c) => c.owner === 'salesA' || c.owner === 'salesB');
+    expect(first.dealsCreated).toBe(owned.length);
+    for (const spec of owned) {
+      const deals = await prisma.deal.findMany({ where: { tenantId, client: { name: spec.name } } });
+      expect(deals).toHaveLength(1);
+      expect(deals[0]).toMatchObject({ type: 'NEW_CONTRACT', stageKey: 'NEW_LEAD', ownerUserId: first.users[spec.owner!].id });
+    }
+  });
+
+  it('NFR-PERF-03 seeds bulk open deals over the bulk companies, each with its first history row', async () => {
+    expect(first.bulkDealsCreated).toBe(40);
+    const bulk = await prisma.deal.findMany({ where: { tenantId, title: { startsWith: BULK_DEAL_PREFIX } }, include: { stageHistory: true } });
+    expect(bulk).toHaveLength(40);
+    expect(new Set(bulk.map((deal) => deal.stageKey)).size).toBe(7);
+    expect(bulk.every((deal) => deal.stageHistory.length === 1)).toBe(true);
   });
 
   it('UAT-2 every named company has two contacts, one of them primary', async () => {

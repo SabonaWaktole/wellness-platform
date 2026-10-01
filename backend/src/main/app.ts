@@ -148,6 +148,19 @@ import { createPricingRouter } from '../pricing/interfaces/http/pricingRoutes';
 import { ISalesScriptWriteTransaction } from '../salesScript/application/ports/ISalesScriptWriteTransaction';
 import { PrismaSalesScriptStore } from '../salesScript/infrastructure/PrismaSalesScriptStore';
 import { PrismaSalesScriptWriteTransaction } from '../salesScript/infrastructure/PrismaSalesScriptWriteTransaction';
+import { IDealWriteTransaction } from '../deals/application/ports/IDealWriteTransaction';
+import { PrismaDealWriteTransaction } from '../deals/infrastructure/PrismaDealWriteTransaction';
+import { PrismaDealStore } from '../deals/infrastructure/PrismaDealStore';
+import { GetDealUseCase } from '../deals/application/use-cases/GetDealUseCase';
+import { CreateDealUseCase } from '../deals/application/use-cases/CreateDealUseCase';
+import { UpdateDealUseCase } from '../deals/application/use-cases/UpdateDealUseCase';
+import { ChangeDealStageUseCase } from '../deals/application/use-cases/ChangeDealStageUseCase';
+import { ReassignDealUseCase } from '../deals/application/use-cases/ReassignDealUseCase';
+import { DeleteDealUseCase } from '../deals/application/use-cases/DeleteDealUseCase';
+import { SearchDealsUseCase } from '../deals/application/use-cases/SearchDealsUseCase';
+import { GetPipelineBoardUseCase } from '../deals/application/use-cases/GetPipelineBoardUseCase';
+import { DealController } from '../deals/interfaces/http/DealController';
+import { createDealRouter } from '../deals/interfaces/http/dealRoutes';
 import { GetPublishedScriptUseCase } from '../salesScript/application/use-cases/GetPublishedScriptUseCase';
 import { GetScriptDraftUseCase } from '../salesScript/application/use-cases/GetScriptDraftUseCase';
 import { SaveScriptDraftUseCase } from '../salesScript/application/use-cases/SaveScriptDraftUseCase';
@@ -198,6 +211,8 @@ export interface AppDependencies {
   pricingWriteTransaction: IPricingWriteTransaction;
   /** M2 Slice 5: the transaction script writes, and a publish with its audit entry, share. */
   salesScriptWriteTransaction: ISalesScriptWriteTransaction;
+  /** M2 Slice 6: the transaction deal writes, their stage history and audit entries share. */
+  dealWriteTransaction: IDealWriteTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -271,6 +286,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const lookupWriteTransaction = overrides?.lookupWriteTransaction ?? new PrismaLookupWriteTransaction();
   const pricingWriteTransaction = overrides?.pricingWriteTransaction ?? new PrismaPricingWriteTransaction();
   const salesScriptWriteTransaction = overrides?.salesScriptWriteTransaction ?? new PrismaSalesScriptWriteTransaction();
+  const dealWriteTransaction = overrides?.dealWriteTransaction ?? new PrismaDealWriteTransaction();
 
   // Use Cases
   //
@@ -490,7 +506,23 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     createSalesScriptRouter(salesScriptController, tokenService, tenantRepository, resolveAccessContext)
   );
 
-  // Settings → Statuses: contract and payment status labels (Slice 10: FR-SET-07, 08).
+  // Deals and the pipeline board (M2 Slice 6: FR-DEAL-01..11, 13, 19).
+  const dealStore = new PrismaDealStore();
+  const getDeal = new GetDealUseCase(dealStore, recordScopes);
+  const dealController = new DealController(
+    new CreateDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
+    getDeal,
+    new UpdateDealUseCase(dealWriteTransaction, recordScopes, getDeal),
+    new ChangeDealStageUseCase(dealWriteTransaction, recordScopes, getDeal),
+    new ReassignDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
+    new DeleteDealUseCase(dealWriteTransaction, recordScopes),
+    new SearchDealsUseCase(dealStore, recordScopes),
+    new GetPipelineBoardUseCase(dealStore, recordScopes)
+  );
+  app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Settings → Statuses: contract and payment status labels, and the deal
+  // stages (Slice 10: FR-SET-07, 08; M2 Slice 6: FR-DEAL-06).
   const statusLabelStore = new PrismaStatusLabelStore();
   const statusLabelWriteTransaction = new PrismaStatusLabelWriteTransaction();
   const statusLabelsController = new StatusLabelsController(

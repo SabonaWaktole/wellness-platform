@@ -14,6 +14,9 @@ import { randomUUID } from 'crypto';
 import { ContactPerson } from '../../domain/entities/ContactPerson';
 import { CompanyContacts } from '../../domain/value-objects/CompanyContacts';
 import { IClientWriteTransaction } from '../ports/IClientWriteTransaction';
+import { Deal } from '../../../deals/domain/Deal';
+import { DealType } from '../../../deals/domain/DealType';
+import { EDIT_DEALS } from '../../../deals/application/dealAccess';
 
 export interface ContactPersonInput {
   name: string;
@@ -47,6 +50,12 @@ interface CreateClientDTO {
    * by ImportClientsUseCase and the public-form path.
    */
   contacts?: ContactPersonInput[];
+  /**
+   * Also create the company's first deal, a New contract in New Lead owned
+   * by the company's salesperson (FR-DEAL-02). Company-form path only, and
+   * it takes `deals.edit`.
+   */
+  createDeal?: boolean;
   authorUserId: string;
   /** `null` for a system actor (a public form submission), which is bound by neither rule below. */
   access: AccessContext | null;
@@ -70,6 +79,14 @@ export class CreateClientUseCase {
   ) {}
 
   async execute(dto: CreateClientDTO): Promise<CreateClientResult> {
+    // Before anything is written, so a refused deal leaves no company behind.
+    if (dto.createDeal) {
+      if (!dto.profile || !dto.access) {
+        throw new Error('CreateClientUseCase: a first deal is created only from the company form.');
+      }
+      dto.access.ensure(EDIT_DEALS);
+    }
+
     const definitions = await this.ensureDefaultFields.execute(dto.tenantId);
     const customFieldValues = this.withResponsibleSalesperson(dto, definitions);
 
@@ -122,9 +139,26 @@ export class CreateClientUseCase {
           })
         )
       );
-      await this.requireWriteTx().run(async ({ clients, contacts }) => {
+      await this.requireWriteTx().run(async ({ clients, contacts, deals }) => {
         await clients.save(dto.tenantId, client);
         await contacts.saveMany(dto.tenantId, initialContacts);
+        if (dto.createDeal) {
+          const { deal, change } = Deal.open({
+            id: randomUUID(),
+            tenantId: dto.tenantId,
+            clientId: client.id,
+            ownerUserId: client.assignedUserId ?? dto.authorUserId,
+            createdByUserId: dto.authorUserId,
+            type: DealType.NewContract,
+            title: null,
+            expectedCloseDate: null,
+            notes: null,
+            now: new Date(),
+            newId: randomUUID,
+          });
+          await deals.insert(deal);
+          await deals.recordChange(dto.tenantId, change);
+        }
       });
     } else {
       await this.clientRepo.save(dto.tenantId, client);

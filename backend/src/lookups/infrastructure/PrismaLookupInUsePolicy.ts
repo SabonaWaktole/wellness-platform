@@ -36,9 +36,11 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
         ]);
         return clients + zones;
       }
-      case LookupList.FollowUpIntervals:
       case LookupList.LostReasons:
-        // Nothing points at either list until deals do (Milestone 2).
+        // A lost deal keeps its reason (M2 Slice 6; set by Slice 13), deleted deals included.
+        return this.prisma.deal.count({ where: { tenantId, lostReasonId: id } });
+      case LookupList.FollowUpIntervals:
+        // Nothing points at this list until follow-ups do (M2 Slice 11).
         return 0;
     }
   }
