@@ -40,6 +40,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.formSubmission.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.formVersion.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.clientForm.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.dealStageHistory.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.deal.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.invoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.ownershipTransfer.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.quotation.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -159,6 +161,30 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       data: { id: randomUUID(), tenantId, version: 2, status: 'DRAFT', liveSlot: 'DRAFT', contentSq: { type: 'doc', content: [] }, createdByUserId: owner.id },
     });
 
+    // A deal holds RESTRICT keys on Client, User, LostReason, ServicePackage
+    // and Quotation (M2 Slice 6), and its stage history names a user under
+    // RESTRICT too; a lost deal with a package and a won offer covers them all.
+    const lostReason = await prisma.lostReason.findFirstOrThrow({ where: { tenantId } });
+    const servicePackage = await prisma.servicePackage.findFirstOrThrow({ where: { tenantId } });
+    const dealId = randomUUID();
+    await prisma.deal.create({
+      data: {
+        id: dealId,
+        tenantId,
+        clientId,
+        ownerUserId: staff.id,
+        createdByUserId: owner.id,
+        type: 'NEW_CONTRACT',
+        stageKey: 'LOST',
+        lostReasonId: lostReason.id,
+        packageId: servicePackage.id,
+        wonQuotationId: quotationId,
+      },
+    });
+    await prisma.dealStageHistory.create({
+      data: { id: randomUUID(), tenantId, dealId, fromStage: 'NEW_LEAD', toStage: 'LOST', changedByUserId: staff.id },
+    });
+
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
     // covered here so a tenant with an edited status label is proven clean too.
     await prisma.statusLabel.create({
@@ -192,6 +218,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.servicePackage.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.service.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.salesScript.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.deal.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.dealStageHistory.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });
