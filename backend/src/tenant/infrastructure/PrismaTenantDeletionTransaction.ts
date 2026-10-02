@@ -96,9 +96,9 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       // ordering.
       await tx.businessType.deleteMany({ where: { tenantId } });
       await tx.riskLevel.deleteMany({ where: { tenantId } });
-      // Pricing (M2 Slice 3): PriceZoneCity holds RESTRICT on its City, so the
-      // zones (and their cities with them) go first; the rest cascade cleanly
-      // but are listed so nothing is left to MySQL's cascade ordering.
+      // Pricing (M2 Slice 3): PriceZoneCity cascades from both its zone and its
+      // City. The zones go first anyway, and the rest are listed rather than
+      // left to MySQL's cascade ordering.
       await tx.priceZone.deleteMany({ where: { tenantId } });
       await tx.riskSurcharge.deleteMany({ where: { tenantId } });
       await tx.visitFrequency.deleteMany({ where: { tenantId } });
