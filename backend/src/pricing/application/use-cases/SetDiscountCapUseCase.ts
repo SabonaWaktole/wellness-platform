@@ -16,9 +16,14 @@ export class SetDiscountCapUseCase {
     private readonly writeTx: IPricingWriteTransaction
   ) {}
 
-  async execute(input: { access: AccessContext; tenantId: string; discountCapPercent: unknown }): Promise<PricingSettingsRecord> {
+  async execute(input: {
+    access: AccessContext;
+    tenantId: string;
+    discountCapPercent: unknown;
+  }): Promise<Pick<PricingSettingsRecord, 'currency' | 'discountCapPercent'>> {
     input.access.ensure(MANAGE_PRICING);
-    const current = await this.store.settings(input.tenantId);
+    const { currency, discountCapPercent: currentCap } = await this.store.settings(input.tenantId);
+    const current = { currency, discountCapPercent: currentCap };
     const discountCapPercent = parsePercent(input.discountCapPercent, 'discountCapPercent', 100);
     if (current.discountCapPercent === discountCapPercent) {
       return current;

@@ -208,6 +208,106 @@
   padding-top: var(--spacing-xs);
 }
 
+/* Services of a package (FR-PCF-06): checkboxes to add, an ordered list to arrange. */
+.checkGroup {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-xs) var(--spacing-md);
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.checkGroup legend {
+  padding: 0;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.orderedList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.orderedItem {
+  font-size: var(--font-size-body-sm);
+  color: var(--text-primary);
+}
+
+.orderedItem > span {
+  vertical-align: middle;
+}
+
+.orderedName {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-right: var(--spacing-sm);
+  overflow-wrap: anywhere;
+}
+
+.orderedActions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* Offer settings (FR-PCF-08): three groups of fields, the texts per language. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.sectionTitle {
+  padding: 0;
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.languageSwitch {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.languageSwitch button {
+  min-height: 36px;
+  padding: 0 var(--spacing-md);
+  font: inherit;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.languageSwitch button[aria-pressed='true'] {
+  background-color: var(--color-surface-container-high);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 @media (max-width: 480px) {
   .inlineForm .field {
     flex: 1 1 100%;

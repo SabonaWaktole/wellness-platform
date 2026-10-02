@@ -663,6 +663,9 @@
       "frequencies": "Visit frequencies",
       "zones": "Price zones",
       "cap": "Discount cap",
+      "services": "Services",
+      "packages": "Packages",
+      "offer": "Offer settings",
       "calculator": "Test calculator"
     },
     "hints": {
@@ -671,6 +674,9 @@
       "frequencies": "A percentage of the base fee, or a fixed monthly amount, such as for ad hoc visits.",
       "zones": "A surcharge on the base fee for the cities of each zone. A city can be in more than one zone; the salesperson chooses.",
       "cap": "The highest discount a salesperson may give without approval.",
+      "services": "What the offer describes. A service has no price of its own: the pricing model sets the price. A service in a package can be deactivated but not deleted.",
+      "packages": "A package is a named set of services the salesperson chooses on the pricing screen. It describes the offer and does not change the price. One active package is the default.",
+      "offer": "How offers are numbered and how long they stay valid, the company details printed on every offer, and its standard texts.",
       "calculator": "Try the current configuration. Nothing is saved and no offer is created."
     },
     "columns": {
@@ -683,7 +689,11 @@
       "pricingType": "Pricing",
       "value": "Value",
       "visitsPerYear": "Visits per year",
-      "cities": "Cities"
+      "cities": "Cities",
+      "descriptionSq": "Albanian description",
+      "descriptionEn": "English description",
+      "services": "Services",
+      "default": "Default"
     },
     "employeesRange": "{{min}}–{{max}} employees",
     "addBand": "Add band",
@@ -754,7 +764,79 @@
       "PRICING_VALUE_TAKEN": "Another value in this list already has this name.",
       "PRICING_ITEM_NOT_FOUND": "This value no longer exists. Reload the page.",
       "INVALID_PRICING_ORDER": "The list changed while you were reordering it. Reload the page and try again.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "SERVICE_NOT_ACTIVE": "Choose active services from the list.",
+      "PACKAGE_NEEDS_SERVICE": "A package needs at least one active service.",
+      "INVALID_RICH_TEXT": "This text contains formatting that is not allowed.",
+      "PRICING_ITEM_IN_USE_one": "This service is in the package {{names}}. Remove it from the package, or deactivate it instead.",
+      "PRICING_ITEM_IN_USE_other": "This service is in the packages {{names}}. Remove it from them, or deactivate it instead.",
+      "DEFAULT_PACKAGE_REQUIRED": "{{names}} is the default package. Make another package the default first.",
+      "SERVICE_LAST_IN_PACKAGE_one": "This would leave the package {{names}} without an active service. Add another service to it first.",
+      "SERVICE_LAST_IN_PACKAGE_other": "This would leave the packages {{names}} without an active service. Add another service to them first."
+    },
+    "services": {
+      "deactivateTitle": "Deactivate {{name}}?",
+      "deactivateMessage_one": "The package {{names}} includes this service. New offers with that package will no longer list it; offers already created keep it.",
+      "deactivateMessage_other": "The packages {{names}} include this service. New offers with those packages will no longer list it; offers already created keep it.",
+      "deactivateConfirm": "Deactivate"
+    },
+    "packages": {
+      "servicesButton": "Services of {{name}}",
+      "count_one": "{{count}} service",
+      "count_other": "{{count}} services",
+      "servicesInPicker": "Change the services with the Services button.",
+      "default": "Default",
+      "makeDefault": "Make default",
+      "makeDefaultFor": "Make {{name}} the default package",
+      "pickerTitle": "Services of {{name}}",
+      "inPackage": "Services in this package, in the order the offer lists them",
+      "empty": "This package has no services yet.",
+      "add": "Add a service",
+      "remove": "Remove {{name}} from the package",
+      "save": "Save services"
+    },
+    "offer": {
+      "sections": {
+        "offer": "Offer",
+        "company": "Company details",
+        "texts": "Standard texts"
+      },
+      "companyHint": "Printed on every offer.",
+      "textsHint": "Printed on every offer in the language it is written in. Bold, italic, lists and links only.",
+      "language": "Language of the texts",
+      "languages": {
+        "Sq": "Albanian",
+        "En": "English"
+      },
+      "texts": {
+        "intro": "Introduction ({{language}})",
+        "terms": "Terms ({{language}})",
+        "closing": "Closing ({{language}})"
+      },
+      "fields": {
+        "offerValidityDays": "Valid for (days after sending)",
+        "contractMonthsDefault": "Contract length (months)",
+        "offerNumberPrefix": "Offer number prefix",
+        "companyName": "Company name",
+        "nipt": "NIPT",
+        "address": "Address",
+        "phone": "Phone",
+        "email": "Email",
+        "website": "Website",
+        "bankDetails": "Bank details"
+      },
+      "errors": {
+        "offerValidityDays": "Enter a whole number of days from 1 to 365.",
+        "contractMonthsDefault": "Enter a whole number of months from 1 to 60.",
+        "offerNumberPrefix": "Use one to six capital letters, e.g. OF.",
+        "email": "Enter an email address.",
+        "website": "Enter a website address, e.g. wellness.al.",
+        "companyName": "This is too long.",
+        "nipt": "This is too long.",
+        "address": "This is too long.",
+        "phone": "This is too long.",
+        "bankDetails": "This is too long."
+      }
     }
   },
   "statuses": {

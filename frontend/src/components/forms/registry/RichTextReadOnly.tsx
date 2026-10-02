@@ -1,5 +1,6 @@
 import React from 'react';
 import type { RichTextDoc } from '../../../types/form';
+import { isAllowedHref } from '../../../utils/safeHref';
 
 export interface RichTextReadOnlyProps {
   content: RichTextDoc | undefined;
@@ -87,6 +88,16 @@ const applyMarks = (text: string, marks: AnyMark[] | undefined): React.ReactNode
         return <u>{child}</u>;
       case 'strike':
         return <s>{child}</s>;
+      case 'link':
+        // Offer texts and the sales script (M2 Slices 4, 5). The server keeps
+        // only http, https and mailto links; anything else renders as text.
+        return isAllowedHref(mark.attrs?.href) ? (
+          <a href={mark.attrs!.href as string} target="_blank" rel="noopener noreferrer">
+            {child}
+          </a>
+        ) : (
+          child
+        );
       case 'textStyle': {
         const attrs = mark.attrs ?? {};
         const style: React.CSSProperties = {

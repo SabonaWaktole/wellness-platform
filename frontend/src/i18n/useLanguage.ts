@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { useVisitorLanguageStore } from '../store/useVisitorLanguageStore';
 import { applyLanguage } from './index';
 import { DEFAULT_LANGUAGE, isSupportedLanguage, type Language } from './config';
 
@@ -23,16 +24,19 @@ export function resolveLanguage(
 }
 
 /**
- * Keeps i18next in step with the signed-in user.
+ * Keeps i18next in step with the signed-in user, or, while no one is signed
+ * in, with the language the visitor chose on the sign-in screen.
  *
  * Mounted once, near the root. Reads only language fields — it must never touch
  * `tenantLocale` or `tenantCurrency`, which belong to the formatting hooks.
  */
 export function useLanguageSync(): Language {
+  const signedIn = useAuthStore((state) => state.user !== null);
   const userLanguage = useAuthStore((state) => state.user?.userLanguage);
   const tenantDefaultLanguage = useAuthStore((state) => state.user?.tenantDefaultLanguage);
+  const visitorLanguage = useVisitorLanguageStore((state) => state.language);
 
-  const language = resolveLanguage(userLanguage, tenantDefaultLanguage);
+  const language = signedIn ? resolveLanguage(userLanguage, tenantDefaultLanguage) : resolveLanguage(visitorLanguage, null);
 
   useEffect(() => {
     applyLanguage(language);

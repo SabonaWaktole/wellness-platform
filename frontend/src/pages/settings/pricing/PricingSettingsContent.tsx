@@ -11,6 +11,9 @@ import { VisitFrequenciesPanel } from './VisitFrequenciesPanel';
 import { PriceZonesPanel } from './PriceZonesPanel';
 import { DiscountCapPanel } from './DiscountCapPanel';
 import { TestCalculatorPanel } from './TestCalculatorPanel';
+import { ServicesPanel } from './ServicesPanel';
+import { PackagesPanel } from './PackagesPanel';
+import { OfferSettingsPanel } from './OfferSettingsPanel';
 import { PRICING_TABS, type PricingPanelProps, type PricingTab } from './pricingTabs';
 import styles from './PricingSettings.module.css';
 
@@ -20,12 +23,16 @@ const PANEL: Record<PricingTab, ComponentType<PricingPanelProps>> = {
   frequencies: VisitFrequenciesPanel,
   zones: PriceZonesPanel,
   cap: DiscountCapPanel,
+  services: ServicesPanel,
+  packages: PackagesPanel,
+  offer: OfferSettingsPanel,
   calculator: TestCalculatorPanel,
 };
 
 /**
- * Settings → Pricing (M2 Slice 3: FR-PCF-01..05, 07, 09): every number of the
- * pricing model, one tab per part, and a test calculator. The URL names the
+ * Settings → Pricing (M2 Slices 3 and 4: FR-PCF-01..09): every number of the
+ * pricing model, the services and packages the offer describes, the offer
+ * settings, one tab per part, and a test calculator. The URL names the
  * open tab, so it can be linked. Only for `pricing.manage`; the route checks.
  */
 export const PricingSettingsContent = () => {

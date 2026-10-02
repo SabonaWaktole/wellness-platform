@@ -1,5 +1,17 @@
 import { BandsOverlapError, InvalidPricingValueError, PricingNameTakenError } from '../../../src/pricing/domain/errors';
-import { bandRules, EmployeeBand, frequencyRules, PriceZone, VisitFrequency, zoneRules } from '../../../src/pricing/domain/PricingLists';
+import {
+  bandRules,
+  checkPackageServices,
+  EmployeeBand,
+  frequencyRules,
+  packageRules,
+  PriceZone,
+  Service,
+  ServicePackage,
+  serviceRules,
+  VisitFrequency,
+  zoneRules,
+} from '../../../src/pricing/domain/PricingLists';
 import { parseFee, parsePercent } from '../../../src/pricing/domain/PricingValues';
 
 const band = (id: string, minEmployees: number, maxEmployees: number, active = true): EmployeeBand => ({
@@ -159,5 +171,75 @@ describe('Price zones (FR-PCF-05)', () => {
     expect(() => zoneRules.validate({ ...centre, id: 'other', nameEn: null, nameSq: 'Tirana Centre' }, [centre])).toThrow(
       PricingNameTakenError
     );
+  });
+});
+
+describe('Services and packages (FR-PCF-06)', () => {
+  const service = (id: string, active = true): Service => ({
+    id,
+    nameSq: `Shërbim ${id}`,
+    nameEn: null,
+    descriptionSq: null,
+    descriptionEn: null,
+    order: 1,
+    active,
+  });
+  const standard: ServicePackage = {
+    id: 'p',
+    nameSq: 'Standart',
+    nameEn: 'Standard',
+    descriptionSq: 'Paketa standarde.',
+    descriptionEn: null,
+    serviceIds: ['s1', 's2'],
+    isDefault: true,
+    order: 1,
+    active: true,
+  };
+
+  it('FR-PCF-06 a service has a label and an optional description in sq and en, trimmed', () => {
+    expect(serviceRules.build({ nameSq: ' Vlerësim ', nameEn: 'Assessment', descriptionSq: '  Përshkrim ', descriptionEn: '' }, null)).toEqual({
+      nameSq: 'Vlerësim',
+      nameEn: 'Assessment',
+      descriptionSq: 'Përshkrim',
+      descriptionEn: null,
+    });
+  });
+
+  it('FR-PCF-06 refuses a service without an Albanian name, with an overlong description, or with a taken name', () => {
+    expect(codeOf(() => serviceRules.build({ nameEn: 'Only English' }, null))).toBe('INVALID_PRICING_VALUE');
+    expect(codeOf(() => serviceRules.build({ nameSq: 'X', descriptionEn: 'x'.repeat(2001) }, null))).toBe('INVALID_PRICING_VALUE');
+    expect(() => serviceRules.validate({ ...service('b'), nameSq: 'shërbim a' }, [service('a')])).toThrow(PricingNameTakenError);
+  });
+
+  it('FR-PCF-06 an edit of a package changes its label and description and keeps its services and default flag', () => {
+    expect(packageRules.build({ descriptionEn: 'The standard package.' }, standard)).toEqual({
+      nameSq: 'Standart',
+      nameEn: 'Standard',
+      descriptionSq: 'Paketa standarde.',
+      descriptionEn: 'The standard package.',
+      serviceIds: ['s1', 's2'],
+      isDefault: true,
+    });
+    expect(packageRules.audited(standard)).toEqual({
+      nameSq: 'Standart',
+      nameEn: 'Standard',
+      descriptionSq: 'Paketa standarde.',
+      descriptionEn: null,
+    });
+  });
+
+  it('FR-PCF-06 a package holds services of the list, each once, in the order given', () => {
+    const services = [service('s1'), service('s2'), service('s3')];
+    expect(checkPackageServices(['s3', 's1', 's2'], services)).toEqual(['s3', 's1', 's2']);
+    expect(codeOf(() => checkPackageServices(['s1', 's1'], services))).toBe('INVALID_PRICING_VALUE');
+    expect(codeOf(() => checkPackageServices(['elsewhere'], services))).toBe('SERVICE_NOT_ACTIVE');
+  });
+
+  it('FR-PCF-06 a package needs at least one active service; a deactivated one may stay but not be added', () => {
+    const services = [service('s1'), service('s2', false)];
+    expect(codeOf(() => checkPackageServices([], services))).toBe('PACKAGE_NEEDS_SERVICE');
+    expect(codeOf(() => checkPackageServices(['s2'], services))).toBe('SERVICE_NOT_ACTIVE');
+    expect(codeOf(() => checkPackageServices(['s2'], services, ['s2']))).toBe('PACKAGE_NEEDS_SERVICE');
+    expect(checkPackageServices(['s1', 's2'], services, ['s2'])).toEqual(['s1', 's2']);
   });
 });

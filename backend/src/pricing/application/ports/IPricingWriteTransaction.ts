@@ -1,15 +1,25 @@
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
+import { OfferSettings } from '../../domain/OfferSettings';
 import { PricingItemOf, PricingList } from '../../domain/PricingLists';
 
 /** Writes to a workspace's pricing configuration. Every method takes `tenantId` first, so no write can cross tenants. */
 export interface IPricingWrites {
   create<L extends PricingList>(tenantId: string, list: L, item: PricingItemOf[L]): Promise<void>;
-  /** Replaces the item's editable fields, order and active flag with `item`'s. A zone's cities are left alone. */
+  /**
+   * Replaces the item's editable fields, order and active flag with `item`'s.
+   * A zone's cities, a package's services and its default flag are left alone.
+   * Creating a package writes its services and default flag with it.
+   */
   update<L extends PricingList>(tenantId: string, list: L, item: PricingItemOf[L]): Promise<void>;
   delete(tenantId: string, list: PricingList, id: string): Promise<void>;
   setZoneCities(tenantId: string, zoneId: string, cityIds: string[]): Promise<void>;
   upsertRiskSurcharge(tenantId: string, surcharge: { id: string; riskLevelId: string; percent: string }): Promise<void>;
   setDiscountCap(tenantId: string, discountCapPercent: string): Promise<void>;
+  /** Replaces a package's services, in the order given. */
+  setPackageServices(tenantId: string, packageId: string, serviceIds: string[]): Promise<void>;
+  /** Makes this package the workspace's only default. */
+  setDefaultPackage(tenantId: string, packageId: string): Promise<void>;
+  updateOfferSettings(tenantId: string, changes: Partial<OfferSettings>): Promise<void>;
 }
 
 export interface PricingWriteRepos {

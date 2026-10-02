@@ -7,9 +7,10 @@ import { IPricingStore } from '../ports/IPricingStore';
 import { IPricingWriteTransaction } from '../ports/IPricingWriteTransaction';
 
 /**
- * Adds a band (FR-PCF-01), a visit frequency (FR-PCF-04) or a price zone
- * (FR-PCF-05). It is active at once, so the next calculation uses it; a new
- * zone starts with no cities.
+ * Adds a band (FR-PCF-01), a visit frequency (FR-PCF-04), a price zone
+ * (FR-PCF-05) or a service (FR-PCF-06). It is active at once, so the next
+ * calculation or offer uses it; a new zone starts with no cities. A package
+ * is created with its services by `CreateServicePackageUseCase`.
  */
 export class CreatePricingItemUseCase {
   constructor(
@@ -24,6 +25,9 @@ export class CreatePricingItemUseCase {
     values: Record<string, unknown>;
   }): Promise<PricingItem> {
     input.access.ensure(MANAGE_PRICING);
+    if (input.list === PricingList.Packages) {
+      throw new Error('A package is created with its services: use CreateServicePackageUseCase.');
+    }
     const rules = rulesFor(input.list);
     const siblings = await this.store.list(input.tenantId, input.list);
 

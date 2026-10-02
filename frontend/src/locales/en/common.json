@@ -137,7 +137,8 @@
   "language": {
     "inReview": "translation in review",
     "reviewNoticeOne": "<0>{{languages}}</0> is translated but not yet checked by a native speaker. Wording may be wrong in places, and server error messages are still shown in English.",
-    "reviewNoticeOther": "<0>{{languages}}</0> are translated but not yet checked by a native speaker. Wording may be wrong in places, and server error messages are still shown in English."
+    "reviewNoticeOther": "<0>{{languages}}</0> are translated but not yet checked by a native speaker. Wording may be wrong in places, and server error messages are still shown in English.",
+    "switchLabel": "Language"
   },
   "theme": {
     "menuTitle": "Theme",
@@ -145,5 +146,17 @@
     "dark": "Dark",
     "system": "System",
     "triggerLabel": "Theme: {{current}}. Change theme"
+  },
+  "richText": {
+    "toolbar": "Formatting: {{label}}",
+    "bold": "Bold",
+    "italic": "Italic",
+    "bulletList": "Bulleted list",
+    "orderedList": "Numbered list",
+    "link": "Add a link",
+    "unlink": "Remove the link",
+    "linkAddress": "Link address",
+    "applyLink": "Add link",
+    "invalidLink": "Enter a web address (https://…) or an email address."
   }
 }

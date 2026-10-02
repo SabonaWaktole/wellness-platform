@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '../../ui/Card/Card';
 import { ThemeToggle } from '../../ui/ThemeToggle';
 import { BrandLogo } from '../BrandLogo';
+import { VisitorLanguageSwitch } from './VisitorLanguageSwitch';
 import { usePageTitle } from '../../../hooks/usePageTitle';
 import styles from './AuthLayout.module.css';
 
@@ -42,6 +43,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
 
       <div className={styles.formColumn}>
         <div className={styles.toolbar}>
+          <VisitorLanguageSwitch />
           <ThemeToggle />
         </div>
 

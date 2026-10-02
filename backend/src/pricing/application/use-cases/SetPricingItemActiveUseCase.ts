@@ -1,14 +1,16 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { PricingItem, PricingList } from '../../domain/PricingLists';
-import { findPricingItem, listItemTarget, MANAGE_PRICING, pricingAuditEntry, rulesFor } from '../pricingAdmin';
+import { ensureListRulesKept, findPricingItem, listItemTarget, MANAGE_PRICING, pricingAuditEntry, rulesFor } from '../pricingAdmin';
 import { IPricingStore } from '../ports/IPricingStore';
 import { IPricingWriteTransaction } from '../ports/IPricingWriteTransaction';
 
 /**
- * Deactivates or reactivates a band, frequency or zone. An inactive value is
- * left out of every new calculation but stays on the offers that used it.
- * Reactivating a band is refused if it would overlap an active one (FR-PCF-01).
+ * Deactivates or reactivates a value of a pricing list. An inactive value is
+ * left out of every new calculation and offer but stays on the offers that
+ * used it. Reactivating a band is refused if it would overlap an active one
+ * (FR-PCF-01). The default package cannot be deactivated, and neither can the
+ * last active service of an active package (FR-PCF-06).
  */
 export class SetPricingItemActiveUseCase {
   constructor(
@@ -30,6 +32,7 @@ export class SetPricingItemActiveUseCase {
     }
 
     const next = { ...current, active: input.active } as PricingItem;
+    await ensureListRulesKept(this.store, input.tenantId, input.list, current, input.active ? 'reactivate' : 'deactivate');
     if (input.active) {
       rulesFor(input.list).validate(next, await this.store.list(input.tenantId, input.list));
     }

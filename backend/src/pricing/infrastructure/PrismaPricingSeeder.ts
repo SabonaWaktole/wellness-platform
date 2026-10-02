@@ -9,6 +9,8 @@ import {
   DEFAULT_RISK_SURCHARGES,
   DEFAULT_VISIT_FREQUENCIES,
 } from '../domain/DefaultPricing';
+import { DEFAULT_OFFER_TEXTS, DEFAULT_SERVICE_PACKAGE, DEFAULT_SERVICES, OFFER_TEXT_FIELDS } from '../domain/DefaultOfferSettings';
+import { richTextData } from './prismaPricingRows';
 
 /**
  * Risk surcharges and zone cities are matched to the workspace's lookup
@@ -20,8 +22,17 @@ export class PrismaPricingSeeder implements IPricingSeeder {
   constructor(private readonly prisma: PrismaClient) {}
 
   async seed(tenantId: string): Promise<void> {
+    // The offer numbers take their column defaults (Q6, Q9); the company name
+    // starts as the workspace name until the Administrator fills in the details.
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } });
     await this.prisma.pricingSettings.create({
-      data: { tenantId, currency: DEFAULT_PRICING_CURRENCY, discountCapPercent: DEFAULT_DISCOUNT_CAP_PERCENT },
+      data: {
+        tenantId,
+        currency: DEFAULT_PRICING_CURRENCY,
+        discountCapPercent: DEFAULT_DISCOUNT_CAP_PERCENT,
+        companyName: tenant.name,
+        ...Object.fromEntries(OFFER_TEXT_FIELDS.map((field) => [field, richTextData(DEFAULT_OFFER_TEXTS[field])])),
+      },
     });
 
     await this.prisma.employeeBand.createMany({
@@ -71,6 +82,17 @@ export class PrismaPricingSeeder implements IPricingSeeder {
           .filter((cityId): cityId is string => cityId !== undefined)
           .map((cityId) => ({ zoneId: id, cityId }))
       ),
+    });
+
+    // FR-PCF-06: placeholder services and the default package holding them all.
+    const services = DEFAULT_SERVICES.map((service, index) => ({ id: randomUUID(), tenantId, ...service, order: index + 1 }));
+    await this.prisma.service.createMany({ data: services });
+    const packageId = randomUUID();
+    await this.prisma.servicePackage.create({
+      data: { id: packageId, tenantId, ...DEFAULT_SERVICE_PACKAGE, isDefault: true, order: 1 },
+    });
+    await this.prisma.packageService.createMany({
+      data: services.map((service) => ({ packageId, serviceId: service.id, order: service.order })),
     });
   }
 }

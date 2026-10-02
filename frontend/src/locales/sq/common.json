@@ -137,7 +137,8 @@
   "language": {
     "inReview": "përkthimi në shqyrtim",
     "reviewNoticeOne": "<0>{{languages}}</0> është përkthyer, por nuk është kontrolluar ende nga një folës amtar. Formulimi mund të jetë i pasaktë në disa vende dhe mesazhet e gabimeve të serverit shfaqen ende në anglisht.",
-    "reviewNoticeOther": "<0>{{languages}}</0> janë përkthyer, por nuk janë kontrolluar ende nga folës amtarë. Formulimi mund të jetë i pasaktë në disa vende dhe mesazhet e gabimeve të serverit shfaqen ende në anglisht."
+    "reviewNoticeOther": "<0>{{languages}}</0> janë përkthyer, por nuk janë kontrolluar ende nga folës amtarë. Formulimi mund të jetë i pasaktë në disa vende dhe mesazhet e gabimeve të serverit shfaqen ende në anglisht.",
+    "switchLabel": "Gjuha"
   },
   "theme": {
     "menuTitle": "Tema",
@@ -145,5 +146,17 @@
     "dark": "E errët",
     "system": "Sipas sistemit",
     "triggerLabel": "Tema: {{current}}. Ndryshoni temën"
+  },
+  "richText": {
+    "toolbar": "Formatimi: {{label}}",
+    "bold": "I trashë",
+    "italic": "I pjerrët",
+    "bulletList": "Listë me pika",
+    "orderedList": "Listë e numëruar",
+    "link": "Shto një lidhje",
+    "unlink": "Hiq lidhjen",
+    "linkAddress": "Adresa e lidhjes",
+    "applyLink": "Shto lidhjen",
+    "invalidLink": "Shkruani një adresë interneti (https://…) ose një adresë email-i."
   }
 }

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import {
   pricingService,
   type CityWithoutZone,
+  type OfferSettings,
   type PricingConfiguration,
   type PricingListKey,
   type PricingValues,
@@ -10,7 +11,7 @@ import {
 } from '../services/pricingService';
 
 /**
- * The whole pricing configuration for Settings → Pricing (M2 Slice 3), with
+ * The whole pricing configuration for Settings → Pricing (M2 Slices 3, 4), with
  * the cities in no zone. It is small, and one value can change another screen
  * (a new zone city leaves the warning list), so every write reloads both
  * rather than patching a local copy: the screen always shows what was saved.
@@ -56,7 +57,7 @@ export const usePricingConfig = () => {
     create: (list: PricingListKey, values: PricingValues) => write((slug) => pricingService.create(slug, list, values))(),
     update: (list: PricingListKey, id: string, values: PricingValues) =>
       write((slug) => pricingService.update(slug, list, id, values))(),
-    reorder: (list: 'frequencies' | 'zones', ids: string[]) => write((slug) => pricingService.reorder(slug, list, ids))(),
+    reorder: (list: Exclude<PricingListKey, 'bands'>, ids: string[]) => write((slug) => pricingService.reorder(slug, list, ids))(),
     setActive: (list: PricingListKey, id: string, active: boolean) =>
       write((slug) => pricingService.setActive(slug, list, id, active))(),
     remove: (list: PricingListKey, id: string) => write((slug) => pricingService.remove(slug, list, id))(),
@@ -64,6 +65,10 @@ export const usePricingConfig = () => {
     setRiskSurcharge: (riskLevelId: string, percent: string) =>
       write((slug) => pricingService.setRiskSurcharge(slug, riskLevelId, percent))(),
     setDiscountCap: (percent: string) => write((slug) => pricingService.setDiscountCap(slug, percent))(),
+    setPackageServices: (packageId: string, serviceIds: string[]) =>
+      write((slug) => pricingService.setPackageServices(slug, packageId, serviceIds))(),
+    setDefaultPackage: (packageId: string) => write((slug) => pricingService.setDefaultPackage(slug, packageId))(),
+    updateOfferSettings: (changes: Partial<OfferSettings>) => write((slug) => pricingService.updateOfferSettings(slug, changes))(),
     /** Stores nothing, so nothing to reload. */
     testCalculation: (input: TestCalculationInput) => pricingService.testCalculation(tenantSlug!, input),
   };

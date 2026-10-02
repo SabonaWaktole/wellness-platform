@@ -9,7 +9,11 @@ export type PricingValueErrorCode =
   | 'INVALID_PERCENT'
   | 'INVALID_BAND_RANGE'
   | 'INVALID_PRICING_VALUE'
-  | 'CITY_NOT_ACTIVE';
+  | 'CITY_NOT_ACTIVE'
+  | 'SERVICE_NOT_ACTIVE'
+  | 'PACKAGE_NEEDS_SERVICE'
+  | 'INVALID_OFFER_SETTING'
+  | 'INVALID_RICH_TEXT';
 
 /**
  * A pricing value failed a rule of the model: a fee that is negative, not a
@@ -62,5 +66,24 @@ export class InvalidPricingOrderError extends DomainError {
 
   constructor() {
     super('The new order must list every value exactly once.');
+  }
+}
+
+export type PricingConflictCode = 'PRICING_ITEM_IN_USE' | 'DEFAULT_PACKAGE_REQUIRED' | 'SERVICE_LAST_IN_PACKAGE';
+
+/**
+ * The change would break a rule between lists (FR-PCF-06): a service in a
+ * package cannot be deleted, the default package cannot be deactivated or
+ * deleted until another is the default, and a package cannot be left without
+ * an active service. `names` are the values in the way, for the message.
+ * Mapped to 409.
+ */
+export class PricingConflictError extends DomainError {
+  constructor(
+    readonly code: PricingConflictCode,
+    message: string,
+    readonly names: string[] = []
+  ) {
+    super(message);
   }
 }

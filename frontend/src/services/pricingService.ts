@@ -1,11 +1,12 @@
 import { apiClient as api } from '../api';
+import type { RichTextDoc } from '../types/form';
 
 /**
- * Settings → Pricing's client (M2 Slice 3: FR-PCF-01..05, 07, 09). Amounts
+ * Settings → Pricing's client (M2 Slices 3 and 4: FR-PCF-01..09). Amounts
  * and percentages arrive as two-decimal strings ("49.40"); the frontend only
  * formats them and never calculates a price (NFR-ACC-02).
  */
-export type PricingListKey = 'bands' | 'frequencies' | 'zones';
+export type PricingListKey = 'bands' | 'frequencies' | 'zones' | 'services' | 'packages';
 
 export type FrequencyPricingType = 'PERCENT' | 'FIXED';
 
@@ -51,6 +52,48 @@ export interface RiskSurcharge {
   riskSurchargePercent: string | null;
 }
 
+/** A service the offer describes (FR-PCF-06). It has no price. */
+export interface Service {
+  id: string;
+  nameSq: string;
+  nameEn: string | null;
+  descriptionSq: string | null;
+  descriptionEn: string | null;
+  order: number;
+  active: boolean;
+}
+
+/** A named set of services; exactly one active package is the default (FR-PCF-06). */
+export interface ServicePackage {
+  id: string;
+  nameSq: string;
+  nameEn: string | null;
+  descriptionSq: string | null;
+  descriptionEn: string | null;
+  /** In the order the offer lists them. */
+  serviceIds: string[];
+  isDefault: boolean;
+  order: number;
+  active: boolean;
+}
+
+export const OFFER_TEXT_FIELDS = ['introSq', 'introEn', 'termsSq', 'termsEn', 'closingSq', 'closingEn'] as const;
+export type OfferTextField = (typeof OFFER_TEXT_FIELDS)[number];
+
+/** The offer settings (FR-PCF-08); the texts are TipTap JSON, sanitised by the server. */
+export interface OfferSettings extends Record<OfferTextField, RichTextDoc | null> {
+  offerValidityDays: number;
+  contractMonthsDefault: number;
+  offerNumberPrefix: string;
+  companyName: string | null;
+  nipt: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  bankDetails: string | null;
+}
+
 export interface PricingConfiguration {
   currency: string;
   discountCapPercent: string;
@@ -58,6 +101,9 @@ export interface PricingConfiguration {
   riskSurcharges: RiskSurcharge[];
   frequencies: VisitFrequency[];
   zones: PriceZone[];
+  services: Service[];
+  packages: ServicePackage[];
+  offerSettings: OfferSettings;
 }
 
 export interface CityWithoutZone {
@@ -134,6 +180,19 @@ export const pricingService = {
 
   setDiscountCap: async (tenantSlug: string, discountCapPercent: string): Promise<void> => {
     await api.put(`${base(tenantSlug)}/discount-cap`, { discountCapPercent });
+  },
+
+  setPackageServices: async (tenantSlug: string, packageId: string, serviceIds: string[]): Promise<void> => {
+    await api.put(`${base(tenantSlug)}/packages/${packageId}/services`, { serviceIds });
+  },
+
+  setDefaultPackage: async (tenantSlug: string, packageId: string): Promise<void> => {
+    await api.post(`${base(tenantSlug)}/packages/${packageId}/default`);
+  },
+
+  /** Only the fields sent change. */
+  updateOfferSettings: async (tenantSlug: string, changes: Partial<OfferSettings>): Promise<void> => {
+    await api.put(`${base(tenantSlug)}/offer-settings`, changes);
   },
 
   testCalculation: async (tenantSlug: string, input: TestCalculationInput): Promise<TestCalculationResult> =>

@@ -14,8 +14,8 @@ const TENANT = process.env.E2E_TENANT ?? 'wellness-albania';
 
 const LISTS = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons'];
 
-/** Settings → Pricing's tabs (M2 Slice 3; NFR-USE-02). */
-const PRICING_TABS = ['bands', 'risk', 'frequencies', 'zones', 'cap', 'calculator'];
+/** Settings → Pricing's tabs (M2 Slices 3 and 4; NFR-USE-02). */
+const PRICING_TABS = ['bands', 'risk', 'frequencies', 'zones', 'cap', 'services', 'packages', 'offer', 'calculator'];
 
 async function expectNoHorizontalOverflow(page: Page, screen: string) {
   // Let late-loading data (tables, timelines) lay out before measuring.

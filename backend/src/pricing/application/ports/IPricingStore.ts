@@ -1,8 +1,11 @@
+import { OfferSettings } from '../../domain/OfferSettings';
 import { PricingItemOf, PricingList } from '../../domain/PricingLists';
 
 export interface PricingSettingsRecord {
   currency: string;
   discountCapPercent: string;
+  /** FR-PCF-08 (Slice 4). */
+  offerSettings: OfferSettings;
 }
 
 /** One M1 risk level with its surcharge, or `null` where none is set ("Price on request"). */

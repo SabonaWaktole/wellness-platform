@@ -1,0 +1,160 @@
+/* ============================================================================
+ * RichTextField — the TextareaInput look with a small formatting toolbar on
+ * top. Works from 360px: the toolbar wraps, the link row stacks.
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-md);
+  font-weight: 540;
+  line-height: var(--font-line-height-label-md);
+  color: var(--text-primary);
+  letter-spacing: var(--font-letter-spacing-label-md);
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-default);
+  box-shadow: var(--shadow-xs);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.frame:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring-tight);
+}
+
+.frameError {
+  border-color: var(--color-error);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background-color: var(--color-surface-container);
+  color: var(--text-primary);
+}
+
+.button[aria-pressed='true'] {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-primary);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-tight);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.linkInput {
+  flex: 1 1 180px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px var(--spacing-sm);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-primary);
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.textButton {
+  min-height: 36px;
+  padding: 0 var(--spacing-sm);
+  font: inherit;
+  font-size: var(--font-size-label-sm);
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.textButton:hover {
+  background-color: var(--color-surface-container);
+}
+
+.linkError {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--color-error);
+}
+
+.content {
+  min-height: 96px;
+  padding: 10px var(--spacing-base);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body-md);
+  line-height: var(--font-line-height-body-md);
+  color: var(--text-primary);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.content p {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.content ul,
+.content ol {
+  margin: 0 0 var(--spacing-xs);
+  padding-left: 1.4em;
+}
+
+.content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.helperText {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-tertiary);
+}
+
+.helperTextError {
+  color: var(--color-error);
+}
