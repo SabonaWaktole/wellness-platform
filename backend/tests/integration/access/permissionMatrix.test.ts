@@ -229,13 +229,11 @@ describe('Permission matrix (SRS §4.2)', () => {
           .send({ name: `Matrix WH ${randomUUID()}` }),
     },
     {
-      label: 'settings.manage — POST /clients/settings/outcome-categories (checked in the use case too)',
+      // Read-only since M2 Slice 7: activities take their result from the
+      // activity results list.
+      label: 'settings.manage — GET /clients/settings/outcome-categories',
       permissionKey: 'settings.manage',
-      request: (t) =>
-        request(app)
-          .post(`/api/${tenantSlug}/clients/settings/outcome-categories`)
-          .set('Authorization', `Bearer ${t}`)
-          .send({ name: `Matrix outcome ${randomUUID()}` }),
+      request: (t) => request(app).get(`/api/${tenantSlug}/clients/settings/outcome-categories`).set('Authorization', `Bearer ${t}`),
     },
     {
       label: 'invoices.manage — GET /invoices',

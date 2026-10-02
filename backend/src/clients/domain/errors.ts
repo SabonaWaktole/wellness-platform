@@ -162,3 +162,47 @@ export class ContactNotFoundError extends DomainError {
     super('Contact not found');
   }
 }
+
+export type InvalidActivityField =
+  | 'channel'
+  | 'content'
+  | 'occurredAt'
+  | 'contactPersonId'
+  | 'resultId'
+  | 'dealId';
+
+/**
+ * An activity field is refused (FR-ACT-01, 02). Mapped to 400 with the
+ * field, so the activity dialog shows a translated message next to it.
+ */
+export class InvalidActivityError extends DomainError {
+  readonly code = 'INVALID_ACTIVITY';
+
+  constructor(
+    readonly field: InvalidActivityField,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+/** No such activity on this company. Mapped to 404. */
+export class ActivityNotFoundError extends DomainError {
+  readonly code = 'ACTIVITY_NOT_FOUND';
+
+  constructor() {
+    super('Activity not found');
+  }
+}
+
+/**
+ * FR-ACT-06: after 24 hours only the Sales Manager (activities.add at Team
+ * scope or wider) edits an activity. Mapped to 403.
+ */
+export class ActivityEditClosedError extends DomainError {
+  readonly code = 'ACTIVITY_EDIT_CLOSED';
+
+  constructor() {
+    super('Only the Sales Manager can edit an activity after 24 hours.');
+  }
+}

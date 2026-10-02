@@ -175,6 +175,8 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     prisma.city.findMany({ where: { tenantId, active: true } }),
     prisma.customFieldDefinition.findMany({ where: { tenantId } }),
   ]);
+  // The seeded calls' result (FR-ACT-02): the workspace's first active one.
+  const callResult = await prisma.activityResult.findFirstOrThrow({ where: { tenantId, active: true }, orderBy: { order: 'asc' } });
   const fieldName = (role: FieldRole) => fieldDefs.find((f) => f.role === role)?.fieldName;
   const nameField = fieldName(FieldRole.PRIMARY_NAME) ?? 'Name';
   const statusField = fieldName(FieldRole.STATUS) ?? 'Status';
@@ -216,7 +218,16 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     log(`company + ${spec.name}${spec.owner ? ` (${spec.owner})` : ' (unassigned)'}`);
 
     await api.call('POST', `/clients/${company.id}/interactions`, { channel: 'NOTE', content: 'Shënim UAT: klienti preferon takime në mëngjes.' });
-    await api.call('POST', `/clients/${company.id}/interactions`, { channel: 'CALL', content: 'Telefonatë UAT: u diskutua oferta vjetore.' });
+    // A call names its contact person and its result (M2 Slice 7, FR-ACT-02).
+    const primary = await prisma.contactPerson.findFirstOrThrow({ where: { tenantId, clientId: company.id, isPrimary: true, deletedAt: null } });
+    await api.call('POST', `/clients/${company.id}/interactions`, {
+      channel: 'CALL',
+      content: 'Telefonatë UAT: u diskutua oferta vjetore.',
+      contactPersonId: primary.id,
+      resultId: callResult.id,
+      clientFeedback: 'I interesuar për një ofertë vjetore.',
+      nextAction: 'Dërgo ofertën.',
+    });
 
     if (spec.contract) {
       const year = new Date().getFullYear();
