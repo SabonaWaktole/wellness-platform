@@ -1,7 +1,7 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { LookupList } from '../../domain/LookupList';
 import { LookupRecord, sortLookupItems } from '../../domain/LookupItem';
-import { allowedFilter, MANAGE_LISTS } from '../lookupAdmin';
+import { allowedFilter, canManageList } from '../lookupAdmin';
 import { LookupRulesRegistry } from '../LookupListRules';
 import { ILookupStore } from '../ports/ILookupStore';
 
@@ -26,7 +26,7 @@ export class ListLookupItemsUseCase {
     filter?: Record<string, unknown>;
   }): Promise<LookupRecord[]> {
     const items = await this.store.list(input.tenantId, input.list, allowedFilter(this.rules[input.list], input.filter));
-    const all = input.includeInactive === true && input.access.can(MANAGE_LISTS);
+    const all = input.includeInactive === true && canManageList(input.access, input.list);
     return sortLookupItems(all ? items : items.filter((item) => item.active));
   }
 }

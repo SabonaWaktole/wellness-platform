@@ -34,6 +34,7 @@ const listFields: Record<LookupList, z.ZodRawShape> = {
     days: z.number().int(),
   },
   [LookupList.LostReasons]: {},
+  [LookupList.ActivityResults]: {},
 };
 
 export const lookupSchemas = {

@@ -52,6 +52,12 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.formVersion.deleteMany({ where: { tenantId } });
       await tx.clientForm.deleteMany({ where: { tenantId } });
       /*
+       * Activities (M2 Slice 7) hold RESTRICT references to Deal,
+       * ContactPerson and ActivityResult as well as Client and User, so they
+       * go before the deals.
+       */
+      await tx.interaction.deleteMany({ where: { tenantId } });
+      /*
        * Deals (M2 Slice 6) hold RESTRICT references to Client, User,
        * Quotation, LostReason and ServicePackage, so they go before all of
        * them. Their stage history cascades from the deal on Postgres; it is
@@ -72,7 +78,6 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.ownershipTransfer.deleteMany({ where: { tenantId } });
       await tx.notification.deleteMany({ where: { tenantId } });
       await tx.appointment.deleteMany({ where: { tenantId } });
-      await tx.interaction.deleteMany({ where: { tenantId } });
       await tx.quotation.deleteMany({ where: { tenantId } });
       await tx.stockMovement.deleteMany({ where: { tenantId } });
       await tx.stockLevel.deleteMany({ where: { tenantId } });
@@ -85,6 +90,9 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.client.deleteMany({ where: { tenantId } });
       await tx.customFieldDefinition.deleteMany({ where: { tenantId } });
       await tx.outcomeCategory.deleteMany({ where: { tenantId } });
+      // Cascades from Tenant; listed so nothing is left to MySQL's cascade
+      // ordering once the activities that point at it are gone (M2 Slice 7).
+      await tx.activityResult.deleteMany({ where: { tenantId } });
       await tx.invitation.deleteMany({ where: { tenantId } });
       // PasswordResetToken has no tenantId column of its own — only via the
       // user it belongs to.

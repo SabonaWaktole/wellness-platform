@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { ILookupSeeder } from '../application/ports/ILookupSeeder';
 import {
+  DEFAULT_ACTIVITY_RESULTS,
   DEFAULT_AREAS,
   DEFAULT_BUSINESS_TYPES,
   DEFAULT_FOLLOW_UP_INTERVALS,
@@ -68,6 +69,14 @@ export class PrismaLookupSeeder implements ILookupSeeder {
         id: randomUUID(),
         tenantId,
         ...reason,
+        order: index + 1,
+      })),
+    });
+    await this.prisma.activityResult.createMany({
+      data: DEFAULT_ACTIVITY_RESULTS.map((result, index) => ({
+        id: randomUUID(),
+        tenantId,
+        ...result,
         order: index + 1,
       })),
     });

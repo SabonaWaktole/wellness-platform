@@ -40,6 +40,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.formSubmission.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.formVersion.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.clientForm.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.interaction.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.dealStageHistory.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.deal.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.invoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -56,6 +57,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.area.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.followUpInterval.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.lostReason.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.activityResult.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.statusLabel.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     }
@@ -154,8 +156,9 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // ContactPerson: RESTRICT on its own tenantId FK, must be gone before the
     // tenant delete (its clientId FK cascades from Client, but that is not
     // relied on here — see the comment beside contactPerson.deleteMany).
+    const contactId = randomUUID();
     await prisma.contactPerson.create({
-      data: { id: randomUUID(), tenantId, clientId, name: 'Jane Doe', phone: '+355691234567', isPrimary: true },
+      data: { id: contactId, tenantId, clientId, name: 'Jane Doe', phone: '+355691234567', isPrimary: true },
     });
 
     // OwnershipTransfer: RESTRICT on tenantId AND on two User rows — must be
@@ -211,6 +214,26 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       data: { id: randomUUID(), tenantId, dealId, fromStage: 'NEW_LEAD', toStage: 'LOST', changedByUserId: staff.id },
     });
 
+    // An activity holds RESTRICT keys on Deal, ContactPerson, ActivityResult
+    // and two users (M2 Slice 7), so it has to go before every one of them.
+    const activityResult = await prisma.activityResult.findFirstOrThrow({ where: { tenantId } });
+    await prisma.interaction.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        clientId,
+        authorUserId: staff.id,
+        content: 'Called about the offer',
+        channel: 'CALL',
+        occurredAt: new Date(),
+        contactPersonId: contactId,
+        dealId,
+        resultId: activityResult.id,
+        updatedAt: new Date(),
+        updatedByUserId: owner.id,
+      },
+    });
+
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
     // covered here so a tenant with an edited status label is proven clean too.
     await prisma.statusLabel.create({
@@ -246,6 +269,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.salesScript.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.deal.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.dealStageHistory.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.interaction.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.activityResult.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });

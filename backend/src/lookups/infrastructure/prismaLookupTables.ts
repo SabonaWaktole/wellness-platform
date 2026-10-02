@@ -14,6 +14,7 @@ const TABLES: Record<LookupList, { delegate: (prisma: PrismaClient) => any; colu
   [LookupList.Cities]: { delegate: (prisma) => prisma.city, columns: ['areaId'] },
   [LookupList.FollowUpIntervals]: { delegate: (prisma) => prisma.followUpInterval, columns: ['days'] },
   [LookupList.LostReasons]: { delegate: (prisma) => prisma.lostReason, columns: [] },
+  [LookupList.ActivityResults]: { delegate: (prisma) => prisma.activityResult, columns: [] },
 };
 
 const SHARED_COLUMNS = ['id', 'nameSq', 'nameEn', 'order', 'active'];

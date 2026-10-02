@@ -2,7 +2,7 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { LookupItemInUseError } from '../../domain/errors';
 import { LookupList } from '../../domain/LookupList';
-import { auditedFields, auditFieldsOf, findItem, lookupAuditEntry, MANAGE_LISTS } from '../lookupAdmin';
+import { auditedFields, auditFieldsOf, ensureCanManageList, findItem, lookupAuditEntry } from '../lookupAdmin';
 import { LookupRulesRegistry } from '../LookupListRules';
 import { ILookupInUsePolicy } from '../ports/ILookupInUsePolicy';
 import { ILookupStore } from '../ports/ILookupStore';
@@ -18,7 +18,7 @@ export class DeleteLookupItemUseCase {
   ) {}
 
   async execute(input: { access: AccessContext; tenantId: string; list: LookupList; id: string }): Promise<void> {
-    input.access.ensure(MANAGE_LISTS);
+    ensureCanManageList(input.access, input.list);
     const rules = this.rules[input.list];
     const item = await findItem(this.store, input.tenantId, input.list, input.id);
 

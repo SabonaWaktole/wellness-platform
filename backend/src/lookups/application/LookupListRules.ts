@@ -259,6 +259,26 @@ export class LostReasonRules implements LookupListRules {
   }
 }
 
+/** Activity results (FR-ACT-03): labels only. */
+export class ActivityResultRules implements LookupListRules {
+  readonly list = LookupList.ActivityResults;
+  readonly fields: string[] = [];
+  readonly auditFields: string[] = [];
+  readonly namePeers = defaultNamePeers;
+
+  async validate() {}
+
+  async checkDeactivate(): Promise<LookupRecord[]> {
+    return [];
+  }
+
+  async checkReactivate() {}
+
+  async describe(): Promise<Record<string, unknown>> {
+    return {};
+  }
+}
+
 export type LookupRulesRegistry = Record<LookupList, LookupListRules>;
 
 export function createLookupRules(store: ILookupStore): LookupRulesRegistry {
@@ -269,5 +289,6 @@ export function createLookupRules(store: ILookupStore): LookupRulesRegistry {
     [LookupList.Cities]: new CityRules(store),
     [LookupList.FollowUpIntervals]: new FollowUpIntervalRules(),
     [LookupList.LostReasons]: new LostReasonRules(),
+    [LookupList.ActivityResults]: new ActivityResultRules(),
   };
 }

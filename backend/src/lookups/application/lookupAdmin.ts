@@ -11,6 +11,26 @@ import { ILookupStore } from './ports/ILookupStore';
 /** Every write to a list needs this (FR-SET-01, 02). */
 export const MANAGE_LISTS = 'settings.manage';
 
+/**
+ * The activity results are also managed under the "Activity results, stage
+ * labels" row of the role matrix (SRS §9.2, M2 Slice 7, FR-ACT-03), so either
+ * key edits that list. Every other list stays `settings.manage` only.
+ */
+export const MANAGE_ACTIVITY_RESULTS = 'activityResults.manage';
+
+/** Every key that can edit some list: what the write routes let through. */
+export const LIST_EDIT_KEYS = [MANAGE_LISTS, MANAGE_ACTIVITY_RESULTS];
+
+export function canManageList(access: AccessContext, list: LookupList): boolean {
+  return access.can(MANAGE_LISTS) || (list === LookupList.ActivityResults && access.can(MANAGE_ACTIVITY_RESULTS));
+}
+
+/** Throws `PermissionDeniedError` unless `access` may edit `list`. */
+export function ensureCanManageList(access: AccessContext, list: LookupList): void {
+  if (list === LookupList.ActivityResults && access.can(MANAGE_ACTIVITY_RESULTS)) return;
+  access.ensure(MANAGE_LISTS);
+}
+
 export async function findItem(store: ILookupStore, tenantId: string, list: LookupList, id: string): Promise<LookupRecord> {
   const item = await store.findById(tenantId, list, id);
   if (!item) {

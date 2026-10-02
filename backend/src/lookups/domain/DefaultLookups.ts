@@ -10,6 +10,8 @@
  * reasons) seed the same values for workspaces that already exist, and
  * `20260930200000_m2_pricing_config` adds the cities marked `since: 'M2'`
  * (Vorë, for the Kamëz and Vorë price zone);
+ * `20261002100000_m2_activities` / `mysql_migration_m2_activities.sql` seed
+ * the activity results;
  * `DefaultLookups.test.ts` keeps them all in step.
  */
 export interface DefaultRiskLevel {
@@ -50,6 +52,11 @@ export interface DefaultFollowUpInterval {
 }
 
 export interface DefaultLostReason {
+  nameSq: string;
+  nameEn: string;
+}
+
+export interface DefaultActivityResult {
   nameSq: string;
   nameEn: string;
 }
@@ -101,4 +108,14 @@ export const DEFAULT_LOST_REASONS: DefaultLostReason[] = [
   { nameSq: 'Ka tashmë një ofrues', nameEn: 'Already has a provider' },
   { nameSq: 'Pa buxhet', nameEn: 'No budget' },
   { nameSq: 'Pa përgjigje', nameEn: 'No response' },
+];
+
+/** FR-ACT-03's own example list (Q14). */
+export const DEFAULT_ACTIVITY_RESULTS: DefaultActivityResult[] = [
+  { nameSq: 'U kontaktua – i interesuar', nameEn: 'Reached – interested' },
+  { nameSq: 'U kontaktua – jo i interesuar', nameEn: 'Reached – not interested' },
+  { nameSq: 'Nuk u kontaktua', nameEn: 'Not reached' },
+  { nameSq: 'Telefono më vonë', nameEn: 'Call back later' },
+  { nameSq: 'U caktua takim', nameEn: 'Meeting agreed' },
+  { nameSq: 'Kërkoi ofertë', nameEn: 'Offer requested' },
 ];
