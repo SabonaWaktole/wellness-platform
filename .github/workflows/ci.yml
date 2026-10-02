@@ -63,10 +63,19 @@ jobs:
       # Both orderings, because per-worker schema isolation is what makes the
       # parallel run trustworthy and a serial-only pass would hide a leak
       # between workers.
+      #
+      # 4 GB of heap: `npm test` passes --detectOpenHandles, which makes Jest
+      # run every suite in one process (TD-034). The Milestone 2 suites took
+      # that process past Node's ~2 GB default and it aborted with "heap out of
+      # memory" (exit 134) with no test failing.
       - name: Test (parallel)
         run: npm test
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
       - name: Test (serial)
         run: npm test -- --runInBand
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
   # NFR-OPS-01: the Hostinger target is MySQL, which `prisma migrate deploy`
   # cannot migrate (prisma/migrations is Postgres SQL). The hand-written
