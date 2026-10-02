@@ -42,6 +42,8 @@ const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
     'annualValue',
   ],
   QuotationService: [],
+  // Slice 9: the yearly document counter holds no money.
+  DocumentSequence: [],
 };
 
 /** Field name → type, for one model block of a Prisma schema. */

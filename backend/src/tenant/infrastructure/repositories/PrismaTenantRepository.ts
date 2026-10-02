@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { ITenantRepository, TenantSettingsUpdate } from '../../domain/repositories/ITenantRepository';
-import { Tenant } from '../../domain/entities/Tenant';
+import { SalesWorkflow, Tenant } from '../../domain/entities/Tenant';
 import { SubscriptionStatus } from '../../domain/enums/SubscriptionStatus';
 import { prisma as defaultPrisma } from '../../../shared/infrastructure/prisma/client';
 
@@ -144,5 +144,9 @@ export class PrismaTenantRepository implements ITenantRepository {
 
   async setSubscriptionStatus(id: string, status: SubscriptionStatus): Promise<void> {
     await this.prisma.tenant.update({ where: { id }, data: { subscriptionStatus: status } });
+  }
+
+  async setSalesWorkflow(id: string, workflow: SalesWorkflow): Promise<void> {
+    await this.prisma.tenant.update({ where: { id }, data: { salesWorkflow: workflow } });
   }
 }

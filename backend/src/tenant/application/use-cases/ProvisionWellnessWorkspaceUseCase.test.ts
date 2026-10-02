@@ -89,6 +89,34 @@ describe('ProvisionWellnessWorkspaceUseCase', () => {
     expect(platformSettings.save).not.toHaveBeenCalled();
   });
 
+  it('FR-OFR-07 FR-RBAC-18 runs the new Wellness Albania workspace on the sales process (D6)', async () => {
+    const { useCase, tenantRepo } = setup();
+
+    const { tenantId } = await useCase.execute({ owner });
+
+    expect(tenantRepo.setSalesWorkflow).toHaveBeenCalledWith(tenantId, 'SALES_PROCESS');
+  });
+
+  it('FR-OFR-07 moves an existing workspace still on the legacy quotations onto the sales process, even on a plain re-run', async () => {
+    const { useCase, tenantRepo } = setup();
+    tenantRepo.findBySlug.mockResolvedValue(existingTenant());
+
+    await useCase.execute({ owner });
+
+    expect(tenantRepo.setSalesWorkflow).toHaveBeenCalledWith('t-existing', 'SALES_PROCESS');
+  });
+
+  it('leaves the workflow alone when the workspace already runs the sales process', async () => {
+    const { useCase, tenantRepo } = setup();
+    tenantRepo.findBySlug.mockResolvedValue(
+      Tenant.create({ id: 't-existing', name: 'Wellness Albania', urlSlug: 'wellness-albania', salesWorkflow: 'SALES_PROCESS', createdAt: new Date() })
+    );
+
+    await useCase.execute({ updateExisting: true });
+
+    expect(tenantRepo.setSalesWorkflow).not.toHaveBeenCalled();
+  });
+
   it('FR-LNG-04 moves an existing workspace onto the Albanian defaults when asked', async () => {
     const { useCase, tenantRepo } = setup();
     tenantRepo.findBySlug.mockResolvedValue(existingTenant());
