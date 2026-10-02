@@ -371,6 +371,46 @@
       "id": "NFR-SEC-04",
       "priority": "Must",
       "requirement": "The discount cap, approval state, stage rules and data scope shall be enforced on the server for every request."
+    },
+    {
+      "id": "FR-PCF-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage employee bands: from and to number of employees, base fee for the first employee of the band's formula, and fee per extra employee. Bands cannot overlap. Seed: 1–10 employees, €30.00, €8.00."
+    },
+    {
+      "id": "FR-PCF-02",
+      "priority": "Must",
+      "requirement": "The Administrator shall set a risk surcharge % for each risk level from Milestone 1. Seed: Level 1 (Low) 0%, Level 2 (Medium) 10%, Level 3 (High) 20% (Q4)."
+    },
+    {
+      "id": "FR-PCF-03",
+      "priority": "Must",
+      "requirement": "Percentages shall accept values from 0 to 1000 with up to two decimals; fees accept values ≥ 0 with two decimals."
+    },
+    {
+      "id": "FR-PCF-04",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage visit frequencies: label, visits per year (optional, for reports), and pricing type — percentage of base fee, or fixed monthly amount. Seed: 1/year 0%, 2/year 20%, 4/year 35%, 6/year 50%, Monthly 100%, Ad hoc fixed €15.00."
+    },
+    {
+      "id": "FR-PCF-05",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage price zones: label, surcharge %, and the list of predefined cities in the zone (picked from the M1 City list). A city may be in more than one zone (FR-PRC-06). The admin screen lists active cities that are in no zone."
+    },
+    {
+      "id": "FR-PCF-07",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the discount cap: the highest discount % a salesperson may apply without approval (section 5)."
+    },
+    {
+      "id": "FR-PCF-09",
+      "priority": "Should",
+      "requirement": "The Administrator shall be able to try the current configuration in a test calculator on the settings page without creating an offer."
+    },
+    {
+      "id": "FR-AUD-09",
+      "priority": "Must",
+      "requirement": "In Milestone 2 the following shall be audited with old and new values (using the M1 audit mechanism, FR-AUD-03): all pricing configuration (bands, risk surcharges, visit frequencies, price zones and their cities, discount cap, offer settings), services and packages, activity results, stage labels, sales script publishes, discount requests and decisions, offer status changes with prices, deal won / lost / reopen / delete, and changes of deal salesperson or agreed values."
     }
   ]
 }

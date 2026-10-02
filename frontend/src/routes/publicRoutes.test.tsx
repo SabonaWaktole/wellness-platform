@@ -21,9 +21,10 @@ describe('what an anonymous visitor can reach', () => {
   it('FR-BR-05 has no sign-up, onboarding, subscription or landing route', () => {
     // Accounts are created by an administrator in this edition. The remaining
     // public routes are sign-in, password recovery, and links someone was sent
-    // (an invitation, a quotation, a form).
-    const saasPaths = allPaths(routes).filter((path) =>
-      /regist|sign-?up|onboard|landing|pricing|subscri/i.test(path)
+    // (an invitation, a quotation, a form). Settings pages sit behind sign-in,
+    // so Settings → Pricing (M2 Slice 3) is not a public pricing page.
+    const saasPaths = allPaths(routes).filter(
+      (path) => !path.startsWith('settings/') && /regist|sign-?up|onboard|landing|pricing|subscri/i.test(path)
     );
     expect(saasPaths).toEqual([]);
   });

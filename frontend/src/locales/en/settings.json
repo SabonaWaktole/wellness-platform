@@ -13,7 +13,8 @@
     "integrations": "Integrations",
     "warehouses": "Warehouses",
     "categories": "Categories",
-    "audit": "Audit log"
+    "audit": "Audit log",
+    "pricing": "Pricing"
   },
   "company": {
     "title": "Company Settings",
@@ -647,6 +648,112 @@
       "AREA_INACTIVE": "Choose an active area.",
       "AREA_HAS_ACTIVE_CITIES_one": "This area has {{count}} active city. Deactivate it too, or move it first.",
       "AREA_HAS_ACTIVE_CITIES_other": "This area has {{count}} active cities. Deactivate them too, or move them first.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "pricing": {
+    "breadcrumb": "Pricing",
+    "title": "Pricing",
+    "subtitle": "Every number in the pricing model. A change applies to the next calculation; offers already created keep their prices.",
+    "loading": "Loading the pricing configuration…",
+    "loadFailed": "The pricing configuration could not be loaded.",
+    "tabs": {
+      "bands": "Employee bands",
+      "risk": "Risk surcharges",
+      "frequencies": "Visit frequencies",
+      "zones": "Price zones",
+      "cap": "Discount cap",
+      "calculator": "Test calculator"
+    },
+    "hints": {
+      "bands": "The base fee is the price for the first employee of the band, and each extra employee adds the fee per employee. Active bands may not overlap. Above the last band, the price is \"on request\".",
+      "risk": "A surcharge on the base fee for each risk level. A company's risk level comes from its business type.",
+      "frequencies": "A percentage of the base fee, or a fixed monthly amount, such as for ad hoc visits.",
+      "zones": "A surcharge on the base fee for the cities of each zone. A city can be in more than one zone; the salesperson chooses.",
+      "cap": "The highest discount a salesperson may give without approval.",
+      "calculator": "Try the current configuration. Nothing is saved and no offer is created."
+    },
+    "columns": {
+      "minEmployees": "From (employees)",
+      "maxEmployees": "To (employees)",
+      "baseFee": "Base fee",
+      "perEmployeeFee": "Per extra employee",
+      "riskLevel": "Risk level",
+      "surcharge": "Surcharge (%)",
+      "pricingType": "Pricing",
+      "value": "Value",
+      "visitsPerYear": "Visits per year",
+      "cities": "Cities"
+    },
+    "employeesRange": "{{min}}–{{max}} employees",
+    "addBand": "Add band",
+    "editBand": "Edit band {{range}}",
+    "deleteBand": "Delete band {{range}}",
+    "deactivateBand": "Deactivate band {{range}}",
+    "reactivateBand": "Reactivate band {{range}}",
+    "deleteBandConfirm": "Delete the band {{range}}? Offers already created keep their prices.",
+    "pricingTypes": {
+      "PERCENT": "% of base fee",
+      "FIXED": "Fixed monthly amount"
+    },
+    "percent": "{{value}}%",
+    "notSet": "Not set",
+    "notSetHint": "Without a surcharge, companies of this risk level get \"Price on request\".",
+    "save": "Save",
+    "saved": "Saved.",
+    "zoneCities": {
+      "button": "Cities of {{name}}",
+      "title": "Cities of {{name}}",
+      "area": "Area",
+      "allAreas": "All areas",
+      "save": "Save cities",
+      "cancel": "Cancel",
+      "count_one": "{{count}} city",
+      "count_other": "{{count}} cities",
+      "none": "No cities"
+    },
+    "citiesWithoutZone": {
+      "title_one": "{{count}} active city is in no zone",
+      "title_other": "{{count}} active cities are in no zone",
+      "description": "A company in one of these cities gets \"Price on request\".",
+      "none": "Every active city is in a price zone.",
+      "item": "{{city}} ({{area}})"
+    },
+    "cap": {
+      "label": "Discount cap (%)"
+    },
+    "calculator": {
+      "employees": "Employees",
+      "riskLevel": "Risk level",
+      "frequency": "Visit frequency",
+      "zone": "Price zone",
+      "choose": "Choose…",
+      "calculate": "Calculate",
+      "result": "Result",
+      "baseFee": "Base fee",
+      "riskFee": "Risk surcharge",
+      "visitFee": "Visit frequency",
+      "locationFee": "Location surcharge",
+      "listPrice": "Monthly list price",
+      "pricePerEmployee": "Price per employee",
+      "annualValue": "Annual value",
+      "priceOnRequest": "Price on request",
+      "reasons": {
+        "NO_BAND": "No active employee band covers this number of employees.",
+        "NO_ZONE": "This price zone is not active.",
+        "NO_RISK_SURCHARGE": "No surcharge is set for this risk level."
+      }
+    },
+    "errors": {
+      "INVALID_FEE": "Enter an amount of 0 or more, with up to two decimals.",
+      "INVALID_PERCENT": "Enter a percentage from 0 to 1000 (0 to 100 for the discount cap), with up to two decimals.",
+      "INVALID_BAND_RANGE": "The last number of employees must not be below the first.",
+      "BANDS_OVERLAP": "This band overlaps the band {{min}}–{{max}} employees.",
+      "INVALID_PRICING_VALUE": "Check the values and try again.",
+      "CITY_NOT_ACTIVE": "Choose active cities from the list.",
+      "PRICING_VALUE_TAKEN": "Another value in this list already has this name.",
+      "PRICING_ITEM_NOT_FOUND": "This value no longer exists. Reload the page.",
+      "INVALID_PRICING_ORDER": "The list changed while you were reordering it. Reload the page and try again.",
       "generic": "Something went wrong. Please try again."
     }
   },

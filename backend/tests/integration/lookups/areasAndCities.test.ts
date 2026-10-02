@@ -171,4 +171,19 @@ describe('Lookup lists: areas and cities (FR-SET-03, 04)', () => {
     const res = await as('admin').delete(`/lookups/areas/${korce}`).expect(409);
     expect(res.body.code).toBe('LOOKUP_ITEM_IN_USE');
   });
+
+  it('FR-PCF-05 a city listed in a price zone is in use: it can be deactivated but not deleted', async () => {
+    const shijak = await cityId('Shijak', 'Durrës');
+    const zoneId = randomUUID();
+    await prisma.priceZone.create({
+      data: { id: zoneId, tenantId, nameSq: 'Zonë prove', surchargePercent: '5.00', cities: { create: [{ cityId: shijak }] } },
+    });
+    try {
+      const res = await as('admin').delete(`/lookups/cities/${shijak}`).expect(409);
+      expect(res.body.code).toBe('LOOKUP_ITEM_IN_USE');
+      await as('admin').post(`/lookups/cities/${shijak}/deactivate`).expect(200);
+    } finally {
+      await prisma.priceZone.delete({ where: { id: zoneId } });
+    }
+  });
 });

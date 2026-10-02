@@ -4,6 +4,7 @@ import { ITenantProvisioningTransaction } from '../../../src/tenant/application/
 import { PrismaTenantRepository } from '../../../src/tenant/infrastructure/repositories/PrismaTenantRepository';
 import { PrismaUserRepository } from '../../../src/auth/infrastructure/repositories/PrismaUserRepository';
 import { PrismaLookupSeeder } from '../../../src/lookups/infrastructure/PrismaLookupSeeder';
+import { PrismaPricingSeeder } from '../../../src/pricing/infrastructure/PrismaPricingSeeder';
 import { PrismaSystemRoleSeeder } from '../../../src/access/infrastructure/PrismaSystemRoleSeeder';
 import { CreateTenantWithOwnerUseCase } from '../../../src/tenant/application/use-cases/CreateTenantWithOwnerUseCase';
 import { IPasswordHasher } from '../../../src/auth/application/ports/IPasswordHasher';
@@ -174,6 +175,7 @@ describe('Tenant provisioning atomicity', () => {
             userRepo: new PrismaUserRepository(),
             roleSeeder: new PrismaSystemRoleSeeder(prisma),
             lookupSeeder: new PrismaLookupSeeder(prisma),
+            pricingSeeder: new PrismaPricingSeeder(prisma),
           })
         ),
     };

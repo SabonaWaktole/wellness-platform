@@ -43,13 +43,19 @@
     "FollowUpInterval": "Interval ndjekjeje",
     "LostReason": "Arsye humbjeje",
     "StatusLabel": "Etiketë statusi",
-    "Workspace": "Hapësirë pune"
+    "Workspace": "Hapësirë pune",
+    "EmployeeBand": "Grup punonjësish",
+    "RiskSurcharge": "Shtesë për rrezikun",
+    "VisitFrequency": "Frekuencë vizitash",
+    "PriceZone": "Zonë çmimi",
+    "PricingSettings": "Cilësimet e çmimeve"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
     "clients": "Kompanitë",
     "contracts": "Kontratat dhe pagesat",
-    "lists": "Listat e cilësimeve"
+    "lists": "Listat e cilësimeve",
+    "pricing": "Çmimet"
   },
   "actors": {
     "system": "Sistemi",
@@ -101,7 +107,18 @@
     "labelEn": "Etiketa në anglisht",
     "colour": "Ngjyra",
     "order": "Renditja",
-    "active": "Aktive"
+    "active": "Aktive",
+    "minEmployees": "Nga (punonjës)",
+    "maxEmployees": "Deri (punonjës)",
+    "baseFee": "Tarifa bazë",
+    "perEmployeeFee": "Tarifa për çdo punonjës shtesë",
+    "riskSurchargePercent": "Shtesa për rrezikun (%)",
+    "visitsPerYear": "Vizita në vit",
+    "pricingType": "Lloji i çmimit",
+    "frequencyValue": "Vlera",
+    "surchargePercent": "Shtesa (%)",
+    "cities": "Qytetet",
+    "discountCapPercent": "Kufiri i zbritjes (%)"
   },
   "empty": {
     "title": "Asnjë hyrje nuk përputhet me këto filtra",

@@ -67,10 +67,30 @@ describe('Default lookup lists', () => {
         expect(sql).toMatch(areaRow);
 
         area.cities.forEach((city, cityIndex) => {
+          if (city.since) return; // added later, by that milestone's migration (below)
           const cityRow = new RegExp(`'${area.nameSq}'[^\\n]*'${city.nameSq}'[^\\n]*'${city.nameEn}'[^\\n]*\\b${cityIndex + 1}\\b`);
           expect(sql).toMatch(cityRow);
         });
       });
+    });
+  }
+
+  const pricingMigrations = {
+    postgres: read('migrations/20260930200000_m2_pricing_config/migration.sql'),
+    'mysql (standalone)': read('mysql_migration_m2_pricing_config.sql'),
+    'mysql (upgrade script)': read('mysql_upgrade_to_current.sql'),
+  };
+
+  for (const [name, sql] of Object.entries(pricingMigrations)) {
+    it(`FR-PCF-05 the ${name} pricing migration adds every city added in Milestone 2, at its default position`, () => {
+      const added = DEFAULT_AREAS.flatMap((area) =>
+        area.cities.map((city, cityIndex) => ({ area, city, order: cityIndex + 1 })).filter(({ city }) => city.since === 'M2')
+      );
+      expect(added.map(({ city }) => city.nameSq)).toEqual(['Vorë']);
+      for (const { area, city, order } of added) {
+        const cityRow = new RegExp(`'${area.nameSq}'[^\\n]*'${city.nameSq}'[^\\n]*'${city.nameEn}'[^\\n]*\\b${order}\\b`);
+        expect(sql).toMatch(cityRow);
+      }
     });
   }
 
