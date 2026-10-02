@@ -50,14 +50,16 @@
     "PriceZone": "Zonë çmimi",
     "PricingSettings": "Cilësimet e çmimeve",
     "Service": "Shërbim",
-    "ServicePackage": "Paketë shërbimesh"
+    "ServicePackage": "Paketë shërbimesh",
+    "SalesScript": "Skripti i shitjes"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
     "clients": "Kompanitë",
     "contracts": "Kontratat dhe pagesat",
     "lists": "Listat e cilësimeve",
-    "pricing": "Çmimet"
+    "pricing": "Çmimet",
+    "salesScript": "Skripti i shitjes"
   },
   "actors": {
     "system": "Sistemi",

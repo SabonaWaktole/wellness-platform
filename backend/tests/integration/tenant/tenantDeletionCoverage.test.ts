@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
 import { PrismaLookupSeeder } from '../../../src/lookups/infrastructure/PrismaLookupSeeder';
 import { PrismaPricingSeeder } from '../../../src/pricing/infrastructure/PrismaPricingSeeder';
+import { PrismaSalesScriptSeeder } from '../../../src/salesScript/infrastructure/PrismaSalesScriptSeeder';
 
 /**
  * PRODUCTION INCIDENT, SEP 11 2026: deleting ANY tenant failed with
@@ -44,6 +45,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
       await prisma.quotation.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.contactPerson.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.client.deleteMany({ where: { tenantId: { in: tenantIds } } });
+      await prisma.salesScript.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.user.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.priceZone.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.businessType.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -176,6 +178,12 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // PriceZoneCity points at City (M2 Slice 3); the pricing seed gives every
     // tenant zones with cities, and a package with services.
     await new PrismaPricingSeeder(prisma).seed(tenantId);
+    // The sales script names its author through a SET NULL key on User (M2
+    // Slice 5); a draft by the owner proves that key is no obstacle.
+    await new PrismaSalesScriptSeeder(prisma).seed(tenantId);
+    await prisma.salesScript.create({
+      data: { id: randomUUID(), tenantId, version: 2, status: 'DRAFT', liveSlot: 'DRAFT', contentSq: { type: 'doc', content: [] }, createdByUserId: owner.id },
+    });
 
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
     // covered here so a tenant with an edited status label is proven clean too.
@@ -209,6 +217,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     expect(await prisma.pricingSettings.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.servicePackage.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.service.count({ where: { tenantId } })).toBe(0);
+    expect(await prisma.salesScript.count({ where: { tenantId } })).toBe(0);
 
     tenantIds.length = 0; // nothing left for afterAll to clean up
   });

@@ -50,14 +50,16 @@
     "PriceZone": "Price zone",
     "PricingSettings": "Pricing settings",
     "Service": "Service",
-    "ServicePackage": "Service package"
+    "ServicePackage": "Service package",
+    "SalesScript": "Sales script"
   },
   "entityGroups": {
     "access": "Users, roles & workspace",
     "clients": "Companies",
     "contracts": "Contracts & payments",
     "lists": "Settings lists",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "salesScript": "Sales script"
   },
   "actors": {
     "system": "System",

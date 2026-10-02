@@ -1,0 +1,155 @@
+/* ============================================================================
+ * Settings → Sales script: the editor, its preview and the version list.
+ * Works from 360px: the controls and each version's buttons wrap.
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.headerTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-headline-sm);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mutedText,
+.errorText,
+.successText {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  text-wrap: pretty;
+}
+
+.mutedText {
+  color: var(--text-tertiary);
+}
+
+.errorText {
+  color: var(--color-error);
+}
+
+.successText {
+  color: var(--color-success);
+}
+
+.controls,
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.languageSwitch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.languageSwitch button {
+  min-height: 36px;
+  padding: 0 var(--spacing-md);
+  font: inherit;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.languageSwitch button[aria-pressed='true'] {
+  background-color: var(--color-surface-container-high);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* The preview is the panel's width, so it reads as salespeople will see it. */
+.preview {
+  max-width: var(--sales-script-panel-width);
+  padding: var(--spacing-lg);
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-default);
+}
+
+.versionList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.versionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.versionRow:first-child {
+  border-top: 0;
+}
+
+.versionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.versionName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.badge {
+  padding: 1px 8px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--color-on-success-container);
+  background-color: var(--color-success-container);
+  border-radius: var(--radius-full);
+}

@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card/Card';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Avatar } from '../../components/ui/Avatar/Avatar';
 import { Button } from '../../components/ui/Button/Button';
+import { SalesScriptButton } from '../../components/salesScript/SalesScriptButton';
 import { SlideOver } from '../../components/ui/SlideOver';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
 import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
@@ -195,6 +196,8 @@ export const ClientDetailContent: React.FC = () => {
             </div>
           </div>
           <div className={styles.headerActions}>
+            {/* FR-SCR-01: the script is at hand on the company page, as in the header. */}
+            <SalesScriptButton outline className={styles.iconButton} />
             <Button
               variant="outline"
               className={styles.iconButton}

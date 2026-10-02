@@ -116,6 +116,15 @@ describe('CreateTenantWithOwnerUseCase — roles (FR-RBAC-01, FR-USR-02)', () =>
     expect(lookupSeeder.seed.mock.invocationCallOrder[0]).toBeLessThan(pricingSeeder.seed.mock.invocationCallOrder[0]);
   });
 
+  it('FR-SCR-03 publishes the placeholder sales script for the new workspace', async () => {
+    const { provisioningTx, salesScriptSeeder, tenantRepo } = makeTenantProvisioningHarness();
+    const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);
+
+    await useCase.execute(validInput);
+
+    expect(salesScriptSeeder.seed).toHaveBeenCalledWith(tenantRepo.create.mock.calls[0][0].id);
+  });
+
   it('FR-USR-02 makes the owner an Administrator by role, not only by the legacy string', async () => {
     const { provisioningTx, userRepo } = makeTenantProvisioningHarness();
     const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);

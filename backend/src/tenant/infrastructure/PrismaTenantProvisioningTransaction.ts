@@ -9,6 +9,7 @@ import { PrismaUserRepository } from '../../auth/infrastructure/repositories/Pri
 import { PrismaSystemRoleSeeder } from '../../access/infrastructure/PrismaSystemRoleSeeder';
 import { PrismaLookupSeeder } from '../../lookups/infrastructure/PrismaLookupSeeder';
 import { PrismaPricingSeeder } from '../../pricing/infrastructure/PrismaPricingSeeder';
+import { PrismaSalesScriptSeeder } from '../../salesScript/infrastructure/PrismaSalesScriptSeeder';
 
 export class PrismaTenantProvisioningTransaction implements ITenantProvisioningTransaction {
   constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
@@ -32,6 +33,7 @@ export class PrismaTenantProvisioningTransaction implements ITenantProvisioningT
         roleSeeder: new PrismaSystemRoleSeeder(client),
         lookupSeeder: new PrismaLookupSeeder(client),
         pricingSeeder: new PrismaPricingSeeder(client),
+        salesScriptSeeder: new PrismaSalesScriptSeeder(client),
       });
     });
   }

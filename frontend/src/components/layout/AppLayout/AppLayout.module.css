@@ -290,3 +290,12 @@
     margin-left: var(--spacing-sidebar-width);
   }
 }
+
+/* The sales script panel is open (M2 Slice 5). From 1024px the page makes
+   room for it, so it never covers the form being filled in; narrower, it
+   sits over the right of the page. */
+@media (min-width: 1024px) {
+  .mainContentBesideScript {
+    margin-right: var(--sales-script-panel-width);
+  }
+}

@@ -14,7 +14,8 @@
     "warehouses": "Warehouses",
     "categories": "Categories",
     "audit": "Audit log",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "salesScript": "Sales script"
   },
   "company": {
     "title": "Company Settings",
@@ -869,6 +870,57 @@
       "INVALID_STATUS_LABEL": "Check the values: the Albanian label is required and the colour must be a valid hex value.",
       "INVALID_STATUS_ORDER": "The list changed while you were reordering it. Reload the page and try again.",
       "generic": "Something went wrong. Please try again."
+    }
+  },
+  "salesScript": {
+    "breadcrumb": "Sales script",
+    "title": "Sales script",
+    "subtitle": "The script salespeople read in the side panel during calls, meetings and visits. Saving a draft does not change what they see; publishing does, and every publish is kept as a version.",
+    "loading": "Loading the sales script…",
+    "loadFailed": "The sales script could not be loaded. Reload the page to try again.",
+    "language": "Language",
+    "languages": {
+      "Sq": "Albanian",
+      "En": "English"
+    },
+    "mode": "Edit or preview",
+    "edit": "Edit",
+    "preview": "Preview",
+    "previewLabel": "Preview, as salespeople will see it",
+    "textLabel": "Script ({{language}})",
+    "editorHint": "Start each section with a section heading; the panel lists the sections at the top.",
+    "englishHint": "Salespeople reading in English see the Albanian text while the English one is empty.",
+    "draftStatus": "Draft version {{version}}, saved {{date}}. Not published yet: salespeople still see the published version.",
+    "publishedStatus": "Version {{version}} is published, since {{date}}. There is no draft.",
+    "noScript": "There is no published script yet.",
+    "saveDraft": "Save draft",
+    "draftSaved": "Draft saved. Salespeople still see the published version.",
+    "publish": "Publish",
+    "published": "Published. Salespeople now see this version.",
+    "publishTitle": "Publish the script?",
+    "publishMessage": "Salespeople will see this text the next time they open the panel. The version it replaces is kept and can be restored.",
+    "versions": "Versions",
+    "versionsHint": "Every published version, newest first, with who published it and when.",
+    "noVersions": "Nothing has been published yet.",
+    "versionName": "Version {{version}}",
+    "current": "Current",
+    "publishedBy": "Published {{date}} by {{name}}",
+    "system": "the system",
+    "view": "View",
+    "viewVersion": "View version {{version}}",
+    "restore": "Restore",
+    "restoreVersion": "Restore version {{version}}",
+    "restoreTitle": "Restore version {{version}}?",
+    "restoreMessage": "The draft will take version {{version}}'s text, in both languages. Salespeople see no change until you publish it.",
+    "restored": "Version {{version}} is now the draft. Publish it to make it current.",
+    "emptyLanguage": "No text in this language.",
+    "errors": {
+      "generic": "That did not work. Try again.",
+      "SCRIPT_EMPTY": "Write the Albanian text before publishing.",
+      "INVALID_RICH_TEXT": "The text contains formatting that is not allowed.",
+      "NO_SCRIPT_DRAFT": "There is no draft to publish.",
+      "SALES_SCRIPT_CONFLICT": "Someone else changed the script. The latest version has been loaded; check it and try again.",
+      "SALES_SCRIPT_NOT_FOUND": "That version no longer exists."
     }
   }
 }

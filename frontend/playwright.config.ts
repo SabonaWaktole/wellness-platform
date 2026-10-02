@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * `mobile-360` is the NFR-USE-01 device pass (tests/e2e/mobile360.spec.ts):
- * every Milestone 1 screen at 360 px. The older `chromium` specs predate the
+ * every Milestone 1 screen at 360 px. `desktop` holds the Wellness Albania
+ * specs that need a desktop browser and the seeded Administrator session
+ * (the sales script panel, M2 Slice 5). The older `chromium` specs predate the
  * Wellness Albania edition and are not part of CI.
  *
  * Both dev servers start from here; `cwd` is relative to this file.
@@ -21,12 +23,18 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: [/mobile360\.spec\.ts/, /\.setup\.ts/],
+      testIgnore: [/mobile360\.spec\.ts/, /salesScript\.spec\.ts/, /\.setup\.ts/],
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'setup',
       testMatch: /setup\/.*\.setup\.ts/,
+    },
+    {
+      name: 'desktop',
+      testMatch: /salesScript\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'mobile-360',

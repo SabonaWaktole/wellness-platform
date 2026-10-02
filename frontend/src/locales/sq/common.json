@@ -149,6 +149,8 @@
   },
   "richText": {
     "toolbar": "Formatimi: {{label}}",
+    "heading2": "Titull seksioni",
+    "heading3": "Nëntitull",
     "bold": "I trashë",
     "italic": "I pjerrët",
     "bulletList": "Listë me pika",
@@ -158,5 +160,17 @@
     "linkAddress": "Adresa e lidhjes",
     "applyLink": "Shto lidhjen",
     "invalidLink": "Shkruani një adresë interneti (https://…) ose një adresë email-i."
+  },
+  "salesScript": {
+    "button": "Skripti i shitjes",
+    "title": "Skripti i shitjes",
+    "close": "Mbyll skriptin e shitjes",
+    "sections": "Seksionet",
+    "search": "Kërko në skript",
+    "searchPlaceholder": "Kërko në skript…",
+    "matches_one": "{{count}} përputhje",
+    "matches_other": "{{count}} përputhje",
+    "loading": "Skripti po ngarkohet…",
+    "loadFailed": "Skripti nuk u ngarkua. Mbylleni panelin dhe hapeni përsëri."
   }
 }

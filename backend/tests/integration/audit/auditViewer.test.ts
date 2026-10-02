@@ -121,6 +121,7 @@ describe('Audit log viewer (FR-AUD-06, 08)', () => {
     expect(res.body.groups.find((group: any) => group.group === 'pricing').types).toEqual([
       'EmployeeBand', 'RiskSurcharge', 'VisitFrequency', 'PriceZone', 'PricingSettings', 'Service', 'ServicePackage',
     ]);
+    expect(res.body.groups.find((group: any) => group.group === 'salesScript').types).toEqual(['SalesScript']);
     await as('reception').get('/audit/entity-types').expect(403);
   });
 

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STATE } from './support/sessions';
 
 /**
- * NFR-USE-01: every Milestone 1 screen works from 360 px wide. Opens each one
+ * NFR-USE-01, NFR-USE-02: every Milestone 1 and 2 screen works from 360 px wide. Opens each one
  * in a 360 px viewport (the `mobile-360` project) and asserts the page never
  * scrolls sideways — the failure that makes a phone layout unusable.
  *
@@ -27,7 +27,7 @@ async function expectNoHorizontalOverflow(page: Page, screen: string) {
   expect(scrollWidth, `${screen} scrolls sideways at ${clientWidth}px`).toBeLessThanOrEqual(clientWidth);
 }
 
-test.describe('NFR-USE-01 M1 screens have no horizontal overflow at 360px', () => {
+test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360px', () => {
   test.skip(!process.env.E2E_ADMIN_PASSWORD, 'Set E2E_ADMIN_PASSWORD to the seeded Administrator password.');
 
   test('the sign-in and password-recovery pages', async ({ page }) => {
@@ -65,7 +65,24 @@ test.describe('NFR-USE-01 M1 screens have no horizontal overflow at 360px', () =
       ['settings → statuses', () => 'settings/statuses'],
       ...LISTS.map((list): [string, () => string] => [`settings → lists → ${list}`, () => `settings/lists/${list}`]),
       ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
+      // M2 Slice 5
+      ['settings → sales script', () => 'settings/sales-script'],
     ];
+
+    test('NFR-USE-02 FR-SCR-02 the sales script panel covers the phone screen and closes', async ({ page }) => {
+      await page.goto(`/${TENANT}/clients/${companyId}`);
+      await page.getByRole('banner').getByRole('button', { name: /Sales script|Skripti i shitjes/ }).click();
+      const panel = page.getByRole('complementary', { name: /Sales script|Skripti i shitjes/ });
+      await expect(panel).toBeVisible();
+      const box = await panel.boundingBox();
+      // The browser measures in fractions of a pixel (359.99998 on CI), so
+      // "covers the screen" is within a pixel of the viewport, not exactly 360.
+      expect(box?.width).toBeCloseTo(360, 0);
+      await expectNoHorizontalOverflow(page, 'sales script panel');
+
+      await panel.getByRole('button', { name: /Close the sales script|Mbyll skriptin e shitjes/ }).click();
+      await expect(panel).toBeHidden();
+    });
 
     for (const [screen, path] of screens) {
       test(screen, async ({ page }) => {

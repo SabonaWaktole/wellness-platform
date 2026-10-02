@@ -167,6 +167,9 @@ model Tenant {
   // M2 Slice 4: services and packages
   services        Service[]
   servicePackages ServicePackage[]
+
+  // M2 Slice 5: the sales script and its versions
+  salesScripts SalesScript[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -304,6 +307,8 @@ model User {
   sentInvitations                   Invitation[]             @relation("InvitationSender")
   ownershipTransfersAsOriginalOwner OwnershipTransfer[]      @relation("OwnershipTransferOriginalOwner")
   ownershipTransfersAsActingOwner   OwnershipTransfer[]      @relation("OwnershipTransferActingOwner")
+  salesScriptsCreated               SalesScript[]            @relation("SalesScriptCreatedBy")
+  salesScriptsPublished             SalesScript[]            @relation("SalesScriptPublishedBy")
 
   assignedRole Role? @relation(fields: [roleId], references: [id])
 
@@ -1750,4 +1755,39 @@ model PackageService {
 
   @@id([packageId, serviceId])
   @@index([serviceId])
+}
+
+/// M2 Slice 5: the workspace sales script (FR-SCR-03..06). One row per
+/// version: at most one DRAFT (what the Administrator is editing) and one
+/// PUBLISHED (what salespeople read); every earlier publish is SUPERSEDED and
+/// kept, with its author and date (FR-SCR-05). Content is TipTap JSON,
+/// sanitised on the server (plan D10, NFR-SEC-05).
+///
+/// `liveSlot` repeats the status while the row is DRAFT or PUBLISHED and is
+/// NULL once SUPERSEDED. A unique index ignores NULLs on Postgres and MySQL
+/// alike, so (tenantId, liveSlot) allows one draft and one published version
+/// per workspace and any number of superseded ones, with no partial index or
+/// generated column.
+model SalesScript {
+  id                String    @id
+  tenantId          String
+  version           Int
+  status            String // 'DRAFT' | 'PUBLISHED' | 'SUPERSEDED'
+  liveSlot          String?
+  contentSq         Json
+  contentEn         Json?
+  createdByUserId   String?
+  publishedAt       DateTime?
+  publishedByUserId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy   User?  @relation("SalesScriptCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedBy User?  @relation("SalesScriptPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, version])
+  @@unique([tenantId, liveSlot])
+  @@index([createdByUserId])
+  @@index([publishedByUserId])
 }

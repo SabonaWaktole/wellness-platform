@@ -81,6 +81,9 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       // user it belongs to.
       await tx.passwordResetToken.deleteMany({ where: { user: { tenantId } } });
       await tx.integration.deleteMany({ where: { tenantId } });
+      // The sales script names its authors (SET NULL), so it goes before them
+      // rather than leaving MySQL to null and then cascade it (M2 Slice 5).
+      await tx.salesScript.deleteMany({ where: { tenantId } });
       await tx.user.deleteMany({ where: { tenantId } });
       await tx.warehouse.deleteMany({ where: { tenantId } });
       // AuditEntry has no foreign key either (same reason as AuditLog), so

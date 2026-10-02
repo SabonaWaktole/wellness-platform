@@ -426,6 +426,51 @@
       "id": "FR-AUD-09",
       "priority": "Must",
       "requirement": "In Milestone 2 the following shall be audited with old and new values (using the M1 audit mechanism, FR-AUD-03): all pricing configuration (bands, risk surcharges, visit frequencies, price zones and their cities, discount cap, offer settings), services and packages, activity results, stage labels, sales script publishes, discount requests and decisions, offer status changes with prices, deal won / lost / reopen / delete, and changes of deal salesperson or agreed values."
+    },
+    {
+      "id": "FR-SCR-01",
+      "priority": "Must",
+      "requirement": "A \"Sales script\" button shall be available to users with \"Sales script: view\" in the application header and on the company, deal and pricing screens."
+    },
+    {
+      "id": "FR-SCR-02",
+      "priority": "Must",
+      "requirement": "The script shall open as a side panel on desktop and stay open while the user navigates between pages and fills in forms, until the user closes it. On a phone it opens full screen with a close button."
+    },
+    {
+      "id": "FR-SCR-03",
+      "priority": "Must",
+      "requirement": "There shall be one script for all salespeople. It is organised in sections with headings and bullet points (e.g. Opening, Needs discovery, Pricing questions, Objections, Closing), and the panel shows the section headings as a clickable list."
+    },
+    {
+      "id": "FR-SCR-04",
+      "priority": "Must",
+      "requirement": "Users with \"Sales script: edit\" (Administrator) shall edit the script in a rich-text editor (headings, bullets, numbered lists, bold, italic, links) in Albanian and in English, preview it, and publish it. Salespeople see the published version in their language; if the English text is empty they see the Albanian text."
+    },
+    {
+      "id": "FR-SCR-05",
+      "priority": "Should",
+      "requirement": "Each publish shall be kept as a version with author and date, and written to the audit log. The Administrator can view earlier versions."
+    },
+    {
+      "id": "FR-SCR-06",
+      "priority": "Could",
+      "requirement": "The Administrator shall be able to restore an earlier version as a new draft."
+    },
+    {
+      "id": "FR-SCR-07",
+      "priority": "Must",
+      "requirement": "Salespeople can only read the script. There is no text-to-speech and no per-salesperson script."
+    },
+    {
+      "id": "FR-SCR-08",
+      "priority": "Could",
+      "requirement": "The user can search the text of the script inside the panel."
+    },
+    {
+      "id": "NFR-USE-02",
+      "priority": "Must",
+      "requirement": "All Milestone 2 screens, including the board, calendar, pricing screen and script panel, shall work on desktop and mobile from 360 px wide."
     }
   ]
 }

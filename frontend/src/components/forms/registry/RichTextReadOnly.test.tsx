@@ -132,4 +132,38 @@ describe('RichTextReadOnly', () => {
     // The refused links keep their text, as plain text.
     expect(container.querySelector('p')?.textContent).toBe('sitemailbaddata');
   });
+
+  it('FR-SCR-03 gives each top-level H2 an anchor numbered the way the server lists the sections', () => {
+    const h = (level: number, text: string) => ({ type: 'heading', attrs: { level }, content: [{ type: 'text', text }] });
+    render(
+      <RichTextReadOnly
+        headingAnchorPrefix='script-section-'
+        content={doc([h(2, 'Hapja'), h(3, 'Nën'), h(2, 'Mbyllja'), { type: 'bulletList', content: [{ type: 'listItem', content: [h(2, 'Nested')] }] }])}
+      />
+    );
+    expect(screen.getByRole('heading', { name: 'Hapja' })).toHaveAttribute('id', 'script-section-1');
+    expect(screen.getByRole('heading', { name: 'Mbyllja' })).toHaveAttribute('id', 'script-section-2');
+    expect(screen.getByRole('heading', { name: 'Nën' })).not.toHaveAttribute('id');
+    expect(screen.getByRole('heading', { name: 'Nested' })).not.toHaveAttribute('id');
+  });
+
+  it('renders headings without ids when no anchor prefix is given', () => {
+    render(<RichTextReadOnly content={doc([{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Title' }] }])} />);
+    expect(screen.getByRole('heading', { name: 'Title' })).not.toHaveAttribute('id');
+  });
+
+  it('FR-SCR-08 marks every match of the highlight, ignoring case and diacritics, inside marks too', () => {
+    const { container } = render(
+      <RichTextReadOnly
+        highlight='cmim'
+        content={doc([
+          { type: 'paragraph', content: [{ type: 'text', text: 'Çmimi dhe ' }, { type: 'text', text: 'çmimet', marks: [{ type: 'bold' }] }] },
+        ])}
+      />
+    );
+    const marks = Array.from(container.querySelectorAll('mark')).map((mark) => mark.textContent);
+    expect(marks).toEqual(['Çmim', 'çmim']);
+    expect(container.querySelector('strong mark')).not.toBeNull();
+    expect(container.textContent).toBe('Çmimi dhe çmimet');
+  });
 });
