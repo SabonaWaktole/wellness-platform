@@ -1,24 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, PhoneCall, Video, FileText, Calendar } from 'lucide-react';
+import { ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Calendar } from 'lucide-react';
 import { useClientDetail, useClientHistory, useClientSettings } from '../../hooks/useClients';
 import { useClientAppointments } from '../../hooks/useAppointments';
 import { Card } from '../../components/ui/Card/Card';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Avatar } from '../../components/ui/Avatar/Avatar';
 import { Button } from '../../components/ui/Button/Button';
+import { SalesScriptButton } from '../../components/salesScript/SalesScriptButton';
 import { SlideOver } from '../../components/ui/SlideOver';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
-import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
-import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { Tabs } from '../../components/ui/Tabs';
 import { usePermission } from '../../hooks/usePermission';
 import { ClientContractsTab } from '../../components/clients/ClientContractsTab';
+import { ClientDealsTab } from '../../components/clients/ClientDealsTab';
 import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { AppointmentForm } from '../../components/forms/AppointmentForm/AppointmentForm';
-import { useAddInteraction } from '../../hooks/useClients';
+import { ActivityDialog } from '../../components/activities/ActivityDialog';
+import { channelIcon } from '../../components/activities/channelIcon';
+import { ACTIVITY_CHANNELS, type ActivityChannel, type ActivityView } from '../../types/client';
 import type { Appointment } from '../../types/appointment';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName, getStaffInitials } from '../../utils/userUtils';
@@ -67,7 +69,6 @@ const getAppointmentStatusVariant = (status: Appointment['status']) => {
 export const ClientDetailContent: React.FC = () => {
   const dates = useDateFormat();
   const { t, i18n } = useTranslation('clients');
-  const { t: tc } = useTranslation('common');
   const statusLabel = useStatusLabel();
   const { clientId, tenantSlug } = useParams();
   const navigate = useNavigate();
@@ -85,28 +86,42 @@ export const ClientDetailContent: React.FC = () => {
     fetchHistory,
     loadMore: loadMoreHistory,
   } = useClientHistory(clientId || '');
-  const { customFields, outcomeCategories, fetchSettings } = useClientSettings();
-  const { addInteraction, isLoading: isAddingInteraction } = useAddInteraction();
+  const { customFields, fetchSettings } = useClientSettings();
   const { appointments, isLoading: isAppointmentsLoading, updateAppointmentLocally, fetchClientAppointments } = useClientAppointments(clientId || '');
   // Staff list resolves assignedUserId to a name. Only fetchStaff is called;
   // pending invitations are a Business-Owner-only endpoint.
   const { staff, fetchStaff } = useTeam();
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts' | 'deals'>('timeline');
   // FR-RBAC-07: a role without contract validity (Reception, once UAT-3 removes
-  // it) gets no tab, rather than one whose request is refused.
+  // it) gets no tab, rather than one whose request is refused. Likewise deals,
+  // which Reception never sees (FR-DEAL-04).
   const canSeeContracts = usePermission('contracts.validity.view');
-  const shownTab = activeTab === 'contracts' && !canSeeContracts ? 'timeline' : activeTab;
-  const [isInteractionSlideOverOpen, setIsInteractionSlideOverOpen] = useState(false);
+  const canSeeDeals = usePermission('deals.view');
+  const shownTab =
+    (activeTab === 'contracts' && !canSeeContracts) || (activeTab === 'deals' && !canSeeDeals) ? 'timeline' : activeTab;
+  const canAddActivities = usePermission('activities.add');
+  const canAddNotes = usePermission('notes.add');
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+  const [activityChannel, setActivityChannel] = useState<ActivityChannel>('CALL');
+  const [editingActivity, setEditingActivity] = useState<ActivityView | null>(null);
+  const contacts = useMemo(() => (client?.contacts ?? []).map(({ id, name }) => ({ id, name })), [client]);
   const [isAppointmentSlideOverOpen, setIsAppointmentSlideOverOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  
-  const [interactionChannel, setInteractionChannel] = useState('NOTE');
-  const [interactionContent, setInteractionContent] = useState('');
-  const [interactionOutcomeId, setInteractionOutcomeId] = useState('');
+
+  const openActivity = (channel: ActivityChannel) => {
+    setEditingActivity(null);
+    setActivityChannel(channel);
+    setIsActivityDialogOpen(true);
+  };
+
+  const editActivity = (activity: ActivityView) => {
+    setEditingActivity(activity);
+    setIsActivityDialogOpen(true);
+  };
 
   /*
-   * `?logInteraction=<channel>` opens the interaction slide-over on arrival —
+   * `?logInteraction=<channel>` opens the activity dialog on arrival —
    * the tail of the staff dashboard's "Log note" quick action, which cannot
    * name a client itself and so routes through the client list. The param is
    * stripped once consumed (replace: true) so a refresh or a Back does not
@@ -115,24 +130,12 @@ export const ClientDetailContent: React.FC = () => {
   useEffect(() => {
     const channel = searchParams.get('logInteraction');
     if (!channel) return;
-    setInteractionChannel(channel);
-    setIsInteractionSlideOverOpen(true);
+    openActivity(ACTIVITY_CHANNELS.includes(channel as ActivityChannel) ? (channel as ActivityChannel) : 'NOTE');
     const next = new URLSearchParams(searchParams);
     next.delete('logInteraction');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const handleAddInteraction = async () => {
-    if (!clientId || !interactionContent) return;
-    await addInteraction(clientId, {
-      channel: interactionChannel,
-      content: interactionContent,
-      outcomeCategoryId: interactionOutcomeId || undefined
-    });
-    setInteractionContent('');
-    setIsInteractionSlideOverOpen(false);
-    fetchHistory();
-  };
 
 
   const handleAppointmentUpdated = (updated: Appointment) => {
@@ -195,6 +198,8 @@ export const ClientDetailContent: React.FC = () => {
             </div>
           </div>
           <div className={styles.headerActions}>
+            {/* FR-SCR-01: the script is at hand on the company page, as in the header. */}
+            <SalesScriptButton outline className={styles.iconButton} />
             <Button
               variant="outline"
               className={styles.iconButton}
@@ -414,10 +419,14 @@ export const ClientDetailContent: React.FC = () => {
               // count here would mean fetching every client's contracts on
               // every client page whether or not anyone opens the tab.
               ...(canSeeContracts ? [{ id: 'contracts' as const, label: t('detail.tabContracts') }] : []),
+              // No count, for the same reason as contracts (M2 Slice 6).
+              ...(canSeeDeals ? [{ id: 'deals' as const, label: t('detail.tabDeals') }] : []),
             ]}
           />
 
-          {shownTab === 'contracts' ? (
+          {shownTab === 'deals' ? (
+            <ClientDealsTab clientId={clientId || ''} />
+          ) : shownTab === 'contracts' ? (
             <ClientContractsTab clientId={clientId || ''} />
           ) : shownTab === 'timeline' ? (
             <Card padding="lg" className={styles.timelineCard}>
@@ -426,18 +435,14 @@ export const ClientDetailContent: React.FC = () => {
               </div>
 
             <div className={styles.logActivityRow}>
-              <Button variant="outline" className={styles.logActivityButton} onClick={() => { setInteractionChannel('CALL'); setIsInteractionSlideOverOpen(true); }}>
-                <PhoneCall size={16} /> {t('detail.logCall')}
-              </Button>
-              <Button variant="outline" className={styles.logActivityButton} onClick={() => { setInteractionChannel('EMAIL'); setIsInteractionSlideOverOpen(true); }}>
-                <Mail size={16} /> {t('detail.logEmail')}
-              </Button>
-              <Button variant="outline" className={styles.logActivityButton} onClick={() => { setInteractionChannel('MEETING'); setIsInteractionSlideOverOpen(true); }}>
-                <Video size={16} /> {t('detail.logMeeting')}
-              </Button>
-              <Button variant="outline" className={styles.logActivityButton} onClick={() => { setInteractionChannel('NOTE'); setIsInteractionSlideOverOpen(true); }}>
-                <FileText size={16} /> {t('detail.logNote')}
-              </Button>
+              {ACTIVITY_CHANNELS.filter((channel) => (channel === 'NOTE' ? canAddNotes : canAddActivities)).map((channel) => {
+                const Icon = channelIcon(channel);
+                return (
+                  <Button key={channel} variant="outline" className={styles.logActivityButton} onClick={() => openActivity(channel)}>
+                    <Icon size={16} /> {t(`detail.channels.${channel}`)}
+                  </Button>
+                );
+              })}
             </div>
 
             <CompanyTimeline
@@ -448,6 +453,7 @@ export const ClientDetailContent: React.FC = () => {
               isLoadingMore={isLoadingMoreHistory}
               error={historyError}
               onLoadMore={loadMoreHistory}
+              onEditActivity={editActivity}
             />
           </Card>
           ) : (
@@ -487,43 +493,15 @@ export const ClientDetailContent: React.FC = () => {
         </div>
       </div>
 
-      <SlideOver
-        isOpen={isInteractionSlideOverOpen}
-        onClose={() => setIsInteractionSlideOverOpen(false)}
-        title={t('detail.addInteraction')}
-        footer={
-          <div className={styles.slideOverFooter}>
-            <Button variant="outline" onClick={() => setIsInteractionSlideOverOpen(false)}>{tc('actions.cancel')}</Button>
-            <Button onClick={handleAddInteraction} disabled={isAddingInteraction || !interactionContent}>
-              {isAddingInteraction ? tc('state.saving') : t('detail.saveInteraction')}
-            </Button>
-          </div>
-        }
-      >
-        <div className={styles.slideOverForm}>
-          <SelectInput label={t('detail.channel')} value={interactionChannel} onChange={e => setInteractionChannel(e.target.value)}>
-            <option value="CALL">{t('detail.channels.CALL')}</option>
-            <option value="EMAIL">{t('detail.channels.EMAIL')}</option>
-            <option value="MEETING">{t('detail.channels.MEETING')}</option>
-            <option value="NOTE">{t('detail.channels.NOTE')}</option>
-          </SelectInput>
-          <TextareaInput 
-            label={t('detail.notes')}
-            placeholder={t('detail.notesPlaceholder')}
-            rows={5}
-            value={interactionContent}
-            onChange={e => setInteractionContent(e.target.value)}
-          />
-          {outcomeCategories && outcomeCategories.length > 0 && (
-            <SelectInput label={t('detail.outcome')} value={interactionOutcomeId} onChange={e => setInteractionOutcomeId(e.target.value)}>
-              <option value="">{t('detail.noOutcome')}</option>
-              {outcomeCategories.map(oc => (
-                <option key={oc.id} value={oc.id}>{oc.label}</option>
-              ))}
-            </SelectInput>
-          )}
-        </div>
-      </SlideOver>
+      <ActivityDialog
+        isOpen={isActivityDialogOpen}
+        onClose={() => setIsActivityDialogOpen(false)}
+        clientId={clientId || ''}
+        contacts={contacts}
+        initialChannel={activityChannel}
+        activity={editingActivity}
+        onSaved={() => fetchHistory()}
+      />
 
       <SlideOver
         isOpen={isAppointmentSlideOverOpen}

@@ -2,7 +2,7 @@ import { AuditAction } from './AuditAction';
 
 /**
  * Entity types an `AuditEntry` is actually written with today (Slices 2, 5,
- * 6, 8, 9, 10). Not enforced by the domain `AuditEntry` itself — a future
+ * 6, 8, 9, 10; M2 Slice 3). Not enforced by the domain `AuditEntry` itself — a future
  * slice can audit a new entity by writing a new string, same as any other
  * audited write (FR-AUD-03) — but the viewer's filter and the CSV export
  * validate against this list so a typo in a query string fails loudly
@@ -23,6 +23,19 @@ export const AUDITED_ENTITY_TYPES = [
   'LostReason',
   'StatusLabel',
   'Workspace',
+  // Milestone 2
+  'EmployeeBand',
+  'RiskSurcharge',
+  'VisitFrequency',
+  'PriceZone',
+  'PricingSettings',
+  'Service',
+  'ServicePackage',
+  'SalesScript',
+  // Milestone 2 Slice 6: a deal's salesperson change and its deletion (FR-DEAL-05, 19).
+  'Deal',
+  // Milestone 2 Slice 7: the activity results list (FR-ACT-03).
+  'ActivityResult',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -33,7 +46,7 @@ export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
  * so a slice that starts auditing a new entity type registers it here too.
  * Group and type labels are translations in the frontend's audit.json.
  */
-export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists'] as const;
+export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists', 'pricing', 'salesScript', 'deals'] as const;
 
 export type AuditEntityGroup = (typeof AUDIT_ENTITY_GROUP_KEYS)[number];
 
@@ -43,8 +56,14 @@ export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types
   { group: 'contracts', types: ['Contract', 'ContractPayment'] },
   {
     group: 'lists',
-    types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'StatusLabel'],
+    types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'ActivityResult', 'StatusLabel'],
   },
+  {
+    group: 'pricing',
+    types: ['EmployeeBand', 'RiskSurcharge', 'VisitFrequency', 'PriceZone', 'PricingSettings', 'Service', 'ServicePackage'],
+  },
+  { group: 'salesScript', types: ['SalesScript'] },
+  { group: 'deals', types: ['Deal'] },
 ];
 
 export function typesForGroup(group: AuditEntityGroup): readonly AuditedEntityType[] {

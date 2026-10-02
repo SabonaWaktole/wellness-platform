@@ -76,6 +76,8 @@ export const updateClientSchema = z.object({
 export const createClientHttpSchema = createClientSchema.extend({
   profile: companyProfileSchema,
   contacts: z.array(contactPersonInputSchema).min(1, 'Add at least one contact person.'),
+  /** "Create a deal": the company's first deal, in New Lead, saved with it (FR-DEAL-02). */
+  createDeal: z.boolean().optional(),
 });
 
 export const addContactPersonSchema = contactPersonInputSchema.omit({ isPrimary: true });
@@ -173,11 +175,27 @@ export const clientHistorySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
+const optionalId = z.string().trim().min(1).max(191).nullable().optional();
+const optionalText = z.string().max(2000).nullable().optional();
+
+/**
+ * An activity as the dialog sends it (FR-ACT-01, 02), on create and on edit.
+ * What each type requires — a note's text, an activity's contact and result,
+ * a time not in the future — is the domain's rule (Interaction.record), so
+ * the error names the field the same way on every path.
+ */
 export const addInteractionSchema = z.object({
-  content: z.string().min(1, 'Content is required'),
   channel: z.nativeEnum(InteractionChannel),
-  outcomeCategoryId: z.string().uuid().optional(),
+  content: z.string().max(5000).optional(),
+  occurredAt: z.coerce.date().nullable().optional(),
+  contactPersonId: optionalId,
+  dealId: optionalId,
+  resultId: optionalId,
+  clientFeedback: optionalText,
+  nextAction: optionalText,
 });
+
+export const updateInteractionSchema = addInteractionSchema;
 
 export const defineCustomFieldSchema = z.object({
   fieldName: z
@@ -228,6 +246,3 @@ export const reorderCustomFieldsSchema = z.object({
   orderedFieldIds: z.array(z.string().uuid()).min(1),
 });
 
-export const defineOutcomeCategorySchema = z.object({
-  label: z.string().min(1, 'Label is required'),
-});

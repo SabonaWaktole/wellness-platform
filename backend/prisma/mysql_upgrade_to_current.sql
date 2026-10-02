@@ -7,14 +7,16 @@
 -- missing and reports what it skipped.
 --
 -- WHAT IT DOES NOT DO: it never drops a table, column or index, never retypes a
--- column in a way that discards values, and rewrites existing rows in exactly
--- two places, both conditional and both additive:
+-- column in a way that discards values, and rewrites existing rows only in
+-- conditional steps that its section describes. For example:
 --   * Tenant.clientFieldsSeededAt  — stamped only where it is NULL and the
 --                                    tenant already has role-carrying fields;
 --   * ClientForm.settings          — set to '{}' only where it is NULL, so the
---                                    column can become NOT NULL.
+--                                    column can become NOT NULL;
+--   * Interaction.occurredAt and   — filled only where occurredAt is NULL
+--     Interaction.resultId           (section 23, FR-ACT-07).
 --
--- It replaces running these eighteen by hand, in this order (the order matters —
+-- It replaces running these twenty-three by hand, in this order (the order matters —
 -- the 2026-08-27 file reads CustomFieldDefinition.role, which the role/order
 -- file adds):
 --   1. mysql_migration_add_custom_field_role_order.sql
@@ -35,6 +37,11 @@
 --  16. mysql_migration_add_contact_persons.sql
 --  17. mysql_migration_ownership_transfer_role_id.sql
 --  18. mysql_migration_m2_sales_permissions.sql
+--  19. mysql_migration_m2_pricing_config.sql
+--  20. mysql_migration_m2_services_offer_settings.sql
+--  21. mysql_migration_m2_sales_script.sql
+--  22. mysql_migration_m2_deals.sql
+--  23. mysql_migration_m2_activities.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -1558,6 +1565,719 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 19. Milestone 2 pricing configuration (M2 Slice 3)
+-- ---------------------------------------------------------------
+-- Tables are created with their final shape; a database that already has
+-- them skips straight to the seed, which is also guarded.
+CREATE TABLE IF NOT EXISTS `PricingSettings` (
+    `tenantId` VARCHAR(191) NOT NULL,
+    `currency` VARCHAR(191) NOT NULL DEFAULT 'EUR',
+    `discountCapPercent` DECIMAL(7, 2) NOT NULL DEFAULT 10,
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`tenantId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `EmployeeBand` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `minEmployees` INTEGER NOT NULL,
+    `maxEmployees` INTEGER NOT NULL,
+    `baseFee` DECIMAL(12, 2) NOT NULL,
+    `perEmployeeFee` DECIMAL(12, 2) NOT NULL,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `EmployeeBand_tenantId_minEmployees_idx`(`tenantId`, `minEmployees`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `RiskSurcharge` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `riskLevelId` VARCHAR(191) NOT NULL,
+    `percent` DECIMAL(7, 2) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `RiskSurcharge_riskLevelId_idx`(`riskLevelId`),
+    UNIQUE INDEX `RiskSurcharge_tenantId_riskLevelId_key`(`tenantId`, `riskLevelId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `VisitFrequency` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `visitsPerYear` INTEGER NULL,
+    `pricingType` VARCHAR(191) NOT NULL,
+    `value` DECIMAL(12, 2) NOT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `VisitFrequency_tenantId_order_idx`(`tenantId`, `order`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `PriceZone` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `surchargePercent` DECIMAL(7, 2) NOT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `PriceZone_tenantId_order_idx`(`tenantId`, `order`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `PriceZoneCity` (
+    `zoneId` VARCHAR(191) NOT NULL,
+    `cityId` VARCHAR(191) NOT NULL,
+
+    INDEX `PriceZoneCity_cityId_idx`(`cityId`),
+    PRIMARY KEY (`zoneId`, `cityId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND CONSTRAINT_NAME = 'PricingSettings_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD CONSTRAINT `PricingSettings_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PricingSettings.PricingSettings_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'EmployeeBand' AND CONSTRAINT_NAME = 'EmployeeBand_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `EmployeeBand` ADD CONSTRAINT `EmployeeBand_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: EmployeeBand.EmployeeBand_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RiskSurcharge' AND CONSTRAINT_NAME = 'RiskSurcharge_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `RiskSurcharge` ADD CONSTRAINT `RiskSurcharge_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: RiskSurcharge.RiskSurcharge_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RiskSurcharge' AND CONSTRAINT_NAME = 'RiskSurcharge_riskLevelId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `RiskSurcharge` ADD CONSTRAINT `RiskSurcharge_riskLevelId_fkey` FOREIGN KEY (`riskLevelId`) REFERENCES `RiskLevel`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: RiskSurcharge.RiskSurcharge_riskLevelId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'VisitFrequency' AND CONSTRAINT_NAME = 'VisitFrequency_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `VisitFrequency` ADD CONSTRAINT `VisitFrequency_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: VisitFrequency.VisitFrequency_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZone' AND CONSTRAINT_NAME = 'PriceZone_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZone` ADD CONSTRAINT `PriceZone_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PriceZone.PriceZone_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_zoneId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZoneCity_zoneId_fkey` FOREIGN KEY (`zoneId`) REFERENCES `PriceZone`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PriceZoneCity.PriceZoneCity_zoneId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_cityId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZoneCity_cityId_fkey` FOREIGN KEY (`cityId`) REFERENCES `City`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PriceZoneCity.PriceZoneCity_cityId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- PriceZoneCity's City key cascades (migration 20260930210000_m2_price_zone_city_cascade): a database that
+-- received the earlier RESTRICT key gets it dropped and re-added.
+SET @restrict := (SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_cityId_fkey' AND DELETE_RULE <> 'CASCADE');
+SET @sql := IF(@restrict > 0, 'ALTER TABLE `PriceZoneCity` DROP FOREIGN KEY `PriceZoneCity_cityId_fkey`', 'SELECT ''skip: PriceZoneCity_cityId_fkey already cascades'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_cityId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZoneCity_cityId_fkey` FOREIGN KEY (`cityId`) REFERENCES `City`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PriceZoneCity.PriceZoneCity_cityId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- Vorë joins the Tiranë area (M1 city list), so the "Kamëz and Vorë" price
+-- zone can be seeded. Every workspace with a Tiranë area and no Vorë in it.
+INSERT INTO `City` (`id`, `tenantId`, `areaId`, `nameSq`, `nameEn`, `order`, `updatedAt`)
+SELECT UUID(), a.tenantId, a.id, v.namesq, v.nameen, v.ord, NOW(3)
+FROM `Area` a
+JOIN (
+  SELECT 'Tiranë' AS areanamesq, 'Vorë' AS namesq, 'Vorë' AS nameen, 4 AS ord
+) v ON a.`nameSq` = v.areanamesq
+WHERE NOT EXISTS (SELECT 1 FROM `City` c WHERE c.areaId = a.id AND c.`nameSq` = v.namesq);
+
+-- Seed (Q1, Q2, Q3, Q4, Q7): the defaults in src/pricing/domain/DefaultPricing.ts,
+-- for every workspace that has none yet. Same values as the Postgres migration.
+INSERT INTO `PricingSettings` (`tenantId`, `currency`, `discountCapPercent`, `updatedAt`)
+SELECT t.id, 'EUR', 10.00, NOW(3)
+FROM `Tenant` t
+WHERE NOT EXISTS (SELECT 1 FROM `PricingSettings` p WHERE p.tenantId = t.id);
+
+INSERT INTO `EmployeeBand` (`id`, `tenantId`, `minEmployees`, `maxEmployees`, `baseFee`, `perEmployeeFee`, `updatedAt`)
+SELECT UUID(), t.id, v.minemployees, v.maxemployees, v.basefee, v.peremployeefee, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT 1 AS minemployees, 10 AS maxemployees, 30.00 AS basefee, 8.00 AS peremployeefee
+) v
+WHERE NOT EXISTS (SELECT 1 FROM `EmployeeBand` b WHERE b.tenantId = t.id);
+
+INSERT INTO `RiskSurcharge` (`id`, `tenantId`, `riskLevelId`, `percent`, `updatedAt`)
+SELECT UUID(), t.id, r.id, v.percent, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT 1 AS risklevel, 0.00 AS percent
+  UNION ALL
+  SELECT 2, 10.00
+  UNION ALL
+  SELECT 3, 20.00
+) v
+JOIN `RiskLevel` r ON r.tenantId = t.id AND r.`level` = v.risklevel
+WHERE NOT EXISTS (SELECT 1 FROM `RiskSurcharge` s WHERE s.tenantId = t.id);
+
+INSERT INTO `VisitFrequency` (`id`, `tenantId`, `nameSq`, `nameEn`, `visitsPerYear`, `pricingType`, `value`, `order`, `updatedAt`)
+SELECT UUID(), t.id, v.namesq, v.nameen, v.visitsperyear, v.pricingtype, v.value, v.ord, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT '1 herë në vit' AS namesq, 'Once a year' AS nameen, 1 AS visitsperyear, 'PERCENT' AS pricingtype, 0.00 AS value, 1 AS ord
+  UNION ALL
+  SELECT '2 herë në vit', 'Twice a year', 2, 'PERCENT', 20.00, 2
+  UNION ALL
+  SELECT '4 herë në vit', '4 times a year', 4, 'PERCENT', 35.00, 3
+  UNION ALL
+  SELECT '6 herë në vit', '6 times a year', 6, 'PERCENT', 50.00, 4
+  UNION ALL
+  SELECT 'Çdo muaj', 'Monthly', 12, 'PERCENT', 100.00, 5
+  UNION ALL
+  SELECT 'Sipas nevojës', 'Ad hoc', NULL, 'FIXED', 15.00, 6
+) v
+WHERE NOT EXISTS (SELECT 1 FROM `VisitFrequency` f WHERE f.tenantId = t.id);
+
+INSERT INTO `PriceZone` (`id`, `tenantId`, `nameSq`, `nameEn`, `surchargePercent`, `order`, `updatedAt`)
+SELECT UUID(), t.id, v.namesq, v.nameen, v.surchargepercent, v.ord, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT 'Tirana qendër' AS namesq, 'Tirana centre' AS nameen, 0.00 AS surchargepercent, 1 AS ord
+  UNION ALL
+  SELECT 'Tirana periferi', 'Tirana suburbs', 15.00, 2
+  UNION ALL
+  SELECT 'Kamëz dhe Vorë', 'Kamëz and Vorë', 30.00, 3
+  UNION ALL
+  SELECT 'Elbasan dhe Durrës', 'Elbasan and Durrës', 100.00, 4
+) v
+WHERE NOT EXISTS (SELECT 1 FROM `PriceZone` z WHERE z.tenantId = t.id);
+
+-- Cities are matched by area and city name, since "Tiranë" is unique only
+-- within its area. A workspace whose zones already have cities keeps them.
+INSERT INTO `PriceZoneCity` (`zoneId`, `cityId`)
+SELECT z.id, c.id
+FROM (
+  SELECT 'Tirana qendër' AS zonenamesq, 'Tiranë' AS areanamesq, 'Tiranë' AS citynamesq
+  UNION ALL
+  SELECT 'Tirana periferi', 'Tiranë', 'Tiranë'
+  UNION ALL
+  SELECT 'Kamëz dhe Vorë', 'Tiranë', 'Kamëz'
+  UNION ALL
+  SELECT 'Kamëz dhe Vorë', 'Tiranë', 'Vorë'
+  UNION ALL
+  SELECT 'Elbasan dhe Durrës', 'Elbasan', 'Elbasan'
+  UNION ALL
+  SELECT 'Elbasan dhe Durrës', 'Durrës', 'Durrës'
+) v
+JOIN `PriceZone` z ON z.`nameSq` = v.zonenamesq
+JOIN `Area` a ON a.tenantId = z.tenantId AND a.`nameSq` = v.areanamesq
+JOIN `City` c ON c.areaId = a.id AND c.`nameSq` = v.citynamesq
+WHERE NOT EXISTS (
+  SELECT 1 FROM `PriceZoneCity` zc JOIN `PriceZone` oz ON oz.id = zc.zoneId WHERE oz.tenantId = z.tenantId
+);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260930200000_m2_pricing_config', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260930200000_m2_pricing_config'
+);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260930210000_m2_price_zone_city_cascade', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260930210000_m2_price_zone_city_cascade'
+);
+
+-- ---------------------------------------------------------------
+-- 20. Milestone 2 services, packages and offer settings (M2 Slice 4)
+-- ---------------------------------------------------------------
+-- Run before the columns are added: whether this database is getting the
+-- offer settings for the first time. Only then are they seeded, so a second
+-- run never refills a value the Administrator has since cleared.
+SET @offerSettingsFresh := (SELECT COUNT(*) = 0 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'offerNumberPrefix');
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'offerValidityDays');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `offerValidityDays` INTEGER NOT NULL DEFAULT 30', 'SELECT ''skip: PricingSettings.offerValidityDays'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'contractMonthsDefault');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `contractMonthsDefault` INTEGER NOT NULL DEFAULT 12', 'SELECT ''skip: PricingSettings.contractMonthsDefault'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'offerNumberPrefix');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `offerNumberPrefix` VARCHAR(191) NOT NULL DEFAULT ''OF''', 'SELECT ''skip: PricingSettings.offerNumberPrefix'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'companyName');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `companyName` VARCHAR(191) NULL', 'SELECT ''skip: PricingSettings.companyName'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'nipt');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `nipt` VARCHAR(191) NULL', 'SELECT ''skip: PricingSettings.nipt'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'address');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `address` TEXT NULL', 'SELECT ''skip: PricingSettings.address'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'phone');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `phone` VARCHAR(191) NULL', 'SELECT ''skip: PricingSettings.phone'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'email');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `email` VARCHAR(191) NULL', 'SELECT ''skip: PricingSettings.email'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'website');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `website` VARCHAR(191) NULL', 'SELECT ''skip: PricingSettings.website'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'bankDetails');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `bankDetails` TEXT NULL', 'SELECT ''skip: PricingSettings.bankDetails'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'introSq');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `introSq` JSON NULL', 'SELECT ''skip: PricingSettings.introSq'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'introEn');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `introEn` JSON NULL', 'SELECT ''skip: PricingSettings.introEn'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'termsSq');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `termsSq` JSON NULL', 'SELECT ''skip: PricingSettings.termsSq'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'termsEn');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `termsEn` JSON NULL', 'SELECT ''skip: PricingSettings.termsEn'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'closingSq');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `closingSq` JSON NULL', 'SELECT ''skip: PricingSettings.closingSq'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PricingSettings' AND COLUMN_NAME = 'closingEn');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PricingSettings` ADD COLUMN `closingEn` JSON NULL', 'SELECT ''skip: PricingSettings.closingEn'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS `Service` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `descriptionSq` TEXT NULL,
+    `descriptionEn` TEXT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `Service_tenantId_order_idx`(`tenantId`, `order`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS `ServicePackage` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `descriptionSq` TEXT NULL,
+    `descriptionEn` TEXT NULL,
+    `isDefault` BOOLEAN NOT NULL DEFAULT false,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `ServicePackage_tenantId_order_idx`(`tenantId`, `order`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS `PackageService` (
+    `packageId` VARCHAR(191) NOT NULL,
+    `serviceId` VARCHAR(191) NOT NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+
+    INDEX `PackageService_serviceId_idx`(`serviceId`),
+    PRIMARY KEY (`packageId`, `serviceId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Service' AND CONSTRAINT_NAME = 'Service_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Service` ADD CONSTRAINT `Service_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: Service.Service_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ServicePackage' AND CONSTRAINT_NAME = 'ServicePackage_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ServicePackage` ADD CONSTRAINT `ServicePackage_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: ServicePackage.ServicePackage_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PackageService' AND CONSTRAINT_NAME = 'PackageService_packageId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PackageService` ADD CONSTRAINT `PackageService_packageId_fkey` FOREIGN KEY (`packageId`) REFERENCES `ServicePackage`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PackageService.PackageService_packageId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PackageService' AND CONSTRAINT_NAME = 'PackageService_serviceId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PackageService` ADD CONSTRAINT `PackageService_serviceId_fkey` FOREIGN KEY (`serviceId`) REFERENCES `Service`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PackageService.PackageService_serviceId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- Seed (Q5, Q6, Q9, Q11): the defaults in
+-- src/pricing/domain/DefaultOfferSettings.ts. Same values as the Postgres
+-- migration. The numbers came with their column defaults above; the company
+-- name starts as the workspace name.
+UPDATE `PricingSettings` p
+JOIN `Tenant` t ON t.id = p.tenantId
+SET p.`companyName` = t.`name`,
+    p.`introSq` = '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Ju falënderojmë për interesin tuaj. Më poshtë gjeni ofertën tonë për shërbimet e sigurisë dhe shëndetit në punë."}]}]}',
+    p.`introEn` = '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Thank you for your interest. Below is our offer for health and safety services at work."}]}]}',
+    p.`termsSq` = '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Çmimet janë mujore, në EUR."}]},{"type":"paragraph","content":[{"type":"text","text":"TVSH nuk përfshihet."}]}]}',
+    p.`termsEn` = '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Prices are monthly, in EUR."}]},{"type":"paragraph","content":[{"type":"text","text":"VAT not included."}]}]}',
+    p.`closingSq` = '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Mbetemi në dispozicion për çdo pyetje."}]}]}',
+    p.`closingEn` = '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"We remain at your disposal for any questions."}]}]}'
+WHERE @offerSettingsFresh = 1;
+
+INSERT INTO `Service` (`id`, `tenantId`, `nameSq`, `nameEn`, `descriptionSq`, `descriptionEn`, `order`, `updatedAt`)
+SELECT UUID(), t.id, v.namesq, v.nameen, v.descriptionsq, v.descriptionen, v.ord, NOW(3)
+FROM `Tenant` t
+CROSS JOIN (
+  SELECT 'Vlerësimi i riskut' AS namesq, 'Risk assessment' AS nameen, 'Vlerësimi i rreziqeve për sigurinë dhe shëndetin në vendin e punës.' AS descriptionsq, 'Assessment of the health and safety risks at the workplace.' AS descriptionen, 1 AS ord
+  UNION ALL
+  SELECT 'Vizita mjekësore në punë', 'Occupational health visits', 'Vizitat e mjekut të punës në objekt, sipas frekuencës së zgjedhur.', 'Visits of the occupational physician on site, at the chosen frequency.', 2
+  UNION ALL
+  SELECT 'Trajnim për sigurinë dhe shëndetin në punë', 'Health and safety training', 'Trajnimi i punonjësve për sigurinë dhe shëndetin në punë.', 'Training of the employees in health and safety at work.', 3
+) v
+WHERE NOT EXISTS (SELECT 1 FROM `Service` s WHERE s.tenantId = t.id);
+
+INSERT INTO `ServicePackage` (`id`, `tenantId`, `nameSq`, `nameEn`, `descriptionSq`, `descriptionEn`, `isDefault`, `order`, `updatedAt`)
+SELECT UUID(), t.id, 'Standart', 'Standard', 'Paketa standarde e shërbimeve.', 'The standard package of services.', true, 1, NOW(3)
+FROM `Tenant` t
+WHERE NOT EXISTS (SELECT 1 FROM `ServicePackage` sp WHERE sp.tenantId = t.id);
+
+-- The default package holds every default service, in order. A package that
+-- already has services keeps them.
+INSERT INTO `PackageService` (`packageId`, `serviceId`, `order`)
+SELECT sp.id, s.id, v.ord
+FROM (
+  SELECT 'Vlerësimi i riskut' AS servicenamesq, 1 AS ord
+  UNION ALL
+  SELECT 'Vizita mjekësore në punë', 2
+  UNION ALL
+  SELECT 'Trajnim për sigurinë dhe shëndetin në punë', 3
+) v
+JOIN `ServicePackage` sp ON sp.`nameSq` = 'Standart' AND sp.`isDefault` = true
+JOIN `Service` s ON s.tenantId = sp.tenantId AND s.`nameSq` = v.servicenamesq
+WHERE NOT EXISTS (SELECT 1 FROM `PackageService` ps WHERE ps.packageId = sp.id);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261001100000_m2_services_offer_settings', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261001100000_m2_services_offer_settings'
+);
+
+-- ---------------------------------------------------------------
+-- 21. Milestone 2 sales script (M2 Slice 5)
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `SalesScript` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `version` INTEGER NOT NULL,
+    `status` VARCHAR(191) NOT NULL,
+    `liveSlot` VARCHAR(191) NULL,
+    `contentSq` JSON NOT NULL,
+    `contentEn` JSON NULL,
+    `createdByUserId` VARCHAR(191) NULL,
+    `publishedAt` DATETIME(3) NULL,
+    `publishedByUserId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `SalesScript_createdByUserId_idx`(`createdByUserId`),
+    INDEX `SalesScript_publishedByUserId_idx`(`publishedByUserId`),
+    UNIQUE INDEX `SalesScript_tenantId_version_key`(`tenantId`, `version`),
+    UNIQUE INDEX `SalesScript_tenantId_liveSlot_key`(`tenantId`, `liveSlot`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'SalesScript' AND CONSTRAINT_NAME = 'SalesScript_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `SalesScript` ADD CONSTRAINT `SalesScript_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: SalesScript.SalesScript_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'SalesScript' AND CONSTRAINT_NAME = 'SalesScript_createdByUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `SalesScript` ADD CONSTRAINT `SalesScript_createdByUserId_fkey` FOREIGN KEY (`createdByUserId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE', 'SELECT ''skip: SalesScript.SalesScript_createdByUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'SalesScript' AND CONSTRAINT_NAME = 'SalesScript_publishedByUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `SalesScript` ADD CONSTRAINT `SalesScript_publishedByUserId_fkey` FOREIGN KEY (`publishedByUserId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE', 'SELECT ''skip: SalesScript.SalesScript_publishedByUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- Seed: the placeholder script in src/salesScript/domain/DefaultSalesScript.ts,
+-- published as version 1 for every workspace that has no script yet. Same
+-- JSON as the Postgres migration.
+INSERT INTO `SalesScript` (`id`, `tenantId`, `version`, `status`, `liveSlot`, `contentSq`, `contentEn`, `publishedAt`, `updatedAt`)
+SELECT UUID(), t.id, 1, 'PUBLISHED', 'PUBLISHED',
+    '{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Hapja"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Prezantoni veten dhe Wellness Albania, dhe pyesni nëse është një moment i përshtatshëm për të folur."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Zbulimi i nevojave"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Pyesni për aktivitetin e kompanisë, numrin e punonjësve dhe si e menaxhojnë sot sigurinë në punë."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Pyetje për çmimin"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Konfirmoni numrin e punonjësve, llojin e biznesit, frekuencën e vizitave dhe qytetin para se të llogaritni çmimin."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Kundërshtimet"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Dëgjoni kundërshtimin deri në fund, pastaj shpjegoni vlerën e shërbimit për kompaninë."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Mbyllja"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Përmblidhni ofertën dhe bini dakord për hapin e radhës dhe datën e ndjekjes."}]}]}]}]}',
+    '{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Opening"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Introduce yourself and Wellness Albania, and ask whether this is a good moment to talk."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Needs discovery"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Ask about the company activity, the number of employees and how they handle safety at work today."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Pricing questions"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Confirm the number of employees, business type, visit frequency and city before calculating the price."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Objections"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Hear the objection out, then explain the value of the service for the company."}]}]}]},{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Closing"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Summarise the offer and agree the next step and the follow-up date."}]}]}]}]}',
+    NOW(3), NOW(3)
+FROM `Tenant` t
+WHERE NOT EXISTS (SELECT 1 FROM `SalesScript` s WHERE s.tenantId = t.id);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261001120000_m2_sales_script', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261001120000_m2_sales_script'
+);
+
+-- ---------------------------------------------------------------
+-- 22. Milestone 2 deals and pipeline (M2 Slice 6)
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `Deal` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `ownerUserId` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(191) NULL,
+    `stageKey` VARCHAR(191) NOT NULL,
+    `expectedCloseDate` DATETIME(3) NULL,
+    `notes` TEXT NULL,
+    `createdByUserId` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `closedAt` DATETIME(3) NULL,
+    `deletedAt` DATETIME(3) NULL,
+    `wonAt` DATETIME(3) NULL,
+    `lostAt` DATETIME(3) NULL,
+    `lostReasonId` VARCHAR(191) NULL,
+    `lostNote` TEXT NULL,
+    `agreedMonthlyPrice` DECIMAL(12, 2) NULL,
+    `agreedAnnualValue` DECIMAL(12, 2) NULL,
+    `packageId` VARCHAR(191) NULL,
+    `wonQuotationId` VARCHAR(191) NULL,
+
+    INDEX `Deal_tenantId_ownerUserId_stageKey_idx`(`tenantId`, `ownerUserId`, `stageKey`),
+    INDEX `Deal_tenantId_clientId_idx`(`tenantId`, `clientId`),
+    INDEX `Deal_tenantId_stageKey_updatedAt_idx`(`tenantId`, `stageKey`, `updatedAt`),
+    INDEX `Deal_ownerUserId_idx`(`ownerUserId`),
+    INDEX `Deal_createdByUserId_idx`(`createdByUserId`),
+    INDEX `Deal_lostReasonId_idx`(`lostReasonId`),
+    INDEX `Deal_packageId_idx`(`packageId`),
+    INDEX `Deal_wonQuotationId_idx`(`wonQuotationId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `DealStageHistory` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `dealId` VARCHAR(191) NOT NULL,
+    `fromStage` VARCHAR(191) NULL,
+    `toStage` VARCHAR(191) NOT NULL,
+    `changedByUserId` VARCHAR(191) NULL,
+    `at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `note` TEXT NULL,
+
+    INDEX `DealStageHistory_tenantId_dealId_at_idx`(`tenantId`, `dealId`, `at`),
+    INDEX `DealStageHistory_dealId_idx`(`dealId`),
+    INDEX `DealStageHistory_changedByUserId_idx`(`changedByUserId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_clientId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `Client`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_clientId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_ownerUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_ownerUserId_fkey` FOREIGN KEY (`ownerUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_ownerUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_createdByUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_createdByUserId_fkey` FOREIGN KEY (`createdByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_createdByUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_lostReasonId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_lostReasonId_fkey` FOREIGN KEY (`lostReasonId`) REFERENCES `LostReason`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_lostReasonId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_packageId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_packageId_fkey` FOREIGN KEY (`packageId`) REFERENCES `ServicePackage`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_packageId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_wonQuotationId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_wonQuotationId_fkey` FOREIGN KEY (`wonQuotationId`) REFERENCES `Quotation`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal.Deal_wonQuotationId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DealStageHistory' AND CONSTRAINT_NAME = 'DealStageHistory_dealId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DealStageHistory` ADD CONSTRAINT `DealStageHistory_dealId_fkey` FOREIGN KEY (`dealId`) REFERENCES `Deal`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: DealStageHistory.DealStageHistory_dealId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DealStageHistory' AND CONSTRAINT_NAME = 'DealStageHistory_changedByUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DealStageHistory` ADD CONSTRAINT `DealStageHistory_changedByUserId_fkey` FOREIGN KEY (`changedByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: DealStageHistory.DealStageHistory_changedByUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261001140000_m2_deals', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261001140000_m2_deals'
+);
+
+-- ---------------------------------------------------------------
+-- 23. Milestone 2 activities (M2 Slice 7)
+-- ---------------------------------------------------------------
+
+SELECT '23. Milestone 2 activities' AS step, NOW() AS at;
+
+CREATE TABLE IF NOT EXISTS `ActivityResult` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `nameSq` VARCHAR(191) NOT NULL,
+    `nameEn` VARCHAR(191) NULL,
+    `order` INTEGER NOT NULL DEFAULT 0,
+    `active` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `ActivityResult_tenantId_order_idx`(`tenantId`, `order`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'occurredAt');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `occurredAt` DATETIME(3) NULL', 'SELECT ''skip: Interaction.occurredAt'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'contactPersonId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `contactPersonId` VARCHAR(191) NULL', 'SELECT ''skip: Interaction.contactPersonId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'dealId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `dealId` VARCHAR(191) NULL', 'SELECT ''skip: Interaction.dealId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'resultId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `resultId` VARCHAR(191) NULL', 'SELECT ''skip: Interaction.resultId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'clientFeedback');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `clientFeedback` TEXT NULL', 'SELECT ''skip: Interaction.clientFeedback'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'nextAction');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `nextAction` TEXT NULL', 'SELECT ''skip: Interaction.nextAction'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'updatedAt');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `updatedAt` DATETIME(3) NULL', 'SELECT ''skip: Interaction.updatedAt'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND COLUMN_NAME = 'updatedByUserId');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD COLUMN `updatedByUserId` VARCHAR(191) NULL', 'SELECT ''skip: Interaction.updatedByUserId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND INDEX_NAME = 'Interaction_tenantId_clientId_occurredAt_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Interaction_tenantId_clientId_occurredAt_idx` ON `Interaction`(`tenantId`, `clientId`, `occurredAt`)', 'SELECT ''skip: Interaction_tenantId_clientId_occurredAt_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND INDEX_NAME = 'Interaction_tenantId_dealId_occurredAt_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Interaction_tenantId_dealId_occurredAt_idx` ON `Interaction`(`tenantId`, `dealId`, `occurredAt`)', 'SELECT ''skip: Interaction_tenantId_dealId_occurredAt_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND INDEX_NAME = 'Interaction_contactPersonId_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Interaction_contactPersonId_idx` ON `Interaction`(`contactPersonId`)', 'SELECT ''skip: Interaction_contactPersonId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND INDEX_NAME = 'Interaction_dealId_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Interaction_dealId_idx` ON `Interaction`(`dealId`)', 'SELECT ''skip: Interaction_dealId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND INDEX_NAME = 'Interaction_resultId_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Interaction_resultId_idx` ON `Interaction`(`resultId`)', 'SELECT ''skip: Interaction_resultId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND INDEX_NAME = 'Interaction_updatedByUserId_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `Interaction_updatedByUserId_idx` ON `Interaction`(`updatedByUserId`)', 'SELECT ''skip: Interaction_updatedByUserId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET FOREIGN_KEY_CHECKS=0;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND CONSTRAINT_NAME = 'Interaction_contactPersonId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD CONSTRAINT `Interaction_contactPersonId_fkey` FOREIGN KEY (`contactPersonId`) REFERENCES `ContactPerson`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Interaction.Interaction_contactPersonId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND CONSTRAINT_NAME = 'Interaction_dealId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD CONSTRAINT `Interaction_dealId_fkey` FOREIGN KEY (`dealId`) REFERENCES `Deal`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Interaction.Interaction_dealId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND CONSTRAINT_NAME = 'Interaction_resultId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD CONSTRAINT `Interaction_resultId_fkey` FOREIGN KEY (`resultId`) REFERENCES `ActivityResult`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Interaction.Interaction_resultId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Interaction' AND CONSTRAINT_NAME = 'Interaction_updatedByUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Interaction` ADD CONSTRAINT `Interaction_updatedByUserId_fkey` FOREIGN KEY (`updatedByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Interaction.Interaction_updatedByUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ActivityResult' AND CONSTRAINT_NAME = 'ActivityResult_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ActivityResult` ADD CONSTRAINT `ActivityResult_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: ActivityResult.ActivityResult_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET FOREIGN_KEY_CHECKS=1;
+
+-- Data (FR-ACT-07, NFR-OPS-02), the same as the Postgres migration. Only
+-- workspaces with no activity results yet get the list: the defaults from
+-- src/lookups/domain/DefaultLookups.ts (Q14), then every legacy
+-- OutcomeCategory label that is not already one of them. A copied category
+-- keeps its id, so interactions map by key, not by label. A legacy row is one
+-- with no `occurredAt`; it gets its result first and its date last.
+SELECT 'before' AS m2_activities,
+  (SELECT COUNT(*) FROM `Interaction`) AS interactions,
+  (SELECT COUNT(*) FROM `Interaction` WHERE `occurredAt` IS NULL) AS without_occurred_at,
+  (SELECT COUNT(*) FROM `OutcomeCategory`) AS outcome_categories,
+  (SELECT COUNT(*) FROM `ActivityResult`) AS activity_results;
+
+DROP TEMPORARY TABLE IF EXISTS `_m2_activities_tenant`;
+CREATE TEMPORARY TABLE `_m2_activities_tenant` AS
+SELECT t.id FROM `Tenant` t
+WHERE NOT EXISTS (SELECT 1 FROM `ActivityResult` a WHERE a.tenantId = t.id);
+
+INSERT INTO `ActivityResult` (`id`, `tenantId`, `nameSq`, `nameEn`, `order`, `updatedAt`)
+SELECT UUID(), n.id, v.namesq, v.nameen, v.ord, NOW(3)
+FROM `_m2_activities_tenant` n
+CROSS JOIN (
+  SELECT 'U kontaktua – i interesuar' AS namesq, 'Reached – interested' AS nameen, 1 AS ord
+  UNION ALL
+  SELECT 'U kontaktua – jo i interesuar', 'Reached – not interested', 2
+  UNION ALL
+  SELECT 'Nuk u kontaktua', 'Not reached', 3
+  UNION ALL
+  SELECT 'Telefono më vonë', 'Call back later', 4
+  UNION ALL
+  SELECT 'U caktua takim', 'Meeting agreed', 5
+  UNION ALL
+  SELECT 'Kërkoi ofertë', 'Offer requested', 6
+) v;
+
+INSERT INTO `ActivityResult` (`id`, `tenantId`, `nameSq`, `nameEn`, `order`, `updatedAt`)
+SELECT o.id, o.tenantId, o.label, NULL,
+       6 + ROW_NUMBER() OVER (PARTITION BY o.tenantId ORDER BY o.label), NOW(3)
+FROM `OutcomeCategory` o
+JOIN `_m2_activities_tenant` n ON n.id = o.tenantId
+WHERE NOT EXISTS (SELECT 1 FROM `ActivityResult` a WHERE a.tenantId = o.tenantId AND a.nameSq = o.label)
+  AND NOT EXISTS (SELECT 1 FROM `ActivityResult` a WHERE a.id = o.id);
+
+UPDATE `Interaction` i
+SET i.resultId = COALESCE(
+  (SELECT a.id FROM `ActivityResult` a
+    WHERE a.id = i.outcomeCategoryId AND a.tenantId = i.tenantId),
+  (SELECT a.id FROM `ActivityResult` a
+    JOIN `OutcomeCategory` o ON o.id = i.outcomeCategoryId
+    WHERE a.tenantId = i.tenantId AND a.nameSq = o.label
+    ORDER BY a.`order` LIMIT 1)
+)
+WHERE i.occurredAt IS NULL AND i.resultId IS NULL AND i.outcomeCategoryId IS NOT NULL;
+
+UPDATE `Interaction` SET `occurredAt` = `createdAt` WHERE `occurredAt` IS NULL;
+
+DROP TEMPORARY TABLE IF EXISTS `_m2_activities_tenant`;
+
+SELECT 'after' AS m2_activities,
+  (SELECT COUNT(*) FROM `Interaction`) AS interactions,
+  (SELECT COUNT(*) FROM `Interaction` WHERE `occurredAt` IS NULL) AS without_occurred_at,
+  (SELECT COUNT(*) FROM `Interaction` WHERE `resultId` IS NOT NULL) AS with_result,
+  (SELECT COUNT(*) FROM `ActivityResult`) AS activity_results;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261002100000_m2_activities', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261002100000_m2_activities'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -1621,6 +2341,42 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Tenant' AND COLUMN_NAME='salesWorkflow'
   UNION ALL SELECT 'AppliedPermissionUpgrade table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='AppliedPermissionUpgrade'
+  UNION ALL SELECT 'PricingSettings table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='PricingSettings'
+  UNION ALL SELECT 'EmployeeBand table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='EmployeeBand'
+  UNION ALL SELECT 'RiskSurcharge table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='RiskSurcharge'
+  UNION ALL SELECT 'VisitFrequency table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='VisitFrequency'
+  UNION ALL SELECT 'PriceZone table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='PriceZone'
+  UNION ALL SELECT 'PriceZoneCity table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='PriceZoneCity'
+  UNION ALL SELECT 'PricingSettings.offerValidityDays', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='PricingSettings' AND COLUMN_NAME='offerValidityDays'
+  UNION ALL SELECT 'PricingSettings.closingEn', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='PricingSettings' AND COLUMN_NAME='closingEn'
+  UNION ALL SELECT 'Service table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Service'
+  UNION ALL SELECT 'ServicePackage table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ServicePackage'
+  UNION ALL SELECT 'PackageService table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='PackageService'
+  UNION ALL SELECT 'SalesScript table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SalesScript'
+  UNION ALL SELECT 'Deal table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Deal'
+  UNION ALL SELECT 'DealStageHistory table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DealStageHistory'
+  UNION ALL SELECT 'ActivityResult table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ActivityResult'
+  UNION ALL SELECT 'Interaction.occurredAt', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Interaction' AND COLUMN_NAME='occurredAt'
+  UNION ALL SELECT 'Interaction.resultId', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Interaction' AND COLUMN_NAME='resultId'
+  UNION ALL SELECT 'Interaction.updatedByUserId', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Interaction' AND COLUMN_NAME='updatedByUserId'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

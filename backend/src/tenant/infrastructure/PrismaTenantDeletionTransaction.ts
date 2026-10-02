@@ -34,6 +34,7 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        *   - Product      -> ProductImage
        *   - Invoice      -> InvoiceLineItem, InvoiceStatusHistory
        *   - Contract     -> ContractPayment, ContractStatusHistory
+       *   - Deal         -> DealStageHistory (also deleted explicitly, below)
        *   - Tenant       -> NotificationSettings (deleted last, below)
        *
        * AuditLog is deliberately absent: its tenantId column carries no
@@ -50,6 +51,20 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.formSubmission.deleteMany({ where: { tenantId } });
       await tx.formVersion.deleteMany({ where: { tenantId } });
       await tx.clientForm.deleteMany({ where: { tenantId } });
+      /*
+       * Activities (M2 Slice 7) hold RESTRICT references to Deal,
+       * ContactPerson and ActivityResult as well as Client and User, so they
+       * go before the deals.
+       */
+      await tx.interaction.deleteMany({ where: { tenantId } });
+      /*
+       * Deals (M2 Slice 6) hold RESTRICT references to Client, User,
+       * Quotation, LostReason and ServicePackage, so they go before all of
+       * them. Their stage history cascades from the deal on Postgres; it is
+       * deleted first anyway so nothing is left to MySQL's cascade ordering.
+       */
+      await tx.dealStageHistory.deleteMany({ where: { tenantId } });
+      await tx.deal.deleteMany({ where: { tenantId } });
       await tx.invoice.deleteMany({ where: { tenantId } });
       /*
        * Before Client and User, like Invoice above and for the same reason:
@@ -63,7 +78,6 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.ownershipTransfer.deleteMany({ where: { tenantId } });
       await tx.notification.deleteMany({ where: { tenantId } });
       await tx.appointment.deleteMany({ where: { tenantId } });
-      await tx.interaction.deleteMany({ where: { tenantId } });
       await tx.quotation.deleteMany({ where: { tenantId } });
       await tx.stockMovement.deleteMany({ where: { tenantId } });
       await tx.stockLevel.deleteMany({ where: { tenantId } });
@@ -76,11 +90,17 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.client.deleteMany({ where: { tenantId } });
       await tx.customFieldDefinition.deleteMany({ where: { tenantId } });
       await tx.outcomeCategory.deleteMany({ where: { tenantId } });
+      // Cascades from Tenant; listed so nothing is left to MySQL's cascade
+      // ordering once the activities that point at it are gone (M2 Slice 7).
+      await tx.activityResult.deleteMany({ where: { tenantId } });
       await tx.invitation.deleteMany({ where: { tenantId } });
       // PasswordResetToken has no tenantId column of its own — only via the
       // user it belongs to.
       await tx.passwordResetToken.deleteMany({ where: { user: { tenantId } } });
       await tx.integration.deleteMany({ where: { tenantId } });
+      // The sales script names its authors (SET NULL), so it goes before them
+      // rather than leaving MySQL to null and then cascade it (M2 Slice 5).
+      await tx.salesScript.deleteMany({ where: { tenantId } });
       await tx.user.deleteMany({ where: { tenantId } });
       await tx.warehouse.deleteMany({ where: { tenantId } });
       // AuditEntry has no foreign key either (same reason as AuditLog), so
@@ -93,6 +113,17 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       // ordering.
       await tx.businessType.deleteMany({ where: { tenantId } });
       await tx.riskLevel.deleteMany({ where: { tenantId } });
+      // Pricing (M2 Slice 3): PriceZoneCity cascades from both its zone and its
+      // City. The zones go first anyway, and the rest are listed rather than
+      // left to MySQL's cascade ordering.
+      await tx.priceZone.deleteMany({ where: { tenantId } });
+      await tx.riskSurcharge.deleteMany({ where: { tenantId } });
+      await tx.visitFrequency.deleteMany({ where: { tenantId } });
+      await tx.employeeBand.deleteMany({ where: { tenantId } });
+      await tx.pricingSettings.deleteMany({ where: { tenantId } });
+      // Services and packages (M2 Slice 4): their links cascade from both.
+      await tx.servicePackage.deleteMany({ where: { tenantId } });
+      await tx.service.deleteMany({ where: { tenantId } });
       // Same situation: City holds RESTRICT on its Area.
       await tx.city.deleteMany({ where: { tenantId } });
       await tx.area.deleteMany({ where: { tenantId } });

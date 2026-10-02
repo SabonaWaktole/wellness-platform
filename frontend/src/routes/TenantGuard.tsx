@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
+import { SalesScriptPanelHost } from '../components/panels/SalesScriptPanel/SalesScriptPanel';
 
 export const TenantGuard = () => {
   const { tenantSlug } = useParams();
@@ -16,5 +17,13 @@ export const TenantGuard = () => {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return <Outlet />;
+  // The sales script panel sits beside the pages, not in them: every page
+  // mounts its own AppLayout, but this route stays mounted while the user
+  // moves between pages, so the panel stays open where it was (FR-SCR-02).
+  return (
+    <>
+      <Outlet />
+      <SalesScriptPanelHost />
+    </>
+  );
 };

@@ -2,7 +2,7 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { LookupList } from '../../domain/LookupList';
 import { LookupRecord } from '../../domain/LookupItem';
-import { findItem, lookupAuditEntry, MANAGE_LISTS } from '../lookupAdmin';
+import { ensureCanManageList, findItem, lookupAuditEntry } from '../lookupAdmin';
 import { LookupRulesRegistry } from '../LookupListRules';
 import { ILookupStore } from '../ports/ILookupStore';
 import { ILookupWriteTransaction } from '../ports/ILookupWriteTransaction';
@@ -31,7 +31,7 @@ export class SetLookupItemActiveUseCase {
     active: boolean;
     cascade?: boolean;
   }): Promise<LookupRecord> {
-    input.access.ensure(MANAGE_LISTS);
+    ensureCanManageList(input.access, input.list);
     const rules = this.rules[input.list];
     const current = await findItem(this.store, input.tenantId, input.list, input.id);
     if (current.active === input.active) {

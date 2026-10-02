@@ -2,27 +2,27 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Banknote,
+  Briefcase,
   Calendar,
   CalendarCheck,
   CalendarX,
   FileSignature,
-  FileText,
   History,
-  Mail,
-  PhoneCall,
   ScrollText,
   UserMinus,
   UserPlus,
-  Video,
 } from 'lucide-react';
 import { Button } from '../ui/Button/Button';
 import { TimelineItem } from '../ui/TimelineItem/TimelineItem';
+import { ActivityDetails } from '../activities/ActivityDetails';
+import { channelIcon } from '../activities/channelIcon';
+import { useCanEditActivity } from '../activities/useCanEditActivity';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useDateFormat } from '../../hooks/useDateFormat';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { TIMELINE_CATEGORIES } from '../../types/client';
-import type { ClientHistory, TimelineCategory, TimelineEntry } from '../../types/client';
+import type { ActivityView, ClientHistory, TimelineCategory, TimelineEntry } from '../../types/client';
 import styles from './CompanyTimeline.module.css';
 
 /** The permission each category's entries need — the chip is hidden without it. */
@@ -33,6 +33,7 @@ const CATEGORY_PERMISSION: Record<TimelineCategory, string> = {
   QUOTATION: 'quotations.manage',
   CONTRACT: 'contracts.validity.view',
   PAYMENT: 'payments.view',
+  DEAL: 'deals.view',
 };
 
 const NEUTRAL = { color: 'var(--color-on-surface-variant)', bg: 'var(--color-surface-container-high)' };
@@ -42,7 +43,7 @@ const PRIMARY = { color: 'var(--color-on-primary-container)', bg: 'var(--color-p
 
 interface EntryView {
   title: string;
-  content?: string;
+  content?: React.ReactNode;
   status?: string;
   icon: React.ReactNode;
   color: string;
@@ -57,11 +58,33 @@ interface CompanyTimelineProps {
   isLoadingMore: boolean;
   error?: string | null;
   onLoadMore: () => void;
+  /** Offered on an activity the viewer may edit (FR-ACT-06). */
+  onEditActivity?: (activity: ActivityView) => void;
+}
+
+/** An activity entry back as the activity it describes, for the edit dialog. */
+function activityOf(entry: TimelineEntry): ActivityView {
+  const d = entry.details ?? {};
+  return {
+    id: d.id,
+    clientId: d.clientId,
+    dealId: d.dealId ?? null,
+    channel: d.channel,
+    content: d.content ?? '',
+    occurredAt: d.occurredAt ?? entry.timestamp,
+    recordedAt: d.recordedAt ?? entry.timestamp,
+    updatedAt: d.updatedAt ?? null,
+    author: entry.actor ?? { id: '', name: '' },
+    contact: d.contact ?? null,
+    result: d.result ?? null,
+    clientFeedback: d.clientFeedback ?? null,
+    nextAction: d.nextAction ?? null,
+  };
 }
 
 /**
  * The company's unified history (FR-CMP-05): contacts, notes, activities,
- * offers, contracts and payments in one list, newest first, filterable by
+ * offers, contracts, payments and deals in one list, newest first, filterable by
  * type. The server has already left out what the viewer may not see and
  * removed money fields they may not read, so an amount is shown only when
  * present.
@@ -74,8 +97,10 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
   isLoadingMore,
   error,
   onLoadMore,
+  onEditActivity,
 }) => {
   const { t } = useTranslation('clients');
+  const canEditActivity = useCanEditActivity();
   const statusLabel = useStatusLabel();
   const dates = useDateFormat();
   const money = useMoneyFormat();
@@ -98,14 +123,26 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
       case 'CONTACT_REMOVED':
         return { title: t('detail.timeline.events.CONTACT_REMOVED', { name: d.name }), content: d.position, icon: <UserMinus size={16} />, ...NEUTRAL };
       case 'INTERACTION_ADDED': {
-        const icon =
-          d.channel === 'CALL' ? <PhoneCall size={16} /> :
-          d.channel === 'EMAIL' ? <Mail size={16} /> :
-          d.channel === 'MEETING' ? <Video size={16} /> : <FileText size={16} />;
+        // An activity sits at the time it happened (FR-ACT-05); legacy ones
+        // at their creation (FR-ACT-07).
+        const Icon = channelIcon(d.channel);
+        const activity = activityOf(entry);
+        const editable = !!onEditActivity && !!d.id && canEditActivity(activity);
         return {
           title: t('detail.timeline.events.INTERACTION_ADDED', { channel: t(`detail.channels.${d.channel}`, { defaultValue: d.channel }) }),
-          content: d.content,
-          icon,
+          content: (
+            <ActivityDetails
+              activity={activity}
+              actions={
+                editable ? (
+                  <Button variant="ghost" size="sm" onClick={() => onEditActivity!(activity)}>
+                    {t('activity.edit')}
+                  </Button>
+                ) : undefined
+              }
+            />
+          ),
+          icon: <Icon size={16} />,
           ...NEUTRAL,
         };
       }
@@ -144,6 +181,23 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
           icon: <FileSignature size={16} />,
           ...NEUTRAL,
         };
+      case 'DEAL_CREATED':
+        return {
+          title: t('detail.timeline.events.DEAL_CREATED', { deal: d.title ?? statusLabel.dealType(d.type) }),
+          status: statusLabel.deal('NEW_LEAD'),
+          icon: <Briefcase size={16} />,
+          ...PRIMARY,
+        };
+      case 'DEAL_STAGE_CHANGED':
+        return {
+          title: t('detail.timeline.events.DEAL_STAGE_CHANGED', {
+            deal: d.title ?? statusLabel.dealType(d.type),
+            from: statusLabel.deal(d.fromStage),
+            to: statusLabel.deal(d.toStage),
+          }),
+          icon: <Briefcase size={16} />,
+          ...NEUTRAL,
+        };
       case 'PAYMENT_RECEIVED': {
         const parts = [
           d.paidAmount !== undefined && d.amount !== undefined
@@ -179,8 +233,9 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
   const subtitle = (entry: TimelineEntry) => {
     const timestamp = dates.dateTime(entry.timestamp);
     if (entry.actor) return t('detail.timeline.byActor', { timestamp, actor: entry.actor.name });
-    // A status change with no person behind it was made by the scheduler.
-    if (entry.type.endsWith('_STATUS_CHANGED')) return t('detail.timeline.byActor', { timestamp, actor: t('detail.timeline.system') });
+    // A status change with no person behind it was made by the scheduler, and
+    // a deal stage change by the platform's automatic moves (FR-DEAL-08).
+    if (entry.type.endsWith('_STATUS_CHANGED') || entry.type === 'DEAL_STAGE_CHANGED') return t('detail.timeline.byActor', { timestamp, actor: t('detail.timeline.system') });
     return timestamp;
   };
 

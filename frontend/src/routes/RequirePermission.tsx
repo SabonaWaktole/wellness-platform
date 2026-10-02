@@ -3,7 +3,8 @@ import { useAuthStore } from '../store/useAuthStore';
 
 interface RequirePermissionProps {
   children: React.ReactNode;
-  permission: string;
+  /** A list lets the route through on any one of its keys. */
+  permission: string | string[];
 }
 
 /**
@@ -15,7 +16,8 @@ interface RequirePermissionProps {
 export const RequirePermission = ({ children, permission }: RequirePermissionProps) => {
   const { user } = useAuthStore();
 
-  if (!user || user.permissions?.[permission] === undefined) {
+  const keys = Array.isArray(permission) ? permission : [permission];
+  if (!user || !keys.some((key) => user.permissions?.[key] !== undefined)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

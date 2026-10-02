@@ -5,12 +5,15 @@ import { FieldRole } from '../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../src/clients/domain/enums/ClientStatus';
 import { ITokenService } from '../../src/auth/application/ports/ITokenService';
 import { UserRole } from '../../src/auth/domain/enums/UserRole';
+import { OPEN_DEAL_STAGES } from '../../src/deals/domain/DealStage';
 
 /**
  * The staging data Milestone 1 UAT runs on (deploy/uat-milestone-1.md): one
  * user per role, companies owned by each Sales User and unassigned ones, two
  * contacts each, and contracts, payments, notes and calls so every UAT step
- * has something to look at.
+ * has something to look at. Milestone 2 adds a New contract deal on each
+ * company Sales User A or B owns (UAT-2), and bulk deals for the board's
+ * NFR-PERF-03 measurement.
  *
  * Reads (roles, field definitions, lookups, what already exists) go through
  * Prisma. Every WRITE goes through the real HTTP API as the Administrator, so
@@ -65,6 +68,10 @@ export const UAT_COMPANIES: UatCompanySpec[] = [
 ];
 
 export const BULK_PREFIX = 'UAT Bulk Company ';
+export const BULK_DEAL_PREFIX = 'UAT Bulk Deal ';
+
+/** The salespeople whose named companies get a seeded deal; the leaver's are left to UAT-5. */
+const DEAL_OWNERS: ReadonlyArray<Owner> = ['salesA', 'salesB'];
 
 export interface SeedUatOptions {
   prisma: PrismaClient;
@@ -76,6 +83,8 @@ export interface SeedUatOptions {
   emailDomain: string;
   /** Total bulk companies wanted for the NFR-PERF-01 measurement; 0 for none. */
   bulkCompanies: number;
+  /** Total bulk deals wanted for the NFR-PERF-03 board measurement, spread over the bulk companies; 0 for none. */
+  bulkDeals?: number;
   log?: (line: string) => void;
 }
 
@@ -83,6 +92,8 @@ export interface SeedUatResult {
   users: Record<UatUserSpec['key'] | 'admin', { id: string; email: string; created: boolean }>;
   companiesCreated: number;
   bulkCreated: number;
+  dealsCreated: number;
+  bulkDealsCreated: number;
 }
 
 class Api {
@@ -164,6 +175,8 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     prisma.city.findMany({ where: { tenantId, active: true } }),
     prisma.customFieldDefinition.findMany({ where: { tenantId } }),
   ]);
+  // The seeded calls' result (FR-ACT-02): the workspace's first active one.
+  const callResult = await prisma.activityResult.findFirstOrThrow({ where: { tenantId, active: true }, orderBy: { order: 'asc' } });
   const fieldName = (role: FieldRole) => fieldDefs.find((f) => f.role === role)?.fieldName;
   const nameField = fieldName(FieldRole.PRIMARY_NAME) ?? 'Name';
   const statusField = fieldName(FieldRole.STATUS) ?? 'Status';
@@ -205,7 +218,16 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     log(`company + ${spec.name}${spec.owner ? ` (${spec.owner})` : ' (unassigned)'}`);
 
     await api.call('POST', `/clients/${company.id}/interactions`, { channel: 'NOTE', content: 'Shënim UAT: klienti preferon takime në mëngjes.' });
-    await api.call('POST', `/clients/${company.id}/interactions`, { channel: 'CALL', content: 'Telefonatë UAT: u diskutua oferta vjetore.' });
+    // A call names its contact person and its result (M2 Slice 7, FR-ACT-02).
+    const primary = await prisma.contactPerson.findFirstOrThrow({ where: { tenantId, clientId: company.id, isPrimary: true, deletedAt: null } });
+    await api.call('POST', `/clients/${company.id}/interactions`, {
+      channel: 'CALL',
+      content: 'Telefonatë UAT: u diskutua oferta vjetore.',
+      contactPersonId: primary.id,
+      resultId: callResult.id,
+      clientFeedback: 'I interesuar për një ofertë vjetore.',
+      nextAction: 'Dërgo ofertën.',
+    });
 
     if (spec.contract) {
       const year = new Date().getFullYear();
@@ -223,6 +245,18 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
       const added = await api.call('POST', `/contracts/${contractId}/payments`, { dueDate: `${year}-01-15`, amount: 2400 });
       await api.call('POST', `/contracts/${contractId}/payments/${added.payment.id}/record`, { action: 'PAY' });
     }
+  }
+
+  // --- One deal per salesperson's company (M2 Slice 6, UAT-2) -------------
+  // Checked per company rather than per run, so a workspace seeded before
+  // Milestone 2 gets its deals on the next run.
+  let dealsCreated = 0;
+  for (const spec of UAT_COMPANIES.filter((c) => DEAL_OWNERS.includes(c.owner))) {
+    const company = await prisma.client.findFirst({ where: { tenantId, name: spec.name, deletedAt: null } });
+    if (!company || (await prisma.deal.count({ where: { tenantId, clientId: company.id } })) > 0) continue;
+    await api.call('POST', '/deals', { clientId: company.id, type: 'NEW_CONTRACT' });
+    dealsCreated += 1;
+    log(`deal + ${spec.name}`);
   }
 
   // --- Bulk companies for NFR-PERF-01 ------------------------------------
@@ -272,5 +306,60 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     }
   }
 
-  return { users, companiesCreated, bulkCreated };
+  // --- Bulk deals for NFR-PERF-03 ---------------------------------------
+  let bulkDealsCreated = 0;
+  const wantedDeals = options.bulkDeals ?? 0;
+  if (wantedDeals > 0) {
+    const have = await prisma.deal.count({ where: { tenantId, title: { startsWith: BULK_DEAL_PREFIX } } });
+    const missing = wantedDeals - have;
+    const bulkCompanies = await prisma.client.findMany({
+      where: { tenantId, name: { startsWith: BULK_PREFIX } },
+      select: { id: true },
+      orderBy: { name: 'asc' },
+    });
+    if (missing > 0 && bulkCompanies.length === 0) {
+      throw new Error('Bulk deals need bulk companies: pass --companies as well.');
+    }
+    if (missing > 0) {
+      // Straight to the database, like the bulk companies: open deals spread
+      // over the open stages and both salespeople, each with its first
+      // history row.
+      const owners = [users.salesA.id, users.salesB.id];
+      const now = new Date();
+      const deals = Array.from({ length: missing }, (_, i) => {
+        const n = have + i;
+        return {
+          id: randomUUID(),
+          tenantId,
+          clientId: bulkCompanies[n % bulkCompanies.length].id,
+          ownerUserId: owners[n % owners.length],
+          createdByUserId: admin.id,
+          type: 'NEW_CONTRACT',
+          title: `${BULK_DEAL_PREFIX}${n}`,
+          stageKey: OPEN_DEAL_STAGES[n % OPEN_DEAL_STAGES.length],
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+      for (let i = 0; i < deals.length; i += 2_000) {
+        const batch = deals.slice(i, i + 2_000);
+        await prisma.deal.createMany({ data: batch });
+        await prisma.dealStageHistory.createMany({
+          data: batch.map((deal) => ({
+            id: randomUUID(),
+            tenantId,
+            dealId: deal.id,
+            fromStage: null,
+            toStage: deal.stageKey,
+            changedByUserId: admin.id,
+            at: now,
+          })),
+        });
+      }
+      bulkDealsCreated = missing;
+      log(`bulk + ${missing} deals (now ${wantedDeals})`);
+    }
+  }
+
+  return { users, companiesCreated, bulkCreated, dealsCreated, bulkDealsCreated };
 }

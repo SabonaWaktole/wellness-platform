@@ -114,14 +114,6 @@ export const clientHandlers = [
     ]);
   }),
 
-  http.get(`${API_URL}/:tenantSlug/clients/settings/outcome-categories`, () => {
-    return HttpResponse.json([
-      { id: 'oc1', tenantId: 't1', label: 'Positive' },
-      { id: 'oc2', tenantId: 't1', label: 'Neutral' },
-      { id: 'oc3', tenantId: 't1', label: 'Negative' }
-    ]);
-  }),
-
   http.get(`${API_URL}/:tenantSlug/clients/:clientId/history`, ({ request }) => {
     const types = new URL(request.url).searchParams.get('type')?.split(',').filter(Boolean) ?? [];
     const timeline = [
@@ -197,17 +189,37 @@ export const clientHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  http.post(`${API_URL}/:tenantSlug/clients/:clientId/interactions`, async ({ request }) => {
+  http.post(`${API_URL}/:tenantSlug/clients/:clientId/interactions`, async ({ request, params }) => {
     const body = await request.json() as any;
+    const now = new Date().toISOString();
     return HttpResponse.json({
       id: `i${Date.now()}`,
-      clientId: 'c1', // mock
-      type: 'NOTE',
+      clientId: params.clientId,
       channel: body.channel || 'NOTE',
-      content: body.content,
-      outcomeCategoryId: body.outcomeCategoryId || null,
+      content: body.content ?? '',
       authorUserId: 'u1',
-      createdAt: new Date().toISOString()
+      createdAt: now,
+      occurredAt: body.occurredAt ?? now,
+      contactPersonId: body.contactPersonId ?? null,
+      dealId: body.dealId ?? null,
+      resultId: body.resultId ?? null,
+      clientFeedback: body.clientFeedback ?? null,
+      nextAction: body.nextAction ?? null,
+      updatedAt: null,
     }, { status: 201 });
+  }),
+
+  http.patch(`${API_URL}/:tenantSlug/clients/:clientId/interactions/:interactionId`, async ({ request, params }) => {
+    const body = await request.json() as any;
+    const now = new Date().toISOString();
+    return HttpResponse.json({
+      id: params.interactionId,
+      clientId: params.clientId,
+      authorUserId: 'u1',
+      createdAt: now,
+      occurredAt: body.occurredAt ?? now,
+      updatedAt: now,
+      ...body,
+    });
   }),
 ];

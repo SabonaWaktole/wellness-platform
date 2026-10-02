@@ -23,6 +23,17 @@ const FALLBACK_VARIANT: Record<StatusDomain, Record<string, BadgeProps['variant'
     OVERDUE: 'error',
     WAIVED: 'secondary',
   },
+  deal: {
+    NEW_LEAD: 'secondary',
+    CONTACTED: 'secondary',
+    INTERESTED: 'primary',
+    OFFER_PREPARED: 'primary',
+    OFFER_SENT: 'primary',
+    FOLLOW_UP: 'warning',
+    NEGOTIATION: 'warning',
+    WON: 'success',
+    LOST: 'error',
+  },
 };
 
 export interface StatusBadgeProps {
@@ -31,7 +42,7 @@ export interface StatusBadgeProps {
 }
 
 /**
- * A contract or payment status badge that shows the tenant's own colour
+ * A contract, payment or deal-stage badge that shows the tenant's own colour
  * (Settings → Statuses, FR-SET-07, 08) once it has loaded, and otherwise
  * falls back to a fixed variant — for the moment before the tenant's
  * labels arrive, and for a legacy key like WAIVED that has no tenant row.
@@ -40,7 +51,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ domain, status }) => {
   const items = useStatusLabels(domain);
   const statusLabel = useStatusLabel();
   const item = items.find((i) => i.key === status);
-  const label = domain === 'contract' ? statusLabel.contract(status) : statusLabel.contractPayment(status);
+  const label =
+    domain === 'contract' ? statusLabel.contract(status) : domain === 'deal' ? statusLabel.deal(status) : statusLabel.contractPayment(status);
 
   if (!item) {
     return <Badge variant={FALLBACK_VARIANT[domain][status] ?? 'secondary'}>{label}</Badge>;

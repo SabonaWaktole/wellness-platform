@@ -78,29 +78,22 @@
     "tabTimeline": "Timeline",
     "tabAppointments": "Appointments",
     "tabContracts": "Contracts",
-    "logCall": "Log Call",
-    "logEmail": "Email",
-    "logMeeting": "Meeting",
-    "logNote": "Note",
+    "tabDeals": "Deals",
     "loadingHistory": "Loading history...",
     "appointments": "Appointments",
     "newAppointment": "New Appointment",
     "loadingAppointments": "Loading appointments...",
     "noAppointments": "No appointments scheduled.",
     "noNotes": "No notes",
-    "addInteraction": "Add Interaction",
-    "saveInteraction": "Save Interaction",
-    "channel": "Channel",
     "channels": {
       "CALL": "Call",
       "EMAIL": "Email",
       "MEETING": "Meeting",
-      "NOTE": "Note"
+      "NOTE": "Note",
+      "VISIT": "Visit",
+      "ONLINE_MEETING": "Online meeting"
     },
     "notes": "Notes",
-    "notesPlaceholder": "Add details about this interaction...",
-    "outcome": "Outcome",
-    "noOutcome": "No Outcome",
     "scheduleAppointment": "Schedule Appointment",
     "yes": "Yes",
     "no": "No",
@@ -134,7 +127,8 @@
         "ACTIVITY": "Activities",
         "QUOTATION": "Offers",
         "CONTRACT": "Contracts",
-        "PAYMENT": "Payments"
+        "PAYMENT": "Payments",
+        "DEAL": "Deals"
       },
       "empty": "Nothing in this company's history yet.",
       "emptyFiltered": "Nothing of this type yet.",
@@ -152,7 +146,9 @@
         "QUOTATION_STATUS_CHANGED": "Offer {{reference}}: {{from}} → {{to}}",
         "CONTRACT_CREATED": "Contract {{reference}} created · {{plan}}",
         "CONTRACT_STATUS_CHANGED": "Contract {{reference}}: {{from}} → {{to}}",
-        "PAYMENT_RECEIVED": "Payment received · contract {{reference}}"
+        "PAYMENT_RECEIVED": "Payment received · contract {{reference}}",
+        "DEAL_CREATED": "Deal created: {{deal}}",
+        "DEAL_STAGE_CHANGED": "Deal {{deal}}: {{from}} → {{to}}"
       },
       "appointmentScheduledFor": "Scheduled for {{date}}",
       "offerTotal": "Total: {{amount}}",
@@ -160,6 +156,40 @@
       "contractPrice": "{{amount}} / {{period}}",
       "paymentPaid": "{{paid}} of {{amount}}",
       "paymentMethod": "Method: {{method}}"
+    }
+  },
+  "activity": {
+    "title": "Record activity",
+    "editTitle": "Edit activity",
+    "save": "Save activity",
+    "edit": "Edit",
+    "edited": "Edited",
+    "type": "Type",
+    "occurredAt": "Date and time",
+    "contact": "Contact person",
+    "chooseContact": "Choose a contact person",
+    "noContacts": "Add a contact person to the company first.",
+    "result": "Result",
+    "chooseResult": "Choose a result",
+    "deal": "Deal",
+    "noDeal": "No deal",
+    "currentDeal": "The deal it is linked to",
+    "clientFeedback": "Client feedback",
+    "nextAction": "Next action",
+    "notes": "Notes",
+    "note": "Note",
+    "notesPlaceholder": "What was said, what was agreed…",
+    "errors": {
+      "generic": "The activity could not be saved. Try again.",
+      "forbidden": "You do not have permission to do this.",
+      "notFound": "This activity no longer exists.",
+      "editClosed": "Only the Sales Manager can edit an activity after 24 hours.",
+      "channel": "A note cannot become another type of activity, or the other way round.",
+      "content": "Write the note.",
+      "occurredAt": "An activity cannot be in the future.",
+      "contactPersonId": "Choose the contact person.",
+      "resultId": "Choose a result.",
+      "dealId": "Choose an open deal of this company."
     }
   },
   "form": {
@@ -239,6 +269,11 @@
       "CONTACTS_REQUIRED": "Add at least one contact person.",
       "PRIMARY_CONTACT_REQUIRED": "Choose which contact becomes primary before removing this one.",
       "generic": "Something went wrong. Please try again."
+    },
+    "firstDeal": {
+      "title": "First deal",
+      "label": "Also create a deal for this company",
+      "helper": "A New contract deal in New lead, owned by the company's salesperson."
     }
   },
   "import": {

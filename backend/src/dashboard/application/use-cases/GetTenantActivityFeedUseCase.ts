@@ -3,7 +3,7 @@ import { IInteractionRepository } from '../../../clients/domain/repositories/IIn
 import { IAppointmentRepository } from '../../../appointments/domain/repositories/IAppointmentRepository';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
 import { TimelineMerger } from '../../../shared/application/TimelineMerger';
-import { InteractionChannel } from '../../../clients/domain/enums/InteractionChannel';
+import { visibleChannels } from '../../../clients/application/activityAccess';
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 
@@ -76,14 +76,4 @@ export class GetTenantActivityFeedUseCase {
 
     return { timeline: timelineWithActors };
   }
-}
-
-/** D3: notes and every other channel are separate permissions. */
-function visibleChannels(access: AccessContext): InteractionChannel[] {
-  const channels: InteractionChannel[] = [];
-  if (access.can('notes.view')) channels.push(InteractionChannel.NOTE);
-  if (access.can('activities.view')) {
-    channels.push(...Object.values(InteractionChannel).filter((channel) => channel !== InteractionChannel.NOTE));
-  }
-  return channels;
 }

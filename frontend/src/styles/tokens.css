@@ -228,6 +228,8 @@
 
   --spacing-sidebar-width: 256px;
   --spacing-sidebar-collapsed: 68px;
+  /* The sales script panel beside the page on desktop (M2 Slice 5). */
+  --sales-script-panel-width: 360px;
   --header-height: 60px;
   /* Keeps long-form pages from sprawling on ultrawide displays. */
   --content-max-width: 1440px;

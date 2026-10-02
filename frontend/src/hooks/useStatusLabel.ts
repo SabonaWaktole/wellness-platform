@@ -8,6 +8,8 @@ import {
   contractStatusKey,
   contractPaymentStatusKey,
   billingPeriodKey,
+  dealStageKey,
+  dealTypeKey,
 } from '../constants/statusKeys';
 import { useStatusLabels } from './useStatusLabels';
 import { lookupLabel } from '../utils/lookupLabel';
@@ -27,12 +29,14 @@ import { lookupLabel } from '../utils/lookupLabel';
  * prefer that tenant-set label over the built-in translation, falling back
  * to it while the tenant label is still loading or was never set (WAIVED,
  * which has none). Renaming "Active" there is then reflected on every badge
- * without a code change or a redeploy.
+ * without a code change or a redeploy. Deal stages work the same way (M2
+ * Slice 6, FR-DEAL-06).
  */
 export function useStatusLabel() {
   const { t, i18n } = useTranslation();
   const contractLabels = useStatusLabels('contract');
   const paymentLabels = useStatusLabels('payment');
+  const dealLabels = useStatusLabels('deal');
 
   const translate = (key: string | null, raw: string) => (key ? t(key) : raw);
 
@@ -50,5 +54,7 @@ export function useStatusLabel() {
     contract: (status: string) => fromCatalogue(contractLabels, status, translate(contractStatusKey(status), status)),
     contractPayment: (status: string) => fromCatalogue(paymentLabels, status, translate(contractPaymentStatusKey(status), status)),
     billingPeriod: (period: string) => translate(billingPeriodKey(period), period),
+    deal: (stage: string) => fromCatalogue(dealLabels, stage, translate(dealStageKey(stage), stage)),
+    dealType: (type: string) => translate(dealTypeKey(type), type),
   };
 }

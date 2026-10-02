@@ -10,7 +10,7 @@ import { statusLabelService, type StatusDomain, type StatusLabelItem } from '../
 import { lookupLabel } from '../../../utils/lookupLabel';
 import styles from './StatusesSettingsContent.module.css';
 
-const DOMAINS: StatusDomain[] = ['contract', 'payment'];
+const DOMAINS: StatusDomain[] = ['contract', 'payment', 'deal'];
 
 interface Draft {
   labelSq: string;

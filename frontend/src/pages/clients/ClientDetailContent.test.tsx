@@ -6,13 +6,16 @@ import * as clientsHooks from '../../hooks/useClients';
 import { useAuthStore } from '../../store/useAuthStore';
 import * as apptHooks from '../../hooks/useAppointments';
 
+// The search string the page reads; a test sets it before rendering.
+const router = vi.hoisted(() => ({ search: '' }));
+
 // Mock dependencies
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ clientId: 'client-1' }),
   useNavigate: () => vi.fn(),
-  // The page reads `?logInteraction` to auto-open the interaction slide-over.
+  // The page reads `?logInteraction` to auto-open the activity dialog.
   // These tests render outside a router, so an empty param set is enough.
-  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useSearchParams: () => [new URLSearchParams(router.search), vi.fn()],
   useLocation: () => ({ state: null }),
 }));
 
@@ -20,7 +23,6 @@ vi.mock('../../hooks/useClients', () => ({
   useClientDetail: vi.fn(),
   useClientHistory: vi.fn(),
   useClientSettings: vi.fn(),
-  useAddInteraction: vi.fn()
 }));
 
 vi.mock('../../hooks/useAppointments', () => ({
@@ -34,6 +36,11 @@ vi.mock('../../components/ui/SlideOver', () => ({
 vi.mock('../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel', () => ({
   AppointmentDetailPanel: () => <div data-testid="appointment-panel" />
 }));
+// Shows what the page opened the activity dialog with.
+vi.mock('../../components/activities/ActivityDialog', () => ({
+  ActivityDialog: ({ isOpen, initialChannel }: { isOpen: boolean; initialChannel: string }) =>
+    isOpen ? <div data-testid="activity-dialog">{initialChannel}</div> : null,
+}));
 vi.mock('../../components/forms/AppointmentForm/AppointmentForm', () => ({
   AppointmentForm: () => <div data-testid="appointment-form" />
 }));
@@ -42,16 +49,9 @@ describe('ClientDetailContent Timeline', () => {
   beforeEach(() => {
     vi.mocked(clientsHooks.useClientSettings).mockReturnValue({
       customFields: [],
-      outcomeCategories: [],
       isLoading: false,
       error: null,
       fetchSettings: vi.fn() as any
-    });
-    
-    vi.mocked(clientsHooks.useAddInteraction).mockReturnValue({
-      addInteraction: vi.fn(),
-      isLoading: false,
-      error: null
     });
     
     vi.mocked(apptHooks.useClientAppointments).mockReturnValue({
@@ -136,7 +136,7 @@ describe('ClientDetailContent Timeline', () => {
     const renderWithCustomField = (value: unknown) => {
       vi.mocked(clientsHooks.useClientSettings).mockReturnValue({
         customFields: [{ id: 'cf-1', fieldName: 'isVip', fieldType: 'BOOLEAN', isRequired: false }],
-        outcomeCategories: [],
+       
         isLoading: false,
         fetchSettings: vi.fn(),
       } as any);
@@ -187,8 +187,7 @@ describe('ClientDetailContent Timeline', () => {
 describe('ClientDetailContent Contracts tab', () => {
   const renderAs = (permissions: Record<string, string | true>) => {
     useAuthStore.setState({ user: { userId: 'me', email: 'me@example.com', role: 'STAFF', tenantId: 't1', permissions } } as any);
-    vi.mocked(clientsHooks.useClientSettings).mockReturnValue({ customFields: [], outcomeCategories: [], isLoading: false, fetchSettings: vi.fn() } as any);
-    vi.mocked(clientsHooks.useAddInteraction).mockReturnValue({ addInteraction: vi.fn(), isLoading: false, error: null });
+    vi.mocked(clientsHooks.useClientSettings).mockReturnValue({ customFields: [], isLoading: false, fetchSettings: vi.fn() } as any);
     vi.mocked(apptHooks.useClientAppointments).mockReturnValue({
       appointments: [], total: 0, isLoading: false, error: null, updateAppointmentLocally: vi.fn(), fetchClientAppointments: vi.fn() as any,
     });
@@ -207,5 +206,44 @@ describe('ClientDetailContent Contracts tab', () => {
   it('FR-RBAC-07 hides it from a role without contracts.validity.view', () => {
     renderAs({ 'companies.view': 'ALL' });
     expect(screen.queryByRole('tab', { name: /Contracts/ })).not.toBeInTheDocument();
+  });
+  it('FR-DEAL-01 shows the Deals tab to a role that can see deals', () => {
+    renderAs({ 'companies.view': 'OWN', 'deals.view': 'OWN' });
+    expect(screen.getByRole('tab', { name: /Deals/ })).toBeInTheDocument();
+  });
+
+  it('FR-DEAL-04 hides the Deals tab from Reception, which holds no deals key', () => {
+    renderAs({ 'companies.view': 'ALL', 'contracts.validity.view': 'ALL' });
+    expect(screen.queryByRole('tab', { name: /Deals/ })).not.toBeInTheDocument();
+  });
+});
+
+// The staff dashboard's quick action reaches the company page with
+// `?logInteraction=<channel>`; every type works, the new ones included.
+describe('ClientDetailContent ?logInteraction', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ user: { userId: 'me', email: 'me@example.com', role: 'STAFF', tenantId: 't1', permissions: { 'activities.add': 'OWN', 'notes.add': 'OWN' } } } as any);
+    vi.mocked(clientsHooks.useClientSettings).mockReturnValue({ customFields: [], isLoading: false, fetchSettings: vi.fn() } as any);
+    vi.mocked(apptHooks.useClientAppointments).mockReturnValue({
+      appointments: [], total: 0, isLoading: false, error: null, updateAppointmentLocally: vi.fn(), fetchClientAppointments: vi.fn() as any,
+    });
+    vi.mocked(clientsHooks.useClientDetail).mockReturnValue({
+      client: { id: 'client-1', name: 'Test Client', status: 'ACTIVE', contactInfo: {}, contacts: [] }, isLoading: false, fetchClient: vi.fn(),
+    } as any);
+    vi.mocked(clientsHooks.useClientHistory).mockReturnValue({ history: { timeline: [] }, isLoading: false, types: [], setTypes: vi.fn(), isLoadingMore: false, error: null, loadMore: vi.fn(), fetchHistory: vi.fn() } as any);
+  });
+
+  it('FR-ACT-01 ?logInteraction=VISIT opens the activity dialog on a visit', () => {
+    router.search = '?logInteraction=VISIT';
+    render(<ClientDetailContent />);
+    expect(screen.getByTestId('activity-dialog')).toHaveTextContent('VISIT');
+    router.search = '';
+  });
+
+  it('an unknown channel opens it on a note', () => {
+    router.search = '?logInteraction=FAX';
+    render(<ClientDetailContent />);
+    expect(screen.getByTestId('activity-dialog')).toHaveTextContent('NOTE');
+    router.search = '';
   });
 });

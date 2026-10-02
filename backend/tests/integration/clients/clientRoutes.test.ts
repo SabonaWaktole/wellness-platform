@@ -135,6 +135,12 @@ describe('Client Routes', () => {
       create: { id: 'city-routes-test', tenantId: 't1', areaId: 'area-routes-test', nameSq: 'Tiranë', updatedAt: new Date() },
       update: {},
     });
+    // A call names its result (M2 Slice 7, FR-ACT-02).
+    await prisma.activityResult.upsert({
+      where: { id: 'ar-routes-test' },
+      create: { id: 'ar-routes-test', tenantId: 't1', nameSq: 'U kontaktua – i interesuar', updatedAt: new Date() },
+      update: {},
+    });
   });
 
   afterAll(async () => {
@@ -148,6 +154,7 @@ describe('Client Routes', () => {
     await prisma.area.deleteMany({ where: { id: 'area-routes-test' } });
     await prisma.businessType.deleteMany({ where: { id: 'bt-routes-test' } });
     await prisma.riskLevel.deleteMany({ where: { id: 'rl-routes-test' } });
+    await prisma.activityResult.deleteMany({ where: { id: 'ar-routes-test' } });
     await prisma.$disconnect();
   });
 
@@ -247,14 +254,13 @@ describe('Client Routes', () => {
     expect(afterDelete.body.some((f: any) => f.id === fieldId)).toBe(false);
   });
 
-  it('POST /settings/outcome-categories defines a category', async () => {
+  it('POST /settings/outcome-categories is gone: the list is read-only since M2 Slice 7', async () => {
     const res = await request(app)
       .post('/api/t1/clients/settings/outcome-categories')
       .set('Authorization', `Bearer ${validToken}`)
       .send({ label: 'Closed Won' });
-    
-    expect(res.status).toBe(201);
-    expect(res.body.label).toBe('Closed Won');
+
+    expect(res.status).toBe(404);
   });
 
   let createdClientId: string;
@@ -350,7 +356,8 @@ describe('Client Routes', () => {
     expect(res.body.map((f: any) => f.fieldName)).toContain('industry');
   });
 
-  it('GET /settings/outcome-categories returns defined categories', async () => {
+  it('GET /settings/outcome-categories returns the legacy categories', async () => {
+    await prisma.outcomeCategory.create({ data: { id: 'oc-routes-test', tenantId: 't1', label: 'Closed Won' } });
     const res = await request(app)
       .get('/api/t1/clients/settings/outcome-categories')
       .set('Authorization', `Bearer ${validToken}`);
@@ -361,11 +368,12 @@ describe('Client Routes', () => {
   });
 
   it('POST /:clientId/interactions adds an interaction', async () => {
+    const contact = await prisma.contactPerson.findFirstOrThrow({ where: { tenantId: 't1', clientId: createdClientId } });
     const res = await request(app)
       .post(`/api/t1/clients/${createdClientId}/interactions`)
       .set('Authorization', `Bearer ${validToken}`)
-      .send({ content: 'Great call!', channel: 'CALL' });
-    
+      .send({ content: 'Great call!', channel: 'CALL', contactPersonId: contact.id, resultId: 'ar-routes-test' });
+
     expect(res.status).toBe(201);
     expect(res.body.content).toBe('Great call!');
   });

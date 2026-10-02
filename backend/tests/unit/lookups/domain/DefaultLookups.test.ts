@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import {
+  DEFAULT_ACTIVITY_RESULTS,
   DEFAULT_AREAS,
   DEFAULT_BUSINESS_TYPES,
   DEFAULT_FOLLOW_UP_INTERVALS,
@@ -67,10 +68,30 @@ describe('Default lookup lists', () => {
         expect(sql).toMatch(areaRow);
 
         area.cities.forEach((city, cityIndex) => {
+          if (city.since) return; // added later, by that milestone's migration (below)
           const cityRow = new RegExp(`'${area.nameSq}'[^\\n]*'${city.nameSq}'[^\\n]*'${city.nameEn}'[^\\n]*\\b${cityIndex + 1}\\b`);
           expect(sql).toMatch(cityRow);
         });
       });
+    });
+  }
+
+  const pricingMigrations = {
+    postgres: read('migrations/20260930200000_m2_pricing_config/migration.sql'),
+    'mysql (standalone)': read('mysql_migration_m2_pricing_config.sql'),
+    'mysql (upgrade script)': read('mysql_upgrade_to_current.sql'),
+  };
+
+  for (const [name, sql] of Object.entries(pricingMigrations)) {
+    it(`FR-PCF-05 the ${name} pricing migration adds every city added in Milestone 2, at its default position`, () => {
+      const added = DEFAULT_AREAS.flatMap((area) =>
+        area.cities.map((city, cityIndex) => ({ area, city, order: cityIndex + 1 })).filter(({ city }) => city.since === 'M2')
+      );
+      expect(added.map(({ city }) => city.nameSq)).toEqual(['Vorë']);
+      for (const { area, city, order } of added) {
+        const cityRow = new RegExp(`'${area.nameSq}'[^\\n]*'${city.nameSq}'[^\\n]*'${city.nameEn}'[^\\n]*\\b${order}\\b`);
+        expect(sql).toMatch(cityRow);
+      }
     });
   }
 
@@ -98,6 +119,34 @@ describe('Default lookup lists', () => {
       });
       DEFAULT_LOST_REASONS.forEach((reason, index) => {
         const row = new RegExp(`'${reason.nameSq}'[^\\n]*'${reason.nameEn}'[^\\n]*\\b${index + 1}\\b`);
+        expect(sql).toMatch(row);
+      });
+    });
+  }
+
+  it('FR-ACT-03 default activity result names are unique', () => {
+    const names = new Set(DEFAULT_ACTIVITY_RESULTS.map((result) => result.nameSq));
+    expect(names.size).toBe(DEFAULT_ACTIVITY_RESULTS.length);
+    expect(DEFAULT_ACTIVITY_RESULTS.map((result) => result.nameEn)).toEqual([
+      'Reached – interested',
+      'Reached – not interested',
+      'Not reached',
+      'Call back later',
+      'Meeting agreed',
+      'Offer requested',
+    ]);
+  });
+
+  const activityMigrations = {
+    postgres: read('migrations/20261002100000_m2_activities/migration.sql'),
+    'mysql (standalone)': read('mysql_migration_m2_activities.sql'),
+    'mysql (upgrade script)': read('mysql_upgrade_to_current.sql'),
+  };
+
+  for (const [name, sql] of Object.entries(activityMigrations)) {
+    it(`FR-ACT-03 the ${name} seed carries the same activity results, in the same order`, () => {
+      DEFAULT_ACTIVITY_RESULTS.forEach((result, index) => {
+        const row = new RegExp(`'${result.nameSq}'[^\\n]*'${result.nameEn}'[^\\n]*\\b${index + 1}\\b`);
         expect(sql).toMatch(row);
       });
     });

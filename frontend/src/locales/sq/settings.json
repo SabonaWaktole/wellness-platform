@@ -13,7 +13,9 @@
     "integrations": "Integrimet",
     "warehouses": "Magazinat",
     "categories": "Kategoritë",
-    "audit": "Regjistri i auditimit"
+    "audit": "Regjistri i auditimit",
+    "pricing": "Çmimet",
+    "salesScript": "Skripti i shitjes"
   },
   "company": {
     "title": "Cilësimet e kompanisë",
@@ -70,20 +72,14 @@
   "clientManagement": {
     "title": "Cilësimet e menaxhimit të klientëve",
     "customFields": "Fushat e personalizuara aktive",
-    "outcomeCategories": "Kategoritë e rezultateve",
     "fieldName": "Emri i fushës",
     "fieldNamePlaceholder": "p.sh. Industria",
     "fieldType": "Lloji i fushës",
     "label": "Etiketa",
-    "categoryLabel": "Etiketa e kategorisë",
-    "categoryPlaceholder": "p.sh. Pozitiv",
     "type": "Lloji",
     "required": "E detyrueshme",
     "noCustomFields": "Nuk ka ende fusha të personalizuara.",
-    "noOutcomeCategories": "Nuk ka ende kategori rezultatesh.",
     "editFieldAria": "Ndrysho fushën",
-    "editCategoryAria": "Ndrysho kategorinë",
-    "editCategorySoon": "Ndryshimi i kategorive të rezultateve vjen së shpejti",
     "deleteFieldAria": "Fshi fushën",
     "moveUpAria": "Lëviz fushën lart",
     "moveDownAria": "Lëviz fushën poshtë",
@@ -102,13 +98,10 @@
     },
     "breadcrumb": "Menaxhimi i klientëve",
     "tabCustomFields": "Fusha të personalizuara",
-    "tabOutcomeCategories": "Kategoritë e rezultateve",
     "addField": "Shto fushë",
     "importFields": "Importo nga Excel",
-    "addCategory": "Shto kategori",
     "addFieldTitle": "Shto fushë të personalizuar",
     "editFieldTitle": "Ndrysho fushën e personalizuar",
-    "addCategoryTitle": "Shto kategori rezultati",
     "yes": "Po",
     "no": "Jo",
     "options": "Opsionet",
@@ -578,7 +571,8 @@
       "areas": "Zonat",
       "cities": "Qytetet",
       "followUpIntervals": "Intervalet e ndjekjes",
-      "lostReasons": "Arsyet e humbjes"
+      "lostReasons": "Arsyet e humbjes",
+      "activityResults": "Rezultatet e aktiviteteve"
     },
     "hints": {
       "riskLevels": "Çdo lloj biznesi i përket një niveli rreziku. Niveli i rrezikut i një kompanie rrjedh nga lloji i saj i biznesit.",
@@ -586,7 +580,8 @@
       "areas": "Zona të paracaktuara. Çaktivizimi i një zone ofron edhe çaktivizimin e qyteteve të saj.",
       "cities": "Çdo qytet i përket një zone. Emri i një qyteti duhet të jetë unik vetëm brenda zonës së vet.",
       "followUpIntervals": "Përdoret nga ndjekja me një klik, nga Faza 2. Vlera duhet të jetë numër i plotë ditësh, të paktën 1.",
-      "lostReasons": "Përdoret kur një marrëveshje shënohet si e humbur, nga Faza 2."
+      "lostReasons": "Përdoret kur një marrëveshje shënohet si e humbur, nga Faza 2.",
+      "activityResults": "Zgjidhen kur regjistrohet një telefonatë, email, vizitë ose takim. Një vlerë e re mund të zgjidhet menjëherë."
     },
     "daysValue_one": "{{count}} ditë",
     "daysValue_other": "{{count}} ditë",
@@ -650,15 +645,204 @@
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
     }
   },
+  "pricing": {
+    "breadcrumb": "Çmimet",
+    "title": "Çmimet",
+    "subtitle": "Çdo numër i modelit të çmimeve. Një ndryshim vlen për llogaritjen e radhës; ofertat e krijuara ruajnë çmimet e tyre.",
+    "loading": "Po ngarkohet konfigurimi i çmimeve…",
+    "loadFailed": "Konfigurimi i çmimeve nuk u ngarkua.",
+    "tabs": {
+      "bands": "Grupet sipas punonjësve",
+      "risk": "Shtesat për rrezikun",
+      "frequencies": "Frekuencat e vizitave",
+      "zones": "Zonat e çmimeve",
+      "cap": "Kufiri i zbritjes",
+      "services": "Shërbimet",
+      "packages": "Paketat",
+      "offer": "Cilësimet e ofertës",
+      "calculator": "Llogaritësi provë"
+    },
+    "hints": {
+      "bands": "Tarifa bazë është çmimi për punonjësin e parë të grupit, dhe çdo punonjës shtesë shton tarifën për punonjës. Grupet aktive nuk mund të mbivendosen. Mbi grupin e fundit, çmimi jepet \"me kërkesë\".",
+      "risk": "Një shtesë mbi tarifën bazë për çdo nivel rreziku. Niveli i rrezikut të një kompanie vjen nga lloji i biznesit.",
+      "frequencies": "Një përqindje e tarifës bazë, ose një shumë fikse mujore, si për vizitat sipas nevojës.",
+      "zones": "Një shtesë mbi tarifën bazë për qytetet e çdo zone. Një qytet mund të jetë në më shumë se një zonë; zgjedh shitësi.",
+      "cap": "Zbritja më e lartë që një shitës mund të japë pa miratim.",
+      "services": "Çfarë përshkruan oferta. Një shërbim nuk ka çmim më vete: çmimin e cakton modeli i çmimeve. Një shërbim në një paketë mund të çaktivizohet, por jo të fshihet.",
+      "packages": "Paketa është një grup shërbimesh me emër që shitësi zgjedh në ekranin e çmimit. Ajo përshkruan ofertën dhe nuk e ndryshon çmimin. Një paketë aktive është e paracaktuar.",
+      "offer": "Si numërohen ofertat dhe sa kohë mbeten të vlefshme, të dhënat e kompanisë që shtypen në çdo ofertë dhe tekstet e saj standarde.",
+      "calculator": "Provoni konfigurimin aktual. Asgjë nuk ruhet dhe nuk krijohet asnjë ofertë."
+    },
+    "columns": {
+      "minEmployees": "Nga (punonjës)",
+      "maxEmployees": "Deri (punonjës)",
+      "baseFee": "Tarifa bazë",
+      "perEmployeeFee": "Për çdo punonjës shtesë",
+      "riskLevel": "Niveli i rrezikut",
+      "surcharge": "Shtesa (%)",
+      "pricingType": "Çmimi",
+      "value": "Vlera",
+      "visitsPerYear": "Vizita në vit",
+      "cities": "Qytetet",
+      "descriptionSq": "Përshkrimi në shqip",
+      "descriptionEn": "Përshkrimi në anglisht",
+      "services": "Shërbimet",
+      "default": "E paracaktuar"
+    },
+    "employeesRange": "{{min}}–{{max}} punonjës",
+    "addBand": "Shto grup",
+    "editBand": "Ndrysho grupin {{range}}",
+    "deleteBand": "Fshi grupin {{range}}",
+    "deactivateBand": "Çaktivizo grupin {{range}}",
+    "reactivateBand": "Riaktivizo grupin {{range}}",
+    "deleteBandConfirm": "Të fshihet grupi {{range}}? Ofertat e krijuara ruajnë çmimet e tyre.",
+    "pricingTypes": {
+      "PERCENT": "% e tarifës bazë",
+      "FIXED": "Shumë fikse mujore"
+    },
+    "percent": "{{value}}%",
+    "notSet": "Pa vendosur",
+    "notSetHint": "Pa shtesë, kompanitë me këtë nivel rreziku marrin \"Çmim me kërkesë\".",
+    "save": "Ruaj",
+    "saved": "U ruajt.",
+    "zoneCities": {
+      "button": "Qytetet e {{name}}",
+      "title": "Qytetet e {{name}}",
+      "area": "Zona",
+      "allAreas": "Të gjitha zonat",
+      "save": "Ruaj qytetet",
+      "cancel": "Anulo",
+      "count_one": "{{count}} qytet",
+      "count_other": "{{count}} qytete",
+      "none": "Asnjë qytet"
+    },
+    "citiesWithoutZone": {
+      "title_one": "{{count}} qytet aktiv nuk është në asnjë zonë çmimi",
+      "title_other": "{{count}} qytete aktive nuk janë në asnjë zonë çmimi",
+      "description": "Një kompani në një nga këto qytete merr \"Çmim me kërkesë\".",
+      "none": "Çdo qytet aktiv është në një zonë çmimi.",
+      "item": "{{city}} ({{area}})"
+    },
+    "cap": {
+      "label": "Kufiri i zbritjes (%)"
+    },
+    "calculator": {
+      "employees": "Punonjës",
+      "riskLevel": "Niveli i rrezikut",
+      "frequency": "Frekuenca e vizitave",
+      "zone": "Zona e çmimit",
+      "choose": "Zgjidhni…",
+      "calculate": "Llogarit",
+      "result": "Rezultati",
+      "baseFee": "Tarifa bazë",
+      "riskFee": "Shtesa për rrezikun",
+      "visitFee": "Frekuenca e vizitave",
+      "locationFee": "Shtesa për vendndodhjen",
+      "listPrice": "Çmimi mujor i listës",
+      "pricePerEmployee": "Çmimi për punonjës",
+      "annualValue": "Vlera vjetore",
+      "priceOnRequest": "Çmim me kërkesë",
+      "reasons": {
+        "NO_BAND": "Asnjë grup aktiv nuk mbulon këtë numër punonjësish.",
+        "NO_ZONE": "Kjo zonë çmimi nuk është aktive.",
+        "NO_RISK_SURCHARGE": "Për këtë nivel rreziku nuk është vendosur shtesë."
+      }
+    },
+    "errors": {
+      "INVALID_FEE": "Vendosni një shumë 0 ose më të madhe, me deri në dy shifra dhjetore.",
+      "INVALID_PERCENT": "Vendosni një përqindje nga 0 deri në 1000 (0 deri në 100 për kufirin e zbritjes), me deri në dy shifra dhjetore.",
+      "INVALID_BAND_RANGE": "Numri i fundit i punonjësve nuk mund të jetë më i vogël se i pari.",
+      "BANDS_OVERLAP": "Ky grup mbivendoset me grupin {{min}}–{{max}} punonjës.",
+      "INVALID_PRICING_VALUE": "Kontrolloni vlerat dhe provoni përsëri.",
+      "CITY_NOT_ACTIVE": "Zgjidhni qytete aktive nga lista.",
+      "PRICING_VALUE_TAKEN": "Një vlerë tjetër në këtë listë e ka tashmë këtë emër.",
+      "PRICING_ITEM_NOT_FOUND": "Kjo vlerë nuk ekziston më. Ringarkoni faqen.",
+      "INVALID_PRICING_ORDER": "Lista ndryshoi ndërsa po e rirendisnit. Ringarkoni faqen dhe provoni përsëri.",
+      "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri.",
+      "SERVICE_NOT_ACTIVE": "Zgjidhni shërbime aktive nga lista.",
+      "PACKAGE_NEEDS_SERVICE": "Një paketë ka nevojë për të paktën një shërbim aktiv.",
+      "INVALID_RICH_TEXT": "Ky tekst ka formatim që nuk lejohet.",
+      "PRICING_ITEM_IN_USE_one": "Ky shërbim është në paketën {{names}}. Hiqeni nga paketa ose çaktivizojeni.",
+      "PRICING_ITEM_IN_USE_other": "Ky shërbim është në paketat {{names}}. Hiqeni prej tyre ose çaktivizojeni.",
+      "DEFAULT_PACKAGE_REQUIRED": "{{names}} është paketa e paracaktuar. Bëni fillimisht një paketë tjetër të paracaktuar.",
+      "SERVICE_LAST_IN_PACKAGE_one": "Kjo do ta linte paketën {{names}} pa asnjë shërbim aktiv. Shtoni fillimisht një shërbim tjetër.",
+      "SERVICE_LAST_IN_PACKAGE_other": "Kjo do t'i linte paketat {{names}} pa asnjë shërbim aktiv. Shtoni fillimisht një shërbim tjetër."
+    },
+    "services": {
+      "deactivateTitle": "Të çaktivizohet {{name}}?",
+      "deactivateMessage_one": "Paketa {{names}} e përfshin këtë shërbim. Ofertat e reja me këtë paketë nuk do ta listojnë më; ofertat e krijuara e ruajnë.",
+      "deactivateMessage_other": "Paketat {{names}} e përfshijnë këtë shërbim. Ofertat e reja me këto paketa nuk do ta listojnë më; ofertat e krijuara e ruajnë.",
+      "deactivateConfirm": "Çaktivizo"
+    },
+    "packages": {
+      "servicesButton": "Shërbimet e {{name}}",
+      "count_one": "{{count}} shërbim",
+      "count_other": "{{count}} shërbime",
+      "servicesInPicker": "Ndryshoni shërbimet me butonin Shërbimet.",
+      "default": "E paracaktuar",
+      "makeDefault": "Bëje të paracaktuar",
+      "makeDefaultFor": "Bëje {{name}} paketën e paracaktuar",
+      "pickerTitle": "Shërbimet e {{name}}",
+      "inPackage": "Shërbimet në këtë paketë, në rendin që i liston oferta",
+      "empty": "Kjo paketë nuk ka ende shërbime.",
+      "add": "Shto një shërbim",
+      "remove": "Hiq {{name}} nga paketa",
+      "save": "Ruaj shërbimet"
+    },
+    "offer": {
+      "sections": {
+        "offer": "Oferta",
+        "company": "Të dhënat e kompanisë",
+        "texts": "Tekstet standarde"
+      },
+      "companyHint": "Shtypen në çdo ofertë.",
+      "textsHint": "Shtypen në çdo ofertë në gjuhën në të cilën është shkruar. Vetëm i trashë, i pjerrët, lista dhe lidhje.",
+      "language": "Gjuha e teksteve",
+      "languages": {
+        "Sq": "Shqip",
+        "En": "Anglisht"
+      },
+      "texts": {
+        "intro": "Hyrja ({{language}})",
+        "terms": "Kushtet ({{language}})",
+        "closing": "Mbyllja ({{language}})"
+      },
+      "fields": {
+        "offerValidityDays": "E vlefshme (ditë pas dërgimit)",
+        "contractMonthsDefault": "Kohëzgjatja e kontratës (muaj)",
+        "offerNumberPrefix": "Parashtesa e numrit të ofertës",
+        "companyName": "Emri i kompanisë",
+        "nipt": "NIPT",
+        "address": "Adresa",
+        "phone": "Telefoni",
+        "email": "Email",
+        "website": "Faqja e internetit",
+        "bankDetails": "Të dhënat bankare"
+      },
+      "errors": {
+        "offerValidityDays": "Shkruani një numër të plotë ditësh nga 1 deri në 365.",
+        "contractMonthsDefault": "Shkruani një numër të plotë muajsh nga 1 deri në 60.",
+        "offerNumberPrefix": "Përdorni një deri në gjashtë shkronja të mëdha, p.sh. OF.",
+        "email": "Shkruani një adresë email-i.",
+        "website": "Shkruani një adresë interneti, p.sh. wellness.al.",
+        "companyName": "Është shumë i gjatë.",
+        "nipt": "Është shumë i gjatë.",
+        "address": "Është shumë e gjatë.",
+        "phone": "Është shumë i gjatë.",
+        "bankDetails": "Janë shumë të gjata."
+      }
+    }
+  },
   "statuses": {
     "breadcrumb": "Statuset",
     "title": "Statuset",
-    "subtitle": "Ndryshoni emrin, ngjyrën dhe renditjen e statuseve fikse të kontratave dhe pagesave. Vetë grupi nuk mund të ndryshojë: riemërtimi i \"Aktive\" e ndryshon etiketën kudo, por statusi nën të mbetet i njëjtë.",
+    "subtitle": "Ndryshoni emrin, ngjyrën dhe renditjen e statuseve fikse të kontratave dhe pagesave dhe të fazave të marrëveshjeve. Vetë grupi nuk mund të ndryshojë: riemërtimi i \"Aktive\" e ndryshon etiketën kudo, por statusi nën të mbetet i njëjtë.",
     "loading": "Duke u ngarkuar…",
     "loadFailed": "Statuset nuk u ngarkuan.",
     "sections": {
       "contract": "Statuset e kontratës",
-      "payment": "Statuset e pagesës"
+      "payment": "Statuset e pagesës",
+      "deal": "Fazat e marrëveshjeve"
     },
     "columns": {
       "order": "Renditja",
@@ -680,6 +864,57 @@
       "INVALID_STATUS_LABEL": "Kontrolloni vlerat: etiketa në shqip është e detyrueshme dhe ngjyra duhet të jetë një vlerë hex e vlefshme.",
       "INVALID_STATUS_ORDER": "Lista ndryshoi ndërkohë që po e rendisnit. Ringarkoni faqen dhe provoni përsëri.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    }
+  },
+  "salesScript": {
+    "breadcrumb": "Skripti i shitjes",
+    "title": "Skripti i shitjes",
+    "subtitle": "Skripti që shitësit lexojnë në panelin anësor gjatë telefonatave, takimeve dhe vizitave. Ruajtja e një drafti nuk ndryshon atë që shohin; publikimi po, dhe çdo publikim ruhet si version.",
+    "loading": "Skripti i shitjes po ngarkohet…",
+    "loadFailed": "Skripti i shitjes nuk u ngarkua. Ringarkoni faqen për të provuar përsëri.",
+    "language": "Gjuha",
+    "languages": {
+      "Sq": "Shqip",
+      "En": "Anglisht"
+    },
+    "mode": "Ndrysho ose shiko paraprakisht",
+    "edit": "Ndrysho",
+    "preview": "Pamje paraprake",
+    "previewLabel": "Pamje paraprake, si do ta shohin shitësit",
+    "textLabel": "Skripti ({{language}})",
+    "editorHint": "Filloni çdo seksion me një titull seksioni; paneli i liston seksionet në krye.",
+    "englishHint": "Shitësit që lexojnë në anglisht shohin tekstin shqip derisa teksti anglisht të jetë bosh.",
+    "draftStatus": "Drafti, versioni {{version}}, i ruajtur më {{date}}. Ende i papublikuar: shitësit shohin ende versionin e publikuar.",
+    "publishedStatus": "Versioni {{version}} është i publikuar që nga {{date}}. Nuk ka draft.",
+    "noScript": "Ende nuk ka skript të publikuar.",
+    "saveDraft": "Ruaj draftin",
+    "draftSaved": "Drafti u ruajt. Shitësit shohin ende versionin e publikuar.",
+    "publish": "Publiko",
+    "published": "U publikua. Shitësit tani shohin këtë version.",
+    "publishTitle": "Të publikohet skripti?",
+    "publishMessage": "Shitësit do ta shohin këtë tekst herën tjetër që hapin panelin. Versioni që zëvendësohet ruhet dhe mund të rikthehet.",
+    "versions": "Versionet",
+    "versionsHint": "Çdo version i publikuar, nga më i riu, me kush e publikoi dhe kur.",
+    "noVersions": "Ende nuk është publikuar asgjë.",
+    "versionName": "Versioni {{version}}",
+    "current": "Aktual",
+    "publishedBy": "Publikuar më {{date}} nga {{name}}",
+    "system": "sistemi",
+    "view": "Shiko",
+    "viewVersion": "Shiko versionin {{version}}",
+    "restore": "Rikthe",
+    "restoreVersion": "Rikthe versionin {{version}}",
+    "restoreTitle": "Të rikthehet versioni {{version}}?",
+    "restoreMessage": "Drafti do të marrë tekstin e versionit {{version}}, në të dyja gjuhët. Shitësit nuk shohin ndryshim derisa ta publikoni.",
+    "restored": "Versioni {{version}} tani është drafti. Publikojeni që të bëhet aktual.",
+    "emptyLanguage": "Nuk ka tekst në këtë gjuhë.",
+    "errors": {
+      "generic": "Nuk funksionoi. Provoni përsëri.",
+      "SCRIPT_EMPTY": "Shkruani tekstin shqip para se ta publikoni.",
+      "INVALID_RICH_TEXT": "Teksti përmban formatim që nuk lejohet.",
+      "NO_SCRIPT_DRAFT": "Nuk ka draft për të publikuar.",
+      "SALES_SCRIPT_CONFLICT": "Dikush tjetër e ndryshoi skriptin. U ngarkua versioni më i fundit; kontrollojeni dhe provoni përsëri.",
+      "SALES_SCRIPT_NOT_FOUND": "Ky version nuk ekziston më."
     }
   }
 }

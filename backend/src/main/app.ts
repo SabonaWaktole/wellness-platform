@@ -123,6 +123,55 @@ import { SetLookupItemActiveUseCase } from '../lookups/application/use-cases/Set
 import { DeleteLookupItemUseCase } from '../lookups/application/use-cases/DeleteLookupItemUseCase';
 import { LookupsController } from '../lookups/interfaces/http/LookupsController';
 import { createLookupRouter } from '../lookups/interfaces/http/lookupRoutes';
+import { IPricingWriteTransaction } from '../pricing/application/ports/IPricingWriteTransaction';
+import { PrismaPricingStore } from '../pricing/infrastructure/PrismaPricingStore';
+import { PrismaPricingWriteTransaction } from '../pricing/infrastructure/PrismaPricingWriteTransaction';
+import { GetPricingConfigurationUseCase } from '../pricing/application/use-cases/GetPricingConfigurationUseCase';
+import { CreatePricingItemUseCase } from '../pricing/application/use-cases/CreatePricingItemUseCase';
+import { UpdatePricingItemUseCase } from '../pricing/application/use-cases/UpdatePricingItemUseCase';
+import { ReorderPricingItemsUseCase } from '../pricing/application/use-cases/ReorderPricingItemsUseCase';
+import { SetPricingItemActiveUseCase } from '../pricing/application/use-cases/SetPricingItemActiveUseCase';
+import { DeletePricingItemUseCase } from '../pricing/application/use-cases/DeletePricingItemUseCase';
+import { SetPriceZoneCitiesUseCase } from '../pricing/application/use-cases/SetPriceZoneCitiesUseCase';
+import { SetRiskSurchargeUseCase } from '../pricing/application/use-cases/SetRiskSurchargeUseCase';
+import { SetDiscountCapUseCase } from '../pricing/application/use-cases/SetDiscountCapUseCase';
+import { ListCitiesWithoutZoneUseCase } from '../pricing/application/use-cases/ListCitiesWithoutZoneUseCase';
+import { LoadPricingConfigUseCase } from '../pricing/application/use-cases/LoadPricingConfigUseCase';
+import { TestPriceCalculationUseCase } from '../pricing/application/use-cases/TestPriceCalculationUseCase';
+import { CreateServicePackageUseCase } from '../pricing/application/use-cases/CreateServicePackageUseCase';
+import { SetPackageServicesUseCase } from '../pricing/application/use-cases/SetPackageServicesUseCase';
+import { SetDefaultPackageUseCase } from '../pricing/application/use-cases/SetDefaultPackageUseCase';
+import { ListActivePackagesUseCase } from '../pricing/application/use-cases/ListActivePackagesUseCase';
+import { UpdateOfferSettingsUseCase } from '../pricing/application/use-cases/UpdateOfferSettingsUseCase';
+import { PricingController } from '../pricing/interfaces/http/PricingController';
+import { createPricingRouter } from '../pricing/interfaces/http/pricingRoutes';
+import { ISalesScriptWriteTransaction } from '../salesScript/application/ports/ISalesScriptWriteTransaction';
+import { PrismaSalesScriptStore } from '../salesScript/infrastructure/PrismaSalesScriptStore';
+import { PrismaSalesScriptWriteTransaction } from '../salesScript/infrastructure/PrismaSalesScriptWriteTransaction';
+import { IDealWriteTransaction } from '../deals/application/ports/IDealWriteTransaction';
+import { PrismaDealWriteTransaction } from '../deals/infrastructure/PrismaDealWriteTransaction';
+import { PrismaDealStore } from '../deals/infrastructure/PrismaDealStore';
+import { GetDealUseCase } from '../deals/application/use-cases/GetDealUseCase';
+import { CreateDealUseCase } from '../deals/application/use-cases/CreateDealUseCase';
+import { UpdateDealUseCase } from '../deals/application/use-cases/UpdateDealUseCase';
+import { ChangeDealStageUseCase } from '../deals/application/use-cases/ChangeDealStageUseCase';
+import { ReassignDealUseCase } from '../deals/application/use-cases/ReassignDealUseCase';
+import { DeleteDealUseCase } from '../deals/application/use-cases/DeleteDealUseCase';
+import { SearchDealsUseCase } from '../deals/application/use-cases/SearchDealsUseCase';
+import { GetPipelineBoardUseCase } from '../deals/application/use-cases/GetPipelineBoardUseCase';
+import { GetDealActivitiesUseCase } from '../deals/application/use-cases/GetDealActivitiesUseCase';
+import { PrismaDealActivityStore } from '../deals/infrastructure/PrismaDealActivityStore';
+import { DealController } from '../deals/interfaces/http/DealController';
+import { createDealRouter } from '../deals/interfaces/http/dealRoutes';
+import { GetPublishedScriptUseCase } from '../salesScript/application/use-cases/GetPublishedScriptUseCase';
+import { GetScriptDraftUseCase } from '../salesScript/application/use-cases/GetScriptDraftUseCase';
+import { SaveScriptDraftUseCase } from '../salesScript/application/use-cases/SaveScriptDraftUseCase';
+import { PublishScriptUseCase } from '../salesScript/application/use-cases/PublishScriptUseCase';
+import { ListScriptVersionsUseCase } from '../salesScript/application/use-cases/ListScriptVersionsUseCase';
+import { GetScriptVersionUseCase } from '../salesScript/application/use-cases/GetScriptVersionUseCase';
+import { RestoreScriptVersionUseCase } from '../salesScript/application/use-cases/RestoreScriptVersionUseCase';
+import { SalesScriptController } from '../salesScript/interfaces/http/SalesScriptController';
+import { createSalesScriptRouter } from '../salesScript/interfaces/http/salesScriptRoutes';
 import { PrismaStatusLabelStore } from '../statuses/infrastructure/PrismaStatusLabelStore';
 import { PrismaStatusLabelWriteTransaction } from '../statuses/infrastructure/PrismaStatusLabelWriteTransaction';
 import { ListStatusLabelsUseCase } from '../statuses/application/use-cases/ListStatusLabelsUseCase';
@@ -160,6 +209,12 @@ export interface AppDependencies {
   auditEntryReader: IAuditEntryReader;
   /** Slice 8: the transaction list writes and their audit entries share. */
   lookupWriteTransaction: ILookupWriteTransaction;
+  /** M2 Slice 3: the transaction pricing writes and their audit entries share. */
+  pricingWriteTransaction: IPricingWriteTransaction;
+  /** M2 Slice 5: the transaction script writes, and a publish with its audit entry, share. */
+  salesScriptWriteTransaction: ISalesScriptWriteTransaction;
+  /** M2 Slice 6: the transaction deal writes, their stage history and audit entries share. */
+  dealWriteTransaction: IDealWriteTransaction;
 }
 
 export const createApp = (overrides?: Partial<AppDependencies>) => {
@@ -231,6 +286,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const roleAdminTransaction = overrides?.roleAdminTransaction ?? new PrismaRoleAdminTransaction();
   const auditEntryReader = overrides?.auditEntryReader ?? new PrismaAuditEntryReader();
   const lookupWriteTransaction = overrides?.lookupWriteTransaction ?? new PrismaLookupWriteTransaction();
+  const pricingWriteTransaction = overrides?.pricingWriteTransaction ?? new PrismaPricingWriteTransaction();
+  const salesScriptWriteTransaction = overrides?.salesScriptWriteTransaction ?? new PrismaSalesScriptWriteTransaction();
+  const dealWriteTransaction = overrides?.dealWriteTransaction ?? new PrismaDealWriteTransaction();
 
   // Use Cases
   //
@@ -409,7 +467,65 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   );
   app.use('/api/:tenantSlug/lookups', createLookupRouter(lookupsController, tokenService, tenantRepository, resolveAccessContext));
 
-  // Settings → Statuses: contract and payment status labels (Slice 10: FR-SET-07, 08).
+  // Settings → Pricing: bands, risk surcharges, visit frequencies, price zones,
+  // discount cap and the test calculator (M2 Slice 3: FR-PCF-01..05, 07, 09).
+  const pricingStore = new PrismaPricingStore();
+  const pricingController = new PricingController(
+    new GetPricingConfigurationUseCase(pricingStore),
+    new CreatePricingItemUseCase(pricingStore, pricingWriteTransaction),
+    new UpdatePricingItemUseCase(pricingStore, pricingWriteTransaction),
+    new ReorderPricingItemsUseCase(pricingStore, pricingWriteTransaction),
+    new SetPricingItemActiveUseCase(pricingStore, pricingWriteTransaction),
+    new DeletePricingItemUseCase(pricingStore, pricingWriteTransaction),
+    new SetPriceZoneCitiesUseCase(pricingStore, pricingWriteTransaction),
+    new SetRiskSurchargeUseCase(pricingStore, pricingWriteTransaction),
+    new SetDiscountCapUseCase(pricingStore, pricingWriteTransaction),
+    new ListCitiesWithoutZoneUseCase(pricingStore),
+    new TestPriceCalculationUseCase(new LoadPricingConfigUseCase(pricingStore)),
+    new CreateServicePackageUseCase(pricingStore, pricingWriteTransaction),
+    new SetPackageServicesUseCase(pricingStore, pricingWriteTransaction),
+    new SetDefaultPackageUseCase(pricingStore, pricingWriteTransaction),
+    new ListActivePackagesUseCase(pricingStore),
+    new UpdateOfferSettingsUseCase(pricingStore, pricingWriteTransaction)
+  );
+  app.use('/api/:tenantSlug/pricing', createPricingRouter(pricingController, tokenService, tenantRepository, resolveAccessContext));
+
+  // The sales script: the panel salespeople read, and Settings → Sales script
+  // where the Administrator edits, publishes and restores it (M2 Slice 5:
+  // FR-SCR-03..07).
+  const salesScriptStore = new PrismaSalesScriptStore();
+  const salesScriptController = new SalesScriptController(
+    new GetPublishedScriptUseCase(salesScriptStore),
+    new GetScriptDraftUseCase(salesScriptStore),
+    new SaveScriptDraftUseCase(salesScriptWriteTransaction),
+    new PublishScriptUseCase(salesScriptWriteTransaction),
+    new ListScriptVersionsUseCase(salesScriptStore),
+    new GetScriptVersionUseCase(salesScriptStore),
+    new RestoreScriptVersionUseCase(salesScriptWriteTransaction)
+  );
+  app.use(
+    '/api/:tenantSlug/sales-script',
+    createSalesScriptRouter(salesScriptController, tokenService, tenantRepository, resolveAccessContext)
+  );
+
+  // Deals and the pipeline board (M2 Slice 6: FR-DEAL-01..11, 13, 19).
+  const dealStore = new PrismaDealStore();
+  const getDeal = new GetDealUseCase(dealStore, recordScopes);
+  const dealController = new DealController(
+    new CreateDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
+    getDeal,
+    new UpdateDealUseCase(dealWriteTransaction, recordScopes, getDeal),
+    new ChangeDealStageUseCase(dealWriteTransaction, recordScopes, getDeal),
+    new ReassignDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
+    new DeleteDealUseCase(dealWriteTransaction, recordScopes),
+    new SearchDealsUseCase(dealStore, recordScopes),
+    new GetPipelineBoardUseCase(dealStore, recordScopes),
+    new GetDealActivitiesUseCase(getDeal, new PrismaDealActivityStore())
+  );
+  app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Settings → Statuses: contract and payment status labels, and the deal
+  // stages (Slice 10: FR-SET-07, 08; M2 Slice 6: FR-DEAL-06).
   const statusLabelStore = new PrismaStatusLabelStore();
   const statusLabelWriteTransaction = new PrismaStatusLabelWriteTransaction();
   const statusLabelsController = new StatusLabelsController(

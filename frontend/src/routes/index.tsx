@@ -20,6 +20,8 @@ import { TeamSettingsPage } from '../pages/settings/team/TeamSettingsPage';
 import { RolesSettingsPage } from '../pages/settings/roles/RolesSettingsPage';
 import { AuditLogSettingsPage } from '../pages/settings/audit/AuditLogSettingsPage';
 import { ListsSettingsPage } from '../pages/settings/lists/ListsSettingsPage';
+import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPage';
+import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -43,6 +45,11 @@ import { InvoiceDetail } from '../pages/invoices/InvoiceDetail';
 import { ContractList } from '../pages/contracts/ContractList';
 import { ContractDetail } from '../pages/contracts/ContractDetail';
 import { ContractFormPage } from '../pages/contracts/ContractFormPage';
+import { DealsPage } from '../pages/deals/DealsPage';
+import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
+import { DealListContent } from '../pages/deals/DealListContent';
+import { DealDetailContent } from '../pages/deals/DealDetailContent';
+import { DealFormContent } from '../pages/deals/DealFormContent';
 import { IntegrationsPage } from '../pages/IntegrationsPage';
 import { StatusPage } from '../components/StatusPage/StatusPage';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -179,8 +186,30 @@ export const routes: RouteObject[] = [
         path: 'settings/lists/:list?',
         element: (
           <ProtectedRoute>
-            <RequirePermission permission="settings.manage">
+            <RequirePermission permission={['settings.manage', 'activityResults.manage']}>
               <ListsSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M2 Slice 5: the Administrator edits and publishes the sales script (FR-SCR-04, 07).
+        path: 'settings/sales-script',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="script.edit">
+              <SalesScriptSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M2 Slice 3: every pricing value is commercial, so pricing.manage, not settings.manage.
+        path: 'settings/pricing/:tab?',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="pricing.manage">
+              <PricingSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),
@@ -477,6 +506,70 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ContractFormPage />
+          </ProtectedRoute>
+        ),
+      },
+      /*
+       * Deals and the pipeline (M2 Slice 6). `deals/new` before
+       * `deals/:dealId`, for the same reason as contracts above.
+       */
+      {
+        path: 'pipeline',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.view">
+              <DealsPage>
+                <PipelineBoardContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'pipeline/list',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.view">
+              <DealsPage>
+                <DealListContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'deals/new',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.edit">
+              <DealsPage>
+                <DealFormContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'deals/:dealId',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.view">
+              <DealsPage>
+                <DealDetailContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'deals/:dealId/edit',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.edit">
+              <DealsPage>
+                <DealFormContent />
+              </DealsPage>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

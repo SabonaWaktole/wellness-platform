@@ -38,6 +38,8 @@ export type FollowUpInterval = LookupItem & {
 
 export type LostReason = LookupItem;
 
+export type ActivityResult = LookupItem;
+
 export interface LookupLabels {
   nameSq: string;
   nameEn: string | null;

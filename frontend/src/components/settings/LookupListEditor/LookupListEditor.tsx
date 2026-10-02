@@ -17,6 +17,8 @@ export interface LookupInputProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** The row being added, rather than an existing value being edited. */
+  isNew: boolean;
 }
 
 /** A list-specific column (a risk level's number, a business type's risk level). */
@@ -165,7 +167,13 @@ export function LookupListEditor<T extends LookupItem>({
       </td>
       {columns.map((column) => (
         <td key={column.field} className={styles.cell} data-label={column.header}>
-          {column.renderInput({ id: `${rowId}-${column.field}`, label: column.header, value: draft[column.field], onChange: field(column.field) })}
+          {column.renderInput({
+            id: `${rowId}-${column.field}`,
+            label: column.header,
+            value: draft[column.field],
+            onChange: field(column.field),
+            isNew: rowId === NEW_ROW,
+          })}
         </td>
       ))}
       <td className={styles.cell} />

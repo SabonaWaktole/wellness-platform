@@ -1,5 +1,6 @@
 import type { ClientStatus } from '../types/client';
 import type { ProductStatus } from '../types/inventory';
+import type { DealStage, DealType } from '../types/deal';
 
 /**
  * Translation keys for every domain status the UI displays.
@@ -67,6 +68,25 @@ export const CONTRACT_STATUS_KEYS: Record<ContractStatus, string> = {
   SUSPENDED: 'contracts:status.suspended',
   EXPIRED: 'contracts:status.expired',
   CANCELLED: 'contracts:status.cancelled',
+};
+
+/** Mirrors the backend's DealStage (M2 Slice 6), the fallback until the tenant's stage labels load. */
+export const DEAL_STAGE_KEYS: Record<DealStage, string> = {
+  NEW_LEAD: 'deals:stage.NEW_LEAD',
+  CONTACTED: 'deals:stage.CONTACTED',
+  INTERESTED: 'deals:stage.INTERESTED',
+  OFFER_PREPARED: 'deals:stage.OFFER_PREPARED',
+  OFFER_SENT: 'deals:stage.OFFER_SENT',
+  FOLLOW_UP: 'deals:stage.FOLLOW_UP',
+  NEGOTIATION: 'deals:stage.NEGOTIATION',
+  WON: 'deals:stage.WON',
+  LOST: 'deals:stage.LOST',
+};
+
+export const DEAL_TYPE_KEYS: Record<DealType, string> = {
+  NEW_CONTRACT: 'deals:type.NEW_CONTRACT',
+  RENEWAL: 'deals:type.RENEWAL',
+  EXTRA_SERVICES: 'deals:type.EXTRA_SERVICES',
 };
 
 /**
@@ -152,6 +172,8 @@ export const invoiceStatusKey = (status: string) => lookup(INVOICE_STATUS_KEYS, 
 export const clientStatusKey = (status: string) => lookup(CLIENT_STATUS_KEYS, status);
 export const productStatusKey = (status: string) => lookup(PRODUCT_STATUS_KEYS, status);
 export const appointmentStatusKey = (status: string) => lookup(APPOINTMENT_STATUS_KEYS, status);
+export const dealStageKey = (stage: string) => lookup(DEAL_STAGE_KEYS, stage);
+export const dealTypeKey = (type: string) => lookup(DEAL_TYPE_KEYS, type);
 export const contractStatusKey = (status: string) => lookup(CONTRACT_STATUS_KEYS, status);
 export const contractPaymentStatusKey = (status: string) =>
   lookup(CONTRACT_PAYMENT_STATUS_KEYS, status);

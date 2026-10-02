@@ -105,6 +105,26 @@ describe('CreateTenantWithOwnerUseCase — roles (FR-RBAC-01, FR-USR-02)', () =>
     expect(lookupSeeder.seed).toHaveBeenCalledWith(created.id);
   });
 
+  it('FR-PCF-01 FR-PCF-05 seeds the default pricing configuration after the lookups it points at', async () => {
+    const { provisioningTx, lookupSeeder, pricingSeeder, tenantRepo } = makeTenantProvisioningHarness();
+    const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);
+
+    await useCase.execute(validInput);
+
+    const created = tenantRepo.create.mock.calls[0][0];
+    expect(pricingSeeder.seed).toHaveBeenCalledWith(created.id);
+    expect(lookupSeeder.seed.mock.invocationCallOrder[0]).toBeLessThan(pricingSeeder.seed.mock.invocationCallOrder[0]);
+  });
+
+  it('FR-SCR-03 publishes the placeholder sales script for the new workspace', async () => {
+    const { provisioningTx, salesScriptSeeder, tenantRepo } = makeTenantProvisioningHarness();
+    const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);
+
+    await useCase.execute(validInput);
+
+    expect(salesScriptSeeder.seed).toHaveBeenCalledWith(tenantRepo.create.mock.calls[0][0].id);
+  });
+
   it('FR-USR-02 makes the owner an Administrator by role, not only by the legacy string', async () => {
     const { provisioningTx, userRepo } = makeTenantProvisioningHarness();
     const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);

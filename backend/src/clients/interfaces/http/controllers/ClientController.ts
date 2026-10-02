@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { redactFields } from '../../../../access/domain/redactFields';
 import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { CreateClientUseCase } from '../../../application/use-cases/CreateClientUseCase';
@@ -10,7 +11,7 @@ import { DefineCustomFieldUseCase } from '../../../application/use-cases/DefineC
 import { UpdateCustomFieldUseCase } from '../../../application/use-cases/UpdateCustomFieldUseCase';
 import { DeleteCustomFieldUseCase } from '../../../application/use-cases/DeleteCustomFieldUseCase';
 import { ReorderCustomFieldsUseCase } from '../../../application/use-cases/ReorderCustomFieldsUseCase';
-import { DefineOutcomeCategoryUseCase } from '../../../application/use-cases/DefineOutcomeCategoryUseCase';
+import { UpdateInteractionUseCase } from '../../../application/use-cases/UpdateInteractionUseCase';
 import { GetClientUseCase } from '../../../application/use-cases/GetClientUseCase';
 import { ArchiveClientUseCase } from '../../../application/use-cases/ArchiveClientUseCase';
 import { RestoreClientUseCase } from '../../../application/use-cases/RestoreClientUseCase';
@@ -45,7 +46,7 @@ import {
   defineCustomFieldSchema,
   updateCustomFieldSchema,
   reorderCustomFieldsSchema,
-  defineOutcomeCategorySchema,
+  updateInteractionSchema,
   addContactPersonSchema,
   updateContactPersonSchema,
   removeContactPersonSchema,
@@ -63,7 +64,7 @@ export class ClientController {
     private updateCustomFieldUseCase: UpdateCustomFieldUseCase,
     private deleteCustomFieldUseCase: DeleteCustomFieldUseCase,
     private reorderCustomFieldsUseCase: ReorderCustomFieldsUseCase,
-    private defineOutcomeCategoryUseCase: DefineOutcomeCategoryUseCase,
+    private updateInteractionUseCase: UpdateInteractionUseCase,
     private getClientUseCase: GetClientUseCase,
     private getCustomFieldsUseCase: GetCustomFieldsUseCase,
     private getOutcomeCategoriesUseCase: GetOutcomeCategoriesUseCase,
@@ -169,7 +170,7 @@ export class ClientController {
     }
   };
 
-  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile and its Slice 12 contacts. */
+  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile and its Slice 12 contacts. Every response passes it through redactFields (FR-RBAC-17). */
   private async presentClient(tenantId: string, client: Client) {
     const [profile, contacts] = await Promise.all([
       this.companyReadModel.enrichOne(tenantId, client),
@@ -204,7 +205,7 @@ export class ClientController {
         access: req.access!,
       });
 
-      res.status(201).json({ ...(await this.presentClient(tenantId, client)), warnings });
+      res.status(201).json(redactFields({ ...(await this.presentClient(tenantId, client)), warnings }, req.access!));
     } catch (error) {
       sendClientError(res, error);
     }
@@ -215,7 +216,7 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const clientId = req.params.clientId as string;
       const client = await this.getClientUseCase.execute(tenantId, clientId, req.access!);
-      res.status(200).json(await this.presentClient(tenantId, client));
+      res.status(200).json(redactFields(await this.presentClient(tenantId, client), req.access!));
     } catch (error: any) {
       if (error instanceof DomainError) {
         res.status(404).json({ error: error.message });
@@ -240,7 +241,7 @@ export class ClientController {
         ...validatedData
       });
 
-      res.status(200).json({ ...(await this.presentClient(tenantId, client)), warnings });
+      res.status(200).json(redactFields({ ...(await this.presentClient(tenantId, client)), warnings }, req.access!));
     } catch (error) {
       sendClientError(res, error);
     }
@@ -338,14 +339,28 @@ export class ClientController {
       });
 
       res.status(201).json(interaction);
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
-        res.status(404).json({ error: error.message });
-      } else {
-        res.status(400).json({ error: error.message });
-      }
+    } catch (error) {
+      sendClientError(res, error);
     }
   };
+
+  /** FR-ACT-06: edit an activity; who may, and until when, is the use case's rule. */
+  public updateInteraction = async (req: Request, res: Response) => {
+    try {
+      const details = updateInteractionSchema.parse(req.body);
+      const interaction = await this.updateInteractionUseCase.execute({
+        tenantId: requireTenantId(req),
+        clientId: req.params.clientId as string,
+        interactionId: req.params.interactionId as string,
+        access: req.access!,
+        details,
+      });
+      res.status(200).json(interaction);
+    } catch (error) {
+      sendClientError(res, error);
+    }
+  };
+
 
   public defineCustomField = async (req: Request, res: Response) => {
     try {
@@ -428,27 +443,6 @@ export class ClientController {
       });
 
       res.status(204).send();
-    } catch (error: any) {
-      if (error instanceof PermissionDeniedError) {
-        res.status(403).json({ error: error.message });
-      } else {
-        res.status(400).json({ error: error.message });
-      }
-    }
-  };
-
-  public defineOutcomeCategory = async (req: Request, res: Response) => {
-    try {
-      const validatedData = defineOutcomeCategorySchema.parse(req.body);
-      const tenantId = requireTenantId(req);
-
-      const category = await this.defineOutcomeCategoryUseCase.execute({
-        tenantId,
-        access: req.access!,
-        ...validatedData
-      });
-
-      res.status(201).json(category);
     } catch (error: any) {
       if (error instanceof PermissionDeniedError) {
         res.status(403).json({ error: error.message });

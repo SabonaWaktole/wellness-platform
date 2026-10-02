@@ -5,6 +5,7 @@ import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 import { PrismaAuditTrail } from '../../../audit/infrastructure/PrismaAuditTrail';
 import { PrismaClientRepository } from './PrismaClientRepository';
 import { PrismaContactPersonRepository } from './PrismaContactPersonRepository';
+import { PrismaDealWrites } from '../../../deals/infrastructure/PrismaDealWrites';
 
 export class PrismaClientWriteTransaction implements IClientWriteTransaction {
   constructor(
@@ -20,6 +21,7 @@ export class PrismaClientWriteTransaction implements IClientWriteTransaction {
       return work({
         clients: new PrismaClientRepository(client),
         contacts: new PrismaContactPersonRepository(client),
+        deals: new PrismaDealWrites(client),
         auditTrail: this.auditTrailFor(client),
       });
     });

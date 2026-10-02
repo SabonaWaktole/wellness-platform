@@ -50,6 +50,13 @@ describe('SettingsLayout', () => {
     expect(links[0].getAttribute('href')).toBe('/acme/settings/lists');
   });
 
+  it('FR-ACT-03 links to Lists for a user who manages only the activity results', () => {
+    renderAs({ 'activityResults.manage': true });
+
+    const links = screen.getAllByRole('link', { name: 'Lists' });
+    expect(links[0].getAttribute('href')).toBe('/acme/settings/lists');
+  });
+
   it('FR-SET-01 hides Lists from a user who does not', () => {
     renderAs({ 'users.manage': true, 'audit.view': true });
 
@@ -67,5 +74,15 @@ describe('SettingsLayout', () => {
     renderAs({ 'users.manage': true, 'audit.view': true });
 
     expect(screen.queryByRole('link', { name: 'Statuses' })).toBeNull();
+  });
+
+  it('FR-SCR-07 links to Sales script for the Administrator, who edits it, and not for a salesperson, who only reads it', () => {
+    renderAs({ 'script.edit': true, 'script.view': true });
+    expect(screen.getAllByRole('link', { name: 'Sales script' })[0].getAttribute('href')).toBe('/acme/settings/sales-script');
+  });
+
+  it('FR-SCR-07 hides Sales script from a salesperson', () => {
+    renderAs({ 'script.view': true, 'users.manage': true });
+    expect(screen.queryByRole('link', { name: 'Sales script' })).toBeNull();
   });
 });

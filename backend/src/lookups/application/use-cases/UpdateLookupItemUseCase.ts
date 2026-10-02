@@ -4,7 +4,7 @@ import { diff } from '../../../audit/domain/diff';
 import { LookupValueTakenError } from '../../domain/errors';
 import { LookupList } from '../../domain/LookupList';
 import { findNameClash, lookupLabels, LookupRecord } from '../../domain/LookupItem';
-import { auditedFields, auditFieldsOf, findItem, lookupAuditEntry, MANAGE_LISTS, pickFields } from '../lookupAdmin';
+import { auditedFields, auditFieldsOf, ensureCanManageList, findItem, lookupAuditEntry, pickFields } from '../lookupAdmin';
 import { LookupRulesRegistry } from '../LookupListRules';
 import { ILookupStore } from '../ports/ILookupStore';
 import { ILookupWriteTransaction } from '../ports/ILookupWriteTransaction';
@@ -28,7 +28,7 @@ export class UpdateLookupItemUseCase {
     id: string;
     values: Record<string, unknown>;
   }): Promise<LookupRecord> {
-    input.access.ensure(MANAGE_LISTS);
+    ensureCanManageList(input.access, input.list);
     const rules = this.rules[input.list];
     const current = await findItem(this.store, input.tenantId, input.list, input.id);
 

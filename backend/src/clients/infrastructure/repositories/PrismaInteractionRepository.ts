@@ -6,6 +6,47 @@ import { Interaction } from '../../domain/entities/Interaction';
 import { InteractionChannel } from '../../domain/enums/InteractionChannel';
 import { OutcomeCategory } from '../../domain/entities/OutcomeCategory';
 
+type InteractionRow = Prisma.InteractionGetPayload<{ include: { outcomeCategory: true } }>;
+
+function toInteraction(r: InteractionRow): Interaction {
+  return Interaction.create({
+    id: r.id,
+    tenantId: r.tenantId,
+    clientId: r.clientId,
+    authorUserId: r.authorUserId,
+    content: r.content,
+    channel: r.channel as InteractionChannel,
+    outcomeCategory: r.outcomeCategory ? OutcomeCategory.create({
+      id: r.outcomeCategory.id,
+      tenantId: r.outcomeCategory.tenantId,
+      label: r.outcomeCategory.label,
+    }) : undefined,
+    createdAt: r.createdAt,
+    occurredAt: r.occurredAt,
+    contactPersonId: r.contactPersonId,
+    dealId: r.dealId,
+    resultId: r.resultId,
+    clientFeedback: r.clientFeedback,
+    nextAction: r.nextAction,
+    updatedAt: r.updatedAt,
+    updatedByUserId: r.updatedByUserId,
+  });
+}
+
+/** The columns an activity's details live in (FR-ACT-02): written on create and on every edit. */
+function detailColumns(interaction: Interaction) {
+  return {
+    content: interaction.content,
+    channel: interaction.channel,
+    occurredAt: interaction.occurredAt,
+    contactPersonId: interaction.contactPersonId,
+    dealId: interaction.dealId,
+    resultId: interaction.resultId,
+    clientFeedback: interaction.clientFeedback,
+    nextAction: interaction.nextAction,
+  };
+}
+
 export class PrismaInteractionRepository implements IInteractionRepository {
   constructor(private prisma: PrismaClient) {}
 
@@ -16,20 +57,7 @@ export class PrismaInteractionRepository implements IInteractionRepository {
       orderBy: { createdAt: 'desc' },
     });
 
-    return records.map(r => Interaction.create({
-      id: r.id,
-      tenantId: r.tenantId,
-      clientId: r.clientId,
-      authorUserId: r.authorUserId,
-      content: r.content,
-      channel: r.channel as InteractionChannel,
-      outcomeCategory: r.outcomeCategory ? OutcomeCategory.create({
-        id: r.outcomeCategory.id,
-        tenantId: r.outcomeCategory.tenantId,
-        label: r.outcomeCategory.label,
-      }) : undefined,
-      createdAt: r.createdAt,
-    }));
+    return records.map(toInteraction);
   }
 
   async findById(id: string): Promise<Interaction | null> {
@@ -37,22 +65,7 @@ export class PrismaInteractionRepository implements IInteractionRepository {
       where: { id },
       include: { outcomeCategory: true },
     });
-    if (!record) return null;
-
-    return Interaction.create({
-      id: record.id,
-      tenantId: record.tenantId,
-      clientId: record.clientId,
-      authorUserId: record.authorUserId,
-      content: record.content,
-      channel: record.channel as InteractionChannel,
-      outcomeCategory: record.outcomeCategory ? OutcomeCategory.create({
-        id: record.outcomeCategory.id,
-        tenantId: record.outcomeCategory.tenantId,
-        label: record.outcomeCategory.label,
-      }) : undefined,
-      createdAt: record.createdAt,
-    });
+    return record ? toInteraction(record) : null;
   }
 
   async findRecentByTenant(tenantId: string, limit: number, options: RecentInteractionsOptions = {}): Promise<Interaction[]> {
@@ -71,20 +84,7 @@ export class PrismaInteractionRepository implements IInteractionRepository {
       take: limit,
     });
 
-    return records.map(r => Interaction.create({
-      id: r.id,
-      tenantId: r.tenantId,
-      clientId: r.clientId,
-      authorUserId: r.authorUserId,
-      content: r.content,
-      channel: r.channel as InteractionChannel,
-      outcomeCategory: r.outcomeCategory ? OutcomeCategory.create({
-        id: r.outcomeCategory.id,
-        tenantId: r.outcomeCategory.tenantId,
-        label: r.outcomeCategory.label,
-      }) : undefined,
-      createdAt: r.createdAt,
-    }));
+    return records.map(toInteraction);
   }
 
   async save(tenantId: string, interaction: Interaction): Promise<void> {
@@ -94,10 +94,20 @@ export class PrismaInteractionRepository implements IInteractionRepository {
         tenantId: interaction.tenantId,
         clientId: interaction.clientId,
         authorUserId: interaction.authorUserId,
-        content: interaction.content,
-        channel: interaction.channel,
         outcomeCategoryId: interaction.outcomeCategory?.id || null,
         createdAt: interaction.createdAt,
+        ...detailColumns(interaction),
+      },
+    });
+  }
+
+  async update(interaction: Interaction): Promise<void> {
+    await this.prisma.interaction.updateMany({
+      where: { id: interaction.id, tenantId: interaction.tenantId },
+      data: {
+        ...detailColumns(interaction),
+        updatedAt: interaction.updatedAt,
+        updatedByUserId: interaction.updatedByUserId,
       },
     });
   }

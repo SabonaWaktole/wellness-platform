@@ -3,6 +3,8 @@ import { ZodError } from 'zod';
 import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { DomainError } from '../../../../shared/domain/errors/DomainError';
 import {
+  ActivityEditClosedError,
+  ActivityNotFoundError,
   AreaRequiredError,
   BusinessTypeInactiveError,
   BusinessTypeRequiredError,
@@ -15,6 +17,7 @@ import {
   ContactsRequiredError,
   EmailInvalidError,
   EmployeeCountInvalidError,
+  InvalidActivityError,
   PhoneInvalidError,
   PrimaryContactRequiredError,
   TaxIdTakenError,
@@ -39,6 +42,7 @@ const BAD_REQUEST_ERRORS = [
   ContactsRequiredError,
   PrimaryContactRequiredError,
   InvalidTimelineCursorError,
+  InvalidActivityError,
 ];
 
 /**
@@ -54,6 +58,14 @@ export function sendClientError(res: Response, error: unknown): void {
   }
   if (error instanceof PermissionDeniedError) {
     res.status(403).json({ error: error.message });
+    return;
+  }
+  if (error instanceof ActivityEditClosedError) {
+    res.status(403).json({ error: error.message, code: error.code });
+    return;
+  }
+  if (error instanceof ActivityNotFoundError) {
+    res.status(404).json({ error: error.message, code: error.code });
     return;
   }
   if (error instanceof TaxIdTakenError) {

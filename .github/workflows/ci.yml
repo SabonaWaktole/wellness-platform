@@ -63,10 +63,19 @@ jobs:
       # Both orderings, because per-worker schema isolation is what makes the
       # parallel run trustworthy and a serial-only pass would hide a leak
       # between workers.
+      #
+      # 4 GB of heap: `npm test` passes --detectOpenHandles, which makes Jest
+      # run every suite in one process (TD-034). The Milestone 2 suites took
+      # that process past Node's ~2 GB default and it aborted with "heap out of
+      # memory" (exit 134) with no test failing.
       - name: Test (parallel)
         run: npm test
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
       - name: Test (serial)
         run: npm test -- --runInBand
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
   # NFR-OPS-01: the Hostinger target is MySQL, which `prisma migrate deploy`
   # cannot migrate (prisma/migrations is Postgres SQL). The hand-written
@@ -109,14 +118,31 @@ jobs:
       - name: Import the Hostinger baseline
         run: mysql -h 127.0.0.1 -uroot -proot wellness < prisma/nevacrm_full_import.sql
 
-      - name: Upgrade to current, twice (the second run must only skip)
+      - name: Upgrade to current
         run: |
           set -o pipefail
-          for run in 1 2; do
-            mysql -h 127.0.0.1 -uroot -proot wellness < prisma/mysql_upgrade_to_current.sql | tee "upgrade-$run.txt"
-          done
+          mysql -h 127.0.0.1 -uroot -proot wellness < prisma/mysql_upgrade_to_current.sql | tee upgrade-1.txt
+
+      # FR-ACT-07, NFR-OPS-02: interactions recorded the pre-Slice-7 way, so
+      # the second run has to migrate them as well as skip everything else.
+      - name: Plant legacy interactions
+        run: mysql -h 127.0.0.1 -uroot -proot wellness < prisma/ci/mysql_fixture_legacy_interactions.sql
+
+      - name: Upgrade again (only skips, and migrates the planted interactions)
+        run: |
+          set -o pipefail
+          mysql -h 127.0.0.1 -uroot -proot wellness < prisma/mysql_upgrade_to_current.sql | tee upgrade-2.txt
           if grep -q 'STILL MISSING' upgrade-2.txt; then
             echo "::error::mysql_upgrade_to_current.sql left objects missing (see the report above)."
+            exit 1
+          fi
+
+      - name: Legacy interactions were migrated
+        run: |
+          set -o pipefail
+          mysql -h 127.0.0.1 -uroot -proot wellness < prisma/ci/mysql_check_activities.sql | tee check-activities.txt
+          if grep -q 'FAIL' check-activities.txt; then
+            echo "::error::the interaction migration did not do what FR-ACT-07 requires (see the checks above)."
             exit 1
           fi
 

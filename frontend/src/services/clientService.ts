@@ -4,7 +4,7 @@ import type {
   SearchClientsParams,
   PaginatedResult,
   CustomFieldDefinition,
-  OutcomeCategory,
+  ActivityInput,
   ClientHistory,
   ClientHistoryParams,
   Interaction,
@@ -31,6 +31,8 @@ export const clientService = {
       notes?: string | null;
       profile: CompanyProfileInput;
       contacts: ContactPersonInput[];
+      /** Also create the company's first deal, in New lead (M2 Slice 6, FR-DEAL-02). */
+      createDeal?: boolean;
     }
   ) => {
     const response = await apiClient.post<ClientWithWarnings>(`/${tenantSlug}/clients`, data);
@@ -93,8 +95,14 @@ export const clientService = {
     return response.data;
   },
 
-  addInteraction: async (tenantSlug: string, clientId: string, data: { type?: string; channel: string; content: string; outcomeCategoryId?: string }) => {
+  addInteraction: async (tenantSlug: string, clientId: string, data: ActivityInput) => {
     const response = await apiClient.post<Interaction>(`/${tenantSlug}/clients/${clientId}/interactions`, data);
+    return response.data;
+  },
+
+  /** FR-ACT-06: the author for 24 hours, the Sales Manager after that. */
+  updateInteraction: async (tenantSlug: string, clientId: string, interactionId: string, data: ActivityInput) => {
+    const response = await apiClient.patch<Interaction>(`/${tenantSlug}/clients/${clientId}/interactions/${interactionId}`, data);
     return response.data;
   },
 
@@ -186,15 +194,5 @@ export const clientService = {
 
   setPrimaryContact: async (tenantSlug: string, clientId: string, contactId: string) => {
     await apiClient.post<void>(`/${tenantSlug}/clients/${clientId}/contacts/${contactId}/primary`);
-  },
-
-  getOutcomeCategories: async (tenantSlug: string) => {
-    const response = await apiClient.get<OutcomeCategory[]>(`/${tenantSlug}/clients/settings/outcome-categories`);
-    return response.data;
-  },
-
-  defineOutcomeCategory: async (tenantSlug: string, data: { label: string }) => {
-    const response = await apiClient.post<OutcomeCategory>(`/${tenantSlug}/clients/settings/outcome-categories`, data);
-    return response.data;
   },
 };
