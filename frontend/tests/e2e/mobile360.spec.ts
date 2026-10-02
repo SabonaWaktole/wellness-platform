@@ -75,7 +75,9 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       const panel = page.getByRole('complementary', { name: /Sales script|Skripti i shitjes/ });
       await expect(panel).toBeVisible();
       const box = await panel.boundingBox();
-      expect(box?.width).toBe(360);
+      // The browser measures in fractions of a pixel (359.99998 on CI), so
+      // "covers the screen" is within a pixel of the viewport, not exactly 360.
+      expect(box?.width).toBeCloseTo(360, 0);
       await expectNoHorizontalOverflow(page, 'sales script panel');
 
       await panel.getByRole('button', { name: /Close the sales script|Mbyll skriptin e shitjes/ }).click();
