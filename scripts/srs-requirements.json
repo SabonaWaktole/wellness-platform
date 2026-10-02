@@ -661,6 +661,76 @@
       "id": "NFR-PERF-02",
       "priority": "Should",
       "requirement": "A price calculation shall return in under 300 ms and an offer PDF shall be generated in under 3 seconds on the staging server."
+    },
+    {
+      "id": "FR-OFR-02",
+      "priority": "Must",
+      "requirement": "The offer shall be filled automatically with: offer number and date, validity date, Wellness Albania details (FR-PCF-08), company name, NIPT (if recorded), address with predefined Area and City, primary contact person with position (or the contact chosen), number of employees, business type, risk level, visit frequency, service package and its services, price breakdown, list price, discount % and amount, net monthly price, annual value, \"VAT not included\" note (Q5), standard texts, and the salesperson's name, phone and email."
+    },
+    {
+      "id": "FR-OFR-05",
+      "priority": "Must",
+      "requirement": "The salesperson shall preview the offer in the browser as it will appear in the PDF."
+    },
+    {
+      "id": "FR-OFR-06",
+      "priority": "Must",
+      "requirement": "The salesperson shall download the offer as a PDF named \"Oferta_<company>_<number>.pdf\" in Albanian or English (chosen when downloading; default = Albanian)."
+    },
+    {
+      "id": "FR-OFR-07",
+      "priority": "Must",
+      "requirement": "Offers shall not be sent by email from the platform in this milestone. The existing quotation email and public share link shall be disabled for the Wellness Albania workspace."
+    },
+    {
+      "id": "FR-OFR-08",
+      "priority": "Must",
+      "requirement": "Offers shall be numbered sequentially per year with the configured prefix, e.g. OF-2026-0001. Numbers are never reused, including for deleted drafts."
+    },
+    {
+      "id": "FR-OFR-09",
+      "priority": "Must",
+      "requirement": "Offer statuses: Draft, Pending approval, Ready, Sent, Accepted, Rejected, Expired. Only Ready offers can be downloaded as final; drafts download with a \"DRAFT\" watermark."
+    },
+    {
+      "id": "FR-OFR-10",
+      "priority": "Must",
+      "requirement": "After emailing the PDF, the salesperson clicks \"Mark as sent\" and enters the date sent (default today). The validity date is counted from that date."
+    },
+    {
+      "id": "FR-OFR-11",
+      "priority": "Must",
+      "requirement": "Changing a Sent offer shall create a new version (OF-2026-0001 v2) and keep the previous version read-only. Only the latest version can be accepted."
+    },
+    {
+      "id": "FR-OFR-12",
+      "priority": "Must",
+      "requirement": "The salesperson shall mark an offer Accepted or Rejected (with an optional note). Accepting an offer is the normal way to win the deal (FR-DEAL-07)."
+    },
+    {
+      "id": "FR-OFR-13",
+      "priority": "Should",
+      "requirement": "A Sent offer past its validity date shall become Expired automatically (existing expiry job)."
+    },
+    {
+      "id": "FR-OFR-14",
+      "priority": "Must",
+      "requirement": "Users shall list offers with filters by status, salesperson, company and date, within their data scope."
+    },
+    {
+      "id": "FR-OFR-15",
+      "priority": "Must",
+      "requirement": "Offer status changes and final prices shall be recorded in the offer history and the audit log."
+    },
+    {
+      "id": "FR-RBAC-18",
+      "priority": "Must",
+      "requirement": "The existing workspace-wide quotation approval switch and quotations.approve shall be replaced for the Wellness Albania workspace by the discount approval of section 5."
+    },
+    {
+      "id": "NFR-I18N-02",
+      "priority": "Must",
+      "requirement": "All new screens, messages, notifications, the offer PDF and the seeded lists shall be translated in sq and en."
     }
   ]
 }
