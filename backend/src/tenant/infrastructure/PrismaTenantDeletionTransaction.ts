@@ -30,7 +30,8 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        * Rows with `onDelete: Cascade` to a parent deleted here are NOT listed
        * separately — deleting the parent removes them for free:
        *   - Appointment  -> AppointmentAuditLog
-       *   - Quotation    -> QuotationLineItem, QuotationStatusHistory
+       *   - Quotation    -> QuotationLineItem, QuotationService,
+       *                     QuotationStatusHistory
        *   - Product      -> ProductImage
        *   - Invoice      -> InvoiceLineItem, InvoiceStatusHistory
        *   - Contract     -> ContractPayment, ContractStatusHistory
@@ -58,13 +59,12 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        */
       await tx.interaction.deleteMany({ where: { tenantId } });
       /*
-       * Deals (M2 Slice 6) hold RESTRICT references to Client, User,
-       * Quotation, LostReason and ServicePackage, so they go before all of
-       * them. Their stage history cascades from the deal on Postgres; it is
-       * deleted first anyway so nothing is left to MySQL's cascade ordering.
+       * Deals (M2 Slice 6) and offers (M2 Slice 8) reference each other: a
+       * deal names its won quotation, and an offer names its deal, both under
+       * RESTRICT. The deal's link is cleared first, so the quotations can go
+       * (below, after Invoice), and the deals go after them.
        */
-      await tx.dealStageHistory.deleteMany({ where: { tenantId } });
-      await tx.deal.deleteMany({ where: { tenantId } });
+      await tx.deal.updateMany({ where: { tenantId }, data: { wonQuotationId: null } });
       await tx.invoice.deleteMany({ where: { tenantId } });
       /*
        * Before Client and User, like Invoice above and for the same reason:
@@ -79,6 +79,14 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.notification.deleteMany({ where: { tenantId } });
       await tx.appointment.deleteMany({ where: { tenantId } });
       await tx.quotation.deleteMany({ where: { tenantId } });
+      /*
+       * Deals hold RESTRICT references to Client, User, LostReason and
+       * ServicePackage, so they go before all of them, and after their offers.
+       * Their stage history cascades from the deal on Postgres; it is deleted
+       * first anyway so nothing is left to MySQL's cascade ordering.
+       */
+      await tx.dealStageHistory.deleteMany({ where: { tenantId } });
+      await tx.deal.deleteMany({ where: { tenantId } });
       await tx.stockMovement.deleteMany({ where: { tenantId } });
       await tx.stockLevel.deleteMany({ where: { tenantId } });
       await tx.product.deleteMany({ where: { tenantId } });

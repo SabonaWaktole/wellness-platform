@@ -833,11 +833,47 @@ model Quotation {
   /// repeat because its record aged out.
   followUpSentAt DateTime?
 
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
-  client    Client @relation(fields: [clientId], references: [id])
-  createdBy User   @relation(fields: [createdByUserId], references: [id])
+  /// M2 Slice 8: an offer belongs to exactly one deal (FR-OFR-01). NULL for
+  /// the legacy quotations, which have no deal and get none invented (D5).
+  dealId          String?
+  language        String  @default("sq")
+  note            String? @db.Text
+  /// The inputs priced (D2): ids plus their sq/en labels, so the offer reads
+  /// the same after a list is renamed. The FK columns below repeat the ids
+  /// the pricing lists need for their "in use" rule.
+  pricingInputs   Json?
+  /// The rule values used (D2, FR-OFR-04, FR-PCF-10). Decimals as strings.
+  ruleSnapshot    Json?
+  employeesPriced Int?
+  packageId       String?
+  frequencyId     String?
+  zoneId          String?
+
+  /// Amounts calculated on the server when the offer was saved (FR-OFR-03).
+  /// NULL on a "Price on request" draft (FR-PRC-07) and on legacy quotations.
+  baseFee          Decimal? @db.Decimal(12, 2)
+  riskFee          Decimal? @db.Decimal(12, 2)
+  visitFee         Decimal? @db.Decimal(12, 2)
+  locationFee      Decimal? @db.Decimal(12, 2)
+  listPrice        Decimal? @db.Decimal(12, 2)
+  discountPercent  Decimal? @db.Decimal(7, 2)
+  discountAmount   Decimal? @db.Decimal(12, 2)
+  netMonthlyPrice  Decimal? @db.Decimal(12, 2)
+  pricePerEmployee Decimal? @db.Decimal(12, 2)
+  annualValue      Decimal? @db.Decimal(12, 2)
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  client    Client          @relation(fields: [clientId], references: [id])
+  createdBy User            @relation(fields: [createdByUserId], references: [id])
+  /// Restrict: deals are only soft-deleted, and a priced list value referenced
+  /// by an offer is in use, so it is deactivated rather than deleted.
+  deal      Deal?           @relation("DealOffers", fields: [dealId], references: [id], onDelete: Restrict)
+  package   ServicePackage? @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  frequency VisitFrequency? @relation(fields: [frequencyId], references: [id], onDelete: Restrict)
+  zone      PriceZone?      @relation(fields: [zoneId], references: [id], onDelete: Restrict)
 
   lineItems     QuotationLineItem[]
+  services      QuotationService[]
   statusHistory QuotationStatusHistory[]
 
   /// At most one — converting a second time is refused by
@@ -853,6 +889,36 @@ model Quotation {
   /// Drives the follow-up and auto-expiry sweeps, which both scan SENT
   /// quotations by age across all tenants.
   @@index([status, sentAt])
+  @@index([tenantId, dealId, status])
+  @@index([dealId])
+  @@index([packageId])
+  @@index([frequencyId])
+  @@index([zoneId])
+}
+
+/// M2 Slice 8: a service of the offer's package, copied when the offer is
+/// saved (FR-PRC-11, FR-OFR-04), so the offer keeps its text after the
+/// package or the service changes. It has no price (Q11): the offer's totals
+/// are the Decimal columns on Quotation. Legacy product lines stay in
+/// QuotationLineItem.
+model QuotationService {
+  id            String  @id
+  tenantId      String
+  quotationId   String
+  /// SetNull: the copied text is the record; the link is for reference.
+  serviceId     String?
+  nameSq        String
+  nameEn        String?
+  descriptionSq String? @db.Text
+  descriptionEn String? @db.Text
+  order         Int     @default(0)
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  service   Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, quotationId])
+  @@index([quotationId])
+  @@index([serviceId])
 }
 
 model QuotationLineItem {
@@ -1622,7 +1688,10 @@ model VisitFrequency {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Offers priced with this frequency: it is in use (Slice 3), so it can be
+  /// deactivated but not deleted.
+  offers Quotation[]
 
   @@index([tenantId, order])
 }
@@ -1642,6 +1711,7 @@ model PriceZone {
 
   tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   cities PriceZoneCity[]
+  offers Quotation[]
 
   @@index([tenantId, order])
 }
@@ -1678,8 +1748,9 @@ model Service {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  packages PackageService[]
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  packages   PackageService[]
+  offerLines QuotationService[]
 
   @@index([tenantId, order])
 }
@@ -1703,6 +1774,7 @@ model ServicePackage {
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   services PackageService[]
   deals    Deal[]
+  offers   Quotation[]
 
   @@index([tenantId, order])
 }
@@ -1798,6 +1870,12 @@ model Deal {
   packageId          String?
   wonQuotationId     String?
 
+  /// The current offer's net monthly price and annual value (Slice 8), copied
+  /// in the transaction that saves the offer, so the board totals, the value
+  /// filter and the value sort read one indexed column (FR-DEAL-10, 11).
+  offerNetMonthlyPrice Decimal? @db.Decimal(12, 2)
+  offerAnnualValue     Decimal? @db.Decimal(12, 2)
+
   tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   client       Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
   /// Restrict, as Client.assignedUser: users are deactivated, never deleted.
@@ -1808,6 +1886,7 @@ model Deal {
   wonQuotation Quotation?         @relation("DealWonQuotation", fields: [wonQuotationId], references: [id], onDelete: Restrict)
   stageHistory DealStageHistory[]
   interactions Interaction[]
+  offers       Quotation[]        @relation("DealOffers")
 
   @@index([tenantId, ownerUserId, stageKey])
   @@index([tenantId, clientId])
@@ -1817,6 +1896,7 @@ model Deal {
   @@index([lostReasonId])
   @@index([packageId])
   @@index([wonQuotationId])
+  @@index([tenantId, stageKey, offerNetMonthlyPrice])
 }
 
 /// Every stage change of a deal (FR-DEAL-09): from, to, who and when. The

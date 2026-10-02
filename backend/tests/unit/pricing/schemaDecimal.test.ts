@@ -23,8 +23,25 @@ const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
   // Slice 5: the sales script holds no money.
   SalesScript: [],
   // Slice 6: the agreed values Slice 13 fills when a deal is won.
-  Deal: ['agreedMonthlyPrice', 'agreedAnnualValue'],
+  // Slice 8: the current offer's value, copied for the board and the list.
+  Deal: ['agreedMonthlyPrice', 'agreedAnnualValue', 'offerNetMonthlyPrice', 'offerAnnualValue'],
   DealStageHistory: [],
+  // Slice 8: an offer is a Quotation with a deal. Quotation had no Float
+  // field in Milestone 1, so the whole model is listed; the legacy product
+  // lines (QuotationLineItem.unitPrice) stay Float (D4).
+  Quotation: [
+    'baseFee',
+    'riskFee',
+    'visitFee',
+    'locationFee',
+    'listPrice',
+    'discountPercent',
+    'discountAmount',
+    'netMonthlyPrice',
+    'pricePerEmployee',
+    'annualValue',
+  ],
+  QuotationService: [],
 };
 
 /** Field name → type, for one model block of a Prisma schema. */
