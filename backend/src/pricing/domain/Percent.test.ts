@@ -34,6 +34,17 @@ describe('Percent (FR-PCF-03)', () => {
     expect(Percent.of(10).equals(Percent.of(20))).toBe(false);
   });
 
+  it('FR-DSC-04 tells whether a discount is above the cap; the cap itself is not', () => {
+    expect(Percent.of('10.01').exceeds(Percent.of(10))).toBe(true);
+    expect(Percent.of('10.00').exceeds(Percent.of(10))).toBe(false);
+    expect(Percent.of(5).exceeds(Percent.of(10))).toBe(false);
+  });
+
+  it('isZero is true for 0 only', () => {
+    expect(Percent.zero().isZero()).toBe(true);
+    expect(Percent.of('0.01').isZero()).toBe(false);
+  });
+
   it('zero() is 0.00', () => {
     expect(Percent.zero().toString()).toBe('0.00');
   });

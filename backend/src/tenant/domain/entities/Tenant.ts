@@ -42,6 +42,15 @@ export const DEFAULT_LANGUAGE: Language = 'en';
 export { SubscriptionStatus } from '../enums/SubscriptionStatus';
 import { SubscriptionStatus } from '../enums/SubscriptionStatus';
 
+/**
+ * How the workspace sells (D6). `SALES_PROCESS` is Wellness Albania's
+ * Milestone 2 flow: offers are made from a deal's pricing screen, and the
+ * legacy quotation create is refused. Every other workspace keeps the legacy
+ * quotation module.
+ */
+export const SALES_WORKFLOWS = ['LEGACY_QUOTATIONS', 'SALES_PROCESS'] as const;
+export type SalesWorkflow = (typeof SALES_WORKFLOWS)[number];
+
 export const DEFAULT_CURRENCY = 'USD';
 export const DEFAULT_LOCALE: SupportedLocale = 'en-US';
 export const DEFAULT_TIMEZONE = 'UTC';
@@ -58,6 +67,7 @@ interface TenantProps {
   dateFormat?: string;
   defaultLanguage?: string;
   subscriptionStatus?: SubscriptionStatus;
+  salesWorkflow?: string;
   createdAt: Date;
 }
 
@@ -92,6 +102,9 @@ export class Tenant {
    */
   public readonly subscriptionStatus: SubscriptionStatus;
 
+  /** D6. Behaviour-bearing: it decides whether offers come only from deals. */
+  public readonly salesWorkflow: SalesWorkflow;
+
   public readonly createdAt: Date;
 
   private constructor(props: TenantProps) {
@@ -109,6 +122,8 @@ export class Tenant {
     // Mirrors the column default. A tenant constructed in memory is ACTIVE, so
     // no code path can accidentally treat "not stated" as suspended.
     this.subscriptionStatus = props.subscriptionStatus ?? SubscriptionStatus.ACTIVE;
+    // Mirrors the column default; an unknown value is the legacy workflow.
+    this.salesWorkflow = props.salesWorkflow === 'SALES_PROCESS' ? 'SALES_PROCESS' : 'LEGACY_QUOTATIONS';
     this.createdAt = props.createdAt;
   }
 
@@ -126,5 +141,10 @@ export class Tenant {
    */
   public isSuspended(): boolean {
     return this.subscriptionStatus === SubscriptionStatus.SUSPENDED;
+  }
+
+  /** D6: offers are made from a deal's pricing screen only (FR-OFR-01). */
+  public runsSalesProcess(): boolean {
+    return this.salesWorkflow === 'SALES_PROCESS';
   }
 }

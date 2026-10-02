@@ -8,6 +8,15 @@ import { DealDetail, DealSummary } from '../application/dealViews';
 import { BoardCursor, DealCompany, DealListFilters, DealSort, IDealStore } from '../application/ports/IDealStore';
 import { DEAL_SUMMARY_INCLUDE, displayName, toSummary } from './prismaDealRows';
 
+/** The column each list sort reads. */
+const SORT_COLUMNS: Record<DealSort['field'], keyof Prisma.DealOrderByWithRelationInput> = {
+  updatedAt: 'updatedAt',
+  createdAt: 'createdAt',
+  expectedCloseDate: 'expectedCloseDate',
+  title: 'title',
+  value: 'offerNetMonthlyPrice',
+};
+
 /**
  * Deal reads. The scope is always part of the WHERE clause (FR-RBAC-13), on
  * the deal's own salesperson, which is never NULL.
@@ -80,6 +89,12 @@ export class PrismaDealStore implements IDealStore {
         ...(filters.expectedCloseTo ? { lte: filters.expectedCloseTo } : {}),
       };
     }
+    if (filters.valueMin || filters.valueMax) {
+      where.offerNetMonthlyPrice = {
+        ...(filters.valueMin ? { gte: filters.valueMin } : {}),
+        ...(filters.valueMax ? { lte: filters.valueMax } : {}),
+      };
+    }
     if (filters.query) {
       and.push({ OR: [{ title: insensitiveContains(filters.query) }, { client: { name: insensitiveContains(filters.query) } }] });
     }
@@ -88,7 +103,7 @@ export class PrismaDealStore implements IDealStore {
       this.prisma.deal.findMany({
         where,
         include: DEAL_SUMMARY_INCLUDE,
-        orderBy: [{ [sort.field]: sort.direction }, { id: sort.direction }],
+        orderBy: [{ [SORT_COLUMNS[sort.field]]: sort.direction }, { id: sort.direction }],
         skip: page.skip,
         take: page.take,
       }),
@@ -97,13 +112,27 @@ export class PrismaDealStore implements IDealStore {
     return { items: rows.map(toSummary), total };
   }
 
-  async boardCounts(tenantId: string, scope: RecordScope, closedSince: Date): Promise<Map<DealStage, number>> {
+  async boardCounts(
+    tenantId: string,
+    scope: RecordScope,
+    closedSince: Date
+  ): Promise<Map<DealStage, { count: number; totalNetMonthlyPrice: string | null }>> {
     const where: Prisma.DealWhereInput = this.live(tenantId, scope);
     (where.AND as Prisma.DealWhereInput[]).push({
       OR: [{ stageKey: { in: [...OPEN_DEAL_STAGES] } }, { stageKey: { in: [...CLOSED_DEAL_STAGES] }, closedAt: { gte: closedSince } }],
     });
-    const groups = await this.prisma.deal.groupBy({ by: ['stageKey'], where, _count: { _all: true } });
-    return new Map(groups.map((group) => [group.stageKey as DealStage, group._count._all]));
+    const groups = await this.prisma.deal.groupBy({
+      by: ['stageKey'],
+      where,
+      _count: { _all: true },
+      _sum: { offerNetMonthlyPrice: true },
+    });
+    return new Map(
+      groups.map((group) => [
+        group.stageKey as DealStage,
+        { count: group._count._all, totalNetMonthlyPrice: group._sum.offerNetMonthlyPrice?.toFixed(2) ?? null },
+      ])
+    );
   }
 
   async boardColumn(

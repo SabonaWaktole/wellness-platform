@@ -15,6 +15,10 @@ import { DeleteDealUseCase } from '../../application/use-cases/DeleteDealUseCase
 import { SearchDealsUseCase } from '../../application/use-cases/SearchDealsUseCase';
 import { GetPipelineBoardUseCase } from '../../application/use-cases/GetPipelineBoardUseCase';
 import { GetDealActivitiesUseCase } from '../../application/use-cases/GetDealActivitiesUseCase';
+import { GetDealOffersUseCase } from '../../application/use-cases/GetDealOffersUseCase';
+import { SaveDraftOfferUseCase } from '../../../quotations/application/offers/SaveDraftOfferUseCase';
+import { OfferNotEditableError } from '../../../quotations/domain/offerErrors';
+import { InvalidPricingInputError, InvalidPricingValueError, PricingSubjectNotFoundError } from '../../../pricing/domain/errors';
 import { dealSchemas } from './dealSchemas';
 
 /** Maps the deals module's errors to a status; anything else goes to the app's error handler. */
@@ -28,13 +32,16 @@ function sendDealError(res: Response, next: NextFunction, error: unknown) {
   if (error instanceof PermissionDeniedError) {
     return res.status(403).json({ error: error.message });
   }
-  if (error instanceof DealNotFoundError) {
+  if (error instanceof DealNotFoundError || error instanceof PricingSubjectNotFoundError) {
     return res.status(404).json({ error: error.message, code: error.code });
   }
   if (error instanceof InvalidDealError) {
     return res.status(400).json({ error: error.message, code: error.code, field: error.field });
   }
-  if (error instanceof DealStageNotAllowedError) {
+  if (error instanceof InvalidPricingInputError || error instanceof InvalidPricingValueError) {
+    return res.status(400).json({ error: error.message, code: error.code, field: error.field });
+  }
+  if (error instanceof DealStageNotAllowedError || error instanceof OfferNotEditableError) {
     return res.status(409).json({ error: error.message, code: error.code });
   }
   return next(error);
@@ -57,7 +64,9 @@ export class DealController {
     private readonly deleteDeal: DeleteDealUseCase,
     private readonly searchDeals: SearchDealsUseCase,
     private readonly pipeline: GetPipelineBoardUseCase,
-    private readonly dealActivities: GetDealActivitiesUseCase
+    private readonly dealActivities: GetDealActivitiesUseCase,
+    private readonly dealOffers: GetDealOffersUseCase,
+    private readonly saveDraftOffer: SaveDraftOfferUseCase
   ) {}
 
   private handle =
@@ -85,6 +94,8 @@ export class DealController {
         cityId: query.cityId,
         expectedCloseFrom: query.expectedCloseFrom,
         expectedCloseTo: query.expectedCloseTo,
+        valueMin: query.valueMin,
+        valueMax: query.valueMax,
         query: query.q?.trim() || undefined,
       },
       sort: { field: query.sort, direction: query.direction },
@@ -115,6 +126,26 @@ export class DealController {
   activities = this.handle((req) =>
     this.dealActivities.execute({ access: req.access!, tenantId: requireTenantId(req), id: idOf(req) })
   );
+
+  offers = this.handle((req) => this.dealOffers.execute({ access: req.access!, tenantId: requireTenantId(req), id: idOf(req) }));
+
+  /** 201 for the deal's first draft, 200 when the draft is updated (FR-PRC-12). */
+  saveOffer = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { note, alsoUpdateCompany, ...choices } = req.body;
+      const { offer, created } = await this.saveDraftOffer.execute({
+        access: req.access!,
+        tenantId: requireTenantId(req),
+        dealId: idOf(req),
+        choices,
+        note: note ?? null,
+        alsoUpdateCompany: alsoUpdateCompany ?? false,
+      });
+      res.status(created ? 201 : 200).json({ data: redactFields(offer, req.access!) });
+    } catch (error) {
+      sendDealError(res, next, error);
+    }
+  };
 
   create = this.handle(
     (req) =>

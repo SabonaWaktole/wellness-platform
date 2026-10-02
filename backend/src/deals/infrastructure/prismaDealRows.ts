@@ -34,9 +34,10 @@ export function toSummary(row: SummaryRow): DealSummary {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     closedAt: row.closedAt?.toISOString() ?? null,
-    // From the latest offer (Slice 8) and the follow-ups (Slice 11).
-    netMonthlyPrice: null,
-    annualValue: null,
+    // The deal's offer value, copied onto the deal when the offer is saved (Slice 8).
+    netMonthlyPrice: row.offerNetMonthlyPrice?.toFixed(2) ?? null,
+    annualValue: row.offerAnnualValue?.toFixed(2) ?? null,
+    // From the follow-ups (Slice 11).
     nextFollowUpAt: null,
   };
 }
