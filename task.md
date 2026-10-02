@@ -2802,3 +2802,45 @@ way generated code is.
 occurrence). The tests caught both of these, which is an argument for the
 existing suite, not for relying on it — a use case with thinner coverage would
 have shipped the dropped guard.
+
+---
+
+## TD-034 — CI's "Test (parallel)" step does not run in parallel
+
+**Status:** Open
+**Raised:** 2026-10-02, while unblocking the Milestone 2 PRs (#25, #27)
+**Severity:** Medium — the isolation the step is meant to prove is not being exercised
+**Area:** `backend/package.json` (`test` script), `.github/workflows/ci.yml` (backend job)
+
+### What happened
+
+The backend job aborted on #25 and #27 with `FATAL ERROR: Ineffective
+mark-compacts near heap limit … JavaScript heap out of memory` (exit 134) in
+"Test (parallel)". No test had failed. Two other stacked PRs passed the same
+run, so it was intermittent: the run sat right at the limit.
+
+### Why
+
+`npm test` is `jest --forceExit --detectOpenHandles`. In Jest 29,
+`--detectOpenHandles` forces in-band execution
+(`@jest/core/build/testSchedulerHelper.js`: `if (runInBand || detectOpenHandles)`),
+because it cannot detect leaks inside workers. So the "parallel" step runs all
+~270 suites in one Node process, the same as the "serial" step, and that one
+heap grew with each Milestone 2 slice until it passed Node's ~2 GB default.
+
+### What was done
+
+Both Test steps now run with `NODE_OPTIONS=--max-old-space-size=4096`. That
+fixes the abort. It does not make the step parallel.
+
+### The remaining risk
+
+The CI comment says both orderings run "because per-worker schema isolation is
+what makes the parallel run trustworthy". Today neither step runs more than one
+worker, so a fixture leak between workers (TD-001) would not be caught in CI.
+
+### Fix when picked up
+
+Run the parallel step without `--detectOpenHandles` (for example
+`npx jest --forceExit`), keep `--detectOpenHandles` on the serial step, and fix
+whatever the real parallel run exposes before relying on it.
