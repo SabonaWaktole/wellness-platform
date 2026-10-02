@@ -1656,7 +1656,11 @@ model PriceZoneCity {
   cityId String
 
   zone PriceZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-  city City      @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  /// Cascade, not RESTRICT: deleting a workspace cascades to City and PriceZone
+  /// in no fixed order, and Postgres checks a RESTRICT key inside each cascade
+  /// step. A city in a zone still cannot be deleted: PrismaLookupInUsePolicy
+  /// counts it as in use (FR-PCF-05), as PackageService does for services.
+  city City      @relation(fields: [cityId], references: [id], onDelete: Cascade)
 
   @@id([zoneId, cityId])
   @@index([cityId])

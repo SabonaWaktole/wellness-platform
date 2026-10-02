@@ -58,6 +58,32 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     await prisma.$disconnect();
   });
 
+  /*
+   * Many test files clean up with a plain `prisma.tenant.deleteMany()`, which
+   * leaves the order to the cascade. Postgres checks a RESTRICT key inside each
+   * cascade step, so a workspace with the default price zones once failed on
+   * PriceZoneCity's City key whenever City went before PriceZone (CI on M2
+   * Slices 3–6). The key cascades now; this proves a seeded workspace goes.
+   */
+  it('FR-PCF-05 a workspace with the default lists and price zones can be deleted by a plain tenant delete', async () => {
+    const tenantId = randomUUID();
+    tenantIds.push(tenantId);
+    await prisma.tenant.create({ data: { id: tenantId, name: 'Cascade Co', urlSlug: `cascade-${Date.now()}` } });
+    await new PrismaLookupSeeder(prisma).seed(tenantId);
+    await new PrismaPricingSeeder(prisma).seed(tenantId);
+    expect(await prisma.priceZoneCity.count({ where: { zone: { tenantId } } })).toBeGreaterThan(0);
+
+    // The cities first, as a cascade may: this is the order that broke.
+    await prisma.$transaction(async (tx) => {
+      await tx.city.deleteMany({ where: { tenantId } });
+      await tx.tenant.delete({ where: { id: tenantId } });
+    });
+
+    expect(await prisma.tenant.findUnique({ where: { id: tenantId } })).toBeNull();
+    expect(await prisma.priceZone.count({ where: { tenantId } })).toBe(0);
+    tenantIds.splice(tenantIds.indexOf(tenantId), 1);
+  });
+
   it('deletes a tenant that has a form, a submission, an invoice and an ownership transfer', async () => {
     const tenantId = randomUUID();
     tenantIds.push(tenantId);
@@ -147,8 +173,8 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // from Tenant. The seeder creates both pairs, plus follow-up intervals
     // and lost-deal reasons, for every tenant.
     await new PrismaLookupSeeder(prisma).seed(tenantId);
-    // PriceZoneCity holds RESTRICT on its City (M2 Slice 3); the pricing seed
-    // gives every tenant zones with cities.
+    // PriceZoneCity points at City (M2 Slice 3); the pricing seed gives every
+    // tenant zones with cities.
     await new PrismaPricingSeeder(prisma).seed(tenantId);
 
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
