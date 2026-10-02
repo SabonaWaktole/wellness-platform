@@ -34,6 +34,7 @@ import styles from './DealDetailContent.module.css';
  */
 export const DealDetailContent: React.FC = () => {
   const { t } = useTranslation('deals');
+  const { t: tc } = useTranslation('common');
   const { tenantSlug, dealId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -81,7 +82,7 @@ export const DealDetailContent: React.FC = () => {
       </div>
     );
   }
-  if (!deal) return <p className={styles.message}>…</p>;
+  if (!deal) return <p className={styles.message}>{tc('state.loading')}</p>;
 
   const open = isOpenStage(deal.stage);
 
