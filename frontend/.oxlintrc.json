@@ -19,9 +19,9 @@
       {
         "allowedStrings": [
           "/",
-          "\u2014",
+          "—",
           "-",
-          "\u00b7",
+          "·",
           ">",
           "@",
           "+",
@@ -33,9 +33,47 @@
   },
   "overrides": [
     {
-      "files": ["**/*.stories.tsx", "**/*.stories.ts"],
+      "files": [
+        "**/*.stories.tsx",
+        "**/*.stories.ts"
+      ],
       "rules": {
         "react/jsx-no-literals": "off"
+      }
+    },
+    {
+      "files": [
+        "src/pages/pricing/**",
+        "src/components/pricing/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "decimal.js",
+                "message": "The pricing screen shows the server's amounts; it never calculates a price (NFR-ACC-02)."
+              },
+              {
+                "name": "big.js",
+                "message": "The pricing screen shows the server's amounts; it never calculates a price (NFR-ACC-02)."
+              },
+              {
+                "name": "bignumber.js",
+                "message": "The pricing screen shows the server's amounts; it never calculates a price (NFR-ACC-02)."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "**/utils/paymentSchedule"
+                ],
+                "message": "The pricing screen shows the server's amounts; it never calculates a price (NFR-ACC-02)."
+              }
+            ]
+          }
+        ]
       }
     }
   ]

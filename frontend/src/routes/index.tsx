@@ -50,6 +50,7 @@ import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
 import { DealListContent } from '../pages/deals/DealListContent';
 import { DealDetailContent } from '../pages/deals/DealDetailContent';
 import { DealFormContent } from '../pages/deals/DealFormContent';
+import { PricingContent } from '../pages/pricing/PricingContent';
 import { IntegrationsPage } from '../pages/IntegrationsPage';
 import { StatusPage } from '../components/StatusPage/StatusPage';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -556,6 +557,34 @@ export const routes: RouteObject[] = [
             <RequirePermission permission="deals.view">
               <DealsPage>
                 <DealDetailContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      /*
+       * The pricing screen (M2 Slice 8): from a deal, or from a company, where
+       * the offer is saved on one of its open deals.
+       */
+      {
+        path: 'deals/:dealId/pricing',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="offers.edit">
+              <DealsPage>
+                <PricingContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'clients/:clientId/pricing',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="offers.edit">
+              <DealsPage>
+                <PricingContent />
               </DealsPage>
             </RequirePermission>
           </ProtectedRoute>

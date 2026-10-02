@@ -25,6 +25,7 @@ import enNotifications from '../locales/en/notifications.json';
 import enForms from '../locales/en/forms.json';
 import enAudit from '../locales/en/audit.json';
 import enDeals from '../locales/en/deals.json';
+import enPricing from '../locales/en/pricing.json';
 
 import sqCommon from '../locales/sq/common.json';
 import sqAuth from '../locales/sq/auth.json';
@@ -40,6 +41,7 @@ import sqNotifications from '../locales/sq/notifications.json';
 import sqForms from '../locales/sq/forms.json';
 import sqAudit from '../locales/sq/audit.json';
 import sqDeals from '../locales/sq/deals.json';
+import sqPricing from '../locales/sq/pricing.json';
 
 import elCommon from '../locales/el/common.json';
 import elAuth from '../locales/el/auth.json';
@@ -55,6 +57,7 @@ import elNotifications from '../locales/el/notifications.json';
 import elForms from '../locales/el/forms.json';
 import elAudit from '../locales/el/audit.json';
 import elDeals from '../locales/el/deals.json';
+import elPricing from '../locales/el/pricing.json';
 
 import itCommon from '../locales/it/common.json';
 import itAuth from '../locales/it/auth.json';
@@ -70,6 +73,7 @@ import itNotifications from '../locales/it/notifications.json';
 import itForms from '../locales/it/forms.json';
 import itAudit from '../locales/it/audit.json';
 import itDeals from '../locales/it/deals.json';
+import itPricing from '../locales/it/pricing.json';
 
 /**
  * Catalogues are imported statically rather than fetched at runtime.
@@ -96,6 +100,7 @@ export const resources = {
     forms: enForms,
     audit: enAudit,
     deals: enDeals,
+    pricing: enPricing,
   },
   sq: {
     common: sqCommon,
@@ -112,6 +117,7 @@ export const resources = {
     forms: sqForms,
     audit: sqAudit,
     deals: sqDeals,
+    pricing: sqPricing,
   },
   el: {
     common: elCommon,
@@ -128,6 +134,7 @@ export const resources = {
     forms: elForms,
     audit: elAudit,
     deals: elDeals,
+    pricing: elPricing,
   },
   it: {
     common: itCommon,
@@ -144,6 +151,7 @@ export const resources = {
     forms: itForms,
     audit: itAudit,
     deals: itDeals,
+    pricing: itPricing,
   },
 } as const;
 

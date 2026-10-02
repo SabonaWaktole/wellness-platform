@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Calendar } from 'lucide-react';
+import { Calculator, ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Calendar } from 'lucide-react';
 import { useClientDetail, useClientHistory, useClientSettings } from '../../hooks/useClients';
 import { useClientAppointments } from '../../hooks/useAppointments';
 import { Card } from '../../components/ui/Card/Card';
@@ -98,6 +98,7 @@ export const ClientDetailContent: React.FC = () => {
   // which Reception never sees (FR-DEAL-04).
   const canSeeContracts = usePermission('contracts.validity.view');
   const canSeeDeals = usePermission('deals.view');
+  const canPrice = usePermission('offers.edit');
   const shownTab =
     (activeTab === 'contracts' && !canSeeContracts) || (activeTab === 'deals' && !canSeeDeals) ? 'timeline' : activeTab;
   const canAddActivities = usePermission('activities.add');
@@ -200,6 +201,18 @@ export const ClientDetailContent: React.FC = () => {
           <div className={styles.headerActions}>
             {/* FR-SCR-01: the script is at hand on the company page, as in the header. */}
             <SalesScriptButton outline className={styles.iconButton} />
+            {/* M2 Slice 8: the pricing screen, opened on this company (FR-PRC-01). */}
+            {canPrice && (
+              <Button
+                variant="outline"
+                className={styles.iconButton}
+                aria-label={t('detail.calculatePrice')}
+                title={t('detail.calculatePrice')}
+                onClick={() => navigate(`/${tenantSlug}/clients/${clientId}/pricing`)}
+              >
+                <Calculator size={18} />
+              </Button>
+            )}
             <Button
               variant="outline"
               className={styles.iconButton}

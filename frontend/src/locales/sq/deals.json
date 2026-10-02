@@ -67,7 +67,10 @@
     "emptyFiltered": "Asnjë marrëveshje nuk përputhet me këta filtra",
     "emptyFilteredMessage": "Provoni më pak filtra ose një kërkim tjetër.",
     "loadFailed": "Marrëveshjet nuk u ngarkuan.",
-    "itemLabel": "marrëveshje"
+    "itemLabel": "marrëveshje",
+    "valueMin": "Vlera mujore nga",
+    "valueMax": "Vlera mujore deri",
+    "valueInvalid": "Shkruaj një shumë si 49.40."
   },
   "detail": {
     "back": "Kthehu te pipeline-i",
@@ -94,7 +97,6 @@
     "historyBy": "{{date}} · {{actor}}",
     "automatic": "Automatik",
     "offers": "Ofertat",
-    "offersSoon": "Ofertat e kësaj marrëveshjeje, me versionet dhe statuset e tyre, do të shfaqen këtu.",
     "activities": "Aktivitetet",
     "recordActivity": "Regjistro aktivitet",
     "noActivities": "Ende nuk ka aktivitete për këtë marrëveshje.",
@@ -154,6 +156,25 @@
       "title": "Titulli është shumë i gjatë.",
       "notes": "Shënimet janë shumë të gjata.",
       "expectedCloseDate": "Vendosni një datë të vlefshme."
+    }
+  },
+  "offers": {
+    "calculate": "Llogarit çmimin",
+    "edit": "Ndrysho ofertën",
+    "none": "Ende pa ofertë. Llogarit një çmim për ta përgatitur.",
+    "hidden": "Shifrat e ofertave nuk shfaqen për rolin tënd.",
+    "loadFailed": "Ofertat nuk u ngarkuan.",
+    "updated": "Përditësuar {{date}} · {{actor}}",
+    "priceOnRequest": "Çmimi sipas kërkesës",
+    "list": "Çmimi i listës {{list}}",
+    "listWithDiscount": "Çmimi i listës {{list}} · zbritje {{percent}}%",
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_APPROVAL": "Në pritje të miratimit",
+      "SENT": "Dërguar",
+      "ACCEPTED": "Pranuar",
+      "REJECTED": "Refuzuar",
+      "EXPIRED": "Skaduar"
     }
   }
 }

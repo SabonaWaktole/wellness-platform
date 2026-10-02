@@ -79,6 +79,9 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       ['pipeline list', () => 'pipeline/list'],
       ['deal page', () => `deals/${dealId}`],
       ['new deal form', () => 'deals/new'],
+      // M2 Slice 8: the pricing screen, from a deal and from a company
+      ['pricing screen (deal)', () => `deals/${dealId}/pricing`],
+      ['pricing screen (company)', (id) => `clients/${id}/pricing`],
     ];
 
     test('NFR-USE-02 FR-SCR-02 the sales script panel covers the phone screen and closes', async ({ page }) => {

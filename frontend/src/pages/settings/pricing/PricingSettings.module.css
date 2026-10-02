@@ -182,32 +182,6 @@
 }
 
 /* The test calculator's result. */
-.breakdown {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--spacing-xs) var(--spacing-md);
-  margin: 0;
-  max-width: 420px;
-  font-size: var(--font-size-body-md);
-}
-
-.breakdown dt {
-  color: var(--text-secondary);
-}
-
-.breakdown dd {
-  margin: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-}
-
-.breakdownTotal {
-  font-weight: 650;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--spacing-xs);
-}
-
 /* Services of a package (FR-PCF-06): checkboxes to add, an ordered list to arrange. */
 .checkGroup {
   display: grid;
