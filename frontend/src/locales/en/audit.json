@@ -53,7 +53,8 @@
     "Service": "Service",
     "ServicePackage": "Service package",
     "SalesScript": "Sales script",
-    "Deal": "Deal"
+    "Deal": "Deal",
+    "Offer": "Offer"
   },
   "entityGroups": {
     "access": "Users, roles & workspace",
@@ -62,7 +63,8 @@
     "lists": "Settings lists",
     "pricing": "Pricing",
     "salesScript": "Sales script",
-    "deals": "Deals"
+    "deals": "Deals",
+    "offers": "Offers"
   },
   "actors": {
     "system": "System",

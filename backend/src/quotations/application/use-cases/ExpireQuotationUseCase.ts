@@ -69,7 +69,7 @@ export class ExpireQuotationUseCase {
           tenantId: input.tenantId,
           recipientUserIds: [quotation.createdByUserId],
           type: 'QUOTATION_EXPIRED',
-          params: { reference: quotationReference(quotation.id) },
+          params: { reference: quotationReference(quotation) },
           actorUserId: input.actingUserId,
           entityType: 'QUOTATION',
           entityId: quotation.id,

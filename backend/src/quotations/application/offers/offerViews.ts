@@ -1,6 +1,9 @@
 import { PriceOnRequestReason } from '../../../pricing/domain/PriceCalculator';
 import { OfferLanguage, OfferServiceLine } from '../../domain/Offer';
 
+/** The steps the offer view offers, each gated on the server (FR-OFR-09..12). */
+export type OfferAction = 'EDIT' | 'MARK_READY' | 'MARK_SENT' | 'MARK_ACCEPTED' | 'MARK_REJECTED' | 'REVISE';
+
 /**
  * An offer as the deal page shows it (FR-DEAL-03, FR-OFR-04). Amounts are
  * strings with two decimals (NFR-ACC-02), under the names `redactFields`
@@ -12,6 +15,30 @@ export interface OfferView {
   dealId: string;
   clientId: string;
   status: string;
+  /** OF-2026-0001, the same on every version (FR-OFR-08). */
+  number: string | null;
+  version: number;
+  /** What every screen shows: OF-2026-0001, or OF-2026-0001 v2 (FR-OFR-11). */
+  reference: string;
+  previousVersionId: string | null;
+  /** A later version replaces this one: read-only, still downloadable (FR-OFR-11). */
+  superseded: boolean;
+  readyAt: string | null;
+  sentAt: string | null;
+  /** The last day the offer is valid, YYYY-MM-DD (FR-OFR-10). */
+  validUntil: string | null;
+  respondedAt: string | null;
+  /** The note of the latest status change, e.g. why it was rejected (FR-OFR-12). */
+  statusNote: string | null;
+  contactPersonId: string | null;
+  companyName: string;
+  dealTitle: string | null;
+  dealOwnerUserId: string;
+  dealOwnerName: string;
+  /** The deal is not won, lost or deleted: its offers can still change. */
+  dealOpen: boolean;
+  /** What this viewer may do with the offer now (FR-OFR-09); filled by the use case. */
+  permittedActions: OfferAction[];
   language: OfferLanguage;
   note: string | null;
   createdByUserId: string;
@@ -38,4 +65,12 @@ export interface OfferView {
   netMonthlyPrice: string | null;
   pricePerEmployee: string | null;
   annualValue: string | null;
+}
+
+/** One page of the offers list (FR-OFR-14). */
+export interface OfferPage {
+  data: OfferView[];
+  total: number;
+  page: number;
+  pageSize: number;
 }

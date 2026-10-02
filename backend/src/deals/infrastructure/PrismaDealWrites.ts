@@ -44,4 +44,8 @@ export class PrismaDealWrites implements IDealWrites {
       data: { offerNetMonthlyPrice: value.netMonthlyPrice, offerAnnualValue: value.annualValue },
     });
   }
+
+  async hasSentOffer(tenantId: string, dealId: string): Promise<boolean> {
+    return (await this.prisma.quotation.count({ where: { tenantId, dealId, sentAt: { not: null } } })) > 0;
+  }
 }

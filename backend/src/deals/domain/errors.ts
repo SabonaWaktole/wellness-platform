@@ -46,3 +46,15 @@ export class DealStageNotAllowedError extends DomainError {
     super(message);
   }
 }
+
+/**
+ * A deal with an offer marked as sent is a record of what the company was
+ * offered, so it is kept (FR-DEAL-19). Mapped to 409.
+ */
+export class DealHasSentOfferError extends DomainError {
+  readonly code = 'DEAL_HAS_SENT_OFFER';
+
+  constructor() {
+    super('A deal with an offer marked as sent cannot be deleted.');
+  }
+}

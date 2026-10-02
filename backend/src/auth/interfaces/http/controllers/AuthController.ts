@@ -211,6 +211,8 @@ export class AuthController {
                 logoUrl: true, coverImageUrl: true, name: true,
                 currency: true, locale: true, defaultLanguage: true,
                 timezone: true, dateFormat: true,
+                // M2 Slice 9 (D6): which screens show offers and quotations.
+                salesWorkflow: true,
                 // Selected purely to gate the session below, not to return.
                 subscriptionStatus: true,
               },
@@ -292,6 +294,9 @@ export class AuthController {
           tenantLocale: tenantBranding?.locale ?? null,
           tenantTimezone: tenantBranding?.timezone ?? null,
           tenantDateFormat: tenantBranding?.dateFormat ?? null,
+          // D6: SALES_PROCESS shows the Offers list and hides the legacy
+          // quotation screens; null for SUPER_ADMIN.
+          tenantSalesWorkflow: tenantBranding?.salesWorkflow ?? null,
           // Interface language, kept separate from the formatting fields above.
           // `userLanguage` is null when the user follows the workspace default;
           // the client needs the raw value, not just the resolved one, so the

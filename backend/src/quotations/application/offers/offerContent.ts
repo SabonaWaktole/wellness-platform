@@ -22,7 +22,7 @@ const INPUT_MESSAGES: Record<string, string> = {
  * without amounts (FR-PRC-07). A discount above the cap is refused here, on
  * the server, whatever the client sends (FR-DSC-04).
  */
-export function offerContentFrom(state: PricingScreenState, note: string | null): OfferContent {
+export function offerContentFrom(state: PricingScreenState, note: string | null, contactPersonId: string | null = null): OfferContent {
   const { outcome, settings, config } = state;
   if (outcome.kind === 'COMPANY_INCOMPLETE') {
     throw new InvalidPricingInputError(outcome.missing[0], 'Complete the company record first.', 'COMPANY_INCOMPLETE');
@@ -106,5 +106,6 @@ export function offerContentFrom(state: PricingScreenState, note: string | null)
       descriptionEn: service.descriptionEn,
     })),
     note,
+    contactPersonId,
   };
 }

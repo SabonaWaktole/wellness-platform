@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 import { requireTenant, requireTenantId } from '@main/interfaces/http/tenantContext';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactFields } from '../../../access/domain/redactFields';
-import { DealNotFoundError, DealStageNotAllowedError, InvalidDealError } from '../../domain/errors';
+import { DealHasSentOfferError, DealNotFoundError, DealStageNotAllowedError, InvalidDealError } from '../../domain/errors';
 import { DealStage } from '../../domain/DealStage';
 import { DealType } from '../../domain/DealType';
 import { CreateDealUseCase } from '../../application/use-cases/CreateDealUseCase';
@@ -17,7 +17,7 @@ import { GetPipelineBoardUseCase } from '../../application/use-cases/GetPipeline
 import { GetDealActivitiesUseCase } from '../../application/use-cases/GetDealActivitiesUseCase';
 import { GetDealOffersUseCase } from '../../application/use-cases/GetDealOffersUseCase';
 import { SaveDraftOfferUseCase } from '../../../quotations/application/offers/SaveDraftOfferUseCase';
-import { OfferNotEditableError } from '../../../quotations/domain/offerErrors';
+import { OfferNotEditableError, OfferReviseFirstError } from '../../../quotations/domain/offerErrors';
 import { InvalidPricingInputError, InvalidPricingValueError, PricingSubjectNotFoundError } from '../../../pricing/domain/errors';
 import { dealSchemas } from './dealSchemas';
 
@@ -41,7 +41,12 @@ function sendDealError(res: Response, next: NextFunction, error: unknown) {
   if (error instanceof InvalidPricingInputError || error instanceof InvalidPricingValueError) {
     return res.status(400).json({ error: error.message, code: error.code, field: error.field });
   }
-  if (error instanceof DealStageNotAllowedError || error instanceof OfferNotEditableError) {
+  if (
+    error instanceof DealStageNotAllowedError ||
+    error instanceof OfferNotEditableError ||
+    error instanceof OfferReviseFirstError ||
+    error instanceof DealHasSentOfferError
+  ) {
     return res.status(409).json({ error: error.message, code: error.code });
   }
   return next(error);
@@ -132,7 +137,7 @@ export class DealController {
   /** 201 for the deal's first draft, 200 when the draft is updated (FR-PRC-12). */
   saveOffer = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { note, alsoUpdateCompany, ...choices } = req.body;
+      const { note, alsoUpdateCompany, contactPersonId, ...choices } = req.body;
       const { offer, created } = await this.saveDraftOffer.execute({
         access: req.access!,
         tenantId: requireTenantId(req),
@@ -140,6 +145,7 @@ export class DealController {
         choices,
         note: note ?? null,
         alsoUpdateCompany: alsoUpdateCompany ?? false,
+        contactPersonId,
       });
       res.status(created ? 201 : 200).json({ data: redactFields(offer, req.access!) });
     } catch (error) {

@@ -30,10 +30,12 @@ export class QuotationFollowUpJob implements ScheduledJob {
 
   async run(now: Date): Promise<string> {
     const allSettings = await this.settingsRepo.listAll();
+    // Under the sales process, follow-ups are planned by hand (Slice 11).
+    const salesProcess = new Set((await this.queries.listSalesProcessTenants()).map((tenant) => tenant.id));
     let sent = 0;
 
     for (const settings of allSettings) {
-      if (!settings.quotationFollowUpEnabled) continue;
+      if (!settings.quotationFollowUpEnabled || salesProcess.has(settings.tenantId)) continue;
 
       const stale = await this.queries.findQuotationsNeedingFollowUp(
         settings.tenantId,
@@ -55,7 +57,7 @@ export class QuotationFollowUpJob implements ScheduledJob {
           recipientUserIds: [quotation.createdByUserId],
           type: 'QUOTATION_FOLLOW_UP',
           params: {
-            reference: quotationReference(quotation.id),
+            reference: quotationReference(quotation),
             clientName: quotation.clientName,
             daysWaiting,
           },
