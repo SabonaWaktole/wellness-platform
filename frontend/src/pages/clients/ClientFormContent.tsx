@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Building2, FileText, Save } from 'lucide-react';
+import { Briefcase, Building2, FileText, Save } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
@@ -15,6 +15,7 @@ import { useCreateClient, useUpdateClient, useClientDetail } from '../../hooks/u
 import { useClientForm } from '../../hooks/useClientForm';
 import { useTeam } from '../../hooks/useTeam';
 import { useActiveLookups } from '../../hooks/useActiveLookups';
+import { usePermission } from '../../hooks/usePermission';
 import { getStaffDisplayName } from '../../utils/userUtils';
 import { lookupLabel } from '../../utils/lookupLabel';
 import { RiskBadge } from '../../components/clients/RiskBadge';
@@ -62,6 +63,10 @@ export const ClientFormContent: React.FC = () => {
   // Create mode only — the initial contacts (FR-CMP-04). Edit mode reads
   // client.contacts directly and writes through the per-contact endpoints.
   const [draftContacts, setDraftContacts] = useState<ContactPersonInput[]>([emptyContactRow()]);
+  // FR-DEAL-02: the company's first deal, created with it. Offered on create
+  // only, and only to someone who may create deals.
+  const canCreateDeal = usePermission('deals.edit');
+  const [createDeal, setCreateDeal] = useState(false);
 
   const { control, handleSubmit, reset, getValues, watch, setValue } = useForm<ClientFormValues>({
     defaultValues: {
@@ -256,7 +261,7 @@ export const ClientFormContent: React.FC = () => {
       profile,
       // Contacts travel only on create — an edit's contacts are already
       // saved individually through ContactPersonsEditor's own endpoints.
-      ...(isEdit ? {} : { contacts: draftContacts }),
+      ...(isEdit ? {} : { contacts: draftContacts, ...(createDeal ? { createDeal: true } : {}) }),
     };
 
     setSubmitError(null);
@@ -490,6 +495,25 @@ export const ClientFormContent: React.FC = () => {
             <ContactPersonsEditor mode="create" contacts={draftContacts} onChange={setDraftContacts} />
           )}
         </Card>
+
+        {/* First deal (M2 Slice 6: FR-DEAL-02) */}
+        {!isEdit && canCreateDeal && (
+          <Card className={styles.sectionCard} padding="xl">
+            <div className={styles.sectionHeader}>
+              <div className={styles.iconWrapper}>
+                <Briefcase size={20} />
+              </div>
+              <h2 className={styles.sectionTitle}>{t('form.firstDeal.title')}</h2>
+            </div>
+            <label className={styles.checkboxRow}>
+              <input type="checkbox" checked={createDeal} onChange={(e) => setCreateDeal(e.target.checked)} />
+              <span>
+                {t('form.firstDeal.label')}
+                <span className={styles.checkboxHelper}>{t('form.firstDeal.helper')}</span>
+              </span>
+            </label>
+          </Card>
+        )}
 
         {/* Internal Notes */}
         <Card className={styles.sectionCard} padding="xl">

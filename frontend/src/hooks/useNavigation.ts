@@ -24,6 +24,8 @@ type NavItemSpec = Omit<NavItem, 'label'> & { labelKey: string; permission?: str
 const tenantNavItems: NavItemSpec[] = [
   { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'dashboard' },
   { id: 'clients', labelKey: 'nav.clients', icon: 'group', permission: 'companies.view' },
+  // The sales pipeline (M2 Slice 6): the board, with the list one click away.
+  { id: 'pipeline', labelKey: 'nav.pipeline', icon: 'pipeline', permission: 'deals.view' },
   { id: 'appointments', labelKey: 'nav.appointments', icon: 'event', permission: 'calendar.view' },
   { id: 'inventory', labelKey: 'nav.inventory', icon: 'inventory_2', permission: 'inventory.manage' },
   { id: 'quotations', labelKey: 'nav.quotations', icon: 'description', permission: 'quotations.manage' },

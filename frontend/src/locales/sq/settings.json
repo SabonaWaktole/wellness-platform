@@ -843,12 +843,13 @@
   "statuses": {
     "breadcrumb": "Statuset",
     "title": "Statuset",
-    "subtitle": "Ndryshoni emrin, ngjyrën dhe renditjen e statuseve fikse të kontratave dhe pagesave. Vetë grupi nuk mund të ndryshojë: riemërtimi i \"Aktive\" e ndryshon etiketën kudo, por statusi nën të mbetet i njëjtë.",
+    "subtitle": "Ndryshoni emrin, ngjyrën dhe renditjen e statuseve fikse të kontratave dhe pagesave dhe të fazave të marrëveshjeve. Vetë grupi nuk mund të ndryshojë: riemërtimi i \"Aktive\" e ndryshon etiketën kudo, por statusi nën të mbetet i njëjtë.",
     "loading": "Duke u ngarkuar…",
     "loadFailed": "Statuset nuk u ngarkuan.",
     "sections": {
       "contract": "Statuset e kontratës",
-      "payment": "Statuset e pagesës"
+      "payment": "Statuset e pagesës",
+      "deal": "Fazat e marrëveshjeve"
     },
     "columns": {
       "order": "Renditja",

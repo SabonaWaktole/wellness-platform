@@ -1,0 +1,29 @@
+.switch {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-surface-container-high);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--font-size-label-md, 14px);
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  text-decoration: none;
+}
+
+.option:hover {
+  color: var(--text-primary);
+}
+
+.active {
+  background: var(--color-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.08));
+}

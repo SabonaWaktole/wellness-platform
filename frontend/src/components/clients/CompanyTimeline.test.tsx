@@ -85,6 +85,32 @@ describe('CompanyTimeline (FR-CMP-05)', () => {
     expect(screen.getByText('Payment received · contract CD34')).toBeInTheDocument();
   });
 
+  it('FR-DEAL-20 shows a deal\'s creation and its stage changes, an automatic one as "System"', () => {
+    signIn({ ...ADMIN, 'deals.view': 'ALL' });
+    renderTimeline({
+      history: history([
+        entry({
+          id: 'd1', category: 'DEAL', type: 'DEAL_CREATED', actor: { id: 'u2', name: 'Anna Hoxha' },
+          details: { dealId: 'x', title: null, type: 'NEW_CONTRACT' },
+        }),
+        entry({
+          id: 'd2', category: 'DEAL', type: 'DEAL_STAGE_CHANGED',
+          details: { dealId: 'x', title: 'Two sites', type: 'EXTRA_SERVICES', fromStage: 'NEW_LEAD', toStage: 'CONTACTED' },
+        }),
+      ]),
+    });
+
+    expect(screen.getByText('Deal created: New contract')).toBeInTheDocument();
+    expect(screen.getByText('Deal Two sites: New lead → Contacted')).toBeInTheDocument();
+    expect(screen.getByText(/by System/)).toBeInTheDocument();
+  });
+
+  it('FR-DEAL-20 offers the Deals chip only with deals.view', () => {
+    signIn({ ...ADMIN, 'deals.view': 'OWN' });
+    renderTimeline();
+    expect(screen.getByRole('button', { name: 'Deals' })).toBeInTheDocument();
+  });
+
   it('FR-RBAC-06 shows no amount when the server has redacted it', () => {
     signIn(RECEPTION);
     renderTimeline({

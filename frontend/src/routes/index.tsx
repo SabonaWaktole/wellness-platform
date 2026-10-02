@@ -45,6 +45,11 @@ import { InvoiceDetail } from '../pages/invoices/InvoiceDetail';
 import { ContractList } from '../pages/contracts/ContractList';
 import { ContractDetail } from '../pages/contracts/ContractDetail';
 import { ContractFormPage } from '../pages/contracts/ContractFormPage';
+import { DealsPage } from '../pages/deals/DealsPage';
+import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
+import { DealListContent } from '../pages/deals/DealListContent';
+import { DealDetailContent } from '../pages/deals/DealDetailContent';
+import { DealFormContent } from '../pages/deals/DealFormContent';
 import { IntegrationsPage } from '../pages/IntegrationsPage';
 import { StatusPage } from '../components/StatusPage/StatusPage';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -501,6 +506,70 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ContractFormPage />
+          </ProtectedRoute>
+        ),
+      },
+      /*
+       * Deals and the pipeline (M2 Slice 6). `deals/new` before
+       * `deals/:dealId`, for the same reason as contracts above.
+       */
+      {
+        path: 'pipeline',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.view">
+              <DealsPage>
+                <PipelineBoardContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'pipeline/list',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.view">
+              <DealsPage>
+                <DealListContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'deals/new',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.edit">
+              <DealsPage>
+                <DealFormContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'deals/:dealId',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.view">
+              <DealsPage>
+                <DealDetailContent />
+              </DealsPage>
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'deals/:dealId/edit',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="deals.edit">
+              <DealsPage>
+                <DealFormContent />
+              </DealsPage>
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

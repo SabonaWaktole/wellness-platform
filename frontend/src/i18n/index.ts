@@ -24,6 +24,7 @@ import enDashboard from '../locales/en/dashboard.json';
 import enNotifications from '../locales/en/notifications.json';
 import enForms from '../locales/en/forms.json';
 import enAudit from '../locales/en/audit.json';
+import enDeals from '../locales/en/deals.json';
 
 import sqCommon from '../locales/sq/common.json';
 import sqAuth from '../locales/sq/auth.json';
@@ -38,6 +39,7 @@ import sqDashboard from '../locales/sq/dashboard.json';
 import sqNotifications from '../locales/sq/notifications.json';
 import sqForms from '../locales/sq/forms.json';
 import sqAudit from '../locales/sq/audit.json';
+import sqDeals from '../locales/sq/deals.json';
 
 import elCommon from '../locales/el/common.json';
 import elAuth from '../locales/el/auth.json';
@@ -52,6 +54,7 @@ import elDashboard from '../locales/el/dashboard.json';
 import elNotifications from '../locales/el/notifications.json';
 import elForms from '../locales/el/forms.json';
 import elAudit from '../locales/el/audit.json';
+import elDeals from '../locales/el/deals.json';
 
 import itCommon from '../locales/it/common.json';
 import itAuth from '../locales/it/auth.json';
@@ -66,6 +69,7 @@ import itDashboard from '../locales/it/dashboard.json';
 import itNotifications from '../locales/it/notifications.json';
 import itForms from '../locales/it/forms.json';
 import itAudit from '../locales/it/audit.json';
+import itDeals from '../locales/it/deals.json';
 
 /**
  * Catalogues are imported statically rather than fetched at runtime.
@@ -91,6 +95,7 @@ export const resources = {
     notifications: enNotifications,
     forms: enForms,
     audit: enAudit,
+    deals: enDeals,
   },
   sq: {
     common: sqCommon,
@@ -106,6 +111,7 @@ export const resources = {
     notifications: sqNotifications,
     forms: sqForms,
     audit: sqAudit,
+    deals: sqDeals,
   },
   el: {
     common: elCommon,
@@ -121,6 +127,7 @@ export const resources = {
     notifications: elNotifications,
     forms: elForms,
     audit: elAudit,
+    deals: elDeals,
   },
   it: {
     common: itCommon,
@@ -136,6 +143,7 @@ export const resources = {
     notifications: itNotifications,
     forms: itForms,
     audit: itAudit,
+    deals: itDeals,
   },
 } as const;
 

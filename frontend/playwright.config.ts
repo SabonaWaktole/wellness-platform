@@ -23,7 +23,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: [/mobile360\.spec\.ts/, /salesScript\.spec\.ts/, /\.setup\.ts/],
+      testIgnore: [/mobile360\.spec\.ts/, /salesScript\.spec\.ts/, /pipeline\.spec\.ts/, /\.setup\.ts/],
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -32,7 +32,7 @@ export default defineConfig({
     },
     {
       name: 'desktop',
-      testMatch: /salesScript\.spec\.ts/,
+      testMatch: /(salesScript|pipeline)\.spec\.ts/,
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] },
     },

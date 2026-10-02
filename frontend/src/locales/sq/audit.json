@@ -51,7 +51,8 @@
     "PricingSettings": "Cilësimet e çmimeve",
     "Service": "Shërbim",
     "ServicePackage": "Paketë shërbimesh",
-    "SalesScript": "Skripti i shitjes"
+    "SalesScript": "Skripti i shitjes",
+    "Deal": "Marrëveshje"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
@@ -59,7 +60,8 @@
     "contracts": "Kontratat dhe pagesat",
     "lists": "Listat e cilësimeve",
     "pricing": "Çmimet",
-    "salesScript": "Skripti i shitjes"
+    "salesScript": "Skripti i shitjes",
+    "deals": "Marrëveshjet"
   },
   "actors": {
     "system": "Sistemi",

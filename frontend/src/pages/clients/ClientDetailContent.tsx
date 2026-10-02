@@ -16,6 +16,7 @@ import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { Tabs } from '../../components/ui/Tabs';
 import { usePermission } from '../../hooks/usePermission';
 import { ClientContractsTab } from '../../components/clients/ClientContractsTab';
+import { ClientDealsTab } from '../../components/clients/ClientDealsTab';
 import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { AppointmentForm } from '../../components/forms/AppointmentForm/AppointmentForm';
@@ -93,11 +94,14 @@ export const ClientDetailContent: React.FC = () => {
   // pending invitations are a Business-Owner-only endpoint.
   const { staff, fetchStaff } = useTeam();
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts' | 'deals'>('timeline');
   // FR-RBAC-07: a role without contract validity (Reception, once UAT-3 removes
-  // it) gets no tab, rather than one whose request is refused.
+  // it) gets no tab, rather than one whose request is refused. Likewise deals,
+  // which Reception never sees (FR-DEAL-04).
   const canSeeContracts = usePermission('contracts.validity.view');
-  const shownTab = activeTab === 'contracts' && !canSeeContracts ? 'timeline' : activeTab;
+  const canSeeDeals = usePermission('deals.view');
+  const shownTab =
+    (activeTab === 'contracts' && !canSeeContracts) || (activeTab === 'deals' && !canSeeDeals) ? 'timeline' : activeTab;
   const [isInteractionSlideOverOpen, setIsInteractionSlideOverOpen] = useState(false);
   const [isAppointmentSlideOverOpen, setIsAppointmentSlideOverOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -417,10 +421,14 @@ export const ClientDetailContent: React.FC = () => {
               // count here would mean fetching every client's contracts on
               // every client page whether or not anyone opens the tab.
               ...(canSeeContracts ? [{ id: 'contracts' as const, label: t('detail.tabContracts') }] : []),
+              // No count, for the same reason as contracts (M2 Slice 6).
+              ...(canSeeDeals ? [{ id: 'deals' as const, label: t('detail.tabDeals') }] : []),
             ]}
           />
 
-          {shownTab === 'contracts' ? (
+          {shownTab === 'deals' ? (
+            <ClientDealsTab clientId={clientId || ''} />
+          ) : shownTab === 'contracts' ? (
             <ClientContractsTab clientId={clientId || ''} />
           ) : shownTab === 'timeline' ? (
             <Card padding="lg" className={styles.timelineCard}>

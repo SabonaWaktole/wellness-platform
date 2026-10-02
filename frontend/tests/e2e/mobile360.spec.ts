@@ -42,12 +42,19 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
   test.describe('signed in as the Administrator', () => {
     test.use({ storageState: ADMIN_STATE });
     let companyId: string;
+    let dealId: string;
 
     test.beforeEach(async ({ page }) => {
       if (!companyId) {
         const search = await page.request.get(`/api/${TENANT}/clients/search?search=${encodeURIComponent('UAT Kafe Blloku')}`);
         companyId = (await search.json()).items[0]?.id;
         expect(companyId, 'run seed:uat first — UAT Kafe Blloku is missing').toBeTruthy();
+      }
+      if (!dealId) {
+        // seed:uat gives UAT Kafe Blloku a New contract deal (M2 Slice 6).
+        const deals = await page.request.get(`/api/${TENANT}/deals?clientId=${companyId}`);
+        dealId = (await deals.json()).data?.items[0]?.id;
+        expect(dealId, 'run seed:uat first — UAT Kafe Blloku has no deal').toBeTruthy();
       }
     });
 
@@ -67,6 +74,11 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
       // M2 Slice 5
       ['settings → sales script', () => 'settings/sales-script'],
+      // M2 Slice 6 (FR-DEAL-13: the board scrolls inside its own area, never the page)
+      ['pipeline board', () => 'pipeline'],
+      ['pipeline list', () => 'pipeline/list'],
+      ['deal page', () => `deals/${dealId}`],
+      ['new deal form', () => 'deals/new'],
     ];
 
     test('NFR-USE-02 FR-SCR-02 the sales script panel covers the phone screen and closes', async ({ page }) => {
@@ -80,6 +92,18 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
 
       await panel.getByRole('button', { name: /Close the sales script|Mbyll skriptin e shitjes/ }).click();
       await expect(panel).toBeHidden();
+    });
+
+    test('NFR-USE-02 FR-DEAL-13 the board scrolls inside its own area and a card offers "Move to stage"', async ({ page }) => {
+      await page.goto(`/${TENANT}/pipeline`);
+      const column = page.getByRole('region', { name: /^(New lead|Kontakt i ri),/ });
+      await expect(column).toBeVisible();
+      await expectNoHorizontalOverflow(page, 'pipeline board');
+
+      await column.getByRole('button', { name: /Move to stage|Kalo në fazën/ }).first().click();
+      await expect(page.getByRole('menu')).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: /Negotiation|Negocim/ })).toBeVisible();
+      await page.keyboard.press('Escape');
     });
 
     for (const [screen, path] of screens) {

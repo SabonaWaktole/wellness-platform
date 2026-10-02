@@ -31,6 +31,8 @@ export const clientService = {
       notes?: string | null;
       profile: CompanyProfileInput;
       contacts: ContactPersonInput[];
+      /** Also create the company's first deal, in New lead (M2 Slice 6, FR-DEAL-02). */
+      createDeal?: boolean;
     }
   ) => {
     const response = await apiClient.post<ClientWithWarnings>(`/${tenantSlug}/clients`, data);
