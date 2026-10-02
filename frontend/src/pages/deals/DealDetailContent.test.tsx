@@ -8,7 +8,7 @@ import { ToastProvider } from '../../components/ui/Toast';
 import type { DealDetail } from '../../types/deal';
 
 vi.mock('../../services/dealService', () => ({
-  dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn() },
+  dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn(), activities: vi.fn(), list: vi.fn() },
 }));
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
 vi.mock('../../hooks/useTeam', () => ({
@@ -70,6 +70,7 @@ describe('Deal page (FR-DEAL-03)', () => {
     vi.clearAllMocks();
     setPermissions({ 'deals.view': 'TEAM', 'deals.edit': 'TEAM', 'commercial.view': 'TEAM', 'script.view': true });
     vi.mocked(dealService.get).mockResolvedValue(detail());
+    vi.mocked(dealService.activities).mockResolvedValue([]);
   });
 
   it('FR-DEAL-03 shows company, contact persons, stage, value, salesperson, stage history, notes and the sales script button on one page', async () => {
@@ -137,5 +138,48 @@ describe('Deal page (FR-DEAL-03)', () => {
     vi.mocked(dealService.get).mockRejectedValue({ response: { status: 404 } });
     renderPage();
     expect(await screen.findByText('This deal does not exist or is not one of yours.')).toBeInTheDocument();
+  });
+});
+
+describe('Deal page activities (FR-ACT-05)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setPermissions({ 'deals.view': 'OWN', 'deals.edit': 'OWN', 'activities.view': 'OWN', 'activities.add': 'OWN', 'notes.add': 'OWN' });
+    vi.mocked(dealService.get).mockResolvedValue(detail());
+  });
+
+  it("FR-ACT-05 lists the deal's activities with their type, time, author, contact, result and next action", async () => {
+    vi.mocked(dealService.activities).mockResolvedValue([
+      {
+        id: 'i1', clientId: 'c1', dealId: 'd1', channel: 'CALL', content: '', occurredAt: '2026-10-02T09:00:00.000Z',
+        recordedAt: '2026-10-02T09:05:00.000Z', updatedAt: null, author: { id: 'u-a', name: 'Besa Test' },
+        contact: { id: 'p1', name: 'Alba Hoxha' }, result: { id: 'r1', nameSq: 'Kërkoi ofertë', nameEn: 'Offer requested' },
+        clientFeedback: null, nextAction: 'Prepare the offer',
+      },
+    ]);
+    renderPage();
+
+    const section = await screen.findByRole('list', { name: 'Activities' });
+    expect(within(section).getByText('Call')).toBeInTheDocument();
+    expect(within(section).getByText(/Besa Test/)).toBeInTheDocument();
+    expect(within(section).getByText('Alba Hoxha')).toBeInTheDocument();
+    expect(within(section).getByText('Offer requested')).toBeInTheDocument();
+    expect(within(section).getByText('Prepare the offer')).toBeInTheDocument();
+    expect(dealService.activities).toHaveBeenCalledWith('acme', 'd1');
+  });
+
+  it('FR-ACT-01 offers "Record activity" on an open deal', async () => {
+    vi.mocked(dealService.activities).mockResolvedValue([]);
+    renderPage();
+    expect(await screen.findByText('No activities on this deal yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Record activity' })).toBeInTheDocument();
+  });
+
+  it('FR-ACT-01 a won deal takes no new activities', async () => {
+    vi.mocked(dealService.get).mockResolvedValue(detail({ stage: 'WON', closedAt: '2026-10-02T10:00:00Z' }));
+    vi.mocked(dealService.activities).mockResolvedValue([]);
+    renderPage();
+    expect(await screen.findByText('No activities on this deal yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Record activity' })).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Briefcase, CalendarClock, Mail, MessageSquare, MoreVertical, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, Briefcase, CalendarClock, Mail, MoreVertical, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
@@ -24,13 +24,14 @@ import { getStaffDisplayName } from '../../utils/userUtils';
 import { isOpenStage, OPEN_DEAL_STAGES } from '../../types/deal';
 import type { DealDetail, DealStage } from '../../types/deal';
 import { dealErrorMessage } from './dealErrors';
+import { DealActivitiesSection } from './DealActivitiesSection';
 import styles from './DealDetailContent.module.css';
 
 /**
  * The deal page (FR-DEAL-03): company, contact persons, stage, value,
  * salesperson, expected close, notes and the stage history (FR-DEAL-09) on
- * one page, with the sales script button. The offers, activities and
- * follow-ups sections are filled by Slices 7–11.
+ * one page, with the sales script button, and the deal's activities (Slice 7).
+ * The offers and follow-ups sections are filled by Slices 8–11.
  */
 export const DealDetailContent: React.FC = () => {
   const { t } = useTranslation('deals');
@@ -285,7 +286,7 @@ export const DealDetailContent: React.FC = () => {
           </Card>
 
           <Placeholder icon={<Briefcase size={18} />} title={t('detail.offers')} text={t('detail.offersSoon')} />
-          <Placeholder icon={<MessageSquare size={18} />} title={t('detail.activities')} text={t('detail.activitiesSoon')} />
+          <DealActivitiesSection deal={deal} onDealChanged={load} />
           <Placeholder icon={<CalendarClock size={18} />} title={t('detail.followUps')} text={t('detail.followUpsSoon')} />
         </div>
       </div>
@@ -330,7 +331,7 @@ export const DealDetailContent: React.FC = () => {
   );
 };
 
-/** A section a later slice fills (offers: 8–9, activities: 7, follow-ups: 11). */
+/** A section a later slice fills (offers: 8–9, follow-ups: 11). */
 const Placeholder: React.FC<{ icon: React.ReactNode; title: string; text: string }> = ({ icon, title, text }) => (
   <Card padding="lg">
     <h2 className={styles.sectionTitle}>

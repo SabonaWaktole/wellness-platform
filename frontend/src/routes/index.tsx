@@ -186,7 +186,7 @@ export const routes: RouteObject[] = [
         path: 'settings/lists/:list?',
         element: (
           <ProtectedRoute>
-            <RequirePermission permission="settings.manage">
+            <RequirePermission permission={['settings.manage', 'activityResults.manage']}>
               <ListsSettingsPage />
             </RequirePermission>
           </ProtectedRoute>

@@ -1,7 +1,14 @@
 import { apiClient as api } from '../api';
 
 /** The admin-managed lists (Slices 8, 9, 10). */
-export type LookupListKey = 'risk-levels' | 'business-types' | 'areas' | 'cities' | 'follow-up-intervals' | 'lost-reasons';
+export type LookupListKey =
+  | 'risk-levels'
+  | 'business-types'
+  | 'areas'
+  | 'cities'
+  | 'follow-up-intervals'
+  | 'lost-reasons'
+  | 'activity-results';
 
 /** What every list value has. Only the Albanian name is required (FR-LNG-03). */
 export interface LookupItem {
@@ -33,6 +40,9 @@ export interface FollowUpInterval extends LookupItem {
 
 export type LostReason = LookupItem;
 
+/** What came of an activity (M2 Slice 7, FR-ACT-03). */
+export type ActivityResult = LookupItem;
+
 export interface LookupItemOf {
   'risk-levels': RiskLevel;
   'business-types': BusinessType;
@@ -40,6 +50,7 @@ export interface LookupItemOf {
   cities: City;
   'follow-up-intervals': FollowUpInterval;
   'lost-reasons': LostReason;
+  'activity-results': ActivityResult;
 }
 
 /** The body of a create or update: the labels plus the list's own fields. */

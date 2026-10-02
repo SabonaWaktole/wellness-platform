@@ -13,7 +13,6 @@ import { clientService } from '../../services/clientService';
 import {
   useClientSettings,
   useDefineCustomField,
-  useDefineOutcomeCategory,
   useUpdateCustomField,
   useDeleteCustomField,
   useReorderCustomFields,
@@ -43,7 +42,7 @@ export const ClientSettingsContent: React.FC = () => {
   const { tenantSlug = '' } = useParams();
   const { t: tc } = useTranslation('common');
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'fields' | 'form' | 'outcomes'>('fields');
+  const [activeTab, setActiveTab] = useState<'fields' | 'form'>('fields');
 
   // Form state for the slide-over
   const [newFieldName, setNewFieldName] = useState('');
@@ -52,21 +51,19 @@ export const ClientSettingsContent: React.FC = () => {
   const [optionDraft, setOptionDraft] = useState('');
   const [newFieldRole, setNewFieldRole] = useState<'' | FieldRole>('');
   const [newFieldRequired, setNewFieldRequired] = useState(false);
-  const [newOutcomeLabel, setNewOutcomeLabel] = useState('');
 
   const [editingField, setEditingField] = useState<CustomFieldDefinition | null>(null);
   const [deletingField, setDeletingField] = useState<CustomFieldDefinition | null>(null);
 
-  const { customFields, outcomeCategories, isLoading, fetchSettings } = useClientSettings();
+  const { customFields, isLoading, fetchSettings } = useClientSettings();
   const { defineCustomField, isLoading: isDefiningField, error: fieldError } = useDefineCustomField();
   const { updateCustomField, isLoading: isUpdatingField, error: updateFieldError } = useUpdateCustomField();
   const { deleteCustomField } = useDeleteCustomField();
   const { reorderCustomFields } = useReorderCustomFields();
-  const { defineOutcomeCategory, isLoading: isDefiningCategory, error: outcomeError } = useDefineOutcomeCategory();
 
   const sortedFields = [...customFields].sort((a, b) => a.order - b.order);
 
-  const saveError = activeTab === 'fields' ? (fieldError || updateFieldError) : outcomeError;
+  const saveError = fieldError || updateFieldError;
 
   useEffect(() => {
     fetchSettings();
@@ -125,20 +122,6 @@ export const ClientSettingsContent: React.FC = () => {
         await defineCustomField(payload);
       }
       resetFieldForm();
-      setIsSlideOverOpen(false);
-      fetchSettings(); // refresh
-    } catch {
-      // Swallowed on purpose: the hook records the message in its `error`
-      // state, which is rendered above the form as `saveError`. The slide-over
-      // deliberately stays open so the user can correct the input.
-    }
-  };
-
-  const handleSaveOutcome = async () => {
-    if (!newOutcomeLabel) return;
-    try {
-      await defineOutcomeCategory({ label: newOutcomeLabel });
-      setNewOutcomeLabel('');
       setIsSlideOverOpen(false);
       fetchSettings(); // refresh
     } catch {
@@ -207,12 +190,6 @@ export const ClientSettingsContent: React.FC = () => {
               onClick={() => setActiveTab('form')}
             >
               {t('clientManagement.tabForm')}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === 'outcomes' ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab('outcomes')}
-            >
-              {t('clientManagement.tabOutcomeCategories')}
             </button>
           </div>
         </div>
@@ -316,72 +293,23 @@ export const ClientSettingsContent: React.FC = () => {
           * and a layout be rearranged without touching stored client data.
           */}
         {activeTab === 'form' && <ClientFormsTab />}
-
-        {/* Outcome Categories Tab */}
-        {activeTab === 'outcomes' && (
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>{t('clientManagement.outcomeCategories')}</h2>
-              <Button icon={<Plus size={16} />} onClick={() => setIsSlideOverOpen(true)}>
-                {t('clientManagement.addCategory')}
-              </Button>
-            </div>
-
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.th}>{t('clientManagement.label')}</th>
-                    <th className={styles.th}>{tc('labels.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading && (
-                    <tr><td colSpan={2} style={{ textAlign: 'center', padding: '20px' }}>{tc('state.loading')}</td></tr>
-                  )}
-                  {!isLoading && outcomeCategories.length === 0 && (
-                    <tr><td colSpan={2} style={{ textAlign: 'center', padding: '20px', color: 'var(--color-on-surface-variant)' }}>{t('clientManagement.noOutcomeCategories')}</td></tr>
-                  )}
-                  {!isLoading && outcomeCategories.map((cat) => (
-                    <tr key={cat.id} className={styles.tr}>
-                      <td className={styles.td}>{cat.label}</td>
-                      <td className={styles.td}>
-                        <button className={styles.actionButton} aria-label={t('clientManagement.editCategoryAria')} disabled title={t('clientManagement.editCategorySoon')}>
-                          <Edit2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Slide-Over for Adding/Editing */}
       <SlideOver
         isOpen={isSlideOverOpen}
         onClose={() => { setIsSlideOverOpen(false); resetFieldForm(); }}
-        title={
-          activeTab === 'fields'
-            ? (editingField ? t('clientManagement.editFieldTitle') : t('clientManagement.addFieldTitle'))
-            : t('clientManagement.addCategoryTitle')
-        }
+        title={editingField ? t('clientManagement.editFieldTitle') : t('clientManagement.addFieldTitle')}
         footer={
           <div className={styles.slideOverFooter}>
             <Button variant="outline" onClick={() => { setIsSlideOverOpen(false); resetFieldForm(); }}>
               {tc('actions.cancel')}
             </Button>
             <Button
-              onClick={activeTab === 'fields' ? handleSaveField : handleSaveOutcome}
-              disabled={
-                activeTab === 'fields'
-                  ? isDefiningField || isUpdatingField || !newFieldName
-                  : isDefiningCategory || !newOutcomeLabel
-              }
+              onClick={handleSaveField}
+              disabled={isDefiningField || isUpdatingField || !newFieldName}
             >
-              {(isDefiningField || isUpdatingField || isDefiningCategory) ? tc('state.saving') : tc('actions.save')}
+              {(isDefiningField || isUpdatingField) ? tc('state.saving') : tc('actions.save')}
             </Button>
           </div>
         }
@@ -392,104 +320,93 @@ export const ClientSettingsContent: React.FC = () => {
               {saveError}
             </p>
           )}
-          {activeTab === 'fields' ? (
-            <>
-              <TextInput
-                label={t('clientManagement.fieldName')}
-                placeholder={t('clientManagement.fieldNamePlaceholder')}
-                value={newFieldName}
-                onChange={(e) => setNewFieldName(e.target.value)}
-              />
-              <SelectInput label={t('clientManagement.fieldType')} value={newFieldType} onChange={(e) => setNewFieldType(e.target.value)}>
-                <option value="TEXT">{t('clientManagement.fieldTypes.TEXT')}</option>
-                <option value="NUMBER">{t('clientManagement.fieldTypes.NUMBER')}</option>
-                <option value="DATE">{t('clientManagement.fieldTypes.DATE')}</option>
-                <option value="BOOLEAN">{t('clientManagement.fieldTypes.BOOLEAN')}</option>
-                <option value="ALPHANUMERIC">{t('clientManagement.fieldTypes.ALPHANUMERIC')}</option>
-                <option value="SINGLE_SELECT">{t('clientManagement.fieldTypes.SINGLE_SELECT')}</option>
-                <option value="MULTI_SELECT">{t('clientManagement.fieldTypes.MULTI_SELECT')}</option>
-                <option value="EMAIL">{t('clientManagement.fieldTypes.EMAIL')}</option>
-                <option value="USER_REFERENCE">{t('clientManagement.fieldTypes.USER_REFERENCE')}</option>
-              </SelectInput>
+          <TextInput
+            label={t('clientManagement.fieldName')}
+            placeholder={t('clientManagement.fieldNamePlaceholder')}
+            value={newFieldName}
+            onChange={(e) => setNewFieldName(e.target.value)}
+          />
+          <SelectInput label={t('clientManagement.fieldType')} value={newFieldType} onChange={(e) => setNewFieldType(e.target.value)}>
+            <option value="TEXT">{t('clientManagement.fieldTypes.TEXT')}</option>
+            <option value="NUMBER">{t('clientManagement.fieldTypes.NUMBER')}</option>
+            <option value="DATE">{t('clientManagement.fieldTypes.DATE')}</option>
+            <option value="BOOLEAN">{t('clientManagement.fieldTypes.BOOLEAN')}</option>
+            <option value="ALPHANUMERIC">{t('clientManagement.fieldTypes.ALPHANUMERIC')}</option>
+            <option value="SINGLE_SELECT">{t('clientManagement.fieldTypes.SINGLE_SELECT')}</option>
+            <option value="MULTI_SELECT">{t('clientManagement.fieldTypes.MULTI_SELECT')}</option>
+            <option value="EMAIL">{t('clientManagement.fieldTypes.EMAIL')}</option>
+            <option value="USER_REFERENCE">{t('clientManagement.fieldTypes.USER_REFERENCE')}</option>
+          </SelectInput>
 
-              {needsOptions(newFieldType) && (
-                <div className={styles.optionsEditor}>
-                  <label className={styles.optionsLabel}>{t('clientManagement.options')}</label>
-                  <div className={styles.optionsChips}>
-                    {newFieldOptions.map((opt) => (
-                      <span key={opt} className={styles.optionChip}>
-                        {opt}
-                        <button
-                          type="button"
-                          className={styles.optionChipRemove}
-                          aria-label={t('clientManagement.removeOptionAria', { option: opt })}
-                          onClick={() => handleRemoveOption(opt)}
-                        >
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className={styles.optionsInputRow}>
-                    <TextInput
-                      placeholder={t('clientManagement.optionsPlaceholder')}
-                      value={optionDraft}
-                      onChange={(e) => setOptionDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddOption();
-                        }
-                      }}
-                    />
-                    <Button type="button" variant="outline" onClick={handleAddOption}>
-                      {t('clientManagement.addOption')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <SelectInput
-                label={t('clientManagement.role')}
-                value={newFieldRole}
-                onChange={(e) => setNewFieldRole(e.target.value as '' | FieldRole)}
-              >
-                {ROLE_OPTIONS.map((opt) => {
-                  if (opt.value === '') {
-                    return <option key="none" value="">{t(opt.labelKey)}</option>;
-                  }
-                  const holder = customFields.find(
-                    (f) => f.role === opt.value && f.id !== editingField?.id
-                  );
-                  return (
-                    <option key={opt.value} value={opt.value} disabled={!!holder}>
-                      {t(opt.labelKey)}{holder ? ` (${t('clientManagement.roleHeldBy', { fieldName: holder.fieldName })})` : ''}
-                    </option>
-                  );
-                })}
-              </SelectInput>
-
-              <div className={styles.checkboxContainer}>
-                <input
-                  id="new-field-required"
-                  type="checkbox"
-                  className={styles.checkbox}
-                  checked={newFieldRequired}
-                  onChange={(e) => setNewFieldRequired(e.target.checked)}
-                />
-                <label htmlFor="new-field-required" className={styles.checkboxLabel}>
-                  {t('clientManagement.requiredCheckbox')}
-                </label>
+          {needsOptions(newFieldType) && (
+            <div className={styles.optionsEditor}>
+              <label className={styles.optionsLabel}>{t('clientManagement.options')}</label>
+              <div className={styles.optionsChips}>
+                {newFieldOptions.map((opt) => (
+                  <span key={opt} className={styles.optionChip}>
+                    {opt}
+                    <button
+                      type="button"
+                      className={styles.optionChipRemove}
+                      aria-label={t('clientManagement.removeOptionAria', { option: opt })}
+                      onClick={() => handleRemoveOption(opt)}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
               </div>
-            </>
-          ) : (
-            <TextInput
-              label={t('clientManagement.categoryLabel')}
-              placeholder={t('clientManagement.categoryPlaceholder')}
-              value={newOutcomeLabel}
-              onChange={(e) => setNewOutcomeLabel(e.target.value)}
-            />
+              <div className={styles.optionsInputRow}>
+                <TextInput
+                  placeholder={t('clientManagement.optionsPlaceholder')}
+                  value={optionDraft}
+                  onChange={(e) => setOptionDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddOption();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={handleAddOption}>
+                  {t('clientManagement.addOption')}
+                </Button>
+              </div>
+            </div>
           )}
+
+          <SelectInput
+            label={t('clientManagement.role')}
+            value={newFieldRole}
+            onChange={(e) => setNewFieldRole(e.target.value as '' | FieldRole)}
+          >
+            {ROLE_OPTIONS.map((opt) => {
+              if (opt.value === '') {
+                return <option key="none" value="">{t(opt.labelKey)}</option>;
+              }
+              const holder = customFields.find(
+                (f) => f.role === opt.value && f.id !== editingField?.id
+              );
+              return (
+                <option key={opt.value} value={opt.value} disabled={!!holder}>
+                  {t(opt.labelKey)}{holder ? ` (${t('clientManagement.roleHeldBy', { fieldName: holder.fieldName })})` : ''}
+                </option>
+              );
+            })}
+          </SelectInput>
+
+          <div className={styles.checkboxContainer}>
+            <input
+              id="new-field-required"
+              type="checkbox"
+              className={styles.checkbox}
+              checked={newFieldRequired}
+              onChange={(e) => setNewFieldRequired(e.target.checked)}
+            />
+            <label htmlFor="new-field-required" className={styles.checkboxLabel}>
+              {t('clientManagement.requiredCheckbox')}
+            </label>
+          </div>
         </div>
       </SlideOver>
 

@@ -16,8 +16,8 @@ interface NavItem {
   id: string;
   label: string;
   icon: LucideIcon;
-  /** Undefined means always shown to a tenant user (the profile page). */
-  permission?: string;
+  /** Undefined means always shown to a tenant user (the profile page). A list means any one of them. */
+  permission?: string | string[];
   /** When set, the permission must be held at this scope, not merely held (see `warehouses`/`categories`). */
   minScope?: 'ALL';
 }
@@ -35,7 +35,8 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
     { id: 'profile', label: t('nav.profile'), icon: User },
     { id: 'company', label: t('nav.company'), icon: Building2, permission: 'settings.manage' },
     { id: 'client-management', label: t('nav.clientManagement'), icon: Sliders, permission: 'settings.manage' },
-    { id: 'lists', label: t('nav.lists'), icon: ListChecks, permission: 'settings.manage' },
+    // activityResults.manage reaches the activity results list (M2 Slice 7, FR-ACT-03).
+    { id: 'lists', label: t('nav.lists'), icon: ListChecks, permission: ['settings.manage', 'activityResults.manage'] },
     { id: 'statuses', label: t('nav.statuses'), icon: Palette, permission: 'settings.manage' },
     { id: 'pricing', label: t('nav.pricing'), icon: Calculator, permission: 'pricing.manage' },
     { id: 'sales-script', label: t('nav.salesScript'), icon: ScrollText, permission: 'script.edit' },
@@ -56,9 +57,12 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
 
   const visibleItems = navItems.filter((item) => {
     if (!item.permission) return true;
-    const grant = permissions[item.permission];
-    if (grant === undefined) return false;
-    return item.minScope ? grant === item.minScope : true;
+    const keys = Array.isArray(item.permission) ? item.permission : [item.permission];
+    return keys.some((key) => {
+      const grant = permissions[key];
+      if (grant === undefined) return false;
+      return item.minScope ? grant === item.minScope : true;
+    });
   });
   const showSidebar = visibleItems.some((item) => item.id !== 'profile');
 

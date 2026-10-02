@@ -255,6 +255,50 @@
   color: var(--text-primary);
 }
 
+/* The activities section (M2 Slice 7, FR-ACT-05): title and "Record activity"
+   share a row, wrapping at 360 px. */
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.sectionHeader .sectionTitle {
+  margin: 0;
+}
+
+.activities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.activityItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+
+.activityItem:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.activityHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs) var(--spacing-sm);
+}
+
 .modalBody {
   display: flex;
   flex-direction: column;

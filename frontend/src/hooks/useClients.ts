@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { clientService } from '../services/clientService';
 import { useParams } from 'react-router-dom';
-import type { Client, SearchClientsParams, CustomFieldDefinition, OutcomeCategory, ClientHistory, ClientRelatedCounts, ContactPersonInput, TimelineCategory } from '../types/client';
+import type { Client, SearchClientsParams, CustomFieldDefinition, ClientHistory, ClientRelatedCounts, ContactPersonInput, TimelineCategory } from '../types/client';
 import { extractApiErrorMessage } from '../utils/apiError';
 
 export const useClients = () => {
@@ -109,7 +109,6 @@ export const useClientHistory = (clientId: string) => {
 export const useClientSettings = () => {
   const { tenantSlug } = useParams();
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
-  const [outcomeCategories, setOutcomeCategories] = useState<OutcomeCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,12 +117,7 @@ export const useClientSettings = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [cf, oc] = await Promise.all([
-        clientService.getCustomFields(tenantSlug),
-        clientService.getOutcomeCategories(tenantSlug)
-      ]);
-      setCustomFields(cf);
-      setOutcomeCategories(oc);
+      setCustomFields(await clientService.getCustomFields(tenantSlug));
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch client settings');
     } finally {
@@ -131,7 +125,7 @@ export const useClientSettings = () => {
     }
   }, [tenantSlug]);
 
-  return { customFields, outcomeCategories, isLoading, error, fetchSettings };
+  return { customFields, isLoading, error, fetchSettings };
 };
 
 export const useCreateClient = () => {
@@ -178,29 +172,6 @@ export const useUpdateClient = () => {
   };
 
   return { updateClient, isLoading, error };
-};
-
-export const useAddInteraction = () => {
-  const { tenantSlug } = useParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const addInteraction = async (clientId: string, data: { channel: string; content: string; outcomeCategoryId?: string }) => {
-    if (!tenantSlug) throw new Error('Missing tenant context');
-    setIsLoading(true);
-    setError(null);
-    try {
-      return await clientService.addInteraction(tenantSlug, clientId, data);
-    } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to add interaction';
-      setError(msg);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return { addInteraction, isLoading, error };
 };
 
 export const useDefineCustomField = () => {
@@ -404,27 +375,4 @@ export const useContactPersons = () => {
     guard(() => clientService.setPrimaryContact(tenantSlug!, clientId, contactId), 'Failed to set the primary contact');
 
   return { addContact, updateContact, removeContact, setPrimaryContact, isLoading, error };
-};
-
-export const useDefineOutcomeCategory = () => {
-  const { tenantSlug } = useParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const defineOutcomeCategory = async (data: { label: string }) => {
-    if (!tenantSlug) throw new Error('Missing tenant context');
-    setIsLoading(true);
-    setError(null);
-    try {
-      return await clientService.defineOutcomeCategory(tenantSlug, data);
-    } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to define outcome category';
-      setError(msg);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return { defineOutcomeCategory, isLoading, error };
 };

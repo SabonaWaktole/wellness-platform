@@ -12,7 +12,7 @@ import { ADMIN_STATE } from './support/sessions';
  */
 const TENANT = process.env.E2E_TENANT ?? 'wellness-albania';
 
-const LISTS = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons'];
+const LISTS = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons', 'activity-results'];
 
 /** Settings → Pricing's tabs (M2 Slices 3 and 4; NFR-USE-02). */
 const PRICING_TABS = ['bands', 'risk', 'frequencies', 'zones', 'cap', 'services', 'packages', 'offer', 'calculator'];
@@ -105,6 +105,16 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       await column.getByRole('button', { name: /Move to stage|Kalo në fazën/ }).first().click();
       await expect(page.getByRole('menu')).toBeVisible();
       await expect(page.getByRole('menuitem', { name: /Negotiation|Negocim/ })).toBeVisible();
+      await page.keyboard.press('Escape');
+    });
+
+    test('NFR-USE-02 FR-ACT-01 the activity dialog fits the phone screen, all six types included', async ({ page }) => {
+      await page.goto(`/${TENANT}/clients/${companyId}?logInteraction=VISIT`);
+      const dialog = page.getByRole('dialog', { name: /Record activity|Regjistro aktivitet/ });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('radio')).toHaveCount(6);
+      await expect(dialog.getByRole('radio', { name: /Visit|Vizitë/ })).toHaveAttribute('aria-checked', 'true');
+      await expectNoHorizontalOverflow(page, 'activity dialog');
       await page.keyboard.press('Escape');
     });
 

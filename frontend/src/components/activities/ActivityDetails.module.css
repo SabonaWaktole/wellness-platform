@@ -1,0 +1,49 @@
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 2px var(--spacing-sm);
+  margin: 0;
+}
+
+/* Each pair is its own row of the grid, so the labels line up. */
+.field {
+  display: contents;
+}
+
+.label {
+  color: var(--color-on-surface-variant);
+  font-size: var(--font-size-body-sm);
+}
+
+.value {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.content {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.edited {
+  margin-right: auto;
+  color: var(--color-on-surface-variant);
+  font-size: var(--font-size-body-sm);
+  font-style: italic;
+}

@@ -50,6 +50,13 @@ describe('SettingsLayout', () => {
     expect(links[0].getAttribute('href')).toBe('/acme/settings/lists');
   });
 
+  it('FR-ACT-03 links to Lists for a user who manages only the activity results', () => {
+    renderAs({ 'activityResults.manage': true });
+
+    const links = screen.getAllByRole('link', { name: 'Lists' });
+    expect(links[0].getAttribute('href')).toBe('/acme/settings/lists');
+  });
+
   it('FR-SET-01 hides Lists from a user who does not', () => {
     renderAs({ 'users.manage': true, 'audit.view': true });
 
