@@ -130,7 +130,15 @@ SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZo
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_cityId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
-SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZoneCity_cityId_fkey` FOREIGN KEY (`cityId`) REFERENCES `City`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: PriceZoneCity.PriceZoneCity_cityId_fkey'' AS note');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZoneCity_cityId_fkey` FOREIGN KEY (`cityId`) REFERENCES `City`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PriceZoneCity.PriceZoneCity_cityId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- PriceZoneCity's City key cascades (migration 20260930210000_m2_price_zone_city_cascade): a database that
+-- received the earlier RESTRICT key gets it dropped and re-added.
+SET @restrict := (SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_cityId_fkey' AND DELETE_RULE <> 'CASCADE');
+SET @sql := IF(@restrict > 0, 'ALTER TABLE `PriceZoneCity` DROP FOREIGN KEY `PriceZoneCity_cityId_fkey`', 'SELECT ''skip: PriceZoneCity_cityId_fkey already cascades'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'PriceZoneCity' AND CONSTRAINT_NAME = 'PriceZoneCity_cityId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `PriceZoneCity` ADD CONSTRAINT `PriceZoneCity_cityId_fkey` FOREIGN KEY (`cityId`) REFERENCES `City`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: PriceZoneCity.PriceZoneCity_cityId_fkey'' AS note');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET FOREIGN_KEY_CHECKS=1;
 
@@ -234,6 +242,14 @@ SELECT
   UUID(), '', NOW(3), '20260930200000_m2_pricing_config', NULL, NULL, NOW(3), 1
 WHERE NOT EXISTS (
   SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260930200000_m2_pricing_config'
+);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20260930210000_m2_price_zone_city_cascade', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20260930210000_m2_price_zone_city_cascade'
 );
 
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
