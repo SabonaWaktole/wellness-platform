@@ -153,6 +153,7 @@ model Tenant {
   // Slice 10: sales lists
   followUpIntervals FollowUpInterval[]
   lostReasons       LostReason[]
+  activityResults   ActivityResult[]
 
   // Slice 10: status labels
   statusLabels StatusLabel[]
@@ -295,7 +296,8 @@ model User {
   passwordResetTokens               PasswordResetToken[]
   assignedClients                   Client[]                 @relation("AssignedClients")
   updatedClients                    Client[]                 @relation("LastUpdatedClients")
-  interactions                      Interaction[]
+  interactions                      Interaction[]            @relation("InteractionAuthor")
+  updatedInteractions               Interaction[]            @relation("InteractionUpdatedBy")
   assignedAppointments              Appointment[]            @relation("AssignedAppointments")
   inventoryMovements                StockMovement[]
   quotations                        Quotation[]
@@ -599,8 +601,9 @@ model ContactPerson {
   /// and out of search, never hard-deleted.
   deletedAt DateTime?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  interactions Interaction[]
 
   @@index([tenantId, clientId])
   @@index([tenantId, phone])
@@ -647,23 +650,48 @@ model OutcomeCategory {
   @@unique([tenantId, label])
 }
 
+/// A recorded activity (M2 Slice 7, FR-ACT-01, 02). Every channel except NOTE
+/// records when it happened, the contact person and a result; the old
+/// `outcomeCategoryId` stays until Milestone 3 (D5). Rows from before Slice 7
+/// were backfilled with `occurredAt = createdAt` (FR-ACT-07), so `occurredAt`
+/// is nullable only for the migration. `updatedAt` NULL means never edited.
 model Interaction {
-  id                String   @id
+  id                String    @id
   tenantId          String
   clientId          String
   authorUserId      String
   content           String
-  channel           String // 'MEETING', 'CALL', 'NOTE', 'EMAIL'
+  channel           String // MEETING, CALL, NOTE, EMAIL, VISIT, ONLINE_MEETING
   outcomeCategoryId String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
+  occurredAt        DateTime?
+  contactPersonId   String?
+  dealId            String?
+  resultId          String?
+  clientFeedback    String?
+  nextAction        String?
+  updatedAt         DateTime?
+  updatedByUserId   String?
 
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   client          Client           @relation(fields: [clientId], references: [id])
-  authorUser      User             @relation(fields: [authorUserId], references: [id])
+  authorUser      User             @relation("InteractionAuthor", fields: [authorUserId], references: [id])
   outcomeCategory OutcomeCategory? @relation(fields: [outcomeCategoryId], references: [id])
+  /// Restrict: contacts, deals and results are soft-deleted or refused while
+  /// in use, never removed under an activity.
+  contactPerson   ContactPerson?   @relation(fields: [contactPersonId], references: [id], onDelete: Restrict)
+  deal            Deal?            @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  result          ActivityResult?  @relation(fields: [resultId], references: [id], onDelete: Restrict)
+  updatedBy       User?            @relation("InteractionUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, clientId])
   @@index([tenantId, authorUserId])
+  @@index([tenantId, clientId, occurredAt])
+  @@index([tenantId, dealId, occurredAt])
+  @@index([contactPersonId])
+  @@index([dealId])
+  @@index([resultId])
+  @@index([updatedByUserId])
 }
 
 model Appointment {
@@ -1556,6 +1584,25 @@ model LostReason {
   @@index([tenantId, order])
 }
 
+/// What came of an activity (M2 Slice 7, FR-ACT-03): a lookup list with the
+/// same rules as the M1 lists. Seeded with the Q14 defaults; the legacy
+/// OutcomeCategory labels were copied in by the Slice 7 migration (D5).
+model ActivityResult {
+  id        String   @id
+  tenantId  String
+  nameSq    String
+  nameEn    String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  interactions Interaction[]
+
+  @@index([tenantId, order])
+}
+
 /// The label, order and colour the Administrator has set for one fixed
 /// status key (Slice 10: FR-SET-07, 08). `domain` and `key` are both fixed
 /// in code (`StatusCatalogue.ts`) — there is no create or delete, only
@@ -1850,6 +1897,7 @@ model Deal {
   package      ServicePackage?    @relation(fields: [packageId], references: [id], onDelete: Restrict)
   wonQuotation Quotation?         @relation("DealWonQuotation", fields: [wonQuotationId], references: [id], onDelete: Restrict)
   stageHistory DealStageHistory[]
+  interactions Interaction[]
 
   @@index([tenantId, ownerUserId, stageKey])
   @@index([tenantId, clientId])

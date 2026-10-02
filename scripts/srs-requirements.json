@@ -546,6 +546,41 @@
       "id": "NFR-PERF-03",
       "priority": "Should",
       "requirement": "The pipeline board and calendar shall load in under 2 seconds with 2,000 open deals and 5,000 follow-ups."
+    },
+    {
+      "id": "FR-ACT-01",
+      "priority": "Must",
+      "requirement": "The user shall record an activity of type Call, Email, Visit, Meeting, Online meeting or Note on a company, and optionally link it to one of the company's open deals."
+    },
+    {
+      "id": "FR-ACT-02",
+      "priority": "Must",
+      "requirement": "An activity (other than Note) shall record: date and time it happened (default now, can be in the past), contact person (from the company's contacts), result (from a predefined list), client feedback (text), next action (text) and notes. The user who recorded it is stored automatically."
+    },
+    {
+      "id": "FR-ACT-03",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the list of activity results (sq/en, order, active), e.g. Reached – interested, Reached – not interested, Not reached, Call back later, Meeting agreed, Offer requested."
+    },
+    {
+      "id": "FR-ACT-05",
+      "priority": "Must",
+      "requirement": "Activities shall appear in the company history and on the linked deal, newest first, with type, date, user, contact person, result and next action."
+    },
+    {
+      "id": "FR-ACT-06",
+      "priority": "Should",
+      "requirement": "The user who recorded an activity can edit it for 24 hours; after that only the Sales Manager can edit it. Activities are never deleted by Sales Users."
+    },
+    {
+      "id": "FR-ACT-07",
+      "priority": "Must",
+      "requirement": "Existing Interactions shall be kept and shown as activities: MEETING, CALL, EMAIL and NOTE map to the new types, their date is the creation date, and the missing fields are left empty."
+    },
+    {
+      "id": "NFR-OPS-02",
+      "priority": "Must",
+      "requirement": "Migrations shall run on PostgreSQL and MySQL, including the migration of existing interactions (FR-ACT-07) and quotation references (FR-OFR-08), and be reversible or backed up."
     }
   ]
 }

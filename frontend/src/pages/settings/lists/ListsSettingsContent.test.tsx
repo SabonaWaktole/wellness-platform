@@ -5,6 +5,7 @@ import { ListsSettingsContent } from './ListsSettingsContent';
 import { useLookupList } from '../../../hooks/useLookupList';
 import { lookupErrorMessage } from './lookupErrorMessage';
 import i18n from '../../../i18n';
+import { useAuthStore } from '../../../store/useAuthStore';
 
 vi.mock('../../../hooks/useLookupList');
 
@@ -29,6 +30,9 @@ const FOLLOW_UP_INTERVALS = [
   { id: 'f3', nameSq: 'Shpejt', nameEn: 'Soon', days: 3, order: 1, active: true },
   { id: 'f5', nameSq: 'Mesatare', nameEn: 'Medium', days: 5, order: 2, active: true },
 ];
+const ACTIVITY_RESULTS = [
+  { id: 'ar1', nameSq: 'U kontaktua – i interesuar', nameEn: 'Reached – interested', order: 1, active: true },
+];
 const LOST_REASONS = [
   { id: 'lr1', nameSq: 'Shumë e shtrenjtë', nameEn: 'Too expensive', order: 1, active: true },
 ];
@@ -40,7 +44,11 @@ const lists = {
   cities: { items: CITIES, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
   'follow-up-intervals': { items: FOLLOW_UP_INTERVALS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
   'lost-reasons': { items: LOST_REASONS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
+  'activity-results': { items: ACTIVITY_RESULTS, fetchItems: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn(), setActive: vi.fn(), remove: vi.fn() },
 };
+
+const signInWith = (permissions: Record<string, string | true>) =>
+  useAuthStore.setState({ user: { userId: 'me', email: 'me@example.com', role: 'STAFF', tenantId: 't1', permissions } } as any);
 
 const Location = () => <p data-testid="location">{useLocation().pathname}</p>;
 
@@ -66,6 +74,7 @@ describe('ListsSettingsContent', () => {
     vi.clearAllMocks();
     (useLookupList as any).mockImplementation((list: keyof typeof lists) => ({ loading: false, loadFailed: false, ...lists[list] }));
     lists['business-types'].update.mockResolvedValue(undefined);
+    signInWith({ 'settings.manage': true, 'activityResults.manage': true });
   });
 
   it('FR-SET-02 opens on risk levels, showing each level and description', () => {
@@ -180,6 +189,21 @@ describe('ListsSettingsContent', () => {
 
     const table = screen.getByRole('table', { name: 'Lost-deal reasons' });
     expect(within(table).getByTestId('lookup-row-lr1')).toBeDefined();
+  });
+
+  it('FR-ACT-03 Activity results tab shows each result', () => {
+    renderAt('/acme/settings/lists/activity-results');
+
+    const table = screen.getByRole('table', { name: 'Activity results' });
+    expect(within(table).getByTestId('lookup-row-ar1')).toBeDefined();
+  });
+
+  it('FR-ACT-03 with only activityResults.manage, the activity results are the only list shown', () => {
+    signInWith({ 'activityResults.manage': true });
+    renderAt('/acme/settings/lists/risk-levels');
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Activity results']);
+    expect(screen.getByRole('table', { name: 'Activity results' })).toBeDefined();
   });
 });
 

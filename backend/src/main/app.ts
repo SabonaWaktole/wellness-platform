@@ -159,6 +159,8 @@ import { ReassignDealUseCase } from '../deals/application/use-cases/ReassignDeal
 import { DeleteDealUseCase } from '../deals/application/use-cases/DeleteDealUseCase';
 import { SearchDealsUseCase } from '../deals/application/use-cases/SearchDealsUseCase';
 import { GetPipelineBoardUseCase } from '../deals/application/use-cases/GetPipelineBoardUseCase';
+import { GetDealActivitiesUseCase } from '../deals/application/use-cases/GetDealActivitiesUseCase';
+import { PrismaDealActivityStore } from '../deals/infrastructure/PrismaDealActivityStore';
 import { DealController } from '../deals/interfaces/http/DealController';
 import { createDealRouter } from '../deals/interfaces/http/dealRoutes';
 import { GetPublishedScriptUseCase } from '../salesScript/application/use-cases/GetPublishedScriptUseCase';
@@ -517,7 +519,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new ReassignDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
     new DeleteDealUseCase(dealWriteTransaction, recordScopes),
     new SearchDealsUseCase(dealStore, recordScopes),
-    new GetPipelineBoardUseCase(dealStore, recordScopes)
+    new GetPipelineBoardUseCase(dealStore, recordScopes),
+    new GetDealActivitiesUseCase(getDeal, new PrismaDealActivityStore())
   );
   app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
 

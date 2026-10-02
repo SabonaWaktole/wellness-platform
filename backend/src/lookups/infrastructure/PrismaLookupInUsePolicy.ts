@@ -39,6 +39,9 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
       case LookupList.LostReasons:
         // A lost deal keeps its reason (M2 Slice 6; set by Slice 13), deleted deals included.
         return this.prisma.deal.count({ where: { tenantId, lostReasonId: id } });
+      case LookupList.ActivityResults:
+        // An activity keeps its result (M2 Slice 7, FR-ACT-03).
+        return this.prisma.interaction.count({ where: { tenantId, resultId: id } });
       case LookupList.FollowUpIntervals:
         // Nothing points at this list until follow-ups do (M2 Slice 11).
         return 0;

@@ -34,6 +34,8 @@ export const AUDITED_ENTITY_TYPES = [
   'SalesScript',
   // Milestone 2 Slice 6: a deal's salesperson change and its deletion (FR-DEAL-05, 19).
   'Deal',
+  // Milestone 2 Slice 7: the activity results list (FR-ACT-03).
+  'ActivityResult',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -54,7 +56,7 @@ export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types
   { group: 'contracts', types: ['Contract', 'ContractPayment'] },
   {
     group: 'lists',
-    types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'StatusLabel'],
+    types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'ActivityResult', 'StatusLabel'],
   },
   {
     group: 'pricing',

@@ -4,7 +4,7 @@ import { AuditAction } from '../../../audit/domain/AuditAction';
 import { LookupValueTakenError } from '../../domain/errors';
 import { LookupList } from '../../domain/LookupList';
 import { findNameClash, lookupLabels, LookupRecord, nextOrder } from '../../domain/LookupItem';
-import { auditedFields, auditFieldsOf, lookupAuditEntry, MANAGE_LISTS, pickFields } from '../lookupAdmin';
+import { auditedFields, auditFieldsOf, ensureCanManageList, lookupAuditEntry, pickFields } from '../lookupAdmin';
 import { LookupRulesRegistry } from '../LookupListRules';
 import { ILookupStore } from '../ports/ILookupStore';
 import { ILookupWriteTransaction } from '../ports/ILookupWriteTransaction';
@@ -24,7 +24,7 @@ export class CreateLookupItemUseCase {
   ) {}
 
   async execute(input: { access: AccessContext; tenantId: string; list: LookupList; values: LookupValuesInput }): Promise<LookupRecord> {
-    input.access.ensure(MANAGE_LISTS);
+    ensureCanManageList(input.access, input.list);
     const rules = this.rules[input.list];
 
     const labels = lookupLabels(input.values);

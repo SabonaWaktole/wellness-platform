@@ -3,7 +3,7 @@ import { AuditAction } from '../../../audit/domain/AuditAction';
 import { InvalidLookupOrderError } from '../../domain/errors';
 import { LookupList } from '../../domain/LookupList';
 import { LookupRecord, sortLookupItems } from '../../domain/LookupItem';
-import { allowedFilter, lookupAuditEntry, MANAGE_LISTS } from '../lookupAdmin';
+import { allowedFilter, ensureCanManageList, lookupAuditEntry } from '../lookupAdmin';
 import { LookupRulesRegistry } from '../LookupListRules';
 import { ILookupStore } from '../ports/ILookupStore';
 import { ILookupWriteTransaction } from '../ports/ILookupWriteTransaction';
@@ -28,7 +28,7 @@ export class ReorderLookupItemsUseCase {
     ids: string[];
     filter?: Record<string, unknown>;
   }): Promise<LookupRecord[]> {
-    input.access.ensure(MANAGE_LISTS);
+    ensureCanManageList(input.access, input.list);
 
     const items = await this.store.list(input.tenantId, input.list, allowedFilter(this.rules[input.list], input.filter));
     const byId = new Map(items.map((item) => [item.id, item]));

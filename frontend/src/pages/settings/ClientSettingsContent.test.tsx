@@ -5,7 +5,6 @@ import { ClientSettingsContent } from './ClientSettingsContent';
 import {
   useClientSettings,
   useDefineCustomField,
-  useDefineOutcomeCategory,
   useUpdateCustomField,
   useDeleteCustomField,
   useReorderCustomFields,
@@ -21,15 +20,13 @@ vi.mock('../../hooks/useClients');
 describe('ClientSettingsContent', () => {
   const mockFetchSettings = vi.fn();
   const mockDefineCustomField = vi.fn();
-  const mockDefineOutcomeCategory = vi.fn();
   const mockUpdateCustomField = vi.fn();
   const mockDeleteCustomField = vi.fn();
   const mockReorderCustomFields = vi.fn();
 
-  const setup = (overrides: { fieldError?: string | null; outcomeError?: string | null } = {}) => {
+  const setup = (overrides: { fieldError?: string | null } = {}) => {
     (useClientSettings as any).mockReturnValue({
       customFields: [],
-      outcomeCategories: [],
       isLoading: false,
       fetchSettings: mockFetchSettings,
     });
@@ -37,11 +34,6 @@ describe('ClientSettingsContent', () => {
       defineCustomField: mockDefineCustomField,
       isLoading: false,
       error: overrides.fieldError ?? null,
-    });
-    (useDefineOutcomeCategory as any).mockReturnValue({
-      defineOutcomeCategory: mockDefineOutcomeCategory,
-      isLoading: false,
-      error: overrides.outcomeError ?? null,
     });
     // These three were added to the component later; without them the whole
     // suite failed on a destructure of undefined before rendering anything.

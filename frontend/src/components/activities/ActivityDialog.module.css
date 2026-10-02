@@ -1,0 +1,69 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.footer {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+.formError {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-default);
+  background: var(--color-error-container);
+  color: var(--color-on-error-container);
+  font-size: var(--font-size-body-md);
+}
+
+.types {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-label-md);
+  font-weight: var(--font-weight-label-md);
+  color: var(--color-on-surface-variant);
+}
+
+/* Six types wrap onto two or three rows at 360 px; never a horizontal scroll. */
+.typeButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.typeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: 36px;
+  padding: 0 var(--spacing-sm);
+  border: 1px solid var(--color-outline);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-on-surface);
+  font: inherit;
+  font-size: var(--font-size-body-md);
+  cursor: pointer;
+}
+
+.typeButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.typeButtonSelected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  font-weight: var(--font-weight-label-md);
+}

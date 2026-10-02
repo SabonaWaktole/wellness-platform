@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import {
+  DEFAULT_ACTIVITY_RESULTS,
   DEFAULT_AREAS,
   DEFAULT_BUSINESS_TYPES,
   DEFAULT_FOLLOW_UP_INTERVALS,
@@ -118,6 +119,34 @@ describe('Default lookup lists', () => {
       });
       DEFAULT_LOST_REASONS.forEach((reason, index) => {
         const row = new RegExp(`'${reason.nameSq}'[^\\n]*'${reason.nameEn}'[^\\n]*\\b${index + 1}\\b`);
+        expect(sql).toMatch(row);
+      });
+    });
+  }
+
+  it('FR-ACT-03 default activity result names are unique', () => {
+    const names = new Set(DEFAULT_ACTIVITY_RESULTS.map((result) => result.nameSq));
+    expect(names.size).toBe(DEFAULT_ACTIVITY_RESULTS.length);
+    expect(DEFAULT_ACTIVITY_RESULTS.map((result) => result.nameEn)).toEqual([
+      'Reached – interested',
+      'Reached – not interested',
+      'Not reached',
+      'Call back later',
+      'Meeting agreed',
+      'Offer requested',
+    ]);
+  });
+
+  const activityMigrations = {
+    postgres: read('migrations/20261002100000_m2_activities/migration.sql'),
+    'mysql (standalone)': read('mysql_migration_m2_activities.sql'),
+    'mysql (upgrade script)': read('mysql_upgrade_to_current.sql'),
+  };
+
+  for (const [name, sql] of Object.entries(activityMigrations)) {
+    it(`FR-ACT-03 the ${name} seed carries the same activity results, in the same order`, () => {
+      DEFAULT_ACTIVITY_RESULTS.forEach((result, index) => {
+        const row = new RegExp(`'${result.nameSq}'[^\\n]*'${result.nameEn}'[^\\n]*\\b${index + 1}\\b`);
         expect(sql).toMatch(row);
       });
     });

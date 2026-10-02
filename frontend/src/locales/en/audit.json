@@ -42,6 +42,7 @@
     "City": "City",
     "FollowUpInterval": "Follow-up interval",
     "LostReason": "Lost-deal reason",
+    "ActivityResult": "Activity result",
     "StatusLabel": "Status label",
     "Workspace": "Workspace",
     "EmployeeBand": "Employee band",

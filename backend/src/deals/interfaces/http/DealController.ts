@@ -14,6 +14,7 @@ import { ReassignDealUseCase } from '../../application/use-cases/ReassignDealUse
 import { DeleteDealUseCase } from '../../application/use-cases/DeleteDealUseCase';
 import { SearchDealsUseCase } from '../../application/use-cases/SearchDealsUseCase';
 import { GetPipelineBoardUseCase } from '../../application/use-cases/GetPipelineBoardUseCase';
+import { GetDealActivitiesUseCase } from '../../application/use-cases/GetDealActivitiesUseCase';
 import { dealSchemas } from './dealSchemas';
 
 /** Maps the deals module's errors to a status; anything else goes to the app's error handler. */
@@ -55,7 +56,8 @@ export class DealController {
     private readonly reassignDeal: ReassignDealUseCase,
     private readonly deleteDeal: DeleteDealUseCase,
     private readonly searchDeals: SearchDealsUseCase,
-    private readonly pipeline: GetPipelineBoardUseCase
+    private readonly pipeline: GetPipelineBoardUseCase,
+    private readonly dealActivities: GetDealActivitiesUseCase
   ) {}
 
   private handle =
@@ -109,6 +111,10 @@ export class DealController {
   });
 
   get = this.handle((req) => this.getDeal.execute({ access: req.access!, tenantId: requireTenantId(req), id: idOf(req) }));
+
+  activities = this.handle((req) =>
+    this.dealActivities.execute({ access: req.access!, tenantId: requireTenantId(req), id: idOf(req) })
+  );
 
   create = this.handle(
     (req) =>

@@ -8,11 +8,11 @@ import { UpdateClientUseCase } from '../../../application/use-cases/UpdateClient
 import { SearchClientsUseCase } from '../../../application/use-cases/SearchClientsUseCase';
 import { GetClientHistoryUseCase } from '../../../application/use-cases/GetClientHistoryUseCase';
 import { AddInteractionUseCase } from '../../../application/use-cases/AddInteractionUseCase';
+import { UpdateInteractionUseCase } from '../../../application/use-cases/UpdateInteractionUseCase';
 import { DefineCustomFieldUseCase } from '../../../application/use-cases/DefineCustomFieldUseCase';
 import { UpdateCustomFieldUseCase } from '../../../application/use-cases/UpdateCustomFieldUseCase';
 import { DeleteCustomFieldUseCase } from '../../../application/use-cases/DeleteCustomFieldUseCase';
 import { ReorderCustomFieldsUseCase } from '../../../application/use-cases/ReorderCustomFieldsUseCase';
-import { DefineOutcomeCategoryUseCase } from '../../../application/use-cases/DefineOutcomeCategoryUseCase';
 import { EnsureDefaultClientFieldsUseCase } from '../../../application/use-cases/EnsureDefaultClientFieldsUseCase';
 import { GetClientUseCase } from '../../../application/use-cases/GetClientUseCase';
 import { GetCustomFieldsUseCase } from '../../../application/use-cases/GetCustomFieldsUseCase';
@@ -36,6 +36,7 @@ import { PrismaLookupStore } from '../../../../lookups/infrastructure/PrismaLook
 import { PrismaCustomFieldDefinitionRepository } from '../../../infrastructure/repositories/PrismaCustomFieldDefinitionRepository';
 import { PrismaCustomFieldWriteTransaction } from '../../../infrastructure/PrismaCustomFieldWriteTransaction';
 import { PrismaInteractionRepository } from '../../../infrastructure/repositories/PrismaInteractionRepository';
+import { PrismaInteractionWriteTransaction } from '../../../infrastructure/repositories/PrismaInteractionWriteTransaction';
 import { PrismaOutcomeCategoryRepository } from '../../../infrastructure/repositories/PrismaOutcomeCategoryRepository';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
@@ -127,12 +128,14 @@ export const createClientRouter = (
     companyTimelineSources(prisma),
     new PrismaUserRepository(prisma)
   );
-  const addInteractionUseCase = new AddInteractionUseCase(clientRepo, interactionRepo, outcomeCategoryRepo, scopes);
+  const activityReaders = { contacts: contactRepo, lookups: lookupStore, scopes };
+  const interactionWriteTx = new PrismaInteractionWriteTransaction(prisma);
+  const addInteractionUseCase = new AddInteractionUseCase(clientRepo, activityReaders, interactionWriteTx);
+  const updateInteractionUseCase = new UpdateInteractionUseCase(clientRepo, interactionRepo, activityReaders, interactionWriteTx);
   const defineCustomFieldUseCase = new DefineCustomFieldUseCase(customFieldRepo);
   const updateCustomFieldUseCase = new UpdateCustomFieldUseCase(customFieldWriteTransaction);
   const deleteCustomFieldUseCase = new DeleteCustomFieldUseCase(customFieldRepo);
   const reorderCustomFieldsUseCase = new ReorderCustomFieldsUseCase(customFieldRepo);
-  const defineOutcomeCategoryUseCase = new DefineOutcomeCategoryUseCase(outcomeCategoryRepo);
   const getClientUseCase = new GetClientUseCase(clientRepo, scopes);
   const getCustomFieldsUseCase = new GetCustomFieldsUseCase(ensureDefaultClientFieldsUseCase);
   const getOutcomeCategoriesUseCase = new GetOutcomeCategoriesUseCase(outcomeCategoryRepo);
@@ -158,7 +161,7 @@ export const createClientRouter = (
     updateCustomFieldUseCase,
     deleteCustomFieldUseCase,
     reorderCustomFieldsUseCase,
-    defineOutcomeCategoryUseCase,
+    updateInteractionUseCase,
     getClientUseCase,
     getCustomFieldsUseCase,
     getOutcomeCategoriesUseCase,
@@ -186,6 +189,8 @@ export const createClientRouter = (
 
   // settings.manage: custom fields and outcome categories are workspace
   // configuration, same bucket as lookup lists (Slice 8) and role editing.
+  // Outcome categories are read-only since M2 Slice 7, for one milestone:
+  // activities take their result from Settings → Lists → Activity results.
   router.get('/settings/custom-fields', requirePermission('settings.manage'), clientController.getCustomFields);
   router.get(
     '/settings/custom-fields/template',
@@ -211,6 +216,13 @@ export const createClientRouter = (
     '/:clientId/interactions',
     requireAnyPermission(['activities.add', 'notes.add']),
     clientController.addInteraction
+  );
+  // FR-ACT-06: same screen as above; the 24-hour rule lives in
+  // UpdateInteractionUseCase. There is no delete route.
+  router.patch(
+    '/:clientId/interactions/:interactionId',
+    requireAnyPermission(['activities.add', 'notes.add']),
+    clientController.updateInteraction
   );
   router.get(
     '/:clientId/related-counts',
@@ -263,11 +275,6 @@ export const createClientRouter = (
     clientController.importCustomFields
   );
   router.post('/import', requirePermission('companies.edit'), receiveSpreadsheet, clientController.importClients);
-  router.post(
-    '/settings/outcome-categories',
-    requirePermission('settings.manage'),
-    clientController.defineOutcomeCategory
-  );
 
   return router;
 };

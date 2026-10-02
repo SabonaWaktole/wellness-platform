@@ -143,21 +143,58 @@ export interface ImportResult {
   errors: { row: number; message: string }[];
 }
 
-export interface OutcomeCategory {
-  id: string;
-  tenantId: string;
-  label: string;
+/** An activity's type (FR-ACT-01). VISIT and ONLINE_MEETING are M2 Slice 7's. */
+export const ACTIVITY_CHANNELS = ['CALL', 'EMAIL', 'VISIT', 'MEETING', 'ONLINE_MEETING', 'NOTE'] as const;
+export type ActivityChannel = (typeof ACTIVITY_CHANNELS)[number];
+
+/** What the activity dialog sends, on create and on edit (FR-ACT-02). */
+export interface ActivityInput {
+  channel: ActivityChannel;
+  content?: string;
+  /** ISO 8601; the server defaults it to now. */
+  occurredAt?: string | null;
+  contactPersonId?: string | null;
+  dealId?: string | null;
+  resultId?: string | null;
+  clientFeedback?: string | null;
+  nextAction?: string | null;
 }
 
 export interface Interaction {
   id: string;
   clientId: string;
-  type: string;
-  channel: string;
+  channel: ActivityChannel;
   content: string;
-  outcomeCategoryId?: string | null;
   authorUserId: string;
   createdAt: string;
+  occurredAt: string;
+  contactPersonId: string | null;
+  dealId: string | null;
+  resultId: string | null;
+  clientFeedback: string | null;
+  nextAction: string | null;
+  updatedAt: string | null;
+}
+
+/**
+ * An activity as the company timeline and the deal page show it (FR-ACT-05).
+ * `recordedAt` is when it was saved, which the 24-hour edit window counts
+ * from (FR-ACT-06).
+ */
+export interface ActivityView {
+  id: string;
+  clientId: string;
+  dealId: string | null;
+  channel: ActivityChannel;
+  content: string;
+  occurredAt: string;
+  recordedAt: string;
+  updatedAt: string | null;
+  author: { id: string; name: string };
+  contact: { id: string; name: string } | null;
+  result: { id: string; nameSq: string; nameEn: string | null } | null;
+  clientFeedback: string | null;
+  nextAction: string | null;
 }
 
 /** What the company timeline can be filtered by (FR-CMP-05). DEAL is M2 Slice 6's (FR-DEAL-20). */

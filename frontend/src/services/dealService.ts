@@ -1,4 +1,5 @@
 import { apiClient as api } from '../api';
+import type { ActivityView } from '../types/client';
 import type { BoardColumn, DealDetail, DealInput, DealListParams, DealPage, DealStage, NewDealInput, PipelineBoard } from '../types/deal';
 
 /** The deals API (M2 Slice 6: FR-DEAL-01..11, 13, 19). Every response is scoped and redacted on the server. */
@@ -25,6 +26,10 @@ export const dealService = {
 
   get: async (tenantSlug: string, id: string): Promise<DealDetail> =>
     (await api.get<{ data: DealDetail }>(`${base(tenantSlug)}/${id}`)).data.data,
+
+  /** The deal page's activities (FR-ACT-05), newest first by when they happened. */
+  activities: async (tenantSlug: string, id: string): Promise<ActivityView[]> =>
+    (await api.get<{ data: ActivityView[] }>(`${base(tenantSlug)}/${id}/activities`)).data.data,
 
   create: async (tenantSlug: string, input: NewDealInput): Promise<DealDetail> =>
     (await api.post<{ data: DealDetail }>(base(tenantSlug), input)).data.data,

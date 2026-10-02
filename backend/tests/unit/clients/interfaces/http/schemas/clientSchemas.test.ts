@@ -5,7 +5,6 @@ import {
   searchClientsSchema,
   addInteractionSchema,
   defineCustomFieldSchema,
-  defineOutcomeCategorySchema
 } from '../../../../../../src/clients/interfaces/http/schemas/clientSchemas';
 import { ClientStatus } from '../../../../../../src/clients/domain/enums/ClientStatus';
 import { InteractionChannel } from '../../../../../../src/clients/domain/enums/InteractionChannel';
@@ -63,13 +62,25 @@ describe('clientSchemas', () => {
   });
 
   describe('addInteractionSchema', () => {
-    it('validates correct payload', () => {
+    it('FR-ACT-02 validates an activity with when it happened, the contact, the result and the follow-up text', () => {
       const data = {
         content: 'Good call',
         channel: InteractionChannel.CALL,
-        outcomeCategoryId: '123e4567-e89b-12d3-a456-426614174000',
+        occurredAt: '2026-10-01T15:30:00.000Z',
+        contactPersonId: 'contact-1',
+        resultId: 'result-1',
+        dealId: null,
+        clientFeedback: 'Interested',
+        nextAction: 'Send the offer',
       };
-      expect(addInteractionSchema.parse(data)).toEqual(data);
+      expect(addInteractionSchema.parse(data)).toEqual({ ...data, occurredAt: new Date(data.occurredAt) });
+    });
+
+    it('FR-ACT-01 accepts the two new types and refuses an unknown one', () => {
+      expect(addInteractionSchema.parse({ channel: 'VISIT' }).channel).toBe(InteractionChannel.VISIT);
+      expect(addInteractionSchema.parse({ channel: 'ONLINE_MEETING' }).channel).toBe(InteractionChannel.ONLINE_MEETING);
+      expect(() => addInteractionSchema.parse({ channel: 'FAX' })).toThrow();
+      expect(() => addInteractionSchema.parse({ channel: 'CALL', occurredAt: 'not a date' })).toThrow();
     });
   });
 
@@ -143,13 +154,6 @@ describe('clientSchemas', () => {
     it('rejects a type that is not in the enum', () => {
       expect(() => defineCustomFieldSchema.parse({ fieldName: 'x', fieldType: 'CHECKBOX' }))
         .toThrow();
-    });
-  });
-
-  describe('defineOutcomeCategorySchema', () => {
-    it('validates correct payload', () => {
-      const data = { label: 'Closed Won' };
-      expect(defineOutcomeCategorySchema.parse(data)).toEqual(data);
     });
   });
 

@@ -34,6 +34,8 @@ export const createDealRouter = (
   router.get('/board', view, controller.board);
   router.get('/board/column', view, controller.column);
   router.get('/:id', view, controller.get);
+  // FR-ACT-05: notes and other types are filtered by notes.view / activities.view in the use case.
+  router.get('/:id/activities', view, controller.activities);
   router.post('/', edit, validateRequest(dealSchemas.create), controller.create);
   router.patch('/:id', edit, validateRequest(dealSchemas.update), controller.update);
   router.post('/:id/stage', edit, validateRequest(dealSchemas.stage), controller.stage);

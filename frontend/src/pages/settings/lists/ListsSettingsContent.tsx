@@ -10,9 +10,22 @@ import { AreasList } from './AreasList';
 import { CitiesList } from './CitiesList';
 import { FollowUpIntervalsList } from './FollowUpIntervalsList';
 import { LostReasonsList } from './LostReasonsList';
+import { ActivityResultsList } from './ActivityResultsList';
+import { usePermission } from '../../../hooks/usePermission';
 import styles from './ListsSettingsContent.module.css';
 
-const LISTS: LookupListKey[] = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons'];
+const LISTS: LookupListKey[] = [
+  'risk-levels',
+  'business-types',
+  'areas',
+  'cities',
+  'follow-up-intervals',
+  'lost-reasons',
+  'activity-results',
+];
+
+/** The lists `activityResults.manage` reaches without `settings.manage` (SRS §9.2, FR-ACT-03). */
+const ACTIVITY_RESULT_LISTS: LookupListKey[] = ['activity-results'];
 
 const TAB_LABEL: Record<LookupListKey, string> = {
   'risk-levels': 'lists.tabs.riskLevels',
@@ -21,6 +34,7 @@ const TAB_LABEL: Record<LookupListKey, string> = {
   cities: 'lists.tabs.cities',
   'follow-up-intervals': 'lists.tabs.followUpIntervals',
   'lost-reasons': 'lists.tabs.lostReasons',
+  'activity-results': 'lists.tabs.activityResults',
 };
 
 const HINT: Record<LookupListKey, string> = {
@@ -30,6 +44,7 @@ const HINT: Record<LookupListKey, string> = {
   cities: 'lists.hints.cities',
   'follow-up-intervals': 'lists.hints.followUpIntervals',
   'lost-reasons': 'lists.hints.lostReasons',
+  'activity-results': 'lists.hints.activityResults',
 };
 
 const PANEL: Record<LookupListKey, ComponentType> = {
@@ -39,18 +54,21 @@ const PANEL: Record<LookupListKey, ComponentType> = {
   cities: CitiesList,
   'follow-up-intervals': FollowUpIntervalsList,
   'lost-reasons': LostReasonsList,
+  'activity-results': ActivityResultsList,
 };
 
 /**
  * Settings → Lists (Slices 8, 9, 10): the admin-managed values the company
- * form and, from Milestone 2, deals offer. One tab per list; the URL names
- * the open one, so it can be linked.
+ * form and, from Milestone 2, deals and activities offer. One tab per list;
+ * the URL names the open one, so it can be linked. A role with only
+ * `activityResults.manage` sees the activity results alone.
  */
 export const ListsSettingsContent = () => {
   const { t } = useTranslation('settings');
   const navigate = useNavigate();
   const { tenantSlug, list } = useParams();
-  const active: LookupListKey = LISTS.includes(list as LookupListKey) ? (list as LookupListKey) : 'risk-levels';
+  const lists = usePermission('settings.manage') ? LISTS : ACTIVITY_RESULT_LISTS;
+  const active: LookupListKey = lists.includes(list as LookupListKey) ? (list as LookupListKey) : lists[0];
   const Panel = PANEL[active];
 
   return (
@@ -63,7 +81,7 @@ export const ListsSettingsContent = () => {
       <Tabs
         idBase="lists"
         label={t('lists.title')}
-        tabs={LISTS.map((key) => ({ id: key, label: t(TAB_LABEL[key]) }))}
+        tabs={lists.map((key) => ({ id: key, label: t(TAB_LABEL[key]) }))}
         activeId={active}
         onChange={(key) => navigate(`/${tenantSlug}/settings/lists/${key}`)}
       />

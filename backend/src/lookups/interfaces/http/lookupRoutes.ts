@@ -4,11 +4,11 @@ import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRe
 import { authenticate } from '../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../main/interfaces/http/middlewares/resolveTenant';
 import { loadAccess } from '../../../main/interfaces/http/middlewares/loadAccess';
-import { requirePermission } from '../../../main/interfaces/http/middlewares/requirePermission';
+import { requireAnyPermission } from '../../../main/interfaces/http/middlewares/requirePermission';
 import { validateRequest } from '../../../main/interfaces/http/middlewares/validateRequest';
 import { ResolveAccessContextUseCase } from '../../../access/application/use-cases/ResolveAccessContextUseCase';
 import { isLookupList, LookupList } from '../../domain/LookupList';
-import { MANAGE_LISTS } from '../../application/lookupAdmin';
+import { LIST_EDIT_KEYS } from '../../application/lookupAdmin';
 import { LookupsController } from './LookupsController';
 import { lookupSchemas } from './lookupSchemas';
 
@@ -39,7 +39,9 @@ export const createLookupRouter = (
     next();
   });
 
-  const manage = requirePermission(MANAGE_LISTS);
+  // Either key reaches the write routes; the use case decides per list
+  // (activityResults.manage edits only the activity results, FR-ACT-03).
+  const manage = requireAnyPermission(LIST_EDIT_KEYS);
   router.get('/:list', controller.list);
   router.post('/:list', manage, validateFor(lookupSchemas.create), controller.create);
   router.put('/:list/order', manage, validateRequest(lookupSchemas.reorder), controller.reorder);

@@ -14,4 +14,6 @@ export interface IInteractionRepository {
   findByClientId(tenantId: string, clientId: string): Promise<Interaction[]>;
   findRecentByTenant(tenantId: string, limit: number, options?: RecentInteractionsOptions): Promise<Interaction[]>;
   save(tenantId: string, interaction: Interaction): Promise<void>;
+  /** Writes what an edit may change (FR-ACT-06); the author and creation time never change. */
+  update(interaction: Interaction): Promise<void>;
 }
