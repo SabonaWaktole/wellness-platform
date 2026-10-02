@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { redactFields } from '../../../../access/domain/redactFields';
 import { PermissionDeniedError } from '../../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { CreateClientUseCase } from '../../../application/use-cases/CreateClientUseCase';
@@ -169,7 +170,7 @@ export class ClientController {
     }
   };
 
-  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile and its Slice 12 contacts. */
+  /** The wire shape for one client: its own fields plus the enriched Slice 11 profile and its Slice 12 contacts. Every response passes it through redactFields (FR-RBAC-17). */
   private async presentClient(tenantId: string, client: Client) {
     const [profile, contacts] = await Promise.all([
       this.companyReadModel.enrichOne(tenantId, client),
@@ -204,7 +205,7 @@ export class ClientController {
         access: req.access!,
       });
 
-      res.status(201).json({ ...(await this.presentClient(tenantId, client)), warnings });
+      res.status(201).json(redactFields({ ...(await this.presentClient(tenantId, client)), warnings }, req.access!));
     } catch (error) {
       sendClientError(res, error);
     }
@@ -215,7 +216,7 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const clientId = req.params.clientId as string;
       const client = await this.getClientUseCase.execute(tenantId, clientId, req.access!);
-      res.status(200).json(await this.presentClient(tenantId, client));
+      res.status(200).json(redactFields(await this.presentClient(tenantId, client), req.access!));
     } catch (error: any) {
       if (error instanceof DomainError) {
         res.status(404).json({ error: error.message });
@@ -240,7 +241,7 @@ export class ClientController {
         ...validatedData
       });
 
-      res.status(200).json({ ...(await this.presentClient(tenantId, client)), warnings });
+      res.status(200).json(redactFields({ ...(await this.presentClient(tenantId, client)), warnings }, req.access!));
     } catch (error) {
       sendClientError(res, error);
     }

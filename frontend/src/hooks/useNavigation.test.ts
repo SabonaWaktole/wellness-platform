@@ -59,6 +59,11 @@ describe('useNavigation', () => {
       expect(idsFor(ADMINISTRATOR)).toContain('clients');
     });
 
+    it('FR-DEAL-04 offers the Pipeline to whoever holds deals.view, and not to Reception', () => {
+      expect(idsFor(userWith({ 'companies.view': 'OWN', 'deals.view': 'OWN' }))).toContain('pipeline');
+      expect(idsFor(RECEPTION)).not.toContain('pipeline');
+    });
+
     it('D3: Reception has no calendar.view, so no Appointments link', () => {
       expect(idsFor(RECEPTION)).not.toContain('appointments');
       expect(idsFor(SALES_USER)).toContain('appointments');

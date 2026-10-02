@@ -3,7 +3,7 @@ import { AuditAction } from '../../../audit/domain/AuditAction';
 import { diff } from '../../../audit/domain/diff';
 import { catalogueEntry, StatusDomain } from '../../domain/StatusCatalogue';
 import { StatusKeyNotFoundError, StatusLabel, StatusLabelEdit, validateStatusLabelEdit } from '../../domain/StatusLabel';
-import { MANAGE_STATUSES, statusLabelAuditEntry } from '../statusAdmin';
+import { ensureCanManage, statusLabelAuditEntry } from '../statusAdmin';
 import { IStatusLabelStore } from '../ports/IStatusLabelStore';
 import { IStatusLabelWriteTransaction } from '../ports/IStatusLabelWriteTransaction';
 
@@ -17,7 +17,7 @@ export class UpdateStatusLabelUseCase {
   ) {}
 
   async execute(input: { access: AccessContext; tenantId: string; domain: StatusDomain; key: string; edit: StatusLabelEdit }): Promise<StatusLabel> {
-    input.access.ensure(MANAGE_STATUSES);
+    ensureCanManage(input.access, input.domain);
     const entry = catalogueEntry(input.domain, input.key);
     if (!entry) {
       throw new StatusKeyNotFoundError();

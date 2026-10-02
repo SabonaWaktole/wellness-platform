@@ -6,11 +6,14 @@ import { emptyPageGeometry } from '../../types/form';
 import * as clientsHooks from '../../hooks/useClients';
 import * as formHooks from '../../hooks/useClientForm';
 import * as teamHooks from '../../hooks/useTeam';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const navigate = vi.fn();
+/** Edit mode by default; a test sets `clientId: undefined` for the create form. */
+let routeParams: Record<string, string | undefined> = { tenantSlug: 'acme', clientId: 'client-1' };
 
 vi.mock('react-router-dom', () => ({
-  useParams: () => ({ tenantSlug: 'acme', clientId: 'client-1' }),
+  useParams: () => routeParams,
   useNavigate: () => navigate,
 }));
 
@@ -99,6 +102,8 @@ const updateClient = vi.fn();
 describe('ClientFormContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    routeParams = { tenantSlug: 'acme', clientId: 'client-1' };
+    useAuthStore.setState({ user: null, isAuthenticated: false });
     vi.mocked(clientsHooks.useCreateClient).mockReturnValue({
       createClient: vi.fn(),
       isLoading: false,
@@ -125,6 +130,37 @@ describe('ClientFormContent', () => {
       fetchForm: vi.fn(),
     });
     vi.mocked(teamHooks.useTeam).mockReturnValue({ staff: [], fetchStaff: vi.fn() });
+  });
+
+  describe('FR-DEAL-02 "Create a deal" on the company form', () => {
+    const signInWith = (permissions) =>
+      useAuthStore.setState({
+        user: { userId: 'u1', email: 'a@example.com', role: 'STAFF', tenantId: 't1', tenantSlug: 'acme', permissions },
+        isAuthenticated: true,
+      });
+
+    it('FR-DEAL-02 is offered when creating a company, to someone who may create deals', () => {
+      routeParams = { tenantSlug: 'acme', clientId: undefined };
+      signInWith({ 'companies.edit': 'OWN', 'deals.edit': 'OWN' });
+      render(<ClientFormContent />);
+      const box = screen.getByRole('checkbox', { name: /Also create a deal/ });
+      expect(box).not.toBeChecked();
+      fireEvent.click(box);
+      expect(box).toBeChecked();
+    });
+
+    it('FR-DEAL-02 is not offered without deals.edit, or when editing a company', () => {
+      routeParams = { tenantSlug: 'acme', clientId: undefined };
+      signInWith({ 'companies.edit': 'OWN' });
+      const { unmount } = render(<ClientFormContent />);
+      expect(screen.queryByRole('checkbox', { name: /Also create a deal/ })).toBeNull();
+      unmount();
+
+      routeParams = { tenantSlug: 'acme', clientId: 'client-1' };
+      signInWith({ 'companies.edit': 'OWN', 'deals.edit': 'OWN' });
+      render(<ClientFormContent />);
+      expect(screen.queryByRole('checkbox', { name: /Also create a deal/ })).toBeNull();
+    });
   });
 
   it('renders the tenant form, not a hardcoded field list', () => {

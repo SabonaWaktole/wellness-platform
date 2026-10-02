@@ -843,12 +843,13 @@
   "statuses": {
     "breadcrumb": "Statuses",
     "title": "Statuses",
-    "subtitle": "Rename, recolour and reorder the fixed contract and payment statuses. The set itself cannot change: renaming \"Active\" changes the label everywhere, but the status stays the same underneath.",
+    "subtitle": "Rename, recolour and reorder the fixed contract and payment statuses and the deal stages. The set itself cannot change: renaming \"Active\" changes the label everywhere, but the status stays the same underneath.",
     "loading": "Loading…",
     "loadFailed": "Couldn't load the statuses.",
     "sections": {
       "contract": "Contract statuses",
-      "payment": "Payment statuses"
+      "payment": "Payment statuses",
+      "deal": "Deal stages"
     },
     "columns": {
       "order": "Order",

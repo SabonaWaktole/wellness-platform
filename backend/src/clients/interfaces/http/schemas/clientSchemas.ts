@@ -76,6 +76,8 @@ export const updateClientSchema = z.object({
 export const createClientHttpSchema = createClientSchema.extend({
   profile: companyProfileSchema,
   contacts: z.array(contactPersonInputSchema).min(1, 'Add at least one contact person.'),
+  /** "Create a deal": the company's first deal, in New Lead, saved with it (FR-DEAL-02). */
+  createDeal: z.boolean().optional(),
 });
 
 export const addContactPersonSchema = contactPersonInputSchema.omit({ isPrimary: true });

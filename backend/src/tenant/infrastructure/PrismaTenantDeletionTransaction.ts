@@ -34,6 +34,7 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        *   - Product      -> ProductImage
        *   - Invoice      -> InvoiceLineItem, InvoiceStatusHistory
        *   - Contract     -> ContractPayment, ContractStatusHistory
+       *   - Deal         -> DealStageHistory (also deleted explicitly, below)
        *   - Tenant       -> NotificationSettings (deleted last, below)
        *
        * AuditLog is deliberately absent: its tenantId column carries no
@@ -50,6 +51,14 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.formSubmission.deleteMany({ where: { tenantId } });
       await tx.formVersion.deleteMany({ where: { tenantId } });
       await tx.clientForm.deleteMany({ where: { tenantId } });
+      /*
+       * Deals (M2 Slice 6) hold RESTRICT references to Client, User,
+       * Quotation, LostReason and ServicePackage, so they go before all of
+       * them. Their stage history cascades from the deal on Postgres; it is
+       * deleted first anyway so nothing is left to MySQL's cascade ordering.
+       */
+      await tx.dealStageHistory.deleteMany({ where: { tenantId } });
+      await tx.deal.deleteMany({ where: { tenantId } });
       await tx.invoice.deleteMany({ where: { tenantId } });
       /*
        * Before Client and User, like Invoice above and for the same reason:

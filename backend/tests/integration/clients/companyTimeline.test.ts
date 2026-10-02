@@ -235,7 +235,7 @@ describe('Company timeline (Slice 13)', () => {
   });
 
   it('rejects an unknown type or a malformed cursor with 400', async () => {
-    const badType = await as('admin').get(`/clients/${clientId}/history?type=DEAL`);
+    const badType = await as('admin').get(`/clients/${clientId}/history?type=WEATHER`);
     expect(badType.status).toBe(400);
 
     const badCursor = await as('admin').get(`/clients/${clientId}/history?cursor=nonsense`);

@@ -92,6 +92,7 @@
   "nav": {
     "dashboard": "Paneli",
     "clients": "Klientët",
+    "pipeline": "Pipeline",
     "appointments": "Takimet",
     "inventory": "Produktet dhe stoku",
     "quotations": "Ofertat",

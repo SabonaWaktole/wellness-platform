@@ -1,0 +1,266 @@
+/* ============================================================================
+ * PipelineBoardContent (FR-DEAL-10, FR-DEAL-13)
+ * The page header matches ContractListContent's. The board scrolls sideways
+ * inside its own area, so the page never does at 360 px.
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.breadcrumb {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  letter-spacing: var(--font-letter-spacing-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.message {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* The board: columns side by side, scrolled inside this area only. */
+.board {
+  display: flex;
+  gap: var(--spacing-base);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: var(--spacing-sm);
+  scroll-snap-type: x proximity;
+  min-width: 0;
+}
+
+.column {
+  flex: 0 0 272px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-base);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-container-low);
+  border: 1px solid var(--color-outline-variant);
+  scroll-snap-align: start;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+@media (max-width: 480px) {
+  .column {
+    flex-basis: 85%;
+  }
+}
+
+.columnTarget {
+  background: var(--color-surface-container);
+  border-color: var(--color-primary);
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.columnDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.columnTitle {
+  margin: 0;
+  font-size: var(--font-size-label-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.columnCount {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--color-surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+}
+
+.columnTotal {
+  margin-left: auto;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.columnNote {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-tertiary);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-height: 48px;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--spacing-sm) 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--spacing-base);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--color-outline);
+}
+
+.cardMovable {
+  cursor: grab;
+}
+
+.cardMovable:active {
+  cursor: grabbing;
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-xs);
+}
+
+.cardCompany {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.cardMenu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px 0 0;
+  border: none;
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cardMenu:hover,
+.cardMenu:focus-visible {
+  background: var(--color-surface-container-high);
+  color: var(--text-primary);
+}
+
+.menuHeader {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.cardTitle {
+  font-size: var(--font-size-label-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.cardTitle:hover {
+  text-decoration: underline;
+}
+
+.cardMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.cardValue {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cardFollowUp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}

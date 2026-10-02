@@ -160,8 +160,8 @@ export interface Interaction {
   createdAt: string;
 }
 
-/** What the company timeline can be filtered by (FR-CMP-05). */
-export const TIMELINE_CATEGORIES = ['CONTACT', 'NOTE', 'ACTIVITY', 'QUOTATION', 'CONTRACT', 'PAYMENT'] as const;
+/** What the company timeline can be filtered by (FR-CMP-05). DEAL is M2 Slice 6's (FR-DEAL-20). */
+export const TIMELINE_CATEGORIES = ['CONTACT', 'NOTE', 'ACTIVITY', 'QUOTATION', 'CONTRACT', 'PAYMENT', 'DEAL'] as const;
 export type TimelineCategory = (typeof TIMELINE_CATEGORIES)[number];
 
 export interface TimelineEntry {

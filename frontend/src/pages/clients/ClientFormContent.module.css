@@ -168,3 +168,26 @@
   color: var(--text-primary);
   font-size: var(--font-size-body-sm);
 }
+
+/* The "Create a deal" box (M2 Slice 6: FR-DEAL-02). */
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.checkboxRow input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.checkboxHelper {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}

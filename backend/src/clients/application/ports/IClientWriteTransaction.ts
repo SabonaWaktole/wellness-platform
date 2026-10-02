@@ -1,10 +1,13 @@
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 import { IClientRepository } from '../../domain/repositories/IClientRepository';
 import { IContactPersonRepository } from '../../domain/repositories/IContactPersonRepository';
+import { IDealWrites } from '../../../deals/application/ports/IDealWriteTransaction';
 
 export interface ClientWriteRepos {
   clients: IClientRepository;
   contacts: IContactPersonRepository;
+  /** A company created with its first deal saves both together (FR-DEAL-02). */
+  deals: IDealWrites;
   auditTrail: IAuditTrail;
 }
 

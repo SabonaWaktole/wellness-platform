@@ -78,6 +78,7 @@
     "tabTimeline": "Timeline",
     "tabAppointments": "Appointments",
     "tabContracts": "Contracts",
+    "tabDeals": "Deals",
     "logCall": "Log Call",
     "logEmail": "Email",
     "logMeeting": "Meeting",
@@ -134,7 +135,8 @@
         "ACTIVITY": "Activities",
         "QUOTATION": "Offers",
         "CONTRACT": "Contracts",
-        "PAYMENT": "Payments"
+        "PAYMENT": "Payments",
+        "DEAL": "Deals"
       },
       "empty": "Nothing in this company's history yet.",
       "emptyFiltered": "Nothing of this type yet.",
@@ -152,7 +154,9 @@
         "QUOTATION_STATUS_CHANGED": "Offer {{reference}}: {{from}} → {{to}}",
         "CONTRACT_CREATED": "Contract {{reference}} created · {{plan}}",
         "CONTRACT_STATUS_CHANGED": "Contract {{reference}}: {{from}} → {{to}}",
-        "PAYMENT_RECEIVED": "Payment received · contract {{reference}}"
+        "PAYMENT_RECEIVED": "Payment received · contract {{reference}}",
+        "DEAL_CREATED": "Deal created: {{deal}}",
+        "DEAL_STAGE_CHANGED": "Deal {{deal}}: {{from}} → {{to}}"
       },
       "appointmentScheduledFor": "Scheduled for {{date}}",
       "offerTotal": "Total: {{amount}}",
@@ -239,6 +243,11 @@
       "CONTACTS_REQUIRED": "Add at least one contact person.",
       "PRIMARY_CONTACT_REQUIRED": "Choose which contact becomes primary before removing this one.",
       "generic": "Something went wrong. Please try again."
+    },
+    "firstDeal": {
+      "title": "First deal",
+      "label": "Also create a deal for this company",
+      "helper": "A New contract deal in New lead, owned by the company's salesperson."
     }
   },
   "import": {

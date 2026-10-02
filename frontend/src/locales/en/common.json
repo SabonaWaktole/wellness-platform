@@ -92,6 +92,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "clients": "Clients",
+    "pipeline": "Pipeline",
     "appointments": "Appointments",
     "inventory": "Products & Stock",
     "quotations": "Quotations",

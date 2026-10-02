@@ -208,4 +208,13 @@ describe('ClientDetailContent Contracts tab', () => {
     renderAs({ 'companies.view': 'ALL' });
     expect(screen.queryByRole('tab', { name: /Contracts/ })).not.toBeInTheDocument();
   });
+  it('FR-DEAL-01 shows the Deals tab to a role that can see deals', () => {
+    renderAs({ 'companies.view': 'OWN', 'deals.view': 'OWN' });
+    expect(screen.getByRole('tab', { name: /Deals/ })).toBeInTheDocument();
+  });
+
+  it('FR-DEAL-04 hides the Deals tab from Reception, which holds no deals key', () => {
+    renderAs({ 'companies.view': 'ALL', 'contracts.validity.view': 'ALL' });
+    expect(screen.queryByRole('tab', { name: /Deals/ })).not.toBeInTheDocument();
+  });
 });

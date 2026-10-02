@@ -1,6 +1,7 @@
 import { apiClient as api } from '../api';
 
-export type StatusDomain = 'contract' | 'payment';
+/** `deal` is the pipeline's stages (M2 Slice 6, FR-DEAL-06). */
+export type StatusDomain = 'contract' | 'payment' | 'deal';
 
 export interface StatusLabelItem {
   key: string;

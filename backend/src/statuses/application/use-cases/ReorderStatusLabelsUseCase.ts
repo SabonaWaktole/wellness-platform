@@ -2,7 +2,7 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { catalogueKeys, StatusDomain } from '../../domain/StatusCatalogue';
 import { InvalidStatusOrderError, StatusLabel } from '../../domain/StatusLabel';
-import { MANAGE_STATUSES, statusLabelAuditEntry } from '../statusAdmin';
+import { ensureCanManage, statusLabelAuditEntry } from '../statusAdmin';
 import { IStatusLabelStore } from '../ports/IStatusLabelStore';
 import { IStatusLabelWriteTransaction } from '../ports/IStatusLabelWriteTransaction';
 import { ListStatusLabelsUseCase } from './ListStatusLabelsUseCase';
@@ -15,7 +15,7 @@ export class ReorderStatusLabelsUseCase {
   ) {}
 
   async execute(input: { access: AccessContext; tenantId: string; domain: StatusDomain; keys: string[] }): Promise<StatusLabel[]> {
-    input.access.ensure(MANAGE_STATUSES);
+    ensureCanManage(input.access, input.domain);
     const expected = new Set(catalogueKeys(input.domain));
     if (input.keys.length !== expected.size || new Set(input.keys).size !== expected.size || input.keys.some((key) => !expected.has(key))) {
       throw new InvalidStatusOrderError();

@@ -194,6 +194,11 @@ describe('Permission matrix (SRS §4.2)', () => {
       request: (t) => request(app).put(`/api/${tenantSlug}/settings`).set('Authorization', `Bearer ${t}`).send({}),
     },
     {
+      label: 'deals.view — GET /deals/board',
+      permissionKey: 'deals.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/deals/board`).set('Authorization', `Bearer ${t}`),
+    },
+    {
       label: 'contracts.validity.view — GET /contracts',
       permissionKey: 'contracts.validity.view',
       request: (t) => request(app).get(`/api/${tenantSlug}/contracts`).set('Authorization', `Bearer ${t}`),

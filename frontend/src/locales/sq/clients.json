@@ -78,6 +78,7 @@
     "tabTimeline": "Kronologjia",
     "tabAppointments": "Takimet",
     "tabContracts": "Kontratat",
+    "tabDeals": "Marrëveshjet",
     "logCall": "Regjistro telefonatë",
     "logEmail": "Email",
     "logMeeting": "Takim",
@@ -134,7 +135,8 @@
         "ACTIVITY": "Aktivitetet",
         "QUOTATION": "Ofertat",
         "CONTRACT": "Kontratat",
-        "PAYMENT": "Pagesat"
+        "PAYMENT": "Pagesat",
+        "DEAL": "Marrëveshjet"
       },
       "empty": "Ende asgjë në historikun e kësaj kompanie.",
       "emptyFiltered": "Ende asgjë e këtij lloji.",
@@ -152,7 +154,9 @@
         "QUOTATION_STATUS_CHANGED": "Oferta {{reference}}: {{from}} → {{to}}",
         "CONTRACT_CREATED": "U krijua kontrata {{reference}} · {{plan}}",
         "CONTRACT_STATUS_CHANGED": "Kontrata {{reference}}: {{from}} → {{to}}",
-        "PAYMENT_RECEIVED": "U mor pagesa · kontrata {{reference}}"
+        "PAYMENT_RECEIVED": "U mor pagesa · kontrata {{reference}}",
+        "DEAL_CREATED": "Marrëveshje e krijuar: {{deal}}",
+        "DEAL_STAGE_CHANGED": "Marrëveshja {{deal}}: {{from}} → {{to}}"
       },
       "appointmentScheduledFor": "Planifikuar për {{date}}",
       "offerTotal": "Totali: {{amount}}",
@@ -239,6 +243,11 @@
       "CONTACTS_REQUIRED": "Shtoni të paktën një person kontakti.",
       "PRIMARY_CONTACT_REQUIRED": "Zgjidhni cili kontakt bëhet kryesor para se ta hiqni këtë.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    },
+    "firstDeal": {
+      "title": "Marrëveshja e parë",
+      "label": "Krijo edhe një marrëveshje për këtë kompani",
+      "helper": "Një marrëveshje Kontratë e re në fazën Kontakt i ri, e shitësit të kompanisë."
     }
   },
   "import": {

@@ -14,6 +14,7 @@ const CONTRACT_LABELS = [
   { key: 'ACTIVE', labelSq: 'Aktive', labelEn: 'Active', colour: '#3DAA6C', order: 2 },
 ];
 const PAYMENT_LABELS = [{ key: 'PAID', labelSq: 'Paguar', labelEn: 'Paid', colour: '#3DAA6C', order: 1 }];
+const DEAL_LABELS = [{ key: 'INTERESTED', labelSq: 'I interesuar', labelEn: 'Interested', colour: '#0EA5E9', order: 3 }];
 
 const renderAt = () =>
   render(
@@ -29,16 +30,18 @@ describe('StatusesSettingsContent', () => {
     vi.clearAllMocks();
     useStatusLabelsStore.setState({ byDomain: {}, loading: {} });
     (statusLabelService.list as any).mockImplementation((_slug: string, domain: string) =>
-      Promise.resolve(domain === 'contract' ? CONTRACT_LABELS : PAYMENT_LABELS)
+      Promise.resolve(domain === 'contract' ? CONTRACT_LABELS : domain === 'deal' ? DEAL_LABELS : PAYMENT_LABELS)
     );
   });
 
-  it('FR-SET-07, 08 loads and shows both domains\' statuses', async () => {
+  it('FR-SET-07, 08 FR-DEAL-06 loads and shows the contract and payment statuses and the deal stages', async () => {
     renderAt();
 
     expect((await screen.findAllByText('Draft')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Paid').length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('table')).toHaveLength(2);
+    expect((await screen.findAllByText('Interested')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Deal stages' })).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(3);
   });
 
   it('FR-SET-07 renaming "Active" saves the new label and colour, then reloads', async () => {

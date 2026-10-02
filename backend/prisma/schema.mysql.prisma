@@ -156,6 +156,9 @@ model Tenant {
 
   // M2 Slice 5: the sales script and its versions
   salesScripts SalesScript[]
+
+  // M2 Slice 6: deals and their stage history
+  deals Deal[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -273,6 +276,9 @@ model User {
   ownershipTransfersAsActingOwner   OwnershipTransfer[]      @relation("OwnershipTransferActingOwner")
   salesScriptsCreated               SalesScript[]            @relation("SalesScriptCreatedBy")
   salesScriptsPublished             SalesScript[]            @relation("SalesScriptPublishedBy")
+  ownedDeals                        Deal[]                   @relation("DealOwner")
+  createdDeals                      Deal[]                   @relation("DealCreatedBy")
+  dealStageChanges                  DealStageHistory[]       @relation("DealStageChanges")
 
   assignedRole Role? @relation(fields: [roleId], references: [id])
 
@@ -477,18 +483,19 @@ model Client {
   // client-facing read filters on it. Reversible, unlike User.deletedAt.
   deletedAt           DateTime?
 
-  tenant            Tenant        @relation(fields: [tenantId], references: [id])
-  assignedUser      User?         @relation("AssignedClients", fields: [assignedUserId], references: [id])
-  lastUpdatedByUser User          @relation("LastUpdatedClients", fields: [lastUpdatedByUserId], references: [id])
-  businessType      BusinessType? @relation(fields: [businessTypeId], references: [id], onDelete: Restrict)
-  area              Area?         @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  city              City?         @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  assignedUser      User?           @relation("AssignedClients", fields: [assignedUserId], references: [id])
+  lastUpdatedByUser User            @relation("LastUpdatedClients", fields: [lastUpdatedByUserId], references: [id])
+  businessType      BusinessType?   @relation(fields: [businessTypeId], references: [id], onDelete: Restrict)
+  area              Area?           @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  city              City?           @relation(fields: [cityId], references: [id], onDelete: Restrict)
   interactions      Interaction[]
   appointments      Appointment[]
   quotations        Quotation[]
   invoices          Invoice[]
   contracts         Contract[]
   contactPersons    ContactPerson[]
+  deals             Deal[]
 
   @@unique([tenantId, taxId])
   @@index([tenantId, deletedAt])
@@ -507,10 +514,10 @@ model ContactPerson {
   tenantId String
   clientId String
 
-  name     String
-  position String?
-  phone    String?
-  email    String?
+  name      String
+  position  String?
+  phone     String?
+  email     String?
   isPrimary Boolean @default(false)
 
   createdAt DateTime  @default(now())
@@ -810,6 +817,8 @@ model Quotation {
   /// being @unique. No `@relation` needed on this side beyond the implicit
   /// back-reference: Prisma infers the one-to-one from Invoice's unique FK.
   invoice Invoice?
+
+  wonDeals Deal[] @relation("DealWonQuotation")
 
   @@index([tenantId, clientId])
   @@index([tenantId, status])
@@ -1454,6 +1463,7 @@ model LostReason {
   updatedAt DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deals  Deal[]
 
   @@index([tenantId, order])
 }
@@ -1492,11 +1502,11 @@ model PricingSettings {
   /// The company details printed on the offer.
   companyName           String?
   nipt                  String?
-  address               String? @db.Text
+  address               String?  @db.Text
   phone                 String?
   email                 String?
   website               String?
-  bankDetails           String? @db.Text
+  bankDetails           String?  @db.Text
   /// The standard offer texts as sanitised TipTap JSON (plan D10, NFR-SEC-05).
   introSq               Json?
   introEn               Json?
@@ -1614,8 +1624,8 @@ model Service {
   tenantId      String
   nameSq        String
   nameEn        String?
-  descriptionSq String? @db.Text
-  descriptionEn String? @db.Text
+  descriptionSq String?  @db.Text
+  descriptionEn String?  @db.Text
   order         Int      @default(0)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
@@ -1635,8 +1645,8 @@ model ServicePackage {
   tenantId      String
   nameSq        String
   nameEn        String?
-  descriptionSq String? @db.Text
-  descriptionEn String? @db.Text
+  descriptionSq String?  @db.Text
+  descriptionEn String?  @db.Text
   isDefault     Boolean  @default(false)
   order         Int      @default(0)
   active        Boolean  @default(true)
@@ -1645,6 +1655,7 @@ model ServicePackage {
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   services PackageService[]
+  deals    Deal[]
 
   @@index([tenantId, order])
 }
@@ -1700,4 +1711,85 @@ model SalesScript {
   @@unique([tenantId, liveSlot])
   @@index([createdByUserId])
   @@index([publishedByUserId])
+}
+
+/// A sales opportunity with a company (M2 Slice 6, FR-DEAL-01). A company
+/// can have several deals, open or closed. `stageKey` is one of the fixed
+/// DEAL keys in StatusCatalogue.ts (FR-DEAL-06); the Administrator renames
+/// them through StatusLabel, never here. `type` is NEW_CONTRACT | RENEWAL |
+/// EXTRA_SERVICES, a String column like every other status in this schema.
+/// `title` NULL means the default "<company> – <type>", rendered in the
+/// reader's language.
+///
+/// The won and lost columns are filled by Slice 13; they are created now so
+/// the table is created once. The agreed values stay on the deal because a
+/// won deal feeds the Milestone 3 contract (SRS §7.3 note).
+model Deal {
+  id                String    @id
+  tenantId          String
+  clientId          String
+  ownerUserId       String
+  type              String
+  title             String?
+  stageKey          String
+  expectedCloseDate DateTime?
+  notes             String?   @db.Text
+  createdByUserId   String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  closedAt          DateTime?
+  // Soft delete (FR-DEAL-19). NULL means live; every read filters on it.
+  deletedAt         DateTime?
+
+  // Filled when the deal is won or lost (Slice 13).
+  wonAt              DateTime?
+  lostAt             DateTime?
+  lostReasonId       String?
+  lostNote           String?   @db.Text
+  agreedMonthlyPrice Decimal?  @db.Decimal(12, 2)
+  agreedAnnualValue  Decimal?  @db.Decimal(12, 2)
+  packageId          String?
+  wonQuotationId     String?
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client       Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  /// Restrict, as Client.assignedUser: users are deactivated, never deleted.
+  owner        User               @relation("DealOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  createdBy    User               @relation("DealCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  lostReason   LostReason?        @relation(fields: [lostReasonId], references: [id], onDelete: Restrict)
+  package      ServicePackage?    @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  wonQuotation Quotation?         @relation("DealWonQuotation", fields: [wonQuotationId], references: [id], onDelete: Restrict)
+  stageHistory DealStageHistory[]
+
+  @@index([tenantId, ownerUserId, stageKey])
+  @@index([tenantId, clientId])
+  @@index([tenantId, stageKey, updatedAt])
+  @@index([ownerUserId])
+  @@index([createdByUserId])
+  @@index([lostReasonId])
+  @@index([packageId])
+  @@index([wonQuotationId])
+}
+
+/// Every stage change of a deal (FR-DEAL-09): from, to, who and when. The
+/// first row of a deal has no `fromStage`. `changedByUserId` NULL means the
+/// platform moved the deal (FR-DEAL-08), so the user key restricts rather
+/// than sets null: deleting a user must not turn their moves into
+/// "automatic". Milestone 3 reads the time spent in each stage from here.
+model DealStageHistory {
+  id              String   @id
+  tenantId        String
+  dealId          String
+  fromStage       String?
+  toStage         String
+  changedByUserId String?
+  at              DateTime @default(now())
+  note            String?  @db.Text
+
+  deal      Deal  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  changedBy User? @relation("DealStageChanges", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, dealId, at])
+  @@index([dealId])
+  @@index([changedByUserId])
 }

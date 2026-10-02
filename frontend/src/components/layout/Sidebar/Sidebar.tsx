@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Calendar, Package, FileText, BarChart3,
   Settings, Building, CreditCard, Search, ClipboardCheck, Plus,
-  HelpCircle, LogOut, Receipt, FileSignature,
+  HelpCircle, LogOut, Receipt, FileSignature, Columns3,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
@@ -30,6 +30,8 @@ const iconMap: Record<string, LucideIcon> = {
   // distinct from quotations (description) and invoices (receipt_long) in the
   // same stack.
   contract: FileSignature,
+  // The sales pipeline: columns of cards, as the board shows it.
+  pipeline: Columns3,
 };
 
 export interface NavItem {

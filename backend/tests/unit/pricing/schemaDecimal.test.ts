@@ -22,6 +22,9 @@ const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
   PackageService: [],
   // Slice 5: the sales script holds no money.
   SalesScript: [],
+  // Slice 6: the agreed values Slice 13 fills when a deal is won.
+  Deal: ['agreedMonthlyPrice', 'agreedAnnualValue'],
+  DealStageHistory: [],
 };
 
 /** Field name → type, for one model block of a Prisma schema. */

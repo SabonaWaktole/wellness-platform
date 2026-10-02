@@ -1,0 +1,142 @@
+/* ============================================================================
+ * DealFormContent (FR-DEAL-01)
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.breadcrumb {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  letter-spacing: var(--font-letter-spacing-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.label {
+  font-size: var(--font-size-label-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.company {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+}
+
+.companyName {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.companySearch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.matches {
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-xs);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.match {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.match:hover,
+.match:focus-visible {
+  background: var(--color-surface-container-high);
+}
+
+.noMatch {
+  padding: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+.row {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 640px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  color: var(--color-error);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}

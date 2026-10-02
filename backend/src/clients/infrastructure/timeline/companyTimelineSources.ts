@@ -6,8 +6,9 @@ import { PrismaContactTimelineSource } from './PrismaContactTimelineSource';
 import { PrismaQuotationTimelineSource } from './PrismaQuotationTimelineSource';
 import { PrismaContractTimelineSource } from './PrismaContractTimelineSource';
 import { PrismaPaymentTimelineSource } from './PrismaPaymentTimelineSource';
+import { PrismaDealTimelineSource } from './PrismaDealTimelineSource';
 
-/** Every source of a company's timeline (FR-CMP-05). M2 adds deals here. */
+/** Every source of a company's timeline (FR-CMP-05), deals included (M2 Slice 6, FR-DEAL-20). */
 export const companyTimelineSources = (prisma: PrismaClient): TimelineSource[] => [
   new PrismaContactTimelineSource(prisma),
   new PrismaInteractionTimelineSource(prisma, 'NOTE'),
@@ -16,4 +17,5 @@ export const companyTimelineSources = (prisma: PrismaClient): TimelineSource[] =
   new PrismaQuotationTimelineSource(prisma),
   new PrismaContractTimelineSource(prisma),
   new PrismaPaymentTimelineSource(prisma),
+  new PrismaDealTimelineSource(prisma),
 ];

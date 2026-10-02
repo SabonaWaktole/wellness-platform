@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Banknote,
+  Briefcase,
   Calendar,
   CalendarCheck,
   CalendarX,
@@ -33,6 +34,7 @@ const CATEGORY_PERMISSION: Record<TimelineCategory, string> = {
   QUOTATION: 'quotations.manage',
   CONTRACT: 'contracts.validity.view',
   PAYMENT: 'payments.view',
+  DEAL: 'deals.view',
 };
 
 const NEUTRAL = { color: 'var(--color-on-surface-variant)', bg: 'var(--color-surface-container-high)' };
@@ -61,7 +63,7 @@ interface CompanyTimelineProps {
 
 /**
  * The company's unified history (FR-CMP-05): contacts, notes, activities,
- * offers, contracts and payments in one list, newest first, filterable by
+ * offers, contracts, payments and deals in one list, newest first, filterable by
  * type. The server has already left out what the viewer may not see and
  * removed money fields they may not read, so an amount is shown only when
  * present.
@@ -144,6 +146,23 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
           icon: <FileSignature size={16} />,
           ...NEUTRAL,
         };
+      case 'DEAL_CREATED':
+        return {
+          title: t('detail.timeline.events.DEAL_CREATED', { deal: d.title ?? statusLabel.dealType(d.type) }),
+          status: statusLabel.deal('NEW_LEAD'),
+          icon: <Briefcase size={16} />,
+          ...PRIMARY,
+        };
+      case 'DEAL_STAGE_CHANGED':
+        return {
+          title: t('detail.timeline.events.DEAL_STAGE_CHANGED', {
+            deal: d.title ?? statusLabel.dealType(d.type),
+            from: statusLabel.deal(d.fromStage),
+            to: statusLabel.deal(d.toStage),
+          }),
+          icon: <Briefcase size={16} />,
+          ...NEUTRAL,
+        };
       case 'PAYMENT_RECEIVED': {
         const parts = [
           d.paidAmount !== undefined && d.amount !== undefined
@@ -179,8 +198,9 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
   const subtitle = (entry: TimelineEntry) => {
     const timestamp = dates.dateTime(entry.timestamp);
     if (entry.actor) return t('detail.timeline.byActor', { timestamp, actor: entry.actor.name });
-    // A status change with no person behind it was made by the scheduler.
-    if (entry.type.endsWith('_STATUS_CHANGED')) return t('detail.timeline.byActor', { timestamp, actor: t('detail.timeline.system') });
+    // A status change with no person behind it was made by the scheduler, and
+    // a deal stage change by the platform's automatic moves (FR-DEAL-08).
+    if (entry.type.endsWith('_STATUS_CHANGED') || entry.type === 'DEAL_STAGE_CHANGED') return t('detail.timeline.byActor', { timestamp, actor: t('detail.timeline.system') });
     return timestamp;
   };
 
