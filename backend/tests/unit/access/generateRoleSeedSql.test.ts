@@ -1,12 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateMysqlRoleSeedSql, generatePostgresRoleSeedSql } from '../../../scripts/generate-role-seed-sql';
-
-const BEGIN = '-- BEGIN GENERATED ROLE SEED';
-const END = '-- END GENERATED ROLE SEED';
+import {
+  generateMysqlPermissionUpgradeSql,
+  generateMysqlRoleSeedSql,
+  generatePostgresPermissionUpgradeSql,
+  generatePostgresRoleSeedSql,
+} from '../../../scripts/generate-role-seed-sql';
 
 /** The text between (and including) the generated-block markers in `filePath`. */
-function generatedBlockOf(filePath: string): string {
+function generatedBlockOf(filePath: string, BEGIN = '-- BEGIN GENERATED ROLE SEED', END = '-- END GENERATED ROLE SEED'): string {
   const content = fs.readFileSync(filePath, 'utf8');
   const start = content.indexOf(BEGIN);
   const end = content.indexOf(END);
@@ -35,5 +37,26 @@ describe('generate-role-seed-sql (NFR-MNT-01: the matrix and the migration SQL c
     const mysql = path.join(__dirname, '../../../prisma/mysql_migration_add_invitation_role.sql');
     expect(generatedBlockOf(postgres)).toBe(generatePostgresRoleSeedSql());
     expect(generatedBlockOf(mysql)).toBe(generateMysqlRoleSeedSql());
+  });
+
+  describe('FR-RBAC-16 the m2-sales permission upgrade', () => {
+    const upgradeBlockOf = (filePath: string) =>
+      generatedBlockOf(
+        filePath,
+        '-- BEGIN GENERATED PERMISSION UPGRADE m2-sales',
+        '-- END GENERATED PERMISSION UPGRADE m2-sales'
+      );
+
+    it('the Postgres migration carries exactly what the generator produces today', () => {
+      const migration = path.join(__dirname, '../../../prisma/migrations/20260930180000_m2_sales_permissions/migration.sql');
+      expect(upgradeBlockOf(migration)).toBe(generatePostgresPermissionUpgradeSql('m2-sales'));
+    });
+
+    it('the MySQL script and the combined MySQL upgrade carry exactly what the generator produces today', () => {
+      const standalone = path.join(__dirname, '../../../prisma/mysql_migration_m2_sales_permissions.sql');
+      const combined = path.join(__dirname, '../../../prisma/mysql_upgrade_to_current.sql');
+      expect(upgradeBlockOf(standalone)).toBe(generateMysqlPermissionUpgradeSql('m2-sales'));
+      expect(upgradeBlockOf(combined)).toBe(generateMysqlPermissionUpgradeSql('m2-sales'));
+    });
   });
 });

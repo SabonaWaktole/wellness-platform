@@ -23,7 +23,7 @@ const tokenService = new JwtTokenService();
 const LEGACY_ROLE = 'STAFF';
 
 /**
- * FR-RBAC-01, 05, 09; NFR-SEC-01. For each of the five system roles, every
+ * FR-RBAC-01, 05, 09; NFR-SEC-01, 04. For each of the five system roles, every
  * permission-gated tenant route (walked from the live router, so a new route
  * cannot be forgotten) is either allowed or 403'd according to
  * `DEFAULT_ROLE_MATRIX` — the same matrix `generate-role-seed-sql.ts` seeds
@@ -139,7 +139,7 @@ describe('Permission matrix (SRS §4.2)', () => {
       route.path.startsWith('/api/:tenantSlug/') && route.gate.kind === 'permission'
   );
 
-  describe('NFR-SEC-01 every gated tenant route, generated from the router', () => {
+  describe('NFR-SEC-01, NFR-SEC-04 every gated tenant route, generated from the router, enforced on the server for each role', () => {
     it('covers the routes (guards the walk)', () => {
       expect(gatedRoutes.length).toBeGreaterThan(100);
     });

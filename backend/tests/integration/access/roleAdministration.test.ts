@@ -77,10 +77,24 @@ describe('Roles & permissions administration (FR-RBAC-03, 04, 08, 10)', () => {
     await prisma.$disconnect();
   });
 
+  it('FR-RBAC-15 the roles screen receives every Milestone 2 sales permission under "sales", and a new workspace starts with the §9.2 defaults', async () => {
+    const res = await as('admin').get('/roles').expect(200);
+
+    const sales = res.body.catalogue.filter((entry: any) => entry.group === 'sales').map((entry: any) => entry.key);
+    expect(sales).toEqual(
+      expect.arrayContaining([
+        'script.view', 'script.edit', 'deals.view', 'deals.edit', 'deals.reopen', 'deals.delete', 'offers.edit',
+        'discounts.apply', 'discounts.approve', 'followups.manage', 'activityResults.manage', 'commercial.view', 'pricing.manage',
+      ])
+    );
+    const manager = res.body.roles.find((role: any) => role.key === RoleKey.SalesManager);
+    expect(manager.grants).toEqual(DEFAULT_ROLE_MATRIX[RoleKey.SalesManager]);
+  });
+
   it('FR-RBAC-03 lists the catalogue and every role with its grants and holders', async () => {
     const res = await as('admin').get('/roles').expect(200);
 
-    expect(res.body.catalogue).toContainEqual({ key: 'commercial.view', group: 'commercial', supportsScope: true, milestone: 'M2' });
+    expect(res.body.catalogue).toContainEqual({ key: 'commercial.view', group: 'sales', supportsScope: true, milestone: 'M2' });
     const reception = res.body.roles.find((role: any) => role.key === RoleKey.Reception);
     expect(reception).toMatchObject({ isSystem: true, users: 2, grants: DEFAULT_ROLE_MATRIX[RoleKey.Reception] });
   });

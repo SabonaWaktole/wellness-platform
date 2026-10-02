@@ -8,6 +8,25 @@ describe('PermissionCatalogue', () => {
     const keys = PERMISSION_CATALOGUE.map((entry) => entry.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
+
+  it('FR-RBAC-15 lists every Milestone 2 sales permission under the "sales" group, scoped as §9.1 says', () => {
+    const sales = PERMISSION_CATALOGUE.filter((entry) => entry.group === 'sales');
+    expect(sales.map(({ key, supportsScope, milestone }) => ({ key, supportsScope, milestone }))).toEqual([
+      { key: 'script.view', supportsScope: false, milestone: 'M2' },
+      { key: 'script.edit', supportsScope: false, milestone: 'M2' },
+      { key: 'deals.view', supportsScope: true, milestone: 'M2' },
+      { key: 'deals.edit', supportsScope: true, milestone: 'M2' },
+      { key: 'deals.reopen', supportsScope: true, milestone: 'M2' },
+      { key: 'deals.delete', supportsScope: true, milestone: 'M2' },
+      { key: 'offers.edit', supportsScope: true, milestone: 'M2' },
+      { key: 'commercial.view', supportsScope: true, milestone: 'M2' },
+      { key: 'discounts.apply', supportsScope: true, milestone: 'M2' },
+      { key: 'discounts.approve', supportsScope: true, milestone: 'M2' },
+      { key: 'pricing.manage', supportsScope: false, milestone: 'M2' },
+      { key: 'followups.manage', supportsScope: true, milestone: 'M2' },
+      { key: 'activityResults.manage', supportsScope: false, milestone: 'M2' },
+    ]);
+  });
 });
 
 describe('DEFAULT_ROLE_MATRIX (SRS §4.2)', () => {
@@ -65,6 +84,34 @@ describe('DEFAULT_ROLE_MATRIX (SRS §4.2)', () => {
       expect(grants['reports.view']).toBeUndefined();
     }
     expect(DEFAULT_ROLE_MATRIX[RoleKey.Administrator]['inventory.manage']).toBe(PermissionScope.All);
+  });
+
+  const { Own, Team, All } = PermissionScope;
+  const SALES_MATRIX: Record<string, Partial<Record<RoleKey, PermissionScope | true>>> = {
+    'script.view': { SALES_USER: true, SALES_MANAGER: true, ADMINISTRATOR: true, CEO: true },
+    'script.edit': { ADMINISTRATOR: true },
+    'deals.view': { SALES_USER: Own, SALES_MANAGER: Team, ADMINISTRATOR: All, CEO: All },
+    'deals.edit': { SALES_USER: Own, SALES_MANAGER: Team, ADMINISTRATOR: All },
+    'deals.reopen': { SALES_MANAGER: Team, ADMINISTRATOR: All },
+    'deals.delete': { SALES_MANAGER: Team, ADMINISTRATOR: All },
+    'offers.edit': { SALES_USER: Own, SALES_MANAGER: Team, ADMINISTRATOR: All },
+    'commercial.view': { SALES_USER: Own, SALES_MANAGER: Team, ADMINISTRATOR: All, CEO: All },
+    'discounts.apply': { SALES_USER: Own, SALES_MANAGER: Team, ADMINISTRATOR: All },
+    'discounts.approve': { SALES_MANAGER: Team, CEO: All },
+    'pricing.manage': { ADMINISTRATOR: true },
+    'followups.manage': { SALES_USER: Own, SALES_MANAGER: Team, ADMINISTRATOR: All },
+    'activityResults.manage': { ADMINISTRATOR: true },
+  };
+
+  it.each(Object.entries(SALES_MATRIX))('FR-RBAC-16 %s has the SRS §9.2 default for every role', (permissionKey, expected) => {
+    for (const roleKey of Object.values(RoleKey)) {
+      expect([roleKey, DEFAULT_ROLE_MATRIX[roleKey][permissionKey]]).toEqual([roleKey, expected[roleKey]]);
+    }
+  });
+
+  it('Q8: the CEO approves discounts above the cap and the Administrator, who manages the rules, does not', () => {
+    expect(DEFAULT_ROLE_MATRIX[RoleKey.Ceo]['discounts.approve']).toBe(All);
+    expect(DEFAULT_ROLE_MATRIX[RoleKey.Administrator]['discounts.approve']).toBeUndefined();
   });
 
   it('deviation: Sales User keeps inventory.manage at OWN, so legacy STAFF do not lose inventory on rollout', () => {

@@ -49,8 +49,26 @@ export const PERMISSION_CATALOGUE: readonly PermissionCatalogueEntry[] = [
   // Invoices
   { key: 'invoices.manage', group: 'invoices', supportsScope: true },
 
-  // Commercial (M2) and payments (M3) — groundwork only, per cross-cutting rule 9.
-  { key: 'commercial.view', group: 'commercial', supportsScope: true, milestone: 'M2' },
+  // Sales (Milestone 2, SRS M2 §9.1, FR-RBAC-15).
+  { key: 'script.view', group: 'sales', supportsScope: false, milestone: 'M2' },
+  { key: 'script.edit', group: 'sales', supportsScope: false, milestone: 'M2' },
+  { key: 'deals.view', group: 'sales', supportsScope: true, milestone: 'M2' },
+  // Create, edit and change stage.
+  { key: 'deals.edit', group: 'sales', supportsScope: true, milestone: 'M2' },
+  { key: 'deals.reopen', group: 'sales', supportsScope: true, milestone: 'M2' },
+  { key: 'deals.delete', group: 'sales', supportsScope: true, milestone: 'M2' },
+  // Create, edit and download.
+  { key: 'offers.edit', group: 'sales', supportsScope: true, milestone: 'M2' },
+  { key: 'commercial.view', group: 'sales', supportsScope: true, milestone: 'M2' },
+  // A discount up to the workspace cap; above it needs discounts.approve.
+  { key: 'discounts.apply', group: 'sales', supportsScope: true, milestone: 'M2' },
+  { key: 'discounts.approve', group: 'sales', supportsScope: true, milestone: 'M2' },
+  { key: 'pricing.manage', group: 'sales', supportsScope: false, milestone: 'M2' },
+  { key: 'followups.manage', group: 'sales', supportsScope: true, milestone: 'M2' },
+  // Activity results and deal stage labels.
+  { key: 'activityResults.manage', group: 'sales', supportsScope: false, milestone: 'M2' },
+
+  // Payments (M3) — groundwork only, per cross-cutting rule 9.
   { key: 'payments.view', group: 'payments', supportsScope: true, milestone: 'M3' },
   { key: 'payments.update', group: 'payments', supportsScope: false, milestone: 'M3' },
   { key: 'performance.view', group: 'performance', supportsScope: true, milestone: 'M3' },
@@ -58,7 +76,6 @@ export const PERMISSION_CATALOGUE: readonly PermissionCatalogueEntry[] = [
   // Administration
   { key: 'users.manage', group: 'admin', supportsScope: false },
   { key: 'roles.manage', group: 'admin', supportsScope: false },
-  { key: 'pricing.manage', group: 'admin', supportsScope: false, milestone: 'M2' },
   { key: 'settings.manage', group: 'admin', supportsScope: false },
   { key: 'audit.view', group: 'admin', supportsScope: false },
 

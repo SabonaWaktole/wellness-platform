@@ -2,18 +2,11 @@ import { apiClient as api } from '../api';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE';
 
-/** The entity types Slices 2, 5, 6 and 8 actually write audit entries for. */
-export const AUDITED_ENTITY_TYPES = [
-  'Contract',
-  'ContractPayment',
-  'User',
-  'Invitation',
-  'Client',
-  'Role',
-  'RiskLevel',
-  'BusinessType',
-] as const;
-export type AuditEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
+/** A filter group and its audited entity types, as `GET /audit/entity-types` sends them (FR-AUD-10). */
+export interface AuditEntityGroup {
+  group: string;
+  types: string[];
+}
 
 export interface AuditChange {
   field: string;
@@ -41,7 +34,8 @@ export interface AuditFilters {
   from?: Date;
   to?: Date;
   userId?: string;
-  entityType?: AuditEntityType;
+  entityType?: string;
+  entityGroup?: string;
   action?: AuditAction;
 }
 
@@ -56,6 +50,7 @@ function filterParams(filters: AuditFilters) {
     to: filters.to?.toISOString(),
     userId: filters.userId,
     entityType: filters.entityType,
+    entityGroup: filters.entityGroup,
     action: filters.action,
   };
 }
@@ -67,6 +62,11 @@ export const auditService = {
       params: { ...filterParams(filters), page, limit },
     });
     return response.data;
+  },
+
+  entityTypes: async (tenantSlug: string): Promise<AuditEntityGroup[]> => {
+    const response = await api.get<{ groups: AuditEntityGroup[] }>(`/${tenantSlug}/audit/entity-types`);
+    return response.data.groups;
   },
 
   get: async (tenantSlug: string, id: string): Promise<AuditEntry> => {

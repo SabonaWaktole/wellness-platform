@@ -4,9 +4,16 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuditLogContent } from './AuditLogContent';
 import { useAuditLog } from '../../../hooks/useAuditLog';
 import { useTeam } from '../../../hooks/useTeam';
+import { useAuditEntityTypes } from '../../../hooks/useAuditEntityTypes';
 
 vi.mock('../../../hooks/useAuditLog');
 vi.mock('../../../hooks/useTeam');
+vi.mock('../../../hooks/useAuditEntityTypes');
+
+const ENTITY_GROUPS = [
+  { group: 'access', types: ['User', 'Invitation', 'Role', 'Workspace'] },
+  { group: 'contracts', types: ['Contract', 'ContractPayment'] },
+];
 
 const ROLE_ENTRY = {
   id: 'e-role',
@@ -59,6 +66,7 @@ describe('AuditLogContent', () => {
 
   const renderContent = (overrides: Partial<typeof audit> = {}) => {
     (useAuditLog as any).mockReturnValue({ ...audit, ...overrides });
+    (useAuditEntityTypes as any).mockReturnValue({ groups: ENTITY_GROUPS });
     (useTeam as any).mockReturnValue({ staff: [{ id: 'u-admin', firstName: 'Ada', lastName: 'Admin', email: 'ada@example.com' }], fetchStaff: vi.fn() });
     return render(
       <MemoryRouter initialEntries={['/t1/settings/audit']}>
@@ -91,14 +99,26 @@ describe('AuditLogContent', () => {
   it('changing a filter calls updateFilters', () => {
     renderContent();
 
-    fireEvent.change(screen.getByLabelText('Record type'), { target: { value: 'Role' } });
-    expect(audit.updateFilters).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'Role' }));
+    fireEvent.change(screen.getByLabelText('Record type'), { target: { value: 'type:Role' } });
+    expect(audit.updateFilters).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'Role', entityGroup: undefined }));
 
     fireEvent.change(screen.getByLabelText('Action'), { target: { value: 'UPDATE' } });
     expect(audit.updateFilters).toHaveBeenCalledWith(expect.objectContaining({ action: 'UPDATE' }));
 
     fireEvent.change(screen.getByLabelText('User'), { target: { value: 'u-admin' } });
     expect(audit.updateFilters).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u-admin' }));
+  });
+
+  it('FR-AUD-10 offers the record types from the backend, grouped, and filters by a whole group', () => {
+    renderContent();
+    const select = screen.getByLabelText('Record type');
+
+    expect(within(select).getByRole('group', { name: 'Users, roles & workspace' })).toBeInTheDocument();
+    expect(within(select).getByRole('option', { name: 'Workspace' })).toBeInTheDocument();
+    expect(within(select).getByRole('option', { name: 'All in Contracts & payments' })).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: 'group:contracts' } });
+    expect(audit.updateFilters).toHaveBeenCalledWith(expect.objectContaining({ entityGroup: 'contracts', entityType: undefined }));
   });
 
   it('opens the drawer on a row and shows the before/after table, with the removed permission and the redacted value', () => {

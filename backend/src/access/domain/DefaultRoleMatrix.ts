@@ -30,6 +30,12 @@ const { Own, Team, All } = PermissionScope;
  * self-service way to grant it back until Slice 6. `calendar.view: ALL` is
  * added here so nothing already working regresses; flag this to Wellness
  * Albania to confirm at UAT (see the SRS review note after this table).
+ *
+ * Milestone 2 (SRS M2 §9.2) adds the sales keys. Existing tenants receive
+ * them once through the `m2-sales` upgrade (PermissionUpgrades.ts), never by
+ * re-seeding. Q8: the CEO holds `discounts.approve` so that a Sales Manager's
+ * own discount above the cap has an approver; the Administrator manages the
+ * pricing rules but does not approve individual discounts.
  */
 export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
   [RoleKey.SalesUser]: {
@@ -47,6 +53,12 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'commercial.view': Own,
     'payments.view': Own,
     'performance.view': Own,
+    'script.view': true,
+    'deals.view': Own,
+    'deals.edit': Own,
+    'offers.edit': Own,
+    'discounts.apply': Own,
+    'followups.manage': Own,
     // Deviation from D8's "Administrator only by default": D8's single
     // coarse inventory.manage key covers reads, creates and stock
     // adjustments too, not just deletes and bulk edits — today those are
@@ -78,6 +90,15 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'commercial.view': Team,
     'payments.view': Team,
     'performance.view': Team,
+    'script.view': true,
+    'deals.view': Team,
+    'deals.edit': Team,
+    'deals.reopen': Team,
+    'deals.delete': Team,
+    'offers.edit': Team,
+    'discounts.apply': Team,
+    'discounts.approve': Team,
+    'followups.manage': Team,
   },
   [RoleKey.Reception]: {
     'companies.view': All,
@@ -113,6 +134,16 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'forms.manage': true,
     'integrations.manage': true,
     'reports.view': true,
+    'script.view': true,
+    'script.edit': true,
+    'deals.view': All,
+    'deals.edit': All,
+    'deals.reopen': All,
+    'deals.delete': All,
+    'offers.edit': All,
+    'discounts.apply': All,
+    'followups.manage': All,
+    'activityResults.manage': true,
   },
   [RoleKey.Ceo]: {
     'companies.view': All,
@@ -124,5 +155,8 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'payments.view': All,
     'performance.view': All,
     'audit.view': true,
+    'script.view': true,
+    'deals.view': All,
+    'discounts.approve': All,
   },
 };

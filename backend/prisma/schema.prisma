@@ -42,6 +42,11 @@ model Tenant {
   name                      String
   urlSlug                   String  @unique
   requiresQuotationApproval Boolean @default(true)
+  /// LEGACY_QUOTATIONS | SALES_PROCESS (M2 plan D6). Behaviour that differs
+  /// for the Milestone 2 sales process (offer email, public quotation link,
+  /// the approval switch) is keyed on this, never on the tenant slug. Slice 9
+  /// sets it to SALES_PROCESS for Wellness Albania.
+  salesWorkflow             String  @default("LEGACY_QUOTATIONS")
   // Workspace branding, surfaced in the sidebar, settings and customer-facing pages.
   logoUrl                   String?
   coverImageUrl             String?
@@ -133,7 +138,9 @@ model Tenant {
   integrations Integration[]
 
   // Slice 3: RBAC
-  roles Role[]
+  roles                     Role[]
+  // M2 Slice 2: permission upgrades already applied (D7)
+  appliedPermissionUpgrades AppliedPermissionUpgrade[]
 
   // Slice 8: lookup lists
   riskLevels    RiskLevel[]
@@ -339,6 +346,20 @@ model RolePermission {
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionKey])
+}
+
+/// A permission upgrade (src/access/domain/PermissionUpgrades.ts) that has
+/// run for this tenant (M2 plan D7). The upgrade inserts a milestone's new
+/// keys into the system roles only while this row is absent, so a grant the
+/// Administrator revokes afterwards is never put back.
+model AppliedPermissionUpgrade {
+  tenantId  String
+  key       String
+  appliedAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, key])
 }
 
 /// Records a temporary Business-Owner promotion created when a Platform Admin

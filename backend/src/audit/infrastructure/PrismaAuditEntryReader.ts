@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 import { AuditEntryPage, AuditEntryView, IAuditEntryReader } from '../application/ports/IAuditEntryReader';
-import { AuditFilter, AuditQuery } from '../domain/AuditQuery';
+import { AuditFilter, AuditQuery, typesForGroup } from '../domain/AuditQuery';
 import { AuditAction } from '../domain/AuditAction';
 import { AuditChange } from '../domain/AuditChange';
 
@@ -28,7 +28,10 @@ function whereFor(tenantId: string, filter: AuditFilter): Prisma.AuditEntryWhere
   } else if (filter.userId) {
     where.userId = filter.userId;
   }
-  if (filter.entityType) {
+  if (filter.entityGroup) {
+    const types = typesForGroup(filter.entityGroup);
+    where.entityType = { in: filter.entityType ? types.filter((type) => type === filter.entityType) : [...types] };
+  } else if (filter.entityType) {
     where.entityType = filter.entityType;
   }
   if (filter.action) {

@@ -15,14 +15,22 @@
  *   npx ts-node -r tsconfig-paths/register scripts/generate-role-seed-sql.ts
  * and paste the printed blocks back between the markers in both files.
  *
+ * Those M1 blocks are generated from `baselineRoleMatrix()`, the matrix
+ * without any key a later permission upgrade adds, so they stay exactly as
+ * they were applied. Keys added later reach existing tenants once through a
+ * permission upgrade block (`generate*PermissionUpgradeSql`, D7), committed in
+ * that upgrade's migration between `-- BEGIN/END GENERATED PERMISSION UPGRADE`
+ * markers and tested the same way.
+ *
  * Every INSERT is guarded with `WHERE NOT EXISTS (...)`, which is what makes
  * the block idempotent: safe on a fresh database, safe re-run on one that
  * already has the roles, and — because it selects from the live `Tenant`
  * table rather than a fixed list of ids — it also seeds any tenant created
  * between when this migration was written and when it is deployed.
  */
-import { DEFAULT_ROLE_MATRIX, PermissionGrant } from '../src/access/domain/DefaultRoleMatrix';
+import { PermissionGrant, RoleGrantMap } from '../src/access/domain/DefaultRoleMatrix';
 import { PermissionScope } from '../src/access/domain/PermissionScope';
+import { PERMISSION_UPGRADES, baselineRoleMatrix, grantsForUpgrade, permissionUpgrade } from '../src/access/domain/PermissionUpgrades';
 import { RoleKey, SYSTEM_ROLE_NAMES } from '../src/access/domain/RoleKey';
 
 const ROLE_KEYS = Object.values(RoleKey);
@@ -39,10 +47,13 @@ function roleNameRows(): string {
 }
 
 /** `(roleKey, permissionKey, scope)` triples, in a stable order, for every granted key. */
-function grantRows(scopeLiteral: (grant: PermissionGrant) => string): string {
+function grantRows(
+  scopeLiteral: (grant: PermissionGrant) => string,
+  grantsOf: (roleKey: RoleKey) => RoleGrantMap = (roleKey) => baselineRoleMatrix()[roleKey]
+): string {
   const rows: string[] = [];
   for (const roleKey of ROLE_KEYS) {
-    const grants = DEFAULT_ROLE_MATRIX[roleKey];
+    const grants = grantsOf(roleKey);
     for (const permissionKey of Object.keys(grants).sort()) {
       const grant = grants[permissionKey as keyof typeof grants] as PermissionGrant;
       rows.push(
@@ -138,11 +149,154 @@ WHERE u.roleId IS NULL
 -- END GENERATED ROLE SEED`;
 }
 
+/** `(roleKey, changes)` rows for the audit entry of every role the upgrade gives keys to. */
+function upgradeAuditRows(upgradeKey: string): string {
+  const upgrade = permissionUpgrade(upgradeKey);
+  return ROLE_KEYS.flatMap((roleKey) => {
+    const added = Object.keys(grantsForUpgrade(upgrade, roleKey)).sort();
+    if (added.length === 0) return [];
+    const changes = JSON.stringify([
+      { field: 'permissionsAdded', old: null, new: added },
+      { field: 'permissionUpgrade', old: null, new: upgradeKey },
+    ]);
+    return [`  SELECT ${sqlString(roleKey)} AS rolekey, ${sqlString(changes)} AS changes`];
+  }).join('\n  UNION ALL\n');
+}
+
+/**
+ * The statements of permission upgrade `upgradeKey` (D7), in order. Each one
+ * only touches tenants with no `AppliedPermissionUpgrade` row for it, and the
+ * last one writes that row, so the upgrade runs once per tenant: re-running
+ * it, or a grant the Administrator revokes later, changes nothing.
+ */
+export function generatePostgresPermissionUpgradeStatements(upgradeKey: string): string[] {
+  const upgrade = permissionUpgrade(upgradeKey);
+  const scopeLiteral = (grant: PermissionGrant) => (grant === true ? 'NULL::TEXT' : sqlString(grant as PermissionScope));
+  const upgradeGrants = grantRows(scopeLiteral, (roleKey) => grantsForUpgrade(upgrade, roleKey));
+  const notApplied = (tenantColumn: string) =>
+    `NOT EXISTS (
+    SELECT 1 FROM "AppliedPermissionUpgrade" a WHERE a."tenantId" = ${tenantColumn} AND a."key" = ${sqlString(upgradeKey)}
+  )`;
+
+  return [
+    `-- One Role audit entry per system role still missing one of its new keys, from
+-- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
+INSERT INTO "AuditEntry" ("id", "tenantId", "at", "userId", "userRole", "action", "entityType", "entityId", "entityLabel", "changes")
+SELECT gen_random_uuid(), r."tenantId", CURRENT_TIMESTAMP, NULL, 'SYSTEM', 'UPDATE', 'Role', r."id",
+  COALESCE(NULLIF(r."nameSq", ''), r."nameEn"), v."changes"::jsonb
+FROM "Role" r
+CROSS JOIN (
+${upgradeAuditRows(upgradeKey)}
+) v
+WHERE r."isSystem" = true
+  AND r."key" = v."rolekey"
+  AND ${notApplied('r."tenantId"')}
+  AND EXISTS (
+    SELECT 1 FROM (
+${upgradeGrants}
+    ) g
+    WHERE g."rolekey" = r."key"
+      AND NOT EXISTS (
+        SELECT 1 FROM "RolePermission" rp WHERE rp."roleId" = r."id" AND rp."permissionKey" = g."permissionkey"
+      )
+  );`,
+    `-- Grant the new keys to each system role at its default (SRS M2 §9.2). Never updates or deletes a grant.
+INSERT INTO "RolePermission" ("roleId", "permissionKey", "scope")
+SELECT r."id", v."permissionkey", v."scope"
+FROM "Role" r
+CROSS JOIN (
+${upgradeGrants}
+) v
+WHERE r."isSystem" = true
+  AND r."key" = v."rolekey"
+  AND ${notApplied('r."tenantId"')}
+  AND NOT EXISTS (
+    SELECT 1 FROM "RolePermission" rp WHERE rp."roleId" = r."id" AND rp."permissionKey" = v."permissionkey"
+  );`,
+    `-- Record the upgrade, so it never runs again for these tenants.
+INSERT INTO "AppliedPermissionUpgrade" ("tenantId", "key", "appliedAt")
+SELECT t."id", ${sqlString(upgradeKey)}, CURRENT_TIMESTAMP
+FROM "Tenant" t
+WHERE ${notApplied('t."id"')};`,
+  ];
+}
+
+export function generateMysqlPermissionUpgradeStatements(upgradeKey: string): string[] {
+  const upgrade = permissionUpgrade(upgradeKey);
+  const scopeLiteral = (grant: PermissionGrant) => (grant === true ? 'NULL' : sqlString(grant as PermissionScope));
+  const upgradeGrants = grantRows(scopeLiteral, (roleKey) => grantsForUpgrade(upgrade, roleKey));
+  const notApplied = (tenantColumn: string) =>
+    `NOT EXISTS (
+    SELECT 1 FROM \`AppliedPermissionUpgrade\` a WHERE a.tenantId = ${tenantColumn} AND a.\`key\` = ${sqlString(upgradeKey)}
+  )`;
+
+  return [
+    `-- One Role audit entry per system role still missing one of its new keys, from
+-- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
+INSERT INTO \`AuditEntry\` (\`id\`, \`tenantId\`, \`at\`, \`userId\`, \`userRole\`, \`action\`, \`entityType\`, \`entityId\`, \`entityLabel\`, \`changes\`)
+SELECT UUID(), r.tenantId, NOW(3), NULL, 'SYSTEM', 'UPDATE', 'Role', r.id,
+  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), CAST(v.changes AS JSON)
+FROM \`Role\` r
+JOIN (
+${upgradeAuditRows(upgradeKey)}
+) v ON v.rolekey = r.\`key\`
+WHERE r.isSystem = 1
+  AND ${notApplied('r.tenantId')}
+  AND EXISTS (
+    SELECT 1 FROM (
+${upgradeGrants}
+    ) g
+    WHERE g.rolekey = r.\`key\`
+      AND NOT EXISTS (
+        SELECT 1 FROM \`RolePermission\` rp WHERE rp.roleId = r.id AND rp.permissionKey = g.permissionkey
+      )
+  );`,
+    `-- Grant the new keys to each system role at its default (SRS M2 §9.2). Never updates or deletes a grant.
+INSERT INTO \`RolePermission\` (\`roleId\`, \`permissionKey\`, \`scope\`)
+SELECT r.id, v.permissionkey, v.scope
+FROM \`Role\` r
+JOIN (
+${upgradeGrants}
+) v ON v.rolekey = r.\`key\`
+WHERE r.isSystem = 1
+  AND ${notApplied('r.tenantId')}
+  AND NOT EXISTS (
+    SELECT 1 FROM \`RolePermission\` rp WHERE rp.roleId = r.id AND rp.permissionKey = v.permissionkey
+  );`,
+    `-- Record the upgrade, so it never runs again for these tenants.
+INSERT INTO \`AppliedPermissionUpgrade\` (\`tenantId\`, \`key\`, \`appliedAt\`)
+SELECT t.id, ${sqlString(upgradeKey)}, NOW(3)
+FROM \`Tenant\` t
+WHERE ${notApplied('t.id')};`,
+  ];
+}
+
+function upgradeBlock(upgradeKey: string, statements: string[]): string {
+  return `-- BEGIN GENERATED PERMISSION UPGRADE ${upgradeKey}
+-- Generated by scripts/generate-role-seed-sql.ts from PERMISSION_UPGRADES and DEFAULT_ROLE_MATRIX.
+${statements.join('\n\n')}
+-- END GENERATED PERMISSION UPGRADE ${upgradeKey}`;
+}
+
+export function generatePostgresPermissionUpgradeSql(upgradeKey: string): string {
+  return upgradeBlock(upgradeKey, generatePostgresPermissionUpgradeStatements(upgradeKey));
+}
+
+export function generateMysqlPermissionUpgradeSql(upgradeKey: string): string {
+  return upgradeBlock(upgradeKey, generateMysqlPermissionUpgradeStatements(upgradeKey));
+}
+
 /* istanbul ignore next -- CLI entry point, exercised by hand, not by tests */
 if (require.main === module) {
   process.stdout.write('===== Postgres (paste between the markers in the migration.sql) =====\n\n');
   process.stdout.write(generatePostgresRoleSeedSql());
   process.stdout.write('\n\n===== MySQL (paste between the markers in mysql_migration_add_roles_and_permissions.sql) =====\n\n');
   process.stdout.write(generateMysqlRoleSeedSql());
+  for (const { key } of PERMISSION_UPGRADES) {
+    process.stdout.write(`\n\n===== Postgres upgrade ${key} (paste between its markers in the migration.sql) =====\n\n`);
+    process.stdout.write(generatePostgresPermissionUpgradeSql(key));
+    process.stdout.write(`\n\n===== MySQL upgrade ${key} (paste between its markers in its mysql_migration_*.sql) =====\n\n`);
+    process.stdout.write(generateMysqlPermissionUpgradeSql(key));
+  }
   process.stdout.write('\n');
 }
