@@ -1,6 +1,9 @@
 import { Scheduler, ScheduledJob } from './Scheduler';
 import { RecordScopeResolver } from '../access/application/RecordScopeResolver';
 import { PrismaTeamRoster } from '../access/infrastructure/PrismaTeamRoster';
+import { PrismaDiscountApprovalStore } from '../discounts/infrastructure/PrismaDiscountApprovalStore';
+import { DiscountApprovalReminderJob } from './jobs/DiscountApprovalReminderJob';
+import { PrismaPermissionHolderDirectory } from '../notifications/infrastructure/PrismaPermissionHolderDirectory';
 import { PrismaSchedulerQueries } from './PrismaSchedulerQueries';
 import { AppointmentReminderJob } from './jobs/AppointmentReminderJob';
 import { QuotationFollowUpJob } from './jobs/QuotationFollowUpJob';
@@ -54,10 +57,12 @@ export function createScheduler(): Scheduler {
 
   // The reminder and follow-up jobs are not inside a transaction, so they use
   // `emitSafe`, which writes the notification and sends the email in one step.
+  // The directory lets the discount reminder fan out by permission (D9).
   const notifications = new NotificationService(
     notificationRepository,
     userRepository,
-    emailDispatcher
+    emailDispatcher,
+    new PrismaPermissionHolderDirectory(undefined, new PrismaTeamRoster())
   );
 
   const expireQuotation = new ExpireQuotationUseCase(
@@ -76,6 +81,7 @@ export function createScheduler(): Scheduler {
     new AppointmentReminderJob(queries, settingsRepository, notifications),
     new QuotationFollowUpJob(queries, settingsRepository, notifications),
     new QuotationExpiryJob(queries, settingsRepository, expireQuotation, new ExpireOfferUseCase(new PrismaOfferWriteTransaction())),
+    new DiscountApprovalReminderJob(new PrismaDiscountApprovalStore(), settingsRepository, notifications),
     new InvoiceOverdueJob(queries, markInvoiceOverdue),
     new ContractExpiryJob(queries, expireContract, notifications),
     new ContractRenewalReminderJob(queries, notifications),

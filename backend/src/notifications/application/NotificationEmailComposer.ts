@@ -52,8 +52,29 @@ export class NotificationEmailComposer {
     const ref = String(p.reference ?? '');
     const client = String(p.clientName ?? 'a client');
     const when = String(p.scheduledAt ?? '');
+    const percent = String(p.requestedPercent ?? p.approvedPercent ?? '');
 
     switch (type) {
+      case 'DISCOUNT_APPROVAL_REQUESTED':
+        return {
+          subject: `Discount ${percent}% on ${ref} needs your approval`,
+          body: `<strong>${esc(client)}</strong> was offered <strong>${esc(ref)}</strong> with a <strong>${esc(percent)}%</strong> discount, which is above the cap. A decision is waiting.`,
+        };
+      case 'DISCOUNT_APPROVED':
+        return {
+          subject: `Discount ${percent}% on ${ref} was approved`,
+          body: `The <strong>${esc(percent)}%</strong> discount on <strong>${esc(ref)}</strong> was approved. The offer is ready to download.`,
+        };
+      case 'DISCOUNT_REJECTED':
+        return {
+          subject: `Discount on ${ref} was rejected`,
+          body: `The discount above the cap on <strong>${esc(ref)}</strong> was rejected. The offer is back to draft at the cap.`,
+        };
+      case 'DISCOUNT_APPROVAL_REMINDER':
+        return {
+          subject: `Reminder: discount ${percent}% on ${ref} still waits`,
+          body: `The <strong>${esc(percent)}%</strong> discount request on <strong>${esc(ref)}</strong> is still waiting for a decision.`,
+        };
       case 'QUOTATION_SUBMITTED_FOR_APPROVAL':
         return {
           subject: `Quotation ${ref} needs your approval`,
@@ -151,15 +172,17 @@ export class NotificationEmailComposer {
     const path =
       entityType === 'QUOTATION'
         ? `quotations/${entityId}`
-        : entityType === 'APPOINTMENT'
-          ? 'appointments'
-          : entityType === 'CLIENT'
-            ? `clients/${entityId}`
-            : entityType === 'FORM'
-              ? `settings/client-management/forms/${entityId}/submissions`
-              : entityType === 'CONTRACT'
-                ? `contracts/${entityId}`
-                : null;
+        : entityType === 'OFFER'
+          ? `deals/${entityId}`
+          : entityType === 'APPOINTMENT'
+            ? 'appointments'
+            : entityType === 'CLIENT'
+              ? `clients/${entityId}`
+              : entityType === 'FORM'
+                ? `settings/client-management/forms/${entityId}/submissions`
+                : entityType === 'CONTRACT'
+                  ? `contracts/${entityId}`
+                  : null;
     return path ? `${this.appUrl}/${tenantSlug}/${path}` : null;
   }
 
@@ -185,6 +208,8 @@ export class NotificationEmailComposer {
     switch (entityType) {
       case 'QUOTATION':
         return 'Quotation';
+      case 'OFFER':
+        return 'Offer';
       case 'APPOINTMENT':
         return 'Appointment';
       case 'CLIENT':

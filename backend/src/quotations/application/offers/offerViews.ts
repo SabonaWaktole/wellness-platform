@@ -1,8 +1,27 @@
 import { PriceOnRequestReason } from '../../../pricing/domain/PriceCalculator';
 import { OfferLanguage, OfferServiceLine } from '../../domain/Offer';
 
-/** The steps the offer view offers, each gated on the server (FR-OFR-09..12). */
-export type OfferAction = 'EDIT' | 'MARK_READY' | 'MARK_SENT' | 'MARK_ACCEPTED' | 'MARK_REJECTED' | 'REVISE';
+/** The steps the offer view offers, each gated on the server (FR-OFR-09..12, FR-DSC-06, 10). */
+export type OfferAction =
+  | 'EDIT'
+  | 'MARK_READY'
+  | 'MARK_SENT'
+  | 'MARK_ACCEPTED'
+  | 'MARK_REJECTED'
+  | 'REVISE'
+  | 'APPROVE_DISCOUNT'
+  | 'REJECT_DISCOUNT'
+  | 'WITHDRAW_APPROVAL';
+
+/** The offer's pending discount approval, if it waits for one (FR-DSC-03). */
+export interface PendingApprovalSummary {
+  id: string;
+  requestedByUserId: string;
+  requestedByName: string;
+  requestedPercent: string;
+  reason: string;
+  createdAt: string;
+}
 
 /**
  * An offer as the deal page shows it (FR-DEAL-03, FR-OFR-04). Amounts are
@@ -39,6 +58,8 @@ export interface OfferView {
   dealOpen: boolean;
   /** What this viewer may do with the offer now (FR-OFR-09); filled by the use case. */
   permittedActions: OfferAction[];
+  /** The pending discount approval, when the offer waits for one (FR-DSC-03). */
+  pendingApproval: PendingApprovalSummary | null;
   language: OfferLanguage;
   note: string | null;
   createdByUserId: string;

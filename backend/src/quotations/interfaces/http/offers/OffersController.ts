@@ -110,6 +110,7 @@ export class OffersController {
         offerId: idOf(req),
         language: query.lang,
         timeZone: tenant.timezone,
+        disposition: query.disposition,
       });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Length', pdf.length);

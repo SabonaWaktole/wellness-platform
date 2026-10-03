@@ -36,6 +36,7 @@ const toFormState = (settings: NotificationSettings): FormState => ({
   quotationFollowUpDays: settings.quotationFollowUpDays,
   quotationAutoExpireEnabled: settings.quotationAutoExpireEnabled,
   quotationExpiryDays: settings.quotationExpiryDays,
+  discountApprovalReminderHours: settings.discountApprovalReminderHours,
 });
 
 /**
@@ -299,6 +300,31 @@ export const NotificationSettingsPage = () => {
                         </option>
                       ))}
                     </select>
+                  </div>
+                </Card>
+
+                <Card padding="lg">
+                  <div className={styles.cardHeaderWithIcon}>
+                    <FileClock size={17} />
+                    <h2 className={styles.cardTitle}>{t('notifications.discountApprovalsSection')}</h2>
+                  </div>
+                  <p className={styles.helperText}>{t('notifications.discountReminderHoursHint')}</p>
+
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.fieldLabel} htmlFor="discountReminderHours">
+                      {t('notifications.discountReminderHoursLabel')}
+                    </label>
+                    <input
+                      id="discountReminderHours"
+                      type="number"
+                      className={styles.numberInput}
+                      min={settings.limits.discountApprovalReminderHours.min}
+                      max={settings.limits.discountApprovalReminderHours.max}
+                      value={form.discountApprovalReminderHours}
+                      onChange={(e) => setField('discountApprovalReminderHours', Number(e.target.value))}
+                      disabled={!isBusinessOwner || saving}
+                    />
+                    <span className={styles.unit}>{t('notifications.hours')}</span>
                   </div>
                 </Card>
 

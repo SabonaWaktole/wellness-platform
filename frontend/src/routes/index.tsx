@@ -39,6 +39,7 @@ import { FormSubmissionsPage } from '../pages/settings/FormSubmissionsPage';
 import { FormPrintPage } from '../pages/settings/FormPrintPage';
 import { FormSubmissionPrintPage } from '../pages/settings/FormSubmissionPrintPage';
 import { NotificationSettingsPage } from '../pages/settings/NotificationSettingsPage';
+import { ApprovalsPage } from '../pages/approvals/ApprovalsPage';
 import { CreateQuotation } from '../pages/quotations/CreateQuotation';
 import { EditQuotation } from '../pages/quotations/EditQuotation';
 import { InvoiceList } from '../pages/invoices/InvoiceList';
@@ -442,6 +443,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="commercial.view">
               <OfferList />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // Pending discount approvals (M2 Slice 10, FR-DSC-06).
+        path: 'approvals',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="discounts.approve">
+              <ApprovalsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

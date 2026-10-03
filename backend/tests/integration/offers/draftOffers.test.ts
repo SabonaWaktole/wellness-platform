@@ -454,9 +454,11 @@ describe('Pricing screen and draft offers (M2 Slice 8)', () => {
 
     it('FR-DSC-04 20% posted directly returns a validation error, and nothing is saved', async () => {
       const dealId = await newDeal();
+      // M2 Slice 10: above the cap the save becomes an approval request, so a
+      // bare above-cap save is refused for its missing reason, not its discount.
       const res = await saveOffer('salesA', dealId, await exampleA({ discountPercent: '20' }));
       expect(res.status).toBe(400);
-      expect(res.body).toMatchObject({ code: 'DISCOUNT_ABOVE_CAP', field: 'discountPercent' });
+      expect(res.body).toMatchObject({ field: 'reason' });
       expect(await offersOf(dealId)).toEqual([]);
     });
 

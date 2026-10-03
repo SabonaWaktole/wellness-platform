@@ -1,5 +1,6 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { Money } from '../../../pricing/domain/Money';
 import { Percent } from '../../../pricing/domain/Percent';
 import { EDIT_OFFERS, withActions } from './offerAccess';
 import { actorOf, ensureDealOpen, offerInScope, recordOfferChange } from './offerChanges';
@@ -36,10 +37,28 @@ export class MarkOfferReadyUseCase {
         contactPersonId: props.contactPersonId,
         salespersonUserId: deal.ownerUserId,
       });
-      // The cap the offer was priced with (FR-OFR-04); Slice 10 adds approval above it.
+      // The cap the offer was priced with (FR-OFR-04). An approved above-cap
+      // discount passes its approval instead (FR-DSC-08; Slice 10): the
+      // latest APPROVED request covering this list price and discount.
       const cap = Percent.of(String(props.ruleSnapshot.discountCapPercent ?? '0'));
+      const amounts = offer.amounts;
+      let approval: { listPrice: Money; approvedPercent: Percent } | undefined;
+      if (amounts && amounts.discountPercent.exceeds(cap)) {
+        const covering = (await repos.approvals.forOffer(tenantId, offerId))
+          .map((candidate) => candidate.toProps())
+          .find(
+            (candidate) =>
+              candidate.status === 'APPROVED' &&
+              candidate.approvedPercent !== null &&
+              candidate.listPriceAtRequest.equals(amounts.listPrice) &&
+              !amounts.discountPercent.exceeds(candidate.approvedPercent)
+          );
+        if (covering?.approvedPercent) {
+          approval = { listPrice: covering.listPriceAtRequest, approvedPercent: covering.approvedPercent };
+        }
+      }
       const from = props.status;
-      offer.markReady(now, cap, { ...details });
+      offer.markReady(now, cap, { ...details }, approval);
       await repos.offers.saveStatus(offer);
       await recordOfferChange(repos, offer, from, actorOf(access));
     });

@@ -56,6 +56,7 @@ const view = (overrides: Partial<OfferView> = {}): OfferView => ({
   dealOwnerName: 'Arben Sales',
   dealOpen: true,
   permittedActions: [],
+  pendingApproval: null,
   language: 'sq',
   note: 'Pagesa çdo tremujor',
   createdByUserId: 'u1',

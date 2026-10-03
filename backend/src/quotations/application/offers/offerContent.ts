@@ -20,9 +20,16 @@ const INPUT_MESSAGES: Record<string, string> = {
  * D2): the inputs with their labels, the rule values used and the amounts.
  * A draft needs every input chosen; a "Price on request" result is saved
  * without amounts (FR-PRC-07). A discount above the cap is refused here, on
- * the server, whatever the client sends (FR-DSC-04).
+ * the server, whatever the client sends (FR-DSC-04) — unless the caller
+ * passes `allowAboveCap`, in which case the content carries the above-cap
+ * discount for the approval path (FR-DSC-03; Slice 10).
  */
-export function offerContentFrom(state: PricingScreenState, note: string | null, contactPersonId: string | null = null): OfferContent {
+export function offerContentFrom(
+  state: PricingScreenState,
+  note: string | null,
+  contactPersonId: string | null = null,
+  options: { allowAboveCap?: boolean } = {}
+): OfferContent {
   const { outcome, settings, config } = state;
   if (outcome.kind === 'COMPANY_INCOMPLETE') {
     throw new InvalidPricingInputError(outcome.missing[0], 'Complete the company record first.', 'COMPANY_INCOMPLETE');
@@ -36,7 +43,7 @@ export function offerContentFrom(state: PricingScreenState, note: string | null,
   for (const [field, value] of [['employees', employees], ['frequencyId', frequency], ['packageId', pkg]] as const) {
     if (value === null) throw new InvalidPricingInputError(field, INPUT_MESSAGES[field]);
   }
-  if (state.discountAboveCap) {
+  if (state.discountAboveCap && !options.allowAboveCap) {
     throw new InvalidPricingInputError(
       'discountPercent',
       `A discount above ${config.discountCap.toString()}% needs approval.`,

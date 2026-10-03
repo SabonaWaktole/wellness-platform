@@ -34,6 +34,8 @@ interface FormState {
   frequencyId: string;
   packageId: string;
   discount: string;
+  /** FR-DSC-03: why the discount is above the cap. */
+  reason: string;
   note: string;
   alsoUpdateCompany: boolean;
   /** FR-OFR-02: '' is the company's primary contact. */
@@ -113,6 +115,7 @@ export const PricingContent: React.FC = () => {
       .offers(tenantSlug, dealId)
       .then((offers) => {
         // The offer the pricing screen changes: the latest one still a draft or ready (Slice 9).
+        // A pending offer is read-only here: it is decided inline on the deal page (Slice 10).
         const draft = offers.find((offer) => !offer.superseded && (offer.status === 'DRAFT' || offer.status === 'READY'));
         setPrefill(
           draft
@@ -162,6 +165,7 @@ export const PricingContent: React.FC = () => {
               frequencyId: result.inputs.frequencyId ?? '',
               packageId: result.inputs.packageId ?? '',
               discount: result.inputs.discountPercent ?? chosen.discountPercent ?? '0',
+              reason: '',
               note: prefill?.note ?? '',
               alsoUpdateCompany: false,
               contactPersonId: prefill?.contactPersonId ?? '',
@@ -193,6 +197,10 @@ export const PricingContent: React.FC = () => {
   const employeesDiffer =
     !!form && !!view && validEmployees(form.employees) && Number(form.employees) !== view.subject.employeeCount;
   const offerUpdateCompany = !!saveDealId && canEditCompany && employeesDiffer;
+  // FR-DSC-03: above the cap the save becomes a request with a reason. It
+  // needs a price (no approval on "Price on request") and a reason.
+  const aboveCap = !!view?.discountAboveCap;
+  const reasonMissing = aboveCap && form?.reason.trim() === '';
   const canSave =
     !!saveDealId &&
     !!form &&
@@ -200,9 +208,9 @@ export const PricingContent: React.FC = () => {
     !isSaving &&
     !invalidEmployees &&
     !invalidDiscount &&
-    !view.discountAboveCap &&
+    !reasonMissing &&
     view.subject.dealOpen !== false &&
-    (result?.kind === 'PRICED' || result?.kind === 'PRICE_ON_REQUEST') &&
+    (result?.kind === 'PRICED' || (result?.kind === 'PRICE_ON_REQUEST' && !aboveCap)) &&
     !!form.businessTypeId &&
     !!form.frequencyId &&
     !!form.packageId;
@@ -211,7 +219,7 @@ export const PricingContent: React.FC = () => {
     if (!tenantSlug || !saveDealId || !form || !canSave) return;
     setIsSaving(true);
     try {
-      await dealService.saveOffer(tenantSlug, saveDealId, {
+      const offer = await dealService.saveOffer(tenantSlug, saveDealId, {
         employees: Number(form.employees),
         businessTypeId: form.businessTypeId,
         zoneId: form.zoneId || null,
@@ -221,8 +229,9 @@ export const PricingContent: React.FC = () => {
         note: form.note.trim() || null,
         alsoUpdateCompany: offerUpdateCompany && form.alsoUpdateCompany,
         contactPersonId: form.contactPersonId || null,
+        reason: aboveCap ? form.reason.trim() || null : null,
       });
-      toast.success(t('saved'));
+      toast.success(t(offer.status === 'PENDING_APPROVAL' ? 'approvalRequested' : 'saved'));
       navigate(`/${tenantSlug}/deals/${saveDealId}`);
     } catch (error) {
       toast.error(pricingScreenError(error, t));
@@ -386,6 +395,18 @@ export const PricingContent: React.FC = () => {
                 onChange={(e) => set('discount')(e.target.value)}
               />
 
+              {view.discountAboveCap && (
+                <TextareaInput
+                  label={t('reason')}
+                  placeholder={t('reasonPlaceholder', { cap })}
+                  rows={3}
+                  maxLength={2000}
+                  value={form.reason}
+                  error={reasonMissing ? t('reasonRequired') : undefined}
+                  onChange={(e) => set('reason')(e.target.value)}
+                />
+              )}
+
               {saveDealId && contacts.length > 0 && (
                 <SelectInput label={t('contact')} value={form.contactPersonId} onChange={(e) => set('contactPersonId')(e.target.value)}>
                   <option value="">
@@ -480,7 +501,7 @@ export const PricingContent: React.FC = () => {
           {(dealId || (openDeals && openDeals.length > 0)) && (
             <div className={styles.actions}>
               <Button variant="primary" onClick={save} disabled={!canSave} isLoading={isSaving}>
-                {t('save')}
+                {t(aboveCap ? 'requestApproval' : 'save')}
               </Button>
             </div>
           )}

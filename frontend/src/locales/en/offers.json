@@ -15,7 +15,10 @@
     "markSent": "Mark as sent",
     "markAccepted": "Mark accepted",
     "markRejected": "Mark rejected",
-    "revise": "Revise"
+    "revise": "Revise",
+    "approve": "Approve discount",
+    "reject": "Reject discount",
+    "withdraw": "Withdraw request"
   },
   "languages": {
     "sq": "Albanian",
@@ -26,7 +29,10 @@
     "sent": "The offer is marked as sent.",
     "accepted": "The offer is marked accepted.",
     "rejected": "The offer is marked rejected.",
-    "revised": "A new version was made. Change its price on the pricing screen."
+    "revised": "A new version was made. Change its price on the pricing screen.",
+    "approved": "The discount is approved. The offer is ready to download.",
+    "discountRejected": "The discount is rejected. The offer is back to draft at the discount cap.",
+    "withdrawn": "The approval request is withdrawn."
   },
   "sent": {
     "title": "Mark {{reference}} as sent",
@@ -48,6 +54,22 @@
     "title": "Revise {{reference}}",
     "message": "This makes version {{version}} of {{number}} as a draft. The version already sent stays as it is and can still be downloaded."
   },
+  "approval": {
+    "waiting": "Waiting for approval of a {{percent}}% discount. The final download and sending are disabled until it is decided.",
+    "requestedBy": "Requested by {{name}}",
+    "reason": "Reason: {{reason}}",
+    "approveTitle": "Approve a {{percent}}% discount on {{reference}}",
+    "approveMessage": "The offer becomes ready to download at the approved percent. You may approve a lower percent than requested.",
+    "approvedPercent": "Approved percent",
+    "approveInvalid": "Enter a percent up to the requested {{requested}}.",
+    "rejectTitle": "Reject the {{percent}}% discount on {{reference}}",
+    "rejectMessage": "The offer returns to draft with the discount set back to the cap. The comment is shown to the salesperson.",
+    "comment": "Comment",
+    "commentRequired": "A comment is required to reject.",
+    "withdrawTitle": "Withdraw the approval request",
+    "withdrawMessage": "The offer returns to draft. It leaves the approver's list.",
+    "requestedToast": "The approval is requested. The manager is notified."
+  },
   "errors": {
     "notFound": "This offer was not found.",
     "forbidden": "You do not have permission to do this.",
@@ -61,7 +83,24 @@
     "OFFER_NOT_LATEST": "A later version replaces this offer. Use the latest version.",
     "OFFER_NOT_EDITABLE": "This offer can no longer be changed.",
     "OFFER_REVISE_FIRST": "This offer has been sent. Revise it to make a new version.",
-    "INVALID_SENT_DATE": "Choose a date sent that is not in the future and not before the offer was made."
+    "INVALID_SENT_DATE": "Choose a date sent that is not in the future and not before the offer was made.",
+    "SELF_APPROVAL": "You cannot approve your own request.",
+    "DISCOUNT_APPROVAL_NOT_FOUND": "This approval request was not found.",
+    "DISCOUNT_APPROVAL_TRANSITION": "This request can no longer be decided. Reload the page and try again."
+  },
+  "approvalsList": {
+    "breadcrumb": "Sales",
+    "title": "Discount approvals",
+    "loadFailed": "The approval requests could not be loaded.",
+    "empty": "No pending requests",
+    "emptyMessage": "Discounts above the cap appear here for approval.",
+    "itemLabel": "requests",
+    "columns": {
+      "reference": "Offer",
+      "salesperson": "Requested by",
+      "requested": "Requested",
+      "requestedAt": "Requested on"
+    }
   },
   "list": {
     "breadcrumb": "Sales",

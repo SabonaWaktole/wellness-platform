@@ -11,6 +11,8 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
   'listPrice', 'netMonthlyPrice', 'discountAmount', 'discountPercent', 'baseFee', 'riskFee', 'visitFee',
   'locationFee', 'annualValue', 'pricePerEmployee', 'agreedMonthlyPrice', 'agreedAnnualValue',
   'requestedPercent', 'approvedPercent', 'surchargePercent',
+  // Milestone 2 Slice 10: the list price an approval was asked for (FR-DSC-11, FR-RBAC-17)
+  'listPriceAtRequest',
   // Milestone 2 Slice 3: pricing configuration
   'perEmployeeFee', 'riskSurchargePercent', 'frequencyValue', 'discountCapPercent',
   // Milestone 2 Slice 6: a pipeline column's total (each card's value is netMonthlyPrice)

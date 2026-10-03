@@ -49,6 +49,13 @@ export const notificationSettingsSchema = z
       .min(LIMITS.expiryDays.min)
       .max(LIMITS.expiryDays.max)
       .optional(),
+
+    discountApprovalReminderHours: z
+      .number()
+      .int()
+      .min(LIMITS.discountApprovalReminderHours.min)
+      .max(LIMITS.discountApprovalReminderHours.max)
+      .optional(),
   })
   .strict();
 

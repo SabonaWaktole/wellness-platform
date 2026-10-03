@@ -19,6 +19,13 @@ export const OFFER_INCLUDE = {
   deal: { select: { title: true, ownerUserId: true, stageKey: true, deletedAt: true, owner: PERSON } },
   // The latest status change, for its note (FR-OFR-12).
   statusHistory: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 1, select: { note: true } },
+  // The pending discount approval, for the inline approve/reject/withdraw steps (FR-DSC-03, Slice 10).
+  discountApprovals: {
+    where: { status: 'PENDING' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: 1,
+    include: { requestedBy: PERSON },
+  },
 } satisfies Prisma.QuotationInclude;
 
 type OfferRow = Prisma.QuotationGetPayload<{ include: typeof OFFER_INCLUDE }>;
@@ -135,6 +142,7 @@ export function toOffer(row: OfferRow): Offer {
 export function toOfferView(row: OfferRow): OfferView {
   const snapshot = json(row.ruleSnapshot);
   const deal = row.deal!;
+  const pending = row.discountApprovals[0] ?? null;
   return {
     id: row.id,
     dealId: row.dealId!,
@@ -157,6 +165,16 @@ export function toOfferView(row: OfferRow): OfferView {
     dealOwnerName: personName(deal.owner),
     dealOpen: deal.deletedAt === null && isDealStage(deal.stageKey) && isOpenStage(deal.stageKey),
     permittedActions: [],
+    pendingApproval: pending
+      ? {
+          id: pending.id,
+          requestedByUserId: pending.requestedByUserId,
+          requestedByName: personName(pending.requestedBy),
+          requestedPercent: pending.requestedPercent.toFixed(2),
+          reason: pending.reason,
+          createdAt: pending.createdAt.toISOString(),
+        }
+      : null,
     language: row.language as OfferLanguage,
     note: row.note,
     createdByUserId: row.createdByUserId,

@@ -8,6 +8,7 @@ import {
 } from '../domain/NotificationType';
 import { IUserRepository } from '../../auth/domain/repositories/IUserRepository';
 import { UserRole } from '../../auth/domain/enums/UserRole';
+import { IPermissionHolderDirectory } from './ports/IPermissionHolderDirectory';
 
 export interface EmitInput {
   tenantId: string;
@@ -15,6 +16,12 @@ export interface EmitInput {
   recipientUserIds?: string[];
   /** Fan-out to every ACTIVE holder of a role in the tenant. */
   toRole?: UserRole;
+  /**
+   * Fan-out to every active holder of a scoped permission whose grant admits
+   * the subject's owner, minus the actor (M2 Slice 10, D9: discount
+   * approvals, FR-DSC-05, 09).
+   */
+  toPermission?: { key: string; subjectOwnerId: string | null };
   type: NotificationType;
   params: NotificationParams;
   actorUserId?: string | null;
@@ -47,7 +54,12 @@ export class NotificationService {
      * notifications to the dispatcher themselves once their transaction has
      * committed.
      */
-    private readonly emailDispatcher?: { dispatch(notifications: Notification[]): Promise<void> }
+    private readonly emailDispatcher?: { dispatch(notifications: Notification[]): Promise<void> },
+    /**
+     * Optional, and only used when `emit` carries `toPermission` (M2 Slice
+     * 10). Sites that never fan out by permission pass nothing.
+     */
+    private readonly permissionDirectory?: IPermissionHolderDirectory
   ) {}
 
   async emit(input: EmitInput): Promise<Notification[]> {
@@ -99,6 +111,19 @@ export class NotificationService {
     if (input.toRole) {
       const holders = await this.userRepo.findActiveByTenantAndRole(input.tenantId, input.toRole);
       for (const user of holders) ids.add(user.id);
+    }
+
+    if (input.toPermission) {
+      if (!this.permissionDirectory) {
+        throw new Error('NotificationService has no permission directory for toPermission.');
+      }
+      const approvers = await this.permissionDirectory.approvers(
+        input.tenantId,
+        input.toPermission.key,
+        input.toPermission.subjectOwnerId,
+        input.actorUserId ?? undefined
+      );
+      for (const id of approvers) ids.add(id);
     }
 
     // Rule 1: never tell someone what they just did.

@@ -63,10 +63,15 @@
     "zoneId": "Zgjidh zonën e çmimit.",
     "frequencyId": "Zgjidh shpeshtësinë e vizitave."
   },
-  "aboveCap": "Një zbritje mbi {{cap}}% kërkon miratim, prandaj kjo ofertë nuk mund të ruhet.",
+  "aboveCap": "Një zbritje mbi {{cap}}% kërkon miratim. Jepni një arsye për ta kërkuar.",
+  "reason": "Arsyeja për zbritjen më të lartë",
+  "reasonPlaceholder": "Pse kjo kompani merr më shumë se {{cap}}%",
+  "reasonRequired": "Arsyeja është e detyrueshme për të kërkuar miratim.",
   "dealClosed": "Kjo marrëveshje është mbyllur: nuk merr ofertë të re.",
   "save": "Ruaj ofertën",
+  "requestApproval": "Kërko miratim",
   "saved": "Oferta u ruajt si draft.",
+  "approvalRequested": "Kërkesa për miratim u dërgua. Menaxheri njoftohet.",
   "errors": {
     "generic": "Çmimi nuk u llogarit ose nuk u ruajt. Provo përsëri.",
     "notFound": "Kjo kompani ose marrëveshje nuk ekziston ose nuk është e jotja.",
@@ -83,7 +88,8 @@
       "zoneId": "Zgjidh një nga zonat e qytetit të kompanisë.",
       "frequencyId": "Zgjidh një shpeshtësi vizitash aktive.",
       "packageId": "Zgjidh një paketë aktive.",
-      "contactPersonId": "Zgjidhni një person kontakti të kësaj kompanie."
+      "contactPersonId": "Zgjidhni një person kontakti të kësaj kompanie.",
+      "reason": "Jepni një arsye për zbritjen mbi kufirin."
     }
   }
 }

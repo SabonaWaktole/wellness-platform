@@ -15,7 +15,10 @@
     "markSent": "Shëno si të dërguar",
     "markAccepted": "Shëno si të pranuar",
     "markRejected": "Shëno si të refuzuar",
-    "revise": "Rishiko"
+    "revise": "Rishiko",
+    "approve": "Mirato zbritjen",
+    "reject": "Refuzo zbritjen",
+    "withdraw": "Tërhiq kërkesën"
   },
   "languages": {
     "sq": "Shqip",
@@ -26,7 +29,10 @@
     "sent": "Oferta u shënua si e dërguar.",
     "accepted": "Oferta u shënua si e pranuar.",
     "rejected": "Oferta u shënua si e refuzuar.",
-    "revised": "U krijua një version i ri. Ndryshoni çmimin te ekrani i çmimit."
+    "revised": "U krijua një version i ri. Ndryshoni çmimin te ekrani i çmimit.",
+    "approved": "Zbritja u miratua. Oferta është gati për t’u shkarkuar.",
+    "discountRejected": "Zbritja u refuzua. Oferta u kthye në draft me zbritjen kufi.",
+    "withdrawn": "Kërkesa për miratim u tërhoq."
   },
   "sent": {
     "title": "Shëno {{reference}} si të dërguar",
@@ -48,6 +54,22 @@
     "title": "Rishiko {{reference}}",
     "message": "Kjo krijon versionin {{version}} të {{number}} si draft. Versioni i dërguar mbetet siç është dhe mund të shkarkohet përsëri."
   },
+  "approval": {
+    "waiting": "Në pritje të miratimit për zbritjen {{percent}}%. Shkarkimi final dhe dërgimi janë të çaktivizuara derisa të vendoset.",
+    "requestedBy": "Kërkuar nga {{name}}",
+    "reason": "Arsyeja: {{reason}}",
+    "approveTitle": "Mirato zbritjen {{percent}}% për {{reference}}",
+    "approveMessage": "Oferta bëhet gati për t’u shkarkuar me përqindjen e miratuar. Mund të miratoni një përqindje më të ulët se e kërkuara.",
+    "approvedPercent": "Përqindja e miratuar",
+    "approveInvalid": "Vendosni një përqindje deri në {{requested}}.",
+    "rejectTitle": "Refuzo zbritjen {{percent}}% për {{reference}}",
+    "rejectMessage": "Oferta kthehet në draft me zbritjen kufi. Komenti i shfaqet shitësit.",
+    "comment": "Koment",
+    "commentRequired": "Komenti është i detyrueshëm për refuzimin.",
+    "withdrawTitle": "Tërhiq kërkesën për miratim",
+    "withdrawMessage": "Oferta kthehet në draft. Ajo del nga lista e miratuesit.",
+    "requestedToast": "Kërkesa për miratim u dërgua. Menaxheri njoftohet."
+  },
   "errors": {
     "notFound": "Kjo ofertë nuk u gjet.",
     "forbidden": "Nuk keni leje për këtë veprim.",
@@ -61,7 +83,24 @@
     "OFFER_NOT_LATEST": "Një version i mëvonshëm e zëvendëson këtë ofertë. Përdorni versionin e fundit.",
     "OFFER_NOT_EDITABLE": "Kjo ofertë nuk mund të ndryshohet më.",
     "OFFER_REVISE_FIRST": "Kjo ofertë është dërguar. Rishikojeni për të krijuar një version të ri.",
-    "INVALID_SENT_DATE": "Zgjidhni një datë dërgimi që nuk është në të ardhmen dhe as para krijimit të ofertës."
+    "INVALID_SENT_DATE": "Zgjidhni një datë dërgimi që nuk është në të ardhmen dhe as para krijimit të ofertës.",
+    "SELF_APPROVAL": "Nuk mund të miratoni kërkesën tuaj.",
+    "DISCOUNT_APPROVAL_NOT_FOUND": "Kjo kërkesë për miratim nuk u gjet.",
+    "DISCOUNT_APPROVAL_TRANSITION": "Kjo kërkesë nuk mund të vendoset më. Rifreskoni faqen dhe provoni përsëri."
+  },
+  "approvalsList": {
+    "breadcrumb": "Shitjet",
+    "title": "Miratimet e zbritjeve",
+    "loadFailed": "Kërkesat për miratim nuk u ngarkuan.",
+    "empty": "Nuk ka kërkesa në pritje",
+    "emptyMessage": "Zbritjet mbi kufirin shfaqen këtu për miratim.",
+    "itemLabel": "kërkesa",
+    "columns": {
+      "reference": "Oferta",
+      "salesperson": "Kërkuar nga",
+      "requested": "Kërkuar",
+      "requestedAt": "Kërkuar më"
+    }
   },
   "list": {
     "breadcrumb": "Shitjet",

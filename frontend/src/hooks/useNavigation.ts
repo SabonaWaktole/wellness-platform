@@ -35,6 +35,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'pipeline', labelKey: 'nav.pipeline', icon: 'pipeline', permission: 'deals.view' },
   // The offers list (M2 Slice 9, FR-OFR-14), in place of the legacy quotations.
   { id: 'offers', labelKey: 'nav.offers', icon: 'description', permission: 'commercial.view', workflow: 'SALES_PROCESS' },
+  // Pending discount approvals (M2 Slice 10, FR-DSC-06): whoever may approve sees the queue.
+  { id: 'approvals', labelKey: 'nav.approvals', icon: 'task_alt', permission: 'discounts.approve', workflow: 'SALES_PROCESS' },
   { id: 'appointments', labelKey: 'nav.appointments', icon: 'event', permission: 'calendar.view' },
   { id: 'inventory', labelKey: 'nav.inventory', icon: 'inventory_2', permission: 'inventory.manage' },
   { id: 'quotations', labelKey: 'nav.quotations', icon: 'description', permission: 'quotations.manage', workflow: 'LEGACY_QUOTATIONS' },

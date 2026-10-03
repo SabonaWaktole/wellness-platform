@@ -63,10 +63,15 @@
     "zoneId": "Choose the price zone.",
     "frequencyId": "Choose the visit frequency."
   },
-  "aboveCap": "A discount above {{cap}}% needs approval, so this offer cannot be saved.",
+  "aboveCap": "A discount above {{cap}}% needs approval. Give a reason to request it.",
+  "reason": "Reason for the higher discount",
+  "reasonPlaceholder": "Why this company gets more than {{cap}}%",
+  "reasonRequired": "A reason is required to request approval.",
   "dealClosed": "This deal is closed: it takes no new offer.",
   "save": "Save the offer",
+  "requestApproval": "Request approval",
   "saved": "The offer was saved as a draft.",
+  "approvalRequested": "The approval is requested. The manager is notified.",
   "errors": {
     "generic": "The price could not be calculated or saved. Try again.",
     "notFound": "This company or deal does not exist or is not one of yours.",
@@ -83,7 +88,8 @@
       "zoneId": "Choose one of the zones of the company's city.",
       "frequencyId": "Choose an active visit frequency.",
       "packageId": "Choose an active package.",
-      "contactPersonId": "Choose a contact person of this company."
+      "contactPersonId": "Choose a contact person of this company.",
+      "reason": "Give a reason for the discount above the cap."
     }
   }
 }

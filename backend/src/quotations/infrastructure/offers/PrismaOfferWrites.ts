@@ -88,6 +88,11 @@ export class PrismaOfferWrites implements IOfferWrites {
     await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: statusColumns(props) });
   }
 
+  async saveAmounts(offer: Offer): Promise<void> {
+    const props = offer.toProps();
+    await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: amountColumns(props.amounts) });
+  }
+
   async recordStatusChange(change: OfferStatusChange): Promise<void> {
     await this.prisma.quotationStatusHistory.create({
       data: {

@@ -159,6 +159,13 @@ import { OfferPdfRenderer } from '../quotations/infrastructure/offers/OfferPdfRe
 import { StandaloneOfferNumbers } from '../quotations/infrastructure/offers/PrismaOfferNumbers';
 import { OffersController } from '../quotations/interfaces/http/offers/OffersController';
 import { createOfferRouter } from '../quotations/interfaces/http/offers/offerRoutes';
+import { DecideDiscountApprovalUseCase } from '../quotations/application/offers/DecideDiscountApprovalUseCase';
+import { ListPendingApprovalsUseCase } from '../quotations/application/offers/ListPendingApprovalsUseCase';
+import { WithdrawDiscountApprovalUseCase } from '../quotations/application/offers/WithdrawDiscountApprovalUseCase';
+import { DiscountApprovalsController } from '../quotations/interfaces/http/offers/DiscountApprovalsController';
+import { createDiscountApprovalRouter } from '../quotations/interfaces/http/offers/discountApprovalRoutes';
+import { PrismaDiscountApprovalStore } from '../discounts/infrastructure/PrismaDiscountApprovalStore';
+import { PrismaPermissionHolderDirectory } from '../notifications/infrastructure/PrismaPermissionHolderDirectory';
 import { PricingScreen } from '../pricing/application/PricingScreen';
 import { PrismaPricingSubjectReader } from '../pricing/infrastructure/PrismaPricingSubjectReader';
 import { PricingController } from '../pricing/interfaces/http/PricingController';
@@ -539,6 +546,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Deals and the pipeline board (M2 Slice 6: FR-DEAL-01..11, 13, 19).
   const dealStore = new PrismaDealStore();
   const getDeal = new GetDealUseCase(dealStore, recordScopes);
+  // Who holds a scoped permission at a scope admitting a record's owner (M2
+  // Slice 10, D9: discount approval fan-out, FR-DSC-05, 09).
+  const permissionDirectory = new PrismaPermissionHolderDirectory(undefined, new PrismaTeamRoster());
   const dealController = new DealController(
     new CreateDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
     getDeal,
@@ -551,7 +561,16 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new GetDealActivitiesUseCase(getDeal, new PrismaDealActivityStore()),
     // The deal's offers (M2 Slice 8): read on the deal page, saved from the pricing screen.
     new GetDealOffersUseCase(getDeal, offerStore, recordScopes),
-    new SaveDraftOfferUseCase(pricingSubjects, pricingScreen, recordScopes, offerWriteTransaction, offerStore)
+    new SaveDraftOfferUseCase(
+      pricingSubjects,
+      pricingScreen,
+      recordScopes,
+      offerWriteTransaction,
+      offerStore,
+      userRepository,
+      permissionDirectory,
+      notificationEmailDispatcher
+    )
   );
   app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
 
@@ -567,6 +586,27 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new ReviseOfferUseCase(offerWriteTransaction, recordScopes, offerStore)
   );
   app.use('/api/:tenantSlug/offers', createOfferRouter(offersController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Discount approvals above the cap (M2 Slice 10, FR-DSC-03..12): the
+  // approver's pending list and the inline approve / reject / withdraw steps.
+  const discountApprovalStore = new PrismaDiscountApprovalStore();
+  const discountApprovalsController = new DiscountApprovalsController(
+    new ListPendingApprovalsUseCase(discountApprovalStore, recordScopes),
+    new DecideDiscountApprovalUseCase(
+      offerWriteTransaction,
+      recordScopes,
+      offerDocuments,
+      offerStore,
+      userRepository,
+      permissionDirectory,
+      notificationEmailDispatcher
+    ),
+    new WithdrawDiscountApprovalUseCase(offerWriteTransaction, recordScopes, offerStore)
+  );
+  app.use(
+    '/api/:tenantSlug/discount-approvals',
+    createDiscountApprovalRouter(discountApprovalsController, tokenService, tenantRepository, resolveAccessContext)
+  );
 
   // Settings → Statuses: contract and payment status labels, and the deal
   // stages (Slice 10: FR-SET-07, 08; M2 Slice 6: FR-DEAL-06).

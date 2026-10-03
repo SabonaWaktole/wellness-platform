@@ -11,9 +11,12 @@ const CODES = [
   'OFFER_NOT_EDITABLE',
   'OFFER_REVISE_FIRST',
   'INVALID_SENT_DATE',
+  'SELF_APPROVAL',
+  'DISCOUNT_APPROVAL_NOT_FOUND',
+  'DISCOUNT_APPROVAL_TRANSITION',
 ];
 
-/** A translated message for a refused offer step (FR-OFR-09..12). */
+/** A translated message for a refused offer or approval step (FR-OFR-09..12, FR-DSC-06, 09, 10). */
 export function offerErrorMessage(error: unknown, t: TFunction): string {
   const response = (error as ApiError)?.response;
   if (response?.status === 404) return t('offers:errors.notFound');

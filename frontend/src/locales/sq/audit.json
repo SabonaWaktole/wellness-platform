@@ -54,7 +54,8 @@
     "ServicePackage": "Paketë shërbimesh",
     "SalesScript": "Skripti i shitjes",
     "Deal": "Marrëveshje",
-    "Offer": "Ofertë"
+    "Offer": "Ofertë",
+    "DiscountApproval": "Miratim zbritjeje"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
@@ -64,7 +65,8 @@
     "pricing": "Çmimet",
     "salesScript": "Skripti i shitjes",
     "deals": "Marrëveshjet",
-    "offers": "Ofertat"
+    "offers": "Ofertat",
+    "discounts": "Miratimet e zbritjeve"
   },
   "actors": {
     "system": "Sistemi",

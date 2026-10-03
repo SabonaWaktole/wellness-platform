@@ -91,5 +91,7 @@ export const dealSchemas = {
     alsoUpdateCompany: z.boolean().optional(),
     // FR-OFR-02: null is the company's primary contact; left out keeps the offer's.
     contactPersonId: z.string().min(1).max(64).nullable().optional(),
+    // FR-DSC-03: why the discount is above the cap; required when it is.
+    reason: z.string().max(2000).nullable().optional(),
   }),
 };

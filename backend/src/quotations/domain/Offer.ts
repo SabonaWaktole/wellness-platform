@@ -211,14 +211,68 @@ export class Offer {
    * DRAFT → READY (FR-OFR-09): the offer has a price and its discount is
    * within the cap it was priced with. The details the PDF shows are frozen
    * with it (D2), so the final document no longer follows the settings.
+   * An approved above-cap discount passes its approval, which must cover
+   * this list price and discount (FR-DSC-08; Slice 10).
    */
-  markReady(now: Date, discountCap: Percent, renderSnapshot: Record<string, unknown>): void {
+  markReady(
+    now: Date,
+    discountCap: Percent,
+    renderSnapshot: Record<string, unknown>,
+    approval?: { listPrice: Money; approvedPercent: Percent }
+  ): void {
     this.ensureLatest();
     this.ensureStatus(QuotationStatus.Draft, QuotationStatus.Ready);
     const amounts = this.props.amounts;
     if (!amounts) throw new OfferNotReadyError('NO_PRICE');
-    if (amounts.discountPercent.exceeds(discountCap)) throw new OfferNotReadyError('DISCOUNT_ABOVE_CAP');
+    if (amounts.discountPercent.exceeds(discountCap)) {
+      const covers =
+        approval !== undefined &&
+        approval.listPrice.equals(amounts.listPrice) &&
+        !amounts.discountPercent.exceeds(approval.approvedPercent);
+      if (!covers) throw new OfferNotReadyError('DISCOUNT_ABOVE_CAP');
+    }
     this.props = { ...this.props, status: QuotationStatus.Ready, readyAt: now, renderSnapshot, updatedAt: now };
+  }
+
+  /**
+   * DRAFT → PENDING_APPROVAL (FR-DSC-03): the salesperson asked for a
+   * discount above the cap with a reason. The offer cannot be downloaded as
+   * final, marked as sent or used to win until approved.
+   */
+  requestApproval(now: Date): void {
+    this.ensureLatest();
+    this.ensureStatus(QuotationStatus.Draft, QuotationStatus.PendingApproval);
+    this.props = { ...this.props, status: QuotationStatus.PendingApproval, updatedAt: now };
+  }
+
+  /**
+   * PENDING_APPROVAL → READY (FR-DSC-06, 07): the approver allowed the
+   * discount, possibly a lower percent. The amounts carry the approved
+   * percent, recomputed by the use case; the frozen details are taken as in
+   * `markReady`.
+   */
+  approvePending(amounts: OfferAmounts, now: Date, renderSnapshot: Record<string, unknown>): void {
+    this.ensureLatest();
+    this.ensureStatus(QuotationStatus.PendingApproval, QuotationStatus.Ready);
+    this.props = { ...this.props, amounts, status: QuotationStatus.Ready, readyAt: now, renderSnapshot, updatedAt: now };
+  }
+
+  /**
+   * PENDING_APPROVAL → DRAFT (FR-DSC-07): rejected, with the discount set
+   * back to the cap. The amounts carry the cap percent, recomputed by the use
+   * case; the comment is stored on the status-history row, not here.
+   */
+  rejectPending(amounts: OfferAmounts, now: Date): void {
+    this.ensureLatest();
+    this.ensureStatus(QuotationStatus.PendingApproval, QuotationStatus.Draft);
+    this.props = { ...this.props, amounts, status: QuotationStatus.Draft, updatedAt: now };
+  }
+
+  /** PENDING_APPROVAL → DRAFT (FR-DSC-10): the salesperson withdrew the request. */
+  withdrawPending(now: Date): void {
+    this.ensureLatest();
+    this.ensureStatus(QuotationStatus.PendingApproval, QuotationStatus.Draft);
+    this.props = { ...this.props, status: QuotationStatus.Draft, updatedAt: now };
   }
 
   /**

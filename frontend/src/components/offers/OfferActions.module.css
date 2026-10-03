@@ -24,3 +24,10 @@
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
 }
+
+.notice {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}

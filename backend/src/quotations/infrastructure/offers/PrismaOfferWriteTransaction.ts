@@ -3,6 +3,8 @@ import { prisma as defaultPrisma } from '../../../shared/infrastructure/prisma/c
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 import { PrismaAuditTrail } from '../../../audit/infrastructure/PrismaAuditTrail';
 import { PrismaDealWrites } from '../../../deals/infrastructure/PrismaDealWrites';
+import { PrismaDiscountApprovalWrites } from '../../../discounts/infrastructure/PrismaDiscountApprovalWrites';
+import { PrismaNotificationRepository } from '../../../notifications/infrastructure/PrismaNotificationRepository';
 import { IOfferWriteTransaction, OfferWriteRepos } from '../../application/offers/ports/IOfferWriteTransaction';
 import { PrismaOfferNumbers } from './PrismaOfferNumbers';
 import { PrismaOfferWrites } from './PrismaOfferWrites';
@@ -25,6 +27,8 @@ export class PrismaOfferWriteTransaction implements IOfferWriteTransaction {
         numbers: new PrismaOfferNumbers(client),
         deals: new PrismaDealWrites(client),
         auditTrail: this.auditTrailFor(client),
+        approvals: new PrismaDiscountApprovalWrites(client),
+        notifications: new PrismaNotificationRepository(client),
       });
     });
   }

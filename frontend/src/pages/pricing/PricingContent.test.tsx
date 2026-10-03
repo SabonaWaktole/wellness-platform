@@ -187,13 +187,27 @@ describe('Pricing screen (M2 Slice 8)', () => {
     expect(screen.getByRole('button', { name: 'Save the offer' })).toBeEnabled();
   });
 
-  it('FR-DSC-04 above the cap, Save is disabled with an explanation', async () => {
+  it('FR-DSC-03 above the cap, Save becomes Request approval once a reason is given', async () => {
     renderAt('/acme/deals/d1/pricing');
     expect(await screen.findByText('Up to 10% without approval.')).toBeInTheDocument();
     vi.mocked(pricingService.calculate).mockResolvedValue(view({ discountAboveCap: true }));
     fireEvent.change(screen.getByLabelText('Discount %'), { target: { value: '20' } });
-    expect(await screen.findByText('A discount above 10% needs approval, so this offer cannot be saved.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save the offer' })).toBeDisabled();
+    expect(await screen.findByText('A discount above 10% needs approval. Give a reason to request it.')).toBeInTheDocument();
+    // No reason yet: the request cannot go out.
+    expect(screen.getByRole('button', { name: 'Request approval' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Reason for the higher discount'), { target: { value: 'Loyal customer' } });
+    const button = await screen.findByRole('button', { name: 'Request approval' });
+    expect(button).toBeEnabled();
+    vi.mocked(dealService.saveOffer).mockResolvedValue({ status: 'PENDING_APPROVAL' } as OfferView);
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(dealService.saveOffer).toHaveBeenCalledWith(
+        'acme',
+        'd1',
+        expect.objectContaining({ discountPercent: '20', reason: 'Loyal customer' })
+      )
+    );
+    expect(await screen.findByText('deal page')).toBeInTheDocument();
   });
 
   it('FR-PRC-04 a different employee count offers to update the company too, and sends the choice', async () => {
@@ -228,6 +242,7 @@ describe('Pricing screen (M2 Slice 8)', () => {
         note: 'Pagesa çdo tremujor',
         alsoUpdateCompany: false,
         contactPersonId: null,
+        reason: null,
       })
     );
     expect(await screen.findByText('deal page')).toBeInTheDocument();

@@ -99,6 +99,33 @@ export interface SaveOfferInput extends PricingChoices {
   alsoUpdateCompany: boolean;
   /** FR-OFR-02: null for the company's primary contact; left out keeps the offer's. */
   contactPersonId?: string | null;
+  /** FR-DSC-03: why the discount is above the cap; required when it is. */
+  reason?: string | null;
+}
+
+/** One row of the approver's pending list (FR-DSC-06). */
+export interface PendingApprovalView {
+  id: string;
+  offerId: string;
+  dealId: string;
+  companyName: string;
+  dealTitle: string | null;
+  reference: string;
+  dealOwnerUserId: string;
+  dealOwnerName: string;
+  requestedByUserId: string;
+  requestedByName: string;
+  requestedPercent: string;
+  listPriceAtRequest: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface PendingApprovalPage {
+  data: PendingApprovalView[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface OfferService {
@@ -114,8 +141,27 @@ export type OfferStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'READY' | 'SENT' | 'ACC
 
 export const OFFER_STATUSES: readonly OfferStatus[] = ['DRAFT', 'PENDING_APPROVAL', 'READY', 'SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED'];
 
-/** What the server lets this viewer do with the offer now (FR-OFR-09..12). */
-export type OfferAction = 'EDIT' | 'MARK_READY' | 'MARK_SENT' | 'MARK_ACCEPTED' | 'MARK_REJECTED' | 'REVISE';
+/** What the server lets this viewer do with the offer now (FR-OFR-09..12, FR-DSC-06, 10). */
+export type OfferAction =
+  | 'EDIT'
+  | 'MARK_READY'
+  | 'MARK_SENT'
+  | 'MARK_ACCEPTED'
+  | 'MARK_REJECTED'
+  | 'REVISE'
+  | 'APPROVE_DISCOUNT'
+  | 'REJECT_DISCOUNT'
+  | 'WITHDRAW_APPROVAL';
+
+/** The offer's pending discount approval, when it waits for one (FR-DSC-03). */
+export interface PendingApprovalSummary {
+  id: string;
+  requestedByUserId: string;
+  requestedByName: string;
+  requestedPercent: string;
+  reason: string;
+  createdAt: string;
+}
 
 /** An offer as the deal page and the offers list show it (M2 Slices 8, 9). */
 export interface OfferView {
@@ -145,6 +191,8 @@ export interface OfferView {
   dealOwnerName: string;
   dealOpen: boolean;
   permittedActions: OfferAction[];
+  /** The pending discount approval, when the offer waits for one (FR-DSC-03). */
+  pendingApproval: PendingApprovalSummary | null;
   language: 'sq' | 'en';
   note: string | null;
   createdByUserId: string;

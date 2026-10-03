@@ -12,7 +12,10 @@ import type { OfferView } from '../../types/offer';
 
 vi.mock('../../services/dealService', () => ({ dealService: { offers: vi.fn() } }));
 vi.mock('../../services/offerService', () => ({
-  offerService: { pdf: vi.fn(), markReady: vi.fn(), markSent: vi.fn(), markAccepted: vi.fn(), markRejected: vi.fn(), revise: vi.fn() },
+  offerService: {
+    pdf: vi.fn(), markReady: vi.fn(), markSent: vi.fn(), markAccepted: vi.fn(), markRejected: vi.fn(), revise: vi.fn(),
+    approveDiscount: vi.fn(), rejectDiscount: vi.fn(), withdrawApproval: vi.fn(), pendingApprovals: vi.fn(),
+  },
 }));
 vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: vi.fn() }));
 
@@ -58,6 +61,7 @@ const offer = (overrides: Partial<OfferView> = {}): OfferView => ({
   discountAmount: '4.94',
   netMonthlyPrice: '44.46',
   annualValue: '533.52',
+  pendingApproval: null,
   ...overrides,
 });
 
@@ -236,5 +240,64 @@ describe('Offer document on the deal page (M2 Slice 9)', () => {
     renderSection();
     await screen.findByRole('button', { name: 'Revise' });
     expect(screen.queryByRole('button', { name: 'Calculate price' })).not.toBeInTheDocument();
+  });
+
+  it('FR-DSC-03 a pending offer shows the wait and the requester withdraws it', async () => {
+    const pending = offer({
+      status: 'PENDING_APPROVAL',
+      permittedActions: ['WITHDRAW_APPROVAL'],
+      pendingApproval: {
+        id: 'ap1', requestedByUserId: 'u-a', requestedByName: 'Besa Test',
+        requestedPercent: '15.00', reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
+      },
+    });
+    vi.mocked(dealService.offers).mockResolvedValue([pending]);
+    vi.mocked(offerService.withdrawApproval).mockResolvedValue(offer({ status: 'DRAFT', permittedActions: ['EDIT', 'MARK_READY'], pendingApproval: null }));
+    renderSection();
+    expect(await screen.findByText(/Waiting for approval of a 15\.00% discount/)).toBeInTheDocument();
+    expect(screen.getByText(/Loyal customer/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw request' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Withdraw request' }));
+    await waitFor(() => expect(offerService.withdrawApproval).toHaveBeenCalledWith('acme', 'ap1'));
+  });
+
+  it('FR-DSC-06 the approver approves a lower percent inline', async () => {
+    const pending = offer({
+      status: 'PENDING_APPROVAL',
+      permittedActions: ['APPROVE_DISCOUNT', 'REJECT_DISCOUNT'],
+      pendingApproval: {
+        id: 'ap1', requestedByUserId: 'u-b', requestedByName: 'Dritan Test',
+        requestedPercent: '15.00', reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
+      },
+    });
+    vi.mocked(dealService.offers).mockResolvedValue([pending]);
+    vi.mocked(offerService.approveDiscount).mockResolvedValue(offer({ status: 'READY', permittedActions: ['EDIT', 'MARK_SENT'], pendingApproval: null }));
+    renderSection();
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve discount' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(/Approved percent/), { target: { value: '12' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve discount' }));
+    await waitFor(() => expect(offerService.approveDiscount).toHaveBeenCalledWith('acme', 'ap1', '12', null));
+  });
+
+  it('FR-DSC-06 rejecting needs a comment', async () => {
+    const pending = offer({
+      status: 'PENDING_APPROVAL',
+      permittedActions: ['APPROVE_DISCOUNT', 'REJECT_DISCOUNT'],
+      pendingApproval: {
+        id: 'ap1', requestedByUserId: 'u-b', requestedByName: 'Dritan Test',
+        requestedPercent: '15.00', reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
+      },
+    });
+    vi.mocked(dealService.offers).mockResolvedValue([pending]);
+    vi.mocked(offerService.rejectDiscount).mockResolvedValue(offer({ status: 'DRAFT', permittedActions: ['EDIT', 'MARK_READY'], pendingApproval: null }));
+    renderSection();
+    fireEvent.click(await screen.findByRole('button', { name: 'Reject discount' }));
+    const dialog = await screen.findByRole('dialog');
+    // Empty comment: the decision cannot go out.
+    expect(within(dialog).getByRole('button', { name: 'Reject discount' })).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText(/Comment/), { target: { value: 'Too much' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject discount' }));
+    await waitFor(() => expect(offerService.rejectDiscount).toHaveBeenCalledWith('acme', 'ap1', 'Too much'));
   });
 });

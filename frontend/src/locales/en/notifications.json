@@ -30,6 +30,10 @@
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
     "FORM_SUBMITTED": "A new response was submitted for {{form}}",
     "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract expires in {{daysRemaining}} days",
-    "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired"
+    "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired",
+    "DISCOUNT_APPROVAL_REQUESTED": "{{actor}} requested a {{requestedPercent}}% discount on {{reference}} ({{clientName}})",
+    "DISCOUNT_APPROVED": "{{actor}} approved the {{approvedPercent}}% discount on {{reference}}",
+    "DISCOUNT_REJECTED": "{{actor}} rejected the discount above the cap on {{reference}}",
+    "DISCOUNT_APPROVAL_REMINDER": "Reminder: the {{requestedPercent}}% discount on {{reference}} ({{clientName}}) still waits for approval"
   }
 }

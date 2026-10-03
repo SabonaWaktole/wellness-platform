@@ -30,6 +30,10 @@
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
     "FORM_SUBMITTED": "Një përgjigje e re u dërgua për {{form}}",
     "CONTRACT_EXPIRING": "Kontrata {{planName}} e {{clientName}} skadon për {{daysRemaining}} ditë",
-    "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar"
+    "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar",
+    "DISCOUNT_APPROVAL_REQUESTED": "{{actor}} kërkoi zbritje {{requestedPercent}}% për {{reference}} ({{clientName}})",
+    "DISCOUNT_APPROVED": "{{actor}} miratoi zbritjen {{approvedPercent}}% për {{reference}}",
+    "DISCOUNT_REJECTED": "{{actor}} refuzoi zbritjen mbi kufirin për {{reference}}",
+    "DISCOUNT_APPROVAL_REMINDER": "Kujtesë: zbritja {{requestedPercent}}% për {{reference}} ({{clientName}}) ende pret miratim"
   }
 }

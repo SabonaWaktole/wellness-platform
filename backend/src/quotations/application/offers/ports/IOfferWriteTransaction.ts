@@ -1,5 +1,7 @@
 import { IAuditTrail } from '../../../../audit/application/ports/IAuditTrail';
 import { IDealWrites } from '../../../../deals/application/ports/IDealWriteTransaction';
+import { IDiscountApprovalWrites } from '../../../../discounts/application/ports/IDiscountApprovalWrites';
+import { INotificationRepository } from '../../../../notifications/domain/INotificationRepository';
 import { Offer, OfferLanguage } from '../../../domain/Offer';
 import { IOfferNumbers } from './IOfferNumbers';
 
@@ -21,6 +23,8 @@ export interface IOfferWrites {
   update(offer: Offer): Promise<void>;
   /** The status columns only: status, the dates, the render snapshot, superseded (FR-OFR-09). */
   saveStatus(offer: Offer): Promise<void>;
+  /** The amount columns only: a decision changed the discount (FR-DSC-06, 07). */
+  saveAmounts(offer: Offer): Promise<void>;
   /** One status-history row (FR-OFR-15). A NULL user is the scheduler. */
   recordStatusChange(change: OfferStatusChange): Promise<void>;
   /** The workspace's time zone, for "today" and the number's year (FR-OFR-08, 10). */
@@ -59,6 +63,10 @@ export interface OfferWriteRepos {
   /** The offer's deal is read, valued and, on its first offer, moved on the same connection (FR-DEAL-08). */
   deals: IDealWrites;
   auditTrail: IAuditTrail;
+  /** The offer's discount approvals (M2 Slice 10, FR-DSC-03..12). */
+  approvals: IDiscountApprovalWrites;
+  /** Notifications emitted with the change, so they commit or roll back with it. */
+  notifications: INotificationRepository;
 }
 
 /**

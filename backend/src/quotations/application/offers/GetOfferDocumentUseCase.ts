@@ -2,7 +2,8 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { admits } from '../../../access/domain/RecordScope';
 import { OfferLanguage } from '../../domain/Offer';
-import { OfferNotFoundError } from '../../domain/offerErrors';
+import { OfferNotEditableError, OfferNotFoundError } from '../../domain/offerErrors';
+import { QuotationStatus } from '../../domain/Quotation';
 import { buildOfferDocument } from './document/buildOfferDocument';
 import { VIEW_COMMERCIAL } from './offerAccess';
 import { IOfferDocumentSource } from './ports/IOfferDocumentSource';
@@ -47,12 +48,17 @@ export class GetOfferDocumentUseCase {
     offerId: string;
     language: OfferLanguage;
     timeZone: string;
+    /** The preview (inline) always renders; the final download (attachment) needs a final offer (FR-DSC-03). */
+    disposition: 'inline' | 'attachment';
   }): Promise<{ pdf: Buffer; fileName: string }> {
     const { access, tenantId, offerId } = input;
     access.ensure(VIEW_COMMERCIAL);
     const offer = await this.store.find(tenantId, offerId);
     if (!offer || !admits(await this.scopes.resolve(access, VIEW_COMMERCIAL), offer.dealOwnerUserId)) {
       throw new OfferNotFoundError();
+    }
+    if (input.disposition === 'attachment' && offer.status === QuotationStatus.PendingApproval) {
+      throw new OfferNotEditableError('This offer waits for approval before it can be downloaded as final.');
     }
     const details =
       (await this.store.frozenDetails(tenantId, offerId)) ??
