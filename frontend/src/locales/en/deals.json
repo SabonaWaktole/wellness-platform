@@ -171,6 +171,7 @@
     "status": {
       "DRAFT": "Draft",
       "PENDING_APPROVAL": "Awaiting approval",
+      "READY": "Ready",
       "SENT": "Sent",
       "ACCEPTED": "Accepted",
       "REJECTED": "Rejected",

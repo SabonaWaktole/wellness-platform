@@ -262,6 +262,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
       }
     },
     credentials: true,
+    // The offer PDF's file name (FR-OFR-06) must be readable by the frontend
+    // when it is served from another origin.
+    exposedHeaders: ['Content-Disposition'],
   }));
   // Default 100kb is too small for the Reports PDF export, whose body carries
   // several client-captured chart PNGs as base64 alongside the table data.

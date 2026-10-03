@@ -1,0 +1,92 @@
+{
+  "superseded": "Zëvendësuar nga një version i mëvonshëm",
+  "sentOn": "Dërguar më {{sent}}",
+  "sentValid": "Dërguar më {{sent}} · e vlefshme deri më {{until}}",
+  "statusNote": "Shënim: {{note}}",
+  "preview": {
+    "title": "Oferta {{reference}}"
+  },
+  "actions": {
+    "preview": "Shiko",
+    "language": "Gjuha e PDF-së",
+    "download": "Shkarko PDF",
+    "edit": "Ndrysho ofertën",
+    "markReady": "Shëno si gati",
+    "markSent": "Shëno si të dërguar",
+    "markAccepted": "Shëno si të pranuar",
+    "markRejected": "Shëno si të refuzuar",
+    "revise": "Rishiko"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "Anglisht"
+  },
+  "done": {
+    "ready": "Oferta është gati për t’u shkarkuar dhe dërguar.",
+    "sent": "Oferta u shënua si e dërguar.",
+    "accepted": "Oferta u shënua si e pranuar.",
+    "rejected": "Oferta u shënua si e refuzuar.",
+    "revised": "U krijua një version i ri. Ndryshoni çmimin te ekrani i çmimit."
+  },
+  "sent": {
+    "title": "Shëno {{reference}} si të dërguar",
+    "message": "Dërgojeni vetë PDF-në me email te kompania, pastaj shënoni datën kur e dërguat. Vlefshmëria e ofertës fillon nga kjo datë.",
+    "date": "Data e dërgimit"
+  },
+  "accepted": {
+    "title": "Shëno {{reference}} si të pranuar",
+    "message": "Shënoni që kompania e pranoi këtë ofertë. Fitimi i marrëveshjes është hap më vete."
+  },
+  "rejected": {
+    "title": "Shëno {{reference}} si të refuzuar",
+    "message": "Shënoni që kompania e refuzoi këtë ofertë. Mund të shtoni arsyen."
+  },
+  "response": {
+    "note": "Shënim (opsional)"
+  },
+  "revise": {
+    "title": "Rishiko {{reference}}",
+    "message": "Kjo krijon versionin {{version}} të {{number}} si draft. Versioni i dërguar mbetet siç është dhe mund të shkarkohet përsëri."
+  },
+  "errors": {
+    "notFound": "Kjo ofertë nuk u gjet.",
+    "forbidden": "Nuk keni leje për këtë veprim.",
+    "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri.",
+    "OFFER_NOT_READY": "Kjo ofertë nuk mund të shënohet ende si gati.",
+    "notReady": {
+      "NO_PRICE": "Një ofertë pa çmim nuk mund të shënohet si gati.",
+      "DISCOUNT_ABOVE_CAP": "Zbritja është mbi maksimumin. Fillimisht duhet miratuar."
+    },
+    "OFFER_INVALID_TRANSITION": "Statusi i ofertës ka ndryshuar. Rifreskoni faqen dhe provoni përsëri.",
+    "OFFER_NOT_LATEST": "Një version i mëvonshëm e zëvendëson këtë ofertë. Përdorni versionin e fundit.",
+    "OFFER_NOT_EDITABLE": "Kjo ofertë nuk mund të ndryshohet më.",
+    "OFFER_REVISE_FIRST": "Kjo ofertë është dërguar. Rishikojeni për të krijuar një version të ri.",
+    "INVALID_SENT_DATE": "Zgjidhni një datë dërgimi që nuk është në të ardhmen dhe as para krijimit të ofertës."
+  },
+  "list": {
+    "breadcrumb": "Shitjet",
+    "title": "Ofertat",
+    "searchLabel": "Kërko oferta",
+    "searchPlaceholder": "Kompania ose numri i ofertës",
+    "statuses": "Statusi",
+    "salesperson": "Shitësi",
+    "allSalespeople": "Të gjithë shitësit",
+    "createdFrom": "Krijuar nga",
+    "createdTo": "Krijuar deri",
+    "clear": "Pastro filtrat",
+    "loadFailed": "Ofertat nuk u ngarkuan.",
+    "empty": "Ende nuk ka oferta",
+    "emptyMessage": "Ofertat krijohen nga ekrani i çmimit i një marrëveshjeje.",
+    "emptyFiltered": "Asnjë ofertë nuk përputhet me këta filtra",
+    "emptyFilteredMessage": "Provoni më pak filtra.",
+    "itemLabel": "oferta",
+    "columns": {
+      "reference": "Oferta",
+      "status": "Statusi",
+      "salesperson": "Shitësi",
+      "price": "Çmimi neto",
+      "validUntil": "E vlefshme deri",
+      "created": "Krijuar"
+    }
+  }
+}

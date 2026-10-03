@@ -26,6 +26,9 @@
   "discount": "Zbritja %",
   "discountHint": "Deri në {{cap}}% pa miratim.",
   "discountInvalid": "Shkruaj një përqindje nga 0 deri në 100, me deri në dy shifra dhjetore.",
+  "contact": "Drejtuar",
+  "contactPrimary": "{{name}} (kontakti kryesor)",
+  "contactNone": "Kontakti kryesor",
   "note": "Shënim për ofertën",
   "notePlaceholder": "Për shembull, kushte të veçanta",
   "choose": "Zgjidh…",
@@ -71,6 +74,7 @@
     "DISCOUNT_ABOVE_CAP": "Zbritja është mbi kufirin dhe kërkon miratim.",
     "COMPANY_INCOMPLETE": "Plotëso më parë të dhënat e kompanisë.",
     "OFFER_NOT_EDITABLE": "Kjo ofertë nuk mund të ndryshohet më.",
+    "OFFER_REVISE_FIRST": "Kjo ofertë është dërguar. Rishikojeni nga faqja e marrëveshjes për të krijuar një version të ri.",
     "INVALID_PERCENT": "Shkruaj një përqindje nga 0 deri në 100, me deri në dy shifra dhjetore.",
     "INVALID_PRICING_INPUT": "Kontrollo të dhënat.",
     "fields": {
@@ -78,7 +82,8 @@
       "businessTypeId": "Zgjidh një lloj biznesi aktiv.",
       "zoneId": "Zgjidh një nga zonat e qytetit të kompanisë.",
       "frequencyId": "Zgjidh një shpeshtësi vizitash aktive.",
-      "packageId": "Zgjidh një paketë aktive."
+      "packageId": "Zgjidh një paketë aktive.",
+      "contactPersonId": "Zgjidhni një person kontakti të kësaj kompanie."
     }
   }
 }

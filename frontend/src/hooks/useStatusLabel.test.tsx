@@ -99,6 +99,7 @@ describe('status key maps', () => {
       'DRAFT',
       'EXPIRED',
       'PENDING_APPROVAL',
+      'READY',
       'REJECTED',
       'SENT',
     ]);

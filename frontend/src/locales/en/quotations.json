@@ -2,6 +2,7 @@
   "status": {
     "draft": "Draft",
     "pendingApproval": "Pending Approval",
+    "ready": "Ready",
     "sent": "Sent",
     "accepted": "Accepted",
     "rejected": "Rejected",

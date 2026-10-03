@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PricingContent } from './PricingContent';
 import { pricingService } from '../../services/pricingService';
 import { dealService } from '../../services/dealService';
+import { clientService } from '../../services/clientService';
 import { useActiveLookups } from '../../hooks/useActiveLookups';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ToastProvider } from '../../components/ui/Toast';
@@ -11,6 +12,7 @@ import type { OfferView, PricingScreenView } from '../../types/offer';
 
 vi.mock('../../services/pricingService', () => ({ pricingService: { calculate: vi.fn() } }));
 vi.mock('../../services/dealService', () => ({ dealService: { offers: vi.fn(), list: vi.fn(), saveOffer: vi.fn() } }));
+vi.mock('../../services/clientService', () => ({ clientService: { getClient: vi.fn() } }));
 vi.mock('../../hooks/useActiveLookups');
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
 
@@ -95,6 +97,7 @@ describe('Pricing screen (M2 Slice 8)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     signIn();
+    vi.mocked(clientService.getClient).mockResolvedValue({ contacts: [] } as any);
     vi.mocked(useActiveLookups).mockReturnValue([
       { id: 'bt-r', nameSq: 'Restorant', nameEn: 'Restaurant', order: 1, active: true, riskLevelId: 'r2' },
       { id: 'bt-c', nameSq: 'Ndërtim', nameEn: 'Construction', order: 2, active: true, riskLevelId: 'r3' },
@@ -224,9 +227,27 @@ describe('Pricing screen (M2 Slice 8)', () => {
         discountPercent: '0.00',
         note: 'Pagesa çdo tremujor',
         alsoUpdateCompany: false,
+        contactPersonId: null,
       })
     );
     expect(await screen.findByText('deal page')).toBeInTheDocument();
+  });
+
+  it('FR-OFR-02 the offer is addressed to the primary contact unless another is chosen', async () => {
+    vi.mocked(clientService.getClient).mockResolvedValue({
+      contacts: [
+        { id: 'cp-1', name: 'Elira Hoxha', position: 'Administratore', isPrimary: true },
+        { id: 'cp-2', name: 'Gëzim Çela', position: 'Menaxher', isPrimary: false },
+      ],
+    } as any);
+    vi.mocked(dealService.saveOffer).mockResolvedValue({} as OfferView);
+    renderAt('/acme/deals/d1/pricing');
+    await screen.findByTestId('amount-listPrice');
+    const contact = await screen.findByLabelText('Addressed to');
+    expect(within(contact).getByRole('option', { name: 'Elira Hoxha (primary contact)' })).toBeInTheDocument();
+    fireEvent.change(contact, { target: { value: 'cp-2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save the offer' }));
+    await waitFor(() => expect(dealService.saveOffer).toHaveBeenCalledWith('acme', 'd1', expect.objectContaining({ contactPersonId: 'cp-2' })));
   });
 
   it('FR-OFR-04 opened on a deal with a draft, the screen starts from the draft\'s inputs', async () => {
