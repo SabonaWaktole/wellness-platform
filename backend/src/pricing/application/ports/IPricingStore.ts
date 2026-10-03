@@ -40,4 +40,10 @@ export interface IPricingStore {
   cities(tenantId: string, ids: string[]): Promise<CityRecord[]>;
   /** Active cities in no active price zone (FR-PCF-05), in area then city order. */
   citiesWithoutZone(tenantId: string): Promise<CityRecord[]>;
+  /**
+   * How many offers were priced with this frequency or zone, or describe this
+   * package (Slice 8). Such a value is in use: it is deactivated, never
+   * deleted. 0 for the other lists.
+   */
+  offersUsing(tenantId: string, list: PricingList, id: string): Promise<number>;
 }

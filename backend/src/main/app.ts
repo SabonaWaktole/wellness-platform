@@ -143,6 +143,13 @@ import { SetPackageServicesUseCase } from '../pricing/application/use-cases/SetP
 import { SetDefaultPackageUseCase } from '../pricing/application/use-cases/SetDefaultPackageUseCase';
 import { ListActivePackagesUseCase } from '../pricing/application/use-cases/ListActivePackagesUseCase';
 import { UpdateOfferSettingsUseCase } from '../pricing/application/use-cases/UpdateOfferSettingsUseCase';
+import { CalculatePriceUseCase } from '../pricing/application/use-cases/CalculatePriceUseCase';
+import { SaveDraftOfferUseCase } from '../quotations/application/offers/SaveDraftOfferUseCase';
+import { PrismaOfferStore } from '../quotations/infrastructure/offers/PrismaOfferStore';
+import { PrismaOfferWriteTransaction } from '../quotations/infrastructure/offers/PrismaOfferWriteTransaction';
+import { GetDealOffersUseCase } from '../deals/application/use-cases/GetDealOffersUseCase';
+import { PricingScreen } from '../pricing/application/PricingScreen';
+import { PrismaPricingSubjectReader } from '../pricing/infrastructure/PrismaPricingSubjectReader';
 import { PricingController } from '../pricing/interfaces/http/PricingController';
 import { createPricingRouter } from '../pricing/interfaces/http/pricingRoutes';
 import { ISalesScriptWriteTransaction } from '../salesScript/application/ports/ISalesScriptWriteTransaction';
@@ -470,6 +477,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Settings → Pricing: bands, risk surcharges, visit frequencies, price zones,
   // discount cap and the test calculator (M2 Slice 3: FR-PCF-01..05, 07, 09).
   const pricingStore = new PrismaPricingStore();
+  // The pricing screen (M2 Slice 8): one resolve step, shared by the
+  // calculation and the draft offer's save.
+  const pricingScreen = new PricingScreen(pricingStore, lookupStore, new LoadPricingConfigUseCase(pricingStore));
+  const pricingSubjects = new PrismaPricingSubjectReader();
+  const offerStore = new PrismaOfferStore();
   const pricingController = new PricingController(
     new GetPricingConfigurationUseCase(pricingStore),
     new CreatePricingItemUseCase(pricingStore, pricingWriteTransaction),
@@ -486,7 +498,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new SetPackageServicesUseCase(pricingStore, pricingWriteTransaction),
     new SetDefaultPackageUseCase(pricingStore, pricingWriteTransaction),
     new ListActivePackagesUseCase(pricingStore),
-    new UpdateOfferSettingsUseCase(pricingStore, pricingWriteTransaction)
+    new UpdateOfferSettingsUseCase(pricingStore, pricingWriteTransaction),
+    new CalculatePriceUseCase(pricingSubjects, pricingScreen, recordScopes)
   );
   app.use('/api/:tenantSlug/pricing', createPricingRouter(pricingController, tokenService, tenantRepository, resolveAccessContext));
 
@@ -520,7 +533,10 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DeleteDealUseCase(dealWriteTransaction, recordScopes),
     new SearchDealsUseCase(dealStore, recordScopes),
     new GetPipelineBoardUseCase(dealStore, recordScopes),
-    new GetDealActivitiesUseCase(getDeal, new PrismaDealActivityStore())
+    new GetDealActivitiesUseCase(getDeal, new PrismaDealActivityStore()),
+    // The deal's offers (M2 Slice 8): read on the deal page, saved from the pricing screen.
+    new GetDealOffersUseCase(getDeal, offerStore),
+    new SaveDraftOfferUseCase(pricingSubjects, pricingScreen, recordScopes, new PrismaOfferWriteTransaction(), offerStore)
   );
   app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
 
@@ -827,7 +843,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const markQuotationRejectedUseCase = new MarkQuotationRejectedUseCase(quotationWriteTx, userRepository, recordScopes, notificationEmailDispatcher);
 
   const quotationsController = new QuotationsController(
-    new CreateQuotationUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, prismaClientRepository, productRepo, warehouseRepo, recordScopes),
+    new CreateQuotationUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, prismaClientRepository, productRepo, warehouseRepo, recordScopes, tenantRepository),
     new UpdateQuotationUseCase(quotationRepo, quotationLineItemRepo, productRepo, warehouseRepo, stockLevelRepo, quotationWriteTx, recordScopes, quotationDelivery),
     // Each transition takes the email dispatcher so it can send AFTER its
     // transaction commits — see runWithPostCommitEmail.

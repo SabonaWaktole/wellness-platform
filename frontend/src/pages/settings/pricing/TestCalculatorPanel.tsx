@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
+import { PriceBreakdown } from '../../../components/pricing/PriceBreakdown';
 import editorStyles from '../../../components/settings/LookupListEditor/LookupListEditor.module.css';
-import { useMoneyFormat } from '../../../hooks/useMoneyFormat';
 import type { TestCalculationResult } from '../../../services/pricingService';
 import { lookupLabel } from '../../../utils/lookupLabel';
 import type { PricingPanelProps } from './pricingTabs';
@@ -18,7 +18,6 @@ const BREAKDOWN = ['baseFee', 'riskFee', 'visitFee', 'locationFee'] as const;
  */
 export const TestCalculatorPanel = ({ config, pricing }: PricingPanelProps) => {
   const { t, i18n } = useTranslation('settings');
-  const { format } = useMoneyFormat();
   const [employees, setEmployees] = useState('');
   const [riskLevelId, setRiskLevelId] = useState('');
   const [frequencyId, setFrequencyId] = useState('');
@@ -111,22 +110,14 @@ export const TestCalculatorPanel = ({ config, pricing }: PricingPanelProps) => {
       {result && (
         <section aria-label={t('pricing.calculator.result')} aria-live="polite">
           {result.kind === 'PRICED' ? (
-            <dl className={styles.breakdown}>
-              {BREAKDOWN.map((key) => (
-                <div key={key} style={{ display: 'contents' }}>
-                  <dt>{t(`pricing.calculator.${key}`)}</dt>
-                  <dd>{format(Number(result[key]))}</dd>
-                </div>
-              ))}
-              <dt className={styles.breakdownTotal}>{t('pricing.calculator.listPrice')}</dt>
-              <dd className={styles.breakdownTotal} data-testid="list-price">
-                {format(Number(result.listPrice))}
-              </dd>
-              <dt>{t('pricing.calculator.pricePerEmployee')}</dt>
-              <dd>{format(Number(result.pricePerEmployee))}</dd>
-              <dt>{t('pricing.calculator.annualValue')}</dt>
-              <dd>{format(Number(result.annualValue))}</dd>
-            </dl>
+            <PriceBreakdown
+              rows={[
+                ...BREAKDOWN.map((key) => ({ key, label: t(`pricing.calculator.${key}`), amount: result[key] })),
+                { key: 'listPrice', label: t('pricing.calculator.listPrice'), amount: result.listPrice, total: true },
+                { key: 'pricePerEmployee', label: t('pricing.calculator.pricePerEmployee'), amount: result.pricePerEmployee },
+                { key: 'annualValue', label: t('pricing.calculator.annualValue'), amount: result.annualValue },
+              ]}
+            />
           ) : (
             <div className={styles.warning}>
               <p className={styles.warningTitle}>{t('pricing.calculator.priceOnRequest')}</p>

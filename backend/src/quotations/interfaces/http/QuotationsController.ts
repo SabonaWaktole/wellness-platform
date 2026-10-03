@@ -1,5 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { redactFields } from '../../../access/domain/redactFields';
+import { UseDealOffersError } from '../../domain/offerErrors';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { requireTenantId } from "@main/interfaces/http/tenantContext";
 import { ZodError } from 'zod';
@@ -76,6 +77,7 @@ export class QuotationsController {
       res.status(201).json(redactFields(result.quotation, req.access!));
     } catch (error: any) {
       if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
+      if (error instanceof UseDealOffersError) return res.status(409).json({ error: error.message, code: error.code });
       if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
       res.status(400).json({ error: error.message });
     }

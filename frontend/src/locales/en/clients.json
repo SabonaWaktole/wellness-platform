@@ -156,7 +156,8 @@
       "contractPrice": "{{amount}} / {{period}}",
       "paymentPaid": "{{paid}} of {{amount}}",
       "paymentMethod": "Method: {{method}}"
-    }
+    },
+    "calculatePrice": "Calculate price"
   },
   "activity": {
     "title": "Record activity",

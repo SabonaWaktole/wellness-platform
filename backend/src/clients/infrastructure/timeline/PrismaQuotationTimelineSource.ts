@@ -4,8 +4,9 @@ import { TimelineEntry } from '../../../shared/application/timeline/TimelineEntr
 import { quotationReference } from '../../../quotations/domain/quotationReference';
 
 /**
- * Offers: each quotation's creation and every status change. `total` is
- * redacted for viewers without `commercial.view`.
+ * Offers: each quotation's creation and every status change, legacy
+ * quotations and deal offers alike. `total` is redacted for viewers without
+ * `commercial.view`.
  */
 export class PrismaQuotationTimelineSource implements TimelineSource {
   readonly category = 'QUOTATION' as const;
@@ -34,7 +35,12 @@ export class PrismaQuotationTimelineSource implements TimelineSource {
           quotationId: quotation.id,
           reference,
           status: quotation.status,
-          total: quotation.lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+          // An offer (M2 Slice 8) has no product lines: its total is its net
+          // monthly price, absent on a "Price on request" draft. Slice 9
+          // gives offers their own reference and permission here.
+          total: quotation.dealId
+            ? quotation.netMonthlyPrice?.toNumber()
+            : quotation.lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
         },
       };
       const changes: TimelineEntry[] = quotation.statusHistory.map((change) => ({

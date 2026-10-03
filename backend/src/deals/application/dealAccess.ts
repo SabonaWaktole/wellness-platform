@@ -12,3 +12,6 @@ export const REASSIGN_DEALS = 'companies.reassign';
 
 /** Which companies a deal may be created on. Scoped. */
 export const VIEW_COMPANIES = 'companies.view';
+
+/** A deal's value and its offers' figures (FR-RBAC-17). Not scoped. */
+export const VIEW_COMMERCIAL = 'commercial.view';

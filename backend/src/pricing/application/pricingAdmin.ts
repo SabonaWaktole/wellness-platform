@@ -95,7 +95,8 @@ const activeServiceCount = (pkg: ServicePackage, services: Service[]) =>
  * reactivation or delete must keep: the default package stays active and
  * present until another one is the default; no active package is left
  * without an active service; a service in a package is in use, so it can be
- * deactivated but not deleted. The other lists have no such rules.
+ * deactivated but not deleted. From Slice 8 a frequency, zone or package an
+ * offer used is in use too.
  */
 export async function ensureListRulesKept(
   store: IPricingStore,
@@ -104,6 +105,11 @@ export async function ensureListRulesKept(
   item: PricingItem,
   change: 'deactivate' | 'reactivate' | 'delete'
 ): Promise<void> {
+  // Slice 8: a frequency, zone or package an offer used stays, so the offer
+  // keeps what it was priced with; it can be deactivated instead.
+  if (change === 'delete' && list !== PricingList.Packages && (await store.offersUsing(tenantId, list, item.id)) > 0) {
+    throw new PricingConflictError('PRICING_ITEM_IN_USE', 'Offers use this value. Deactivate it instead.', []);
+  }
   if (list === PricingList.Packages) {
     const pkg = item as ServicePackage;
     if (pkg.isDefault && change !== 'reactivate') {
@@ -111,6 +117,9 @@ export async function ensureListRulesKept(
     }
     if (change === 'reactivate' && activeServiceCount(pkg, await store.list(tenantId, PricingList.Services)) === 0) {
       throw new PricingConflictError('SERVICE_LAST_IN_PACKAGE', 'Add an active service to this package first.', [pkg.nameSq]);
+    }
+    if (change === 'delete' && (await store.offersUsing(tenantId, list, pkg.id)) > 0) {
+      throw new PricingConflictError('PRICING_ITEM_IN_USE', 'Offers use this package. Deactivate it instead.', [pkg.nameSq]);
     }
     return;
   }

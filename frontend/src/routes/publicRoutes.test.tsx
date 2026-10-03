@@ -22,9 +22,11 @@ describe('what an anonymous visitor can reach', () => {
     // Accounts are created by an administrator in this edition. The remaining
     // public routes are sign-in, password recovery, and links someone was sent
     // (an invitation, a quotation, a form). Settings pages sit behind sign-in,
-    // so Settings → Pricing (M2 Slice 3) is not a public pricing page.
+    // so Settings → Pricing (M2 Slice 3) is not a public pricing page; nor is
+    // the pricing screen of a deal or a company (M2 Slice 8), a record page.
+    const recordPage = /^(deals\/:dealId|clients\/:clientId)\//;
     const saasPaths = allPaths(routes).filter(
-      (path) => !path.startsWith('settings/') && /regist|sign-?up|onboard|landing|pricing|subscri/i.test(path)
+      (path) => !path.startsWith('settings/') && !recordPage.test(path) && /regist|sign-?up|onboard|landing|pricing|subscri/i.test(path)
     );
     expect(saasPaths).toEqual([]);
   });

@@ -28,12 +28,17 @@ import styles from './DealListContent.module.css';
 
 const DEFAULT_SORT: { field: DealSortField; direction: 'asc' | 'desc' } = { field: 'updatedAt', direction: 'desc' };
 
+/** A monthly value as the server reads it: "40" or "49.40". */
+const AMOUNT = /^\d{1,10}(\.\d{1,2})?$/;
+const amountOrUndefined = (value: string) => (AMOUNT.test(value.trim()) ? value.trim() : undefined);
+
 /**
  * The pipeline as a list (FR-DEAL-11): filtered by salesperson, stage, type,
  * business type, area, city and expected close date, sorted and paged on the
  * server, inside the viewer's scope. The salesperson filter is offered only
- * to someone who sees more than their own deals. Filtering by value comes
- * with offers (Slice 8).
+ * to someone who sees more than their own deals; the value filter and sort,
+ * the net monthly value of the deal's offer (Slice 8), only to someone who
+ * may see values (FR-RBAC-17).
  */
 export const DealListContent: React.FC = () => {
   const { t, i18n } = useTranslation('deals');
@@ -56,6 +61,8 @@ export const DealListContent: React.FC = () => {
   const [cityId, setCityId] = useState('');
   const [closeFrom, setCloseFrom] = useState('');
   const [closeTo, setCloseTo] = useState('');
+  const [valueMin, setValueMin] = useState('');
+  const [valueMax, setValueMax] = useState('');
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -84,12 +91,14 @@ export const DealListContent: React.FC = () => {
       cityId: cityId || undefined,
       expectedCloseFrom: closeFrom || undefined,
       expectedCloseTo: closeTo || undefined,
+      valueMin: canSeeValues ? amountOrUndefined(valueMin) : undefined,
+      valueMax: canSeeValues ? amountOrUndefined(valueMax) : undefined,
       sort: sort.field,
       direction: sort.direction,
       page,
       pageSize,
     }),
-    [debouncedQuery, stages, types, ownerUserId, businessTypeId, areaId, cityId, closeFrom, closeTo, sort, page, pageSize]
+    [debouncedQuery, stages, types, ownerUserId, businessTypeId, areaId, cityId, closeFrom, closeTo, valueMin, valueMax, canSeeValues, sort, page, pageSize]
   );
 
   useEffect(() => {
@@ -117,7 +126,7 @@ export const DealListContent: React.FC = () => {
   const toggle = <T,>(list: T[], value: T): T[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   const hasFilters =
-    !!query || stages.length > 0 || types.length > 0 || !!ownerUserId || !!businessTypeId || !!areaId || !!cityId || !!closeFrom || !!closeTo;
+    !!query || stages.length > 0 || types.length > 0 || !!ownerUserId || !!businessTypeId || !!areaId || !!cityId || !!closeFrom || !!closeTo || !!valueMin || !!valueMax;
   const clearFilters = () => {
     setQuery('');
     setStages([]);
@@ -128,6 +137,8 @@ export const DealListContent: React.FC = () => {
     setCityId('');
     setCloseFrom('');
     setCloseTo('');
+    setValueMin('');
+    setValueMax('');
     setPage(1);
   };
 
@@ -136,7 +147,7 @@ export const DealListContent: React.FC = () => {
     setSort((current) =>
       current.field === next
         ? { field: next, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-        : { field: next, direction: next === 'updatedAt' ? 'desc' : 'asc' }
+        : { field: next, direction: next === 'updatedAt' || next === 'value' ? 'desc' : 'asc' }
     );
     setPage(1);
   };
@@ -168,6 +179,7 @@ export const DealListContent: React.FC = () => {
           {
             id: 'value',
             header: t('list.columns.value'),
+            sortable: true,
             align: 'right' as const,
             nowrap: true,
             render: (deal: DealSummary) =>
@@ -284,6 +296,20 @@ export const DealListContent: React.FC = () => {
           </SelectInput>
           <TextInput type="date" label={t('list.closeFrom')} value={closeFrom} onChange={(e) => filter(setCloseFrom)(e.target.value)} />
           <TextInput type="date" label={t('list.closeTo')} value={closeTo} onChange={(e) => filter(setCloseTo)(e.target.value)} />
+          {canSeeValues &&
+            ([
+              ['valueMin', valueMin, setValueMin],
+              ['valueMax', valueMax, setValueMax],
+            ] as const).map(([key, value, set]) => (
+              <TextInput
+                key={key}
+                label={t(`list.${key}`)}
+                inputMode="decimal"
+                value={value}
+                error={value.trim() !== '' && !AMOUNT.test(value.trim()) ? t('list.valueInvalid') : undefined}
+                onChange={(e) => filter(set)(e.target.value)}
+              />
+            ))}
         </div>
         {hasFilters && (
           <div>

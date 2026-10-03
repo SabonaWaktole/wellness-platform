@@ -1,5 +1,6 @@
 import { apiClient as api } from '../api';
 import type { RichTextDoc } from '../types/form';
+import type { PricingChoices, PricingScreenView, PricingTarget } from '../types/offer';
 
 /**
  * Settings → Pricing's client (M2 Slices 3 and 4: FR-PCF-01..09). Amounts
@@ -197,4 +198,8 @@ export const pricingService = {
 
   testCalculation: async (tenantSlug: string, input: TestCalculationInput): Promise<TestCalculationResult> =>
     (await api.post<{ result: TestCalculationResult }>(`${base(tenantSlug)}/test-calculation`, input)).data.result,
+
+  /** The pricing screen (M2 Slice 8, FR-PRC-01): calculated on the server, nothing stored. */
+  calculate: async (tenantSlug: string, target: PricingTarget, choices: PricingChoices): Promise<PricingScreenView> =>
+    (await api.post<{ data: PricingScreenView }>(`${base(tenantSlug)}/calculate`, { ...target, ...choices })).data.data,
 };

@@ -1,6 +1,7 @@
 import { apiClient as api } from '../api';
 import type { ActivityView } from '../types/client';
 import type { BoardColumn, DealDetail, DealInput, DealListParams, DealPage, DealStage, NewDealInput, PipelineBoard } from '../types/deal';
+import type { OfferView, SaveOfferInput } from '../types/offer';
 
 /** The deals API (M2 Slice 6: FR-DEAL-01..11, 13, 19). Every response is scoped and redacted on the server. */
 const base = (tenantSlug: string) => `/${tenantSlug}/deals`;
@@ -30,6 +31,14 @@ export const dealService = {
   /** The deal page's activities (FR-ACT-05), newest first by when they happened. */
   activities: async (tenantSlug: string, id: string): Promise<ActivityView[]> =>
     (await api.get<{ data: ActivityView[] }>(`${base(tenantSlug)}/${id}/activities`)).data.data,
+
+  /** The deal's offers, newest first (FR-DEAL-03). Needs `commercial.view`. */
+  offers: async (tenantSlug: string, id: string): Promise<OfferView[]> =>
+    (await api.get<{ data: OfferView[] }>(`${base(tenantSlug)}/${id}/offers`)).data.data,
+
+  /** Saves the pricing screen as the deal's draft offer, creating or updating it (FR-PRC-12). */
+  saveOffer: async (tenantSlug: string, id: string, input: SaveOfferInput): Promise<OfferView> =>
+    (await api.put<{ data: OfferView }>(`${base(tenantSlug)}/${id}/offer`, input)).data.data,
 
   create: async (tenantSlug: string, input: NewDealInput): Promise<DealDetail> =>
     (await api.post<{ data: DealDetail }>(base(tenantSlug), input)).data.data,

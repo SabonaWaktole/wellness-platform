@@ -65,6 +65,13 @@ const cityFromRow = (row: CityRow): CityRecord => ({
   active: row.active,
 });
 
+/** The Quotation column that points at a value of each list an offer uses (Slice 8). */
+const OFFER_COLUMNS: Partial<Record<PricingList, 'frequencyId' | 'zoneId' | 'packageId'>> = {
+  [PricingList.Frequencies]: 'frequencyId',
+  [PricingList.Zones]: 'zoneId',
+  [PricingList.Packages]: 'packageId',
+};
+
 export class PrismaPricingStore implements IPricingStore {
   constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
 
@@ -125,6 +132,11 @@ export class PrismaPricingStore implements IPricingStore {
   async cities(tenantId: string, ids: string[]): Promise<CityRecord[]> {
     if (ids.length === 0) return [];
     return (await this.prisma.city.findMany({ where: { tenantId, id: { in: ids } }, select: citySelect })).map(cityFromRow);
+  }
+
+  async offersUsing(tenantId: string, list: PricingList, id: string): Promise<number> {
+    const column = OFFER_COLUMNS[list];
+    return column ? this.prisma.quotation.count({ where: { tenantId, [column]: id } }) : 0;
   }
 
   async citiesWithoutZone(tenantId: string): Promise<CityRecord[]> {

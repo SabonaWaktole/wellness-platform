@@ -93,6 +93,29 @@ describe('Deal list (FR-DEAL-11)', () => {
     await waitFor(() => expect(lastParams()).toMatchObject({ sort: 'expectedCloseDate' }));
   });
 
+  it('FR-DEAL-11 filters and sorts by the deal\'s monthly value (Slice 8)', async () => {
+    renderList();
+    await screen.findAllByText('Deal 1');
+    fireEvent.change(screen.getByLabelText('Monthly value from'), { target: { value: '40' } });
+    fireEvent.change(screen.getByLabelText('Monthly value to'), { target: { value: '49.40' } });
+    await waitFor(() => expect(lastParams()).toMatchObject({ valueMin: '40', valueMax: '49.40' }));
+
+    // Not an amount yet: not sent, and the field says why.
+    fireEvent.change(screen.getByLabelText('Monthly value to'), { target: { value: '49.4.0' } });
+    expect(await screen.findByText('Enter an amount such as 49.40.')).toBeInTheDocument();
+    await waitFor(() => expect(lastParams()?.valueMax).toBeUndefined());
+
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /Monthly value/ })).getByRole('button'));
+    await waitFor(() => expect(lastParams()).toMatchObject({ sort: 'value' }));
+  });
+
+  it('FR-RBAC-17 without commercial.view there is no value filter', async () => {
+    setPermissions({ 'deals.view': 'OWN', 'deals.edit': 'OWN' });
+    renderList();
+    await screen.findAllByText('Deal 1');
+    expect(screen.queryByLabelText('Monthly value from')).toBeNull();
+  });
+
   it('FR-DEAL-04 a Sales User, who sees only their own deals, gets no salesperson filter', async () => {
     setPermissions({ 'deals.view': 'OWN', 'deals.edit': 'OWN' });
     renderList();

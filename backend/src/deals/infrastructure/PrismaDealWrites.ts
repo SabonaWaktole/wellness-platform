@@ -37,4 +37,11 @@ export class PrismaDealWrites implements IDealWrites {
   async recordChange(tenantId: string, change: DealStageChange): Promise<void> {
     await this.prisma.dealStageHistory.create({ data: { ...change, tenantId } });
   }
+
+  async setOfferValue(tenantId: string, dealId: string, value: { netMonthlyPrice: string | null; annualValue: string | null }): Promise<void> {
+    await this.prisma.deal.updateMany({
+      where: { id: dealId, tenantId },
+      data: { offerNetMonthlyPrice: value.netMonthlyPrice, offerAnnualValue: value.annualValue },
+    });
+  }
 }

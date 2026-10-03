@@ -87,3 +87,37 @@ export class PricingConflictError extends DomainError {
     super(message);
   }
 }
+
+/**
+ * What the pricing screen refuses about its inputs (M2 Slice 8). The input is
+ * named in `field`, so the screen can mark it. Mapped to 400.
+ *  - INVALID_PRICING_INPUT: a business type, zone, frequency or package that is
+ *    not one the screen offers, or a draft saved with an input still missing.
+ *  - COMPANY_INCOMPLETE: the company has no city or business type (FR-PRC-02).
+ *  - DISCOUNT_ABOVE_CAP: a discount above the cap without an approval
+ *    (FR-DSC-04); Slice 10 turns it into an approval request.
+ */
+export type PricingInputErrorCode = 'INVALID_PRICING_INPUT' | 'COMPANY_INCOMPLETE' | 'DISCOUNT_ABOVE_CAP';
+
+export class InvalidPricingInputError extends DomainError {
+  constructor(
+    readonly field: string,
+    message: string,
+    readonly code: PricingInputErrorCode = 'INVALID_PRICING_INPUT'
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * No such company or deal in the workspace, or one outside the caller's
+ * `offers.edit` scope: "not found", never "forbidden", as for deals
+ * (FR-DEAL-04). Mapped to 404.
+ */
+export class PricingSubjectNotFoundError extends DomainError {
+  readonly code = 'PRICING_SUBJECT_NOT_FOUND';
+
+  constructor() {
+    super('Company or deal not found.');
+  }
+}

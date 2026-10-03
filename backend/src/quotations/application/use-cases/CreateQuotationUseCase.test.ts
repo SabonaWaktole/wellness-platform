@@ -6,6 +6,7 @@ import { IClientRepository } from '../../../clients/domain/repositories/IClientR
 import { IProductRepository, IWarehouseRepository } from '../../../inventory/domain/repositories';
 import { QuotationStatus } from '../../domain/Quotation';
 import { PermissionDeniedError } from '../../../access/domain/errors';
+import { UseDealOffersError } from '../../domain/offerErrors';
 import { administrator, reception, scopeResolver } from '../../../../tests/support/access';
 
 describe('CreateQuotationUseCase', () => {
@@ -51,6 +52,20 @@ describe('CreateQuotationUseCase', () => {
     expect(quotationRepo.save).toHaveBeenCalledTimes(1);
     expect(lineItemRepo.saveMany).toHaveBeenCalledTimes(1);
     expect(historyRepo.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('FR-OFR-01 a workspace on the sales process makes offers from deals, so the legacy create is refused', async () => {
+    const tenants = { findById: jest.fn().mockResolvedValue({ runsSalesProcess: () => true }) };
+    useCase = new CreateQuotationUseCase(quotationRepo, lineItemRepo, historyRepo, clientRepo, productRepo, warehouseRepo, scopeResolver(), tenants);
+
+    await expect(useCase.execute({
+      tenantId: 'tenant-1',
+      clientId: 'c1',
+      createdByUserId: 'user-1',
+      lineItems: [{ productId: 'p1', warehouseId: 'w1', quantity: 1, unitPrice: 10 }],
+      access: administrator({ userId: 'user-1' })
+    })).rejects.toThrow(UseDealOffersError);
+    expect(quotationRepo.save).not.toHaveBeenCalled();
   });
 
   it('should reject if clientId not found', async () => {

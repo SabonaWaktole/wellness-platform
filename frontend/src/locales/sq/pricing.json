@@ -1,0 +1,84 @@
+{
+  "title": "Llogarit çmimin",
+  "back": {
+    "deal": "Kthehu te marrëveshja",
+    "company": "Kthehu te kompania"
+  },
+  "inputs": "Të dhënat",
+  "deal": "Marrëveshja",
+  "chooseDeal": "Zgjidh një marrëveshje",
+  "noOpenDeal": "Kjo kompani nuk ka marrëveshje të hapur. Krijo një për ta ruajtur ofertën; mund të llogaritësh gjithsesi.",
+  "chooseDealToSave": "Zgjidh një nga marrëveshjet e hapura të kompanisë për ta ruajtur ofertën.",
+  "employees": "Punonjës",
+  "employeesInvalid": "Shkruaj një numër të plotë, 1 ose më shumë.",
+  "alsoUpdateCompany": "Përditëso edhe kompaninë (tani {{current}})",
+  "businessType": "Lloji i biznesit",
+  "risk": "Niveli i riskut",
+  "city": "Qyteti",
+  "cityValue": "{{city}}, {{area}}",
+  "cityNone": "Pa qytet",
+  "editCompany": "Ndrysho kompaninë",
+  "zone": "Zona e çmimit",
+  "zoneLabel": "{{name}} (+{{percent}}%)",
+  "frequency": "Shpeshtësia e vizitave",
+  "package": "Paketa",
+  "packageServices": "Shërbimet e kësaj pakete",
+  "discount": "Zbritja %",
+  "discountHint": "Deri në {{cap}}% pa miratim.",
+  "discountInvalid": "Shkruaj një përqindje nga 0 deri në 100, me deri në dy shifra dhjetore.",
+  "note": "Shënim për ofertën",
+  "notePlaceholder": "Për shembull, kushte të veçanta",
+  "choose": "Zgjidh…",
+  "result": "Çmimi",
+  "calculating": "Duke llogaritur…",
+  "breakdown": {
+    "baseFee": "Tarifa bazë",
+    "riskFee": "Shtesa për riskun",
+    "visitFee": "Shpeshtësia e vizitave",
+    "locationFee": "Vendndodhja",
+    "listPrice": "Çmimi i listës në muaj",
+    "discountAmount": "Zbritja ({{percent}}%)",
+    "netMonthlyPrice": "Çmimi neto në muaj",
+    "pricePerEmployee": "Për punonjës",
+    "annualValue": "Vlera vjetore"
+  },
+  "priceOnRequest": "Çmimi sipas kërkesës",
+  "reasons": {
+    "NO_BAND": "Asnjë grup punonjësish nuk e mbulon këtë numër punonjësish.",
+    "NO_ZONE": "Qyteti i kompanisë nuk është në asnjë zonë çmimi.",
+    "NO_RISK_SURCHARGE": "Ky nivel risku nuk ka shtesë të caktuar."
+  },
+  "incomplete": {
+    "title": "Plotëso më parë kompaninë",
+    "text": "Çmimi kërkon {{fields}} e kompanisë.",
+    "cityId": "qytetin",
+    "businessTypeId": "llojin e biznesit",
+    "link": "Plotëso kompaninë"
+  },
+  "inputRequired": {
+    "employees": "Shkruaj numrin e punonjësve.",
+    "zoneId": "Zgjidh zonën e çmimit.",
+    "frequencyId": "Zgjidh shpeshtësinë e vizitave."
+  },
+  "aboveCap": "Një zbritje mbi {{cap}}% kërkon miratim, prandaj kjo ofertë nuk mund të ruhet.",
+  "dealClosed": "Kjo marrëveshje është mbyllur: nuk merr ofertë të re.",
+  "save": "Ruaj ofertën",
+  "saved": "Oferta u ruajt si draft.",
+  "errors": {
+    "generic": "Çmimi nuk u llogarit ose nuk u ruajt. Provo përsëri.",
+    "notFound": "Kjo kompani ose marrëveshje nuk ekziston ose nuk është e jotja.",
+    "forbidden": "Nuk ke leje për këtë veprim.",
+    "DISCOUNT_ABOVE_CAP": "Zbritja është mbi kufirin dhe kërkon miratim.",
+    "COMPANY_INCOMPLETE": "Plotëso më parë të dhënat e kompanisë.",
+    "OFFER_NOT_EDITABLE": "Kjo ofertë nuk mund të ndryshohet më.",
+    "INVALID_PERCENT": "Shkruaj një përqindje nga 0 deri në 100, me deri në dy shifra dhjetore.",
+    "INVALID_PRICING_INPUT": "Kontrollo të dhënat.",
+    "fields": {
+      "employees": "Shkruaj numrin e punonjësve.",
+      "businessTypeId": "Zgjidh një lloj biznesi aktiv.",
+      "zoneId": "Zgjidh një nga zonat e qytetit të kompanisë.",
+      "frequencyId": "Zgjidh një shpeshtësi vizitash aktive.",
+      "packageId": "Zgjidh një paketë aktive."
+    }
+  }
+}

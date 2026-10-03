@@ -67,7 +67,10 @@
     "emptyFiltered": "No deal matches these filters",
     "emptyFilteredMessage": "Try fewer filters or another search.",
     "loadFailed": "The deals could not be loaded.",
-    "itemLabel": "deals"
+    "itemLabel": "deals",
+    "valueMin": "Monthly value from",
+    "valueMax": "Monthly value to",
+    "valueInvalid": "Enter an amount such as 49.40."
   },
   "detail": {
     "back": "Back to the pipeline",
@@ -94,7 +97,6 @@
     "historyBy": "{{date}} · {{actor}}",
     "automatic": "Automatic",
     "offers": "Offers",
-    "offersSoon": "The offers of this deal, with their versions and statuses, will appear here.",
     "activities": "Activities",
     "recordActivity": "Record activity",
     "noActivities": "No activities on this deal yet.",
@@ -154,6 +156,25 @@
       "title": "The title is too long.",
       "notes": "The notes are too long.",
       "expectedCloseDate": "Enter a valid date."
+    }
+  },
+  "offers": {
+    "calculate": "Calculate price",
+    "edit": "Edit offer",
+    "none": "No offer yet. Calculate a price to prepare one.",
+    "hidden": "Offer figures are not shown for your role.",
+    "loadFailed": "The offers could not be loaded.",
+    "updated": "Updated {{date}} · {{actor}}",
+    "priceOnRequest": "Price on request",
+    "list": "List price {{list}}",
+    "listWithDiscount": "List price {{list}} · discount {{percent}}%",
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_APPROVAL": "Awaiting approval",
+      "SENT": "Sent",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "EXPIRED": "Expired"
     }
   }
 }

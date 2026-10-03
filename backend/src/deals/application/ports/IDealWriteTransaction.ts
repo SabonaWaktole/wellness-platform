@@ -15,6 +15,12 @@ export interface IDealWrites {
   update(deal: Deal): Promise<void>;
   /** One stage-history row (FR-DEAL-09). */
   recordChange(tenantId: string, change: DealStageChange): Promise<void>;
+  /**
+   * The deal's value: its current offer's net monthly price and annual value,
+   * two-decimal strings or null (Slice 8). The board and the list read it
+   * from the deal (FR-DEAL-10, 11).
+   */
+  setOfferValue(tenantId: string, dealId: string, value: { netMonthlyPrice: string | null; annualValue: string | null }): Promise<void>;
 }
 
 export interface DealWriteRepos {

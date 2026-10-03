@@ -43,6 +43,15 @@ export class Percent {
     return this.value.equals(other.value);
   }
 
+  /** Strictly above `other`: a discount equal to the cap is within it (FR-DSC-02). */
+  exceeds(other: Percent): boolean {
+    return this.value.greaterThan(other.value);
+  }
+
+  isZero(): boolean {
+    return this.value.isZero();
+  }
+
   toString(): string {
     return this.value.toFixed(2);
   }

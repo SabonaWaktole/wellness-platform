@@ -1,0 +1,84 @@
+{
+  "title": "Calculate price",
+  "back": {
+    "deal": "Back to the deal",
+    "company": "Back to the company"
+  },
+  "inputs": "Inputs",
+  "deal": "Deal",
+  "chooseDeal": "Choose a deal",
+  "noOpenDeal": "This company has no open deal. Create one to save an offer; you can still calculate.",
+  "chooseDealToSave": "Choose one of the company's open deals to save the offer.",
+  "employees": "Employees",
+  "employeesInvalid": "Enter a whole number of 1 or more.",
+  "alsoUpdateCompany": "Also update the company (now {{current}})",
+  "businessType": "Business type",
+  "risk": "Risk level",
+  "city": "City",
+  "cityValue": "{{city}}, {{area}}",
+  "cityNone": "No city",
+  "editCompany": "Edit the company",
+  "zone": "Price zone",
+  "zoneLabel": "{{name}} (+{{percent}}%)",
+  "frequency": "Visit frequency",
+  "package": "Package",
+  "packageServices": "Services in this package",
+  "discount": "Discount %",
+  "discountHint": "Up to {{cap}}% without approval.",
+  "discountInvalid": "Enter a percentage from 0 to 100, with up to two decimals.",
+  "note": "Note on the offer",
+  "notePlaceholder": "Special conditions, for example",
+  "choose": "Choose…",
+  "result": "Price",
+  "calculating": "Calculating…",
+  "breakdown": {
+    "baseFee": "Base fee",
+    "riskFee": "Risk surcharge",
+    "visitFee": "Visit frequency",
+    "locationFee": "Location",
+    "listPrice": "List price per month",
+    "discountAmount": "Discount ({{percent}}%)",
+    "netMonthlyPrice": "Net price per month",
+    "pricePerEmployee": "Per employee",
+    "annualValue": "Annual value"
+  },
+  "priceOnRequest": "Price on request",
+  "reasons": {
+    "NO_BAND": "No employee band covers this number of employees.",
+    "NO_ZONE": "The company's city is in no price zone.",
+    "NO_RISK_SURCHARGE": "This risk level has no surcharge set."
+  },
+  "incomplete": {
+    "title": "Complete the company first",
+    "text": "The price needs the company's {{fields}}.",
+    "cityId": "city",
+    "businessTypeId": "business type",
+    "link": "Complete the company"
+  },
+  "inputRequired": {
+    "employees": "Enter the number of employees.",
+    "zoneId": "Choose the price zone.",
+    "frequencyId": "Choose the visit frequency."
+  },
+  "aboveCap": "A discount above {{cap}}% needs approval, so this offer cannot be saved.",
+  "dealClosed": "This deal is closed: it takes no new offer.",
+  "save": "Save the offer",
+  "saved": "The offer was saved as a draft.",
+  "errors": {
+    "generic": "The price could not be calculated or saved. Try again.",
+    "notFound": "This company or deal does not exist or is not one of yours.",
+    "forbidden": "You do not have permission to do this.",
+    "DISCOUNT_ABOVE_CAP": "The discount is above the cap and needs approval.",
+    "COMPANY_INCOMPLETE": "Complete the company record first.",
+    "OFFER_NOT_EDITABLE": "This offer can no longer be changed.",
+    "INVALID_PERCENT": "Enter a percentage from 0 to 100, with up to two decimals.",
+    "INVALID_PRICING_INPUT": "Check the inputs.",
+    "fields": {
+      "employees": "Enter the number of employees.",
+      "businessTypeId": "Choose an active business type.",
+      "zoneId": "Choose one of the zones of the company's city.",
+      "frequencyId": "Choose an active visit frequency.",
+      "packageId": "Choose an active package."
+    }
+  }
+}

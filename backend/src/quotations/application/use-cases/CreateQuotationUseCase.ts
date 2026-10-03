@@ -8,6 +8,7 @@ import { IProductRepository, IWarehouseRepository } from '../../../inventory/dom
 import { Quotation } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
+import { UseDealOffersError } from '../../domain/offerErrors';
 
 export class CreateQuotationUseCase {
   constructor(
@@ -17,7 +18,9 @@ export class CreateQuotationUseCase {
     private clientRepo: IClientRepository,
     private productRepo: IProductRepository,
     private warehouseRepo: IWarehouseRepository,
-    private scopes: RecordScopeResolver
+    private scopes: RecordScopeResolver,
+    /** D6: read to refuse the legacy create where offers come from deals. */
+    private tenants?: { findById(id: string): Promise<{ runsSalesProcess(): boolean } | null> }
   ) {}
 
   async execute(input: {
@@ -28,6 +31,10 @@ export class CreateQuotationUseCase {
     access: AccessContext;
   }) {
     input.access.ensure('quotations.manage');
+    // FR-OFR-01: under the sales process every offer belongs to a deal.
+    if ((await this.tenants?.findById(input.tenantId))?.runsSalesProcess()) {
+      throw new UseDealOffersError();
+    }
 
     // Only for a company inside the viewer's scope (FR-RBAC-11); outside it
     // the company is not found.

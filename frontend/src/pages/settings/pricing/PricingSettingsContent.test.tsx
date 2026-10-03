@@ -289,7 +289,7 @@ describe('PricingSettingsContent', () => {
     fireEvent.change(screen.getByLabelText('Price zone'), { target: { value: 'zc' } });
     fireEvent.click(screen.getByRole('button', { name: 'Calculate' }));
 
-    expect((await screen.findByTestId('list-price')).textContent).toBe('€49.40');
+    expect((await screen.findByTestId('amount-listPrice')).textContent).toBe('€49.40');
     expect(pricing.testCalculation).toHaveBeenCalledWith({ employees: 2, riskLevelId: 'rl2', frequencyId: 'f2', zoneId: 'zc' });
     expect(screen.getByText('€592.80')).toBeDefined();
   });

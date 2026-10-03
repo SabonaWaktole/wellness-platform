@@ -1,9 +1,10 @@
 /**
- * NFR-PERF-01 and NFR-PERF-03 on a real deployment: signs in against a
- * running API and times the Milestone 1 company queries (budget 1 s) and the
- * Milestone 2 pipeline board and deal list (budget 2 s), printing p50/p95 per
- * query. Exits 1 if any p95 reaches its budget. Read-only: it only issues GET
- * requests after signing in.
+ * NFR-PERF-01, 02 and 03 on a real deployment: signs in against a running
+ * API and times the Milestone 1 company queries (budget 1 s), the Milestone 2
+ * pipeline board and deal list (budget 2 s) and the pricing screen's
+ * calculation (budget 300 ms), printing p50/p95 per query. Exits 1 if any p95
+ * reaches its budget. Read-only: after signing in it issues GET requests and
+ * the calculation, which stores nothing (FR-PRC-12).
  *
  * Seed the target first (`npm run seed:uat -- --companies 10000 --deals 2000`)
  * so the numbers are taken at the SRS figures of 10,000 companies and 2,000
@@ -22,6 +23,8 @@ const argOf = (name: string): string | undefined => {
 const COMPANY_BUDGET_MS = 1000;
 /** NFR-PERF-03: the pipeline board (the calendar joins it in Slice 12). */
 const PIPELINE_BUDGET_MS = 2000;
+/** NFR-PERF-02: a price calculation (the offer PDF joins it in Slice 9). */
+const CALCULATION_BUDGET_MS = 300;
 
 function percentile(samples: number[], p: number): number {
   const sorted = [...samples].sort((a, b) => a - b);
@@ -48,11 +51,14 @@ async function main(): Promise<void> {
   if (!jwt) throw new Error('Sign-in did not set the jwt cookie.');
 
   const get = (path: string) => fetch(`${api}${path}`, { headers: { Cookie: jwt } });
+  const post = (path: string, body: object) =>
+    fetch(`${api}${path}`, { method: 'POST', headers: { Cookie: jwt, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
   const businessTypes = (await (await get(`/${tenant}/lookups/business-types`)).json()) as { data: { id: string }[] };
   const areas = (await (await get(`/${tenant}/lookups/areas`)).json()) as { data: { id: string }[] };
 
-  const queries: Array<[string, string, number]> = [
+  /** Label, path, budget, and a body for the one POST (the calculation). */
+  const queries: Array<[string, string, number, object?]> = [
     ['session (/auth/me)', '/auth/me', COMPANY_BUDGET_MS],
     ['company list, first page', `/${tenant}/clients/search`, COMPANY_BUDGET_MS],
     ['text search', `/${tenant}/clients/search?search=Company`, COMPANY_BUDGET_MS],
@@ -68,20 +74,30 @@ async function main(): Promise<void> {
     ['deal list, first page', `/${tenant}/deals`, PIPELINE_BUDGET_MS],
     ['deal list, one stage', `/${tenant}/deals?stage=NEGOTIATION`, PIPELINE_BUDGET_MS]
   );
+  const deals = (await (await get(`/${tenant}/deals?pageSize=1`)).json()) as { data: { items: { id: string }[] } };
+  const config = (await (await get(`/${tenant}/pricing/config`)).json()) as { data?: { frequencies?: { id: string }[] } };
+  if (deals.data?.items?.[0]) {
+    queries.push([
+      'price calculation',
+      `/${tenant}/pricing/calculate`,
+      CALCULATION_BUDGET_MS,
+      { dealId: deals.data.items[0].id, frequencyId: config.data?.frequencies?.[0]?.id },
+    ]);
+  }
 
   let failed = false;
   console.log(`${runs} runs per query against ${api} (${tenant}), budgets at p95\n`);
   console.log(`${'query'.padEnd(28)} ${'p50 ms'.padStart(8)} ${'p95 ms'.padStart(8)} ${'budget'.padStart(7)}  total`);
-  for (const [label, path, budget] of queries) {
+  for (const [label, path, budget, body] of queries) {
     const samples: number[] = [];
     let total: unknown = '';
     for (let i = 0; i < runs; i++) {
       const start = performance.now();
-      const res = await get(path);
-      const body = (await res.json()) as { total?: number; data?: { total?: number } };
+      const res = await (body ? post(path, body) : get(path));
+      const json = (await res.json()) as { total?: number; data?: { total?: number } };
       samples.push(performance.now() - start);
-      if (!res.ok) throw new Error(`${label}: ${res.status} ${JSON.stringify(body)}`);
-      total = body.total ?? body.data?.total ?? '';
+      if (!res.ok) throw new Error(`${label}: ${res.status} ${JSON.stringify(json)}`);
+      total = json.total ?? json.data?.total ?? '';
     }
     const p95 = percentile(samples, 0.95);
     if (p95 >= budget) failed = true;
@@ -91,7 +107,7 @@ async function main(): Promise<void> {
   }
 
   if (failed) {
-    console.log('\nAt least one query is over its budget (NFR-PERF-01 or NFR-PERF-03).');
+    console.log('\nAt least one query is over its budget (NFR-PERF-01, 02 or 03).');
     process.exitCode = 1;
   }
 }

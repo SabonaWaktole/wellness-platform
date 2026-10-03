@@ -7,7 +7,8 @@ import { loadAccess } from '../../../main/interfaces/http/middlewares/loadAccess
 import { requirePermission } from '../../../main/interfaces/http/middlewares/requirePermission';
 import { validateRequest } from '../../../main/interfaces/http/middlewares/validateRequest';
 import { ResolveAccessContextUseCase } from '../../../access/application/use-cases/ResolveAccessContextUseCase';
-import { DELETE_DEALS, EDIT_DEALS, REASSIGN_DEALS, VIEW_DEALS } from '../../application/dealAccess';
+import { DELETE_DEALS, EDIT_DEALS, REASSIGN_DEALS, VIEW_COMMERCIAL, VIEW_DEALS } from '../../application/dealAccess';
+import { EDIT_OFFERS } from '../../../pricing/application/use-cases/ListActivePackagesUseCase';
 import { DealController } from './DealController';
 import { dealSchemas } from './dealSchemas';
 
@@ -36,6 +37,11 @@ export const createDealRouter = (
   router.get('/:id', view, controller.get);
   // FR-ACT-05: notes and other types are filtered by notes.view / activities.view in the use case.
   router.get('/:id/activities', view, controller.activities);
+  // Slice 8: the deal's offers are commercial (FR-RBAC-17); the deal's own
+  // deals.view scope is checked in the use case. Saving the pricing screen
+  // creates or updates the deal's draft offer (FR-PRC-12).
+  router.get('/:id/offers', requirePermission(VIEW_COMMERCIAL), controller.offers);
+  router.put('/:id/offer', requirePermission(EDIT_OFFERS), validateRequest(dealSchemas.offer), controller.saveOffer);
   router.post('/', edit, validateRequest(dealSchemas.create), controller.create);
   router.patch('/:id', edit, validateRequest(dealSchemas.update), controller.update);
   router.post('/:id/stage', edit, validateRequest(dealSchemas.stage), controller.stage);

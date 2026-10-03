@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { DealStage } from '../../domain/DealStage';
 import { DealType } from '../../domain/DealType';
 import { DEAL_SORT_FIELDS } from '../../application/ports/IDealStore';
+import { pricingChoices } from '../../../pricing/interfaces/http/pricingSchemas';
+import { OFFER_NOTE_MAX } from '../../../quotations/domain/Offer';
 
 const STAGES = Object.values(DealStage) as [DealStage, ...DealStage[]];
 const TYPES = Object.values(DealType) as [DealType, ...DealType[]];
@@ -18,6 +20,9 @@ const calendarDate = z
     }
     return date;
   });
+
+/** A monthly value in a query: a plain decimal with up to two places, kept as text (NFR-ACC-02). */
+const money = z.string().regex(/^\d{1,10}(\.\d{1,2})?$/, 'Use an amount such as 49.40.');
 
 /** A query value given once, repeated, or comma-separated. */
 const list = <T extends [string, ...string[]]>(values: T) =>
@@ -65,10 +70,24 @@ export const dealSchemas = {
     expectedCloseFrom: calendarDate.optional(),
     expectedCloseTo: calendarDate.optional(),
     q: z.string().max(200).optional(),
+    valueMin: money.optional(),
+    valueMax: money.optional(),
     sort: z.enum(DEAL_SORT_FIELDS).default('updatedAt'),
     direction: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
   }),
   column: z.object({ stage: z.enum(STAGES), cursor: z.string().max(500).optional() }),
+  // Saving the pricing screen as the deal's draft offer (Slice 8). Not
+  // strict: a risk level or amounts sent along are stripped, never read
+  // (FR-PRC-03, FR-OFR-03).
+  offer: z.object({
+    ...pricingChoices,
+    employees: z.number(),
+    businessTypeId: z.string().min(1).max(64),
+    frequencyId: z.string().min(1).max(64),
+    packageId: z.string().min(1).max(64),
+    note: z.string().max(OFFER_NOTE_MAX).nullable().optional(),
+    alsoUpdateCompany: z.boolean().optional(),
+  }),
 };

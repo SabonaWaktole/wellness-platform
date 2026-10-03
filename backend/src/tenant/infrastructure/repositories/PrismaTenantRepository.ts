@@ -20,6 +20,7 @@ const toDomain = (data: {
   dateFormat: string;
   defaultLanguage: string;
   subscriptionStatus: SubscriptionStatus;
+  salesWorkflow: string;
   createdAt: Date;
 }): Tenant =>
   Tenant.create({
@@ -33,6 +34,7 @@ const toDomain = (data: {
     dateFormat: data.dateFormat,
     defaultLanguage: data.defaultLanguage,
     subscriptionStatus: data.subscriptionStatus,
+    salesWorkflow: data.salesWorkflow,
     createdAt: data.createdAt,
   });
 

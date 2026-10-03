@@ -2,7 +2,7 @@
  * Deals and the pipeline (M2 Slice 6). Mirrors the backend's DealSummary and
  * DealDetail views. Money arrives as a Decimal string ("49.40") and is only
  * formatted here; it is absent altogether for a viewer without
- * `commercial.view`, and null until offers exist (Slice 8).
+ * `commercial.view`, and null until the deal has a priced offer (Slice 8).
  */
 export const DEAL_STAGES = [
   'NEW_LEAD',
@@ -83,7 +83,8 @@ export interface PipelineBoard {
   columns: BoardColumn[];
 }
 
-export type DealSortField = 'updatedAt' | 'createdAt' | 'expectedCloseDate' | 'title';
+/** `value` sorts by the net monthly value of the deal's offer (Slice 8). */
+export type DealSortField = 'updatedAt' | 'createdAt' | 'expectedCloseDate' | 'title' | 'value';
 
 export interface DealListParams {
   clientId?: string;
@@ -95,6 +96,9 @@ export interface DealListParams {
   cityId?: string;
   expectedCloseFrom?: string;
   expectedCloseTo?: string;
+  /** Net monthly value bounds, as typed: "40" or "49.40" (Slice 8). */
+  valueMin?: string;
+  valueMax?: string;
   q?: string;
   sort?: DealSortField;
   direction?: 'asc' | 'desc';

@@ -15,6 +15,8 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
   'perEmployeeFee', 'riskSurchargePercent', 'frequencyValue', 'discountCapPercent',
   // Milestone 2 Slice 6: a pipeline column's total (each card's value is netMonthlyPrice)
   'totalNetMonthlyPrice',
+  // Milestone 2 Slice 8: the deal's copy of its offer value (sent as netMonthlyPrice and annualValue)
+  'offerNetMonthlyPrice', 'offerAnnualValue',
 ];
 
 /**

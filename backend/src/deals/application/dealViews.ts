@@ -4,10 +4,10 @@ import { DealType } from '../domain/DealType';
 /**
  * A deal as the board, the list and the company's Deals tab show it.
  *
- * `netMonthlyPrice` and `annualValue` come from the deal's latest offer and
- * `nextFollowUpAt` from its follow-ups. Neither exists before Slices 8 and 11,
- * so both are null until then, under the names `redactFields` already
- * guards (FR-RBAC-17).
+ * `netMonthlyPrice` and `annualValue` are the deal's offer value (Slice 8),
+ * null until it has a priced offer, under the names `redactFields` guards
+ * (FR-RBAC-17). `nextFollowUpAt` comes from its follow-ups, null until
+ * Slice 11.
  */
 export interface DealSummary {
   id: string;
@@ -59,7 +59,7 @@ export interface DealDetail extends DealSummary {
 export interface BoardColumn {
   stage: DealStage;
   count: number;
-  /** The sum of the cards' net monthly value; null until offers exist (Slice 8). */
+  /** The sum of the column's net monthly offer values; null when none has one. */
   totalNetMonthlyPrice: string | null;
   items: DealSummary[];
   /** Opaque; pass to the column page for the next cards. NULL when there are none. */

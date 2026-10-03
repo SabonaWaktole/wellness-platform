@@ -95,6 +95,30 @@ describe('redactFields (FR-RBAC-06)', () => {
       });
     });
 
+    it('FR-RBAC-17 guards a saved offer\'s rule values and the deal\'s copy of its value (M2 Slice 8)', () => {
+      const saved = {
+        id: 'o1',
+        pricingInputs: { employees: 2, discountPercent: '10.00' },
+        ruleSnapshot: {
+          band: { minEmployees: 1, maxEmployees: 10, baseFee: '30.00', perEmployeeFee: '8.00' },
+          riskSurchargePercent: '10.00',
+          frequency: { pricingType: 'PERCENT', frequencyValue: '20.00' },
+          surchargePercent: '0.00',
+          discountCapPercent: '10.00',
+          contractMonths: 12,
+        },
+        deal: { id: 'd1', offerNetMonthlyPrice: '44.46', offerAnnualValue: '533.52' },
+      };
+      const view = redactFields(saved, reception());
+      expectNoCommercialFields(view);
+      expect(view).toEqual({
+        id: 'o1',
+        pricingInputs: { employees: 2 },
+        ruleSnapshot: { band: { minEmployees: 1, maxEmployees: 10 }, frequency: { pricingType: 'PERCENT' }, contractMonths: 12 },
+        deal: { id: 'd1' },
+      });
+    });
+
     it('expectNoCommercialFields fails on a guarded name nested in an array', () => {
       expect(() => expectNoCommercialFields({ items: [{ id: 'x', listPrice: '1.00' }] })).toThrow(/listPrice/);
     });

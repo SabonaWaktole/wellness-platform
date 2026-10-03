@@ -8,7 +8,7 @@ import { ToastProvider } from '../../components/ui/Toast';
 import type { DealDetail } from '../../types/deal';
 
 vi.mock('../../services/dealService', () => ({
-  dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn(), activities: vi.fn(), list: vi.fn() },
+  dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn(), activities: vi.fn(), offers: vi.fn(), list: vi.fn() },
 }));
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
 vi.mock('../../hooks/useTeam', () => ({
@@ -71,6 +71,7 @@ describe('Deal page (FR-DEAL-03)', () => {
     setPermissions({ 'deals.view': 'TEAM', 'deals.edit': 'TEAM', 'commercial.view': 'TEAM', 'script.view': true });
     vi.mocked(dealService.get).mockResolvedValue(detail());
     vi.mocked(dealService.activities).mockResolvedValue([]);
+    vi.mocked(dealService.offers).mockResolvedValue([]);
   });
 
   it('FR-DEAL-03 shows company, contact persons, stage, value, salesperson, stage history, notes and the sales script button on one page', async () => {

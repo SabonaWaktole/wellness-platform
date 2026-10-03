@@ -156,7 +156,8 @@
       "contractPrice": "{{amount}} / {{period}}",
       "paymentPaid": "{{paid}} nga {{amount}}",
       "paymentMethod": "Mënyra: {{method}}"
-    }
+    },
+    "calculatePrice": "Llogarit çmimin"
   },
   "activity": {
     "title": "Regjistro aktivitet",

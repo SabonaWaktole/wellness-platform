@@ -16,9 +16,13 @@ export interface DealListFilters {
   expectedCloseTo?: Date;
   /** Matches the title or the company name. */
   query?: string;
+  /** Inclusive bounds on the net monthly value of the deal's offer, as two-decimal text (Slice 8). */
+  valueMin?: string;
+  valueMax?: string;
 }
 
-export const DEAL_SORT_FIELDS = ['updatedAt', 'createdAt', 'expectedCloseDate', 'title'] as const;
+/** `value` sorts by the net monthly value of the deal's offer (Slice 8). */
+export const DEAL_SORT_FIELDS = ['updatedAt', 'createdAt', 'expectedCloseDate', 'title', 'value'] as const;
 export type DealSortField = (typeof DEAL_SORT_FIELDS)[number];
 
 export interface DealSort {
@@ -54,8 +58,12 @@ export interface IDealStore {
     sort: DealSort,
     page: { skip: number; take: number }
   ): Promise<{ items: DealSummary[]; total: number }>;
-  /** Cards per stage. Won and Lost count only deals closed at or after `closedSince`. */
-  boardCounts(tenantId: string, scope: RecordScope, closedSince: Date): Promise<Map<DealStage, number>>;
+  /**
+   * Cards per stage, with the sum of their net monthly value (null when no
+   * card has an offer value). Won and Lost count only deals closed at or
+   * after `closedSince`.
+   */
+  boardCounts(tenantId: string, scope: RecordScope, closedSince: Date): Promise<Map<DealStage, { count: number; totalNetMonthlyPrice: string | null }>>;
   /** One board column, `take` cards from `cursor` on. */
   boardColumn(
     tenantId: string,

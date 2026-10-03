@@ -4,11 +4,13 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactFields } from '../../../access/domain/redactFields';
 import {
   BandsOverlapError,
+  InvalidPricingInputError,
   InvalidPricingOrderError,
   InvalidPricingValueError,
   PricingConflictError,
   PricingItemNotFoundError,
   PricingNameTakenError,
+  PricingSubjectNotFoundError,
 } from '../../domain/errors';
 import { PricingList } from '../../domain/PricingLists';
 import { GetPricingConfigurationUseCase } from '../../application/use-cases/GetPricingConfigurationUseCase';
@@ -27,6 +29,7 @@ import { SetPackageServicesUseCase } from '../../application/use-cases/SetPackag
 import { SetDefaultPackageUseCase } from '../../application/use-cases/SetDefaultPackageUseCase';
 import { ListActivePackagesUseCase } from '../../application/use-cases/ListActivePackagesUseCase';
 import { UpdateOfferSettingsUseCase } from '../../application/use-cases/UpdateOfferSettingsUseCase';
+import { CalculatePriceUseCase } from '../../application/use-cases/CalculatePriceUseCase';
 
 /** Maps the pricing module's errors to a status; anything else goes to the app's error handler. */
 function sendPricingError(res: Response, next: NextFunction, error: unknown) {
@@ -35,6 +38,12 @@ function sendPricingError(res: Response, next: NextFunction, error: unknown) {
   }
   if (error instanceof PricingItemNotFoundError) {
     return res.status(404).json({ error: error.message, code: error.code });
+  }
+  if (error instanceof PricingSubjectNotFoundError) {
+    return res.status(404).json({ error: error.message, code: error.code });
+  }
+  if (error instanceof InvalidPricingInputError) {
+    return res.status(400).json({ error: error.message, code: error.code, field: error.field });
   }
   if (error instanceof InvalidPricingValueError) {
     return res.status(400).json({ error: error.message, code: error.code, field: error.field });
@@ -78,7 +87,8 @@ export class PricingController {
     private readonly setPackageServices: SetPackageServicesUseCase,
     private readonly setDefaultPackage: SetDefaultPackageUseCase,
     private readonly listActivePackages: ListActivePackagesUseCase,
-    private readonly updateOfferSettings: UpdateOfferSettingsUseCase
+    private readonly updateOfferSettings: UpdateOfferSettingsUseCase,
+    private readonly calculatePrice: CalculatePriceUseCase
   ) {}
 
   private handle =
@@ -106,6 +116,12 @@ export class PricingController {
   calculate = this.handle(200, async (req) => ({
     result: await this.testCalculation.execute({ access: req.access!, tenantId: requireTenantId(req), ...req.body }),
   }));
+
+  /** The pricing screen (FR-PRC-01). Without `commercial.view` the amounts are redacted (FR-RBAC-17). */
+  price = this.handle(200, async (req) => {
+    const { dealId, clientId, ...choices } = req.body;
+    return { data: await this.calculatePrice.execute({ access: req.access!, tenantId: requireTenantId(req), dealId, clientId, choices }) };
+  });
 
   create = this.handle(201, async (req) => ({
     item: await this.createItem.execute({ access: req.access!, tenantId: requireTenantId(req), list: listOf(req), values: req.body }),

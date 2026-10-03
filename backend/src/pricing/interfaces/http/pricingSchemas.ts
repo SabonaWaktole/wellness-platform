@@ -16,6 +16,16 @@ const descriptions = {
   descriptionEn: z.string().max(MAX_DESCRIPTION_LENGTH + 100).nullable().optional(),
 };
 
+/** What the salesperson chooses on the pricing screen; shared with the draft offer's save. */
+export const pricingChoices = {
+  employees: z.number().nullable().optional(),
+  businessTypeId: z.string().max(64).nullable().optional(),
+  zoneId: z.string().max(64).nullable().optional(),
+  frequencyId: z.string().max(64).nullable().optional(),
+  packageId: z.string().max(64).nullable().optional(),
+  discountPercent: amount.nullable().optional(),
+};
+
 const listFields: Record<PricingList, z.ZodRawShape> = {
   [PricingList.Bands]: {
     minEmployees: z.number(),
@@ -77,6 +87,14 @@ export const pricingSchemas = {
       closingEn: richText.optional(),
     })
     .strict(),
+  // The pricing screen (Slice 8). A risk level and amounts are not part of
+  // the shape, so they are stripped: the risk follows the business type and
+  // the server calculates every amount (FR-PRC-03, FR-OFR-03).
+  calculate: z.object({
+    dealId: z.string().min(1).max(64).optional(),
+    clientId: z.string().min(1).max(64).optional(),
+    ...pricingChoices,
+  }),
   testCalculation: z.object({
     employees: z.number(),
     riskLevelId: z.string().min(1),

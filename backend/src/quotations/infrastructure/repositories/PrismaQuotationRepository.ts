@@ -18,7 +18,9 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       }
     });
 
-    if (!raw || raw.tenantId !== tenantId) {
+    // An offer (M2 Slice 8) has a deal and no product lines; the legacy
+    // quotation model cannot hold it, so these routes do not see it.
+    if (!raw || raw.tenantId !== tenantId || raw.dealId !== null) {
       return null;
     }
 
@@ -53,7 +55,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     const rawQuotations = await this.prisma.quotation.findMany({
       where: {
         tenantId,
-        status: QuotationStatus.PendingApproval
+        status: QuotationStatus.PendingApproval,
+        dealId: null
       },
       include: {
         lineItems: true,
@@ -100,6 +103,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
     const where: any = {
       tenantId: filters.tenantId,
+      // Legacy quotations only: offers (M2 Slice 8) are listed on their deal.
+      dealId: null,
       client: ownerWhere(filters.scope ?? ALL_RECORDS, 'assignedUserId'),
     };
 

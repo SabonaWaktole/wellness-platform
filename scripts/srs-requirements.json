@@ -581,6 +581,86 @@
       "id": "NFR-OPS-02",
       "priority": "Must",
       "requirement": "Migrations shall run on PostgreSQL and MySQL, including the migration of existing interactions (FR-ACT-07) and quotation references (FR-OFR-08), and be reversible or backed up."
+    },
+    {
+      "id": "FR-PRC-01",
+      "priority": "Must",
+      "requirement": "A salesperson shall open the pricing screen from a company or a deal. The screen shows the four inputs, the calculated breakdown and the monthly price, and recalculates on the server whenever an input changes."
+    },
+    {
+      "id": "FR-PRC-02",
+      "priority": "Must",
+      "requirement": "Inputs shall be pre-filled from the company record: number of employees, business type (and its risk level) and City. Location is never typed: it is the company's predefined City (Dimitris's comment). If the company has no City or business type, the screen asks the user to complete the company record and links to it."
+    },
+    {
+      "id": "FR-PRC-03",
+      "priority": "Must",
+      "requirement": "The risk level shall follow the business type (M1 FR-CMP-02) and cannot be chosen directly on the pricing screen. Changing the business type on the pricing screen changes the risk surcharge."
+    },
+    {
+      "id": "FR-PRC-04",
+      "priority": "Should",
+      "requirement": "The number of employees defaults to the company value and can be changed for this offer (whole number ≥ 1). Changing it on the pricing screen does not change the company record unless the user chooses \"also update the company\"."
+    },
+    {
+      "id": "FR-PRC-05",
+      "priority": "Must",
+      "requirement": "The visit frequency shall be chosen from the active visit frequencies (FR-PCF-04)."
+    },
+    {
+      "id": "FR-PRC-06",
+      "priority": "Must",
+      "requirement": "When a city belongs to more than one price zone (e.g. Tiranë: centre or suburbs), the salesperson shall choose the zone from those linked to the city. When it belongs to exactly one, the zone is set automatically."
+    },
+    {
+      "id": "FR-PRC-11",
+      "priority": "Must",
+      "requirement": "The salesperson shall choose a service package (FR-PCF-06) on the pricing screen; the package describes the services in the offer. In this milestone the package does not change the price (Q11)."
+    },
+    {
+      "id": "FR-PRC-12",
+      "priority": "Must",
+      "requirement": "Saving the pricing screen creates or updates a draft offer for the deal (section 6). A price can also be calculated without saving, e.g. during a call."
+    },
+    {
+      "id": "FR-PCF-10",
+      "priority": "Must",
+      "requirement": "A change to any pricing setting shall not change offers already created: each offer stores the inputs and the rule values it was calculated with (FR-OFR-04)."
+    },
+    {
+      "id": "FR-DSC-01",
+      "priority": "Must",
+      "requirement": "The salesperson shall enter a discount as a percentage (0 to 100, up to two decimals) on the pricing screen. The platform shows the discount amount and the net monthly price."
+    },
+    {
+      "id": "FR-DSC-02",
+      "priority": "Must",
+      "requirement": "A discount up to and including the discount cap shall be applied without approval."
+    },
+    {
+      "id": "FR-DSC-04",
+      "priority": "Must",
+      "requirement": "The cap shall be checked on the server. A request that applies a discount above the cap without an approval is refused, whatever the client sends."
+    },
+    {
+      "id": "FR-OFR-01",
+      "priority": "Must",
+      "requirement": "An offer shall be created from the pricing screen of a deal (FR-PRC-12). Every offer belongs to exactly one deal and one company."
+    },
+    {
+      "id": "FR-OFR-03",
+      "priority": "Must",
+      "requirement": "The salesperson may add a free-text note to the offer (e.g. special conditions). Prices cannot be edited on the offer; they come only from the pricing screen."
+    },
+    {
+      "id": "FR-OFR-04",
+      "priority": "Must",
+      "requirement": "Each offer shall store the pricing inputs, the rule values used (snapshot) and the resulting amounts, so it can be re-displayed and re-downloaded identically later."
+    },
+    {
+      "id": "NFR-PERF-02",
+      "priority": "Should",
+      "requirement": "A price calculation shall return in under 300 ms and an offer PDF shall be generated in under 3 seconds on the staging server."
     }
   ]
 }

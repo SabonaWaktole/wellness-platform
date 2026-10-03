@@ -43,6 +43,9 @@ export const createPricingRouter = (
   router.put('/discount-cap', manage, validateRequest(pricingSchemas.discountCap), controller.discountCap);
   router.put('/zones/:id/cities', manage, validateRequest(pricingSchemas.zoneCities), controller.zoneCities);
   router.put('/offer-settings', manage, validateRequest(pricingSchemas.offerSettings), controller.offerSettings);
+  // The pricing screen (Slice 8): salespeople price a company or a deal in
+  // their `offers.edit` scope. Before `/:list`, which is the Administrator's.
+  router.post('/calculate', requirePermission(EDIT_OFFERS), validateRequest(pricingSchemas.calculate), controller.price);
   // Packages: read for an offer, created with their services, one default.
   router.get('/packages/active', requirePermission(EDIT_OFFERS), controller.activePackages);
   router.post('/packages', manage, validateRequest(pricingSchemas.createPackage), controller.createPackage);

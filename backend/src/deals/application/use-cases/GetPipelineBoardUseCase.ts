@@ -39,8 +39,8 @@ export class GetPipelineBoardUseCase {
 
     const columns: BoardColumn[] = Object.values(DealStage).map((stage, index) => ({
       stage,
-      count: counts.get(stage) ?? 0,
-      totalNetMonthlyPrice: null,
+      count: counts.get(stage)?.count ?? 0,
+      totalNetMonthlyPrice: counts.get(stage)?.totalNetMonthlyPrice ?? null,
       ...page(pages[index]),
     }));
     return { columns };
