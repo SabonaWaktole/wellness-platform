@@ -91,7 +91,9 @@ export const dealSchemas = {
     alsoUpdateCompany: z.boolean().optional(),
     // FR-OFR-02: null is the company's primary contact; left out keeps the offer's.
     contactPersonId: z.string().min(1).max(64).nullable().optional(),
-    // FR-DSC-03: why the discount is above the cap; required when it is.
+    // FR-DSC-03, FR-PRC-09: why the discount is above the cap, or why the price is set by hand.
     reason: z.string().max(2000).nullable().optional(),
+    // FR-PRC-09: a manual monthly price on "Price on request".
+    manualMonthlyPrice: z.union([z.string().max(14), z.number()]).nullable().optional(),
   }),
 };

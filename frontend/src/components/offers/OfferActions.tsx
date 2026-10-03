@@ -9,6 +9,7 @@ import { TextareaInput } from '../ui/TextareaInput/TextareaInput';
 import { useToast } from '../ui/Toast/toastContext';
 import { useDateFormat } from '../../hooks/useDateFormat';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { offerService } from '../../services/offerService';
 import type { OfferLanguage, OfferView } from '../../types/offer';
 import { downloadBlob } from '../../utils/downloadBlob';
@@ -18,8 +19,8 @@ import styles from './OfferActions.module.css';
 
 type Dialog = 'sent' | 'accepted' | 'rejected' | 'revise' | 'approve' | 'rejectDiscount' | 'withdraw' | null;
 
-/** A percentage as the server accepts it: digits, and up to two decimals (FR-DSC-01). */
-const PERCENT = /^\d+(\.\d{1,2})?$/;
+/** A percentage or an amount as the server accepts it: digits, and up to two decimals (FR-DSC-01, FR-PRC-09). */
+const DECIMAL = /^\d+(\.\d{1,2})?$/;
 
 interface OfferActionsProps {
   tenantSlug: string;
@@ -45,6 +46,7 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
   const toast = useToast();
   const dates = useDateFormat();
   const isPhone = useMediaQuery('(max-width: 767px)');
+  const money = useMoneyFormat();
   const [language, setLanguage] = useState<OfferLanguage>('sq');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,12 +57,15 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
   const [comment, setComment] = useState('');
   const can = (action: OfferView['permittedActions'][number]) => offer.permittedActions.includes(action);
   const pending = offer.pendingApproval;
+  // FR-PRC-09: a manual price is approved as a price (any amount above 0), a discount as a
+  // percent no higher than requested (FR-DSC-06). `approvedPercent` holds whichever applies.
+  const isManual = pending?.kind === 'MANUAL_PRICE';
   const requestedPercent = Number(pending?.requestedPercent ?? NaN);
   const approvedValid =
     pending !== null &&
-    PERCENT.test(approvedPercent.trim()) &&
-    Number(approvedPercent) >= 0 &&
-    Number(approvedPercent) <= requestedPercent;
+    DECIMAL.test(approvedPercent.trim()) &&
+    (isManual ? Number(approvedPercent) > 0 : Number(approvedPercent) >= 0 && Number(approvedPercent) <= requestedPercent);
+  const requestedPrice = pending?.requestedMonthlyPrice ? money.format(Number(pending.requestedMonthlyPrice)) : '';
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -112,7 +117,7 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
   const open = (next: Dialog) => {
     setNote('');
     setComment('');
-    setApprovedPercent(pending?.requestedPercent ?? '');
+    setApprovedPercent((isManual ? pending?.requestedMonthlyPrice : pending?.requestedPercent) ?? '');
     setSentDate(dates.dayKey(new Date()));
     setDialog(next);
   };
@@ -189,7 +194,10 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
 
       {offer.status === 'PENDING_APPROVAL' && pending && (
         <p className={styles.notice} role="status">
-          {t('approval.waiting', { percent: pending.requestedPercent })} {t('approval.requestedBy', { name: pending.requestedByName })}{' '}
+          {isManual
+            ? t('approval.waitingManual', { price: requestedPrice })
+            : t('approval.waiting', { percent: pending.requestedPercent })}{' '}
+          {t('approval.requestedBy', { name: pending.requestedByName })}{' '}
           {t('approval.reason', { reason: pending.reason })}
         </p>
       )}
@@ -265,7 +273,11 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
         <ConfirmDialog
           isOpen={dialog === 'approve'}
           onClose={() => setDialog(null)}
-          title={t('approval.approveTitle', { percent: pending.requestedPercent, reference: offer.reference })}
+          title={
+            isManual
+              ? t('approval.approveManualTitle', { price: requestedPrice, reference: offer.reference })
+              : t('approval.approveTitle', { percent: pending.requestedPercent, reference: offer.reference })
+          }
           confirmLabel={t('actions.approve')}
           tone="primary"
           confirmDisabled={!approvedValid}
@@ -275,7 +287,7 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
                 offerService.approveDiscount(
                   tenantSlug,
                   pending.id,
-                  approvedPercent.trim(),
+                  isManual ? { approvedMonthlyPrice: approvedPercent.trim() } : { approvedPercent: approvedPercent.trim() },
                   comment.trim() === '' ? null : comment.trim()
                 ),
               t('done.approved')
@@ -283,13 +295,19 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
           }
           message={
             <>
-              <p>{t('approval.approveMessage')}</p>
+              <p>{t(isManual ? 'approval.approveManualMessage' : 'approval.approveMessage')}</p>
               <div className={styles.dialogField}>
                 <TextInput
-                  label={t('approval.approvedPercent')}
+                  label={t(isManual ? 'approval.approvedPrice' : 'approval.approvedPercent')}
                   inputMode="decimal"
                   value={approvedPercent}
-                  error={approvedPercent.trim() !== '' && !approvedValid ? t('approval.approveInvalid', { requested: pending.requestedPercent }) : undefined}
+                  error={
+                    approvedPercent.trim() !== '' && !approvedValid
+                      ? isManual
+                        ? t('approval.approvePriceInvalid')
+                        : t('approval.approveInvalid', { requested: pending.requestedPercent })
+                      : undefined
+                  }
                   onChange={(event) => setApprovedPercent(event.target.value)}
                   required
                 />
@@ -309,14 +327,18 @@ export const OfferActions: React.FC<OfferActionsProps> = ({ tenantSlug, offer, o
         <ConfirmDialog
           isOpen={dialog === 'rejectDiscount'}
           onClose={() => setDialog(null)}
-          title={t('approval.rejectTitle', { percent: pending.requestedPercent, reference: offer.reference })}
+          title={
+            isManual
+              ? t('approval.rejectManualTitle', { price: requestedPrice, reference: offer.reference })
+              : t('approval.rejectTitle', { percent: pending.requestedPercent, reference: offer.reference })
+          }
           confirmLabel={t('actions.reject')}
           tone="danger"
           confirmDisabled={comment.trim() === ''}
           onConfirm={() => step(() => offerService.rejectDiscount(tenantSlug, pending.id, comment.trim()), t('done.discountRejected'))}
           message={
             <>
-              <p>{t('approval.rejectMessage')}</p>
+              <p>{t(isManual ? 'approval.rejectManualMessage' : 'approval.rejectMessage')}</p>
               <div className={styles.dialogField}>
                 <TextareaInput
                   label={t('approval.comment')}

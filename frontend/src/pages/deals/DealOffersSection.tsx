@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Briefcase, Calculator } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
@@ -39,6 +39,9 @@ export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () 
   const { t: tc } = useTranslation('common');
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  // FR-DSC-05: a notification or the approvals list opens the deal on one offer.
+  const [searchParams] = useSearchParams();
+  const focusOfferId = searchParams.get('offer');
   const dates = useDateFormat();
   const money = useMoneyFormat();
   const canSeeOffers = usePermission('commercial.view');
@@ -59,6 +62,12 @@ export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () 
   useEffect(() => {
     load();
   }, [load]);
+
+  const hasOffers = offers !== null;
+  useEffect(() => {
+    if (!focusOfferId || !hasOffers) return;
+    document.querySelector(`[data-testid="offer-${CSS.escape(focusOfferId)}"]`)?.scrollIntoView?.({ block: 'center' });
+  }, [focusOfferId, hasOffers]);
 
   const canPrice = canEditOffers && isOpenStage(deal.stage);
   const inProgress = offers?.some((offer) => !offer.superseded && IN_PROGRESS.includes(offer.status)) ?? false;
@@ -98,7 +107,12 @@ export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () 
           {offers.map((offer) => {
             const pkg = offer.pricingInputs?.package;
             return (
-              <li key={offer.id} className={styles.activityItem} data-testid={`offer-${offer.id}`}>
+              <li
+                key={offer.id}
+                className={offer.id === focusOfferId ? `${styles.activityItem} ${styles.highlighted}` : styles.activityItem}
+                data-testid={`offer-${offer.id}`}
+                aria-current={offer.id === focusOfferId ? 'true' : undefined}
+              >
                 <div className={styles.activityHeader}>
                   <strong>{offer.reference}</strong>
                   <Badge variant={badgeVariant(offer.status)}>{t(`offers.status.${offer.status}`, { defaultValue: offer.status })}</Badge>
@@ -114,13 +128,16 @@ export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () 
                       : to('sentOn', { sent: dates.date(offer.sentAt) })}
                   </span>
                 )}
-                {offer.priceOnRequest ? (
+                {offer.priceOnRequest && !offer.manualMonthlyPrice ? (
                   <span className={styles.value}>{t('offers.priceOnRequest')}</span>
                 ) : (
                   offer.netMonthlyPrice != null && (
                     <>
                       <span className={styles.value}>{t('perMonth', { amount: money.format(Number(offer.netMonthlyPrice)) })}</span>
-                      {offer.listPrice != null && (
+                      {offer.manualMonthlyPrice ? (
+                        // FR-PRC-09: a manual price on "Price on request", with why.
+                        <span className={styles.muted}>{to('manualPrice', { reason: offer.manualPriceReason ?? '' })}</span>
+                      ) : offer.listPrice != null && (
                         <span className={styles.muted}>
                           {offer.discountPercent && Number(offer.discountPercent) > 0
                             ? t('offers.listWithDiscount', { list: money.format(Number(offer.listPrice)), percent: offer.discountPercent })

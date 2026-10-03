@@ -4,7 +4,7 @@ import { RecordScope } from '../../access/domain/RecordScope';
 import { ownerWhere } from '../../access/infrastructure/prismaRecordScope';
 import { quotationReference } from '../../quotations/domain/quotationReference';
 import { IDiscountApprovalStore } from '../application/ports/IDiscountApprovalStore';
-import { PendingApprovalView } from '../application/ports/IDiscountApprovalWrites';
+import { PendingApprovalView } from '../application/ports/IDiscountApprovalStore';
 import { DiscountApproval } from '../domain/DiscountApproval';
 import { approvalColumns, toDiscountApproval } from './prismaDiscountApprovalRows';
 
@@ -46,8 +46,10 @@ function toPendingView(row: PendingRow): PendingApprovalView {
     dealOwnerName: offer.deal ? personName(offer.deal.owner) : '',
     requestedByUserId: row.requestedByUserId,
     requestedByName: personName(row.requestedBy),
-    requestedPercent: row.requestedPercent.toFixed(2),
-    listPriceAtRequest: row.listPriceAtRequest.toFixed(2),
+    kind: row.kind === 'MANUAL_PRICE' ? 'MANUAL_PRICE' : 'DISCOUNT',
+    requestedPercent: row.requestedPercent?.toFixed(2) ?? null,
+    listPriceAtRequest: row.listPriceAtRequest?.toFixed(2) ?? null,
+    requestedMonthlyPrice: row.requestedMonthlyPrice?.toFixed(2) ?? null,
     reason: row.reason,
     createdAt: row.createdAt.toISOString(),
   };
@@ -96,20 +98,6 @@ export class PrismaDiscountApprovalStore implements IDiscountApprovalStore {
       this.prisma.discountApproval.count({ where }),
     ]);
     return { data: rows.map(toPendingView), total, page, pageSize };
-  }
-
-  /** Pending requests older than `hours` with no reminder sent (FR-DSC-12). */
-  async pendingOlderThan(tenantId: string, hours: number, now: Date): Promise<DiscountApproval[]> {
-    const rows = await this.prisma.discountApproval.findMany({
-      where: {
-        tenantId,
-        status: 'PENDING',
-        remindedAt: null,
-        createdAt: { lte: new Date(now.getTime() - hours * 3_600_000) },
-      },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    });
-    return rows.map(toDiscountApproval);
   }
 
   /** Pending requests older than `hours` with the offer context the reminder needs. */

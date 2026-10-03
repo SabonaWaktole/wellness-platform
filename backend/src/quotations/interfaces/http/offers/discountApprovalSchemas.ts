@@ -9,10 +9,14 @@ export const discountApprovalSchemas = {
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
   }),
-  /** FR-DSC-06: an optional lower percent than requested, with an optional comment. */
+  /**
+   * FR-DSC-06: an optional lower percent than requested, with an optional
+   * comment. FR-PRC-09: for a manual price, an optional other price.
+   */
   approve: z
     .object({
       approvedPercent: percentInput.optional(),
+      approvedMonthlyPrice: percentInput.optional(),
       comment: z.string().max(DECISION_COMMENT_MAX).nullable().optional(),
     })
     .strict(),

@@ -1,8 +1,9 @@
 import { ScheduledJob } from '../Scheduler';
 import { INotificationSettingsRepository } from '../../notifications/domain/INotificationSettingsRepository';
 import { NotificationService } from '../../notifications/application/NotificationService';
-import { PrismaDiscountApprovalStore } from '../../discounts/infrastructure/PrismaDiscountApprovalStore';
+import { IDiscountApprovalStore } from '../../discounts/application/ports/IDiscountApprovalStore';
 import { APPROVE_DISCOUNTS } from '../../quotations/application/offers/offerAccess';
+import { approvalRequestParams } from '../../quotations/application/offers/approvalNotices';
 
 /**
  * One reminder for a discount approval that has waited longer than the
@@ -16,7 +17,7 @@ export class DiscountApprovalReminderJob implements ScheduledJob {
   readonly intervalMs = 60 * 60_000;
 
   constructor(
-    private readonly store: PrismaDiscountApprovalStore,
+    private readonly store: IDiscountApprovalStore,
     private readonly settingsRepo: INotificationSettingsRepository,
     private readonly notifications: NotificationService
   ) {}
@@ -36,15 +37,21 @@ export class DiscountApprovalReminderJob implements ScheduledJob {
 
           await this.notifications.emitSafe({
             tenantId: settings.tenantId,
-            toPermission: { key: APPROVE_DISCOUNTS, subjectOwnerId: view.dealOwnerUserId },
+            // The requester is never reminded of their own request (FR-DSC-09).
+            toPermission: { key: APPROVE_DISCOUNTS, subjectOwnerId: view.dealOwnerUserId, excludeUserId: view.requestedByUserId },
             type: 'DISCOUNT_APPROVAL_REMINDER',
-            params: {
+            params: approvalRequestParams({
+              kind: view.kind,
               reference: view.reference,
               clientName: view.companyName,
+              salespersonName: view.requestedByName,
+              reason: view.reason,
               requestedPercent: view.requestedPercent,
+              listPrice: view.listPriceAtRequest,
+              requestedMonthlyPrice: view.requestedMonthlyPrice,
               offerId: view.offerId,
               dealId: view.dealId,
-            },
+            }),
             actorUserId: null,
             entityType: 'OFFER',
             entityId: view.dealId,

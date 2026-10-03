@@ -1,7 +1,9 @@
 import { InvalidPricingInputError } from '../../../pricing/domain/errors';
 import { PricingScreenState } from '../../../pricing/application/PricingScreen';
 import { PricingLabel } from '../../../pricing/application/ports/IPricingSubjectReader';
-import { OfferContent } from '../../domain/Offer';
+import { Money } from '../../../pricing/domain/Money';
+import { Percent } from '../../../pricing/domain/Percent';
+import { OfferAmounts, OfferContent, OfferManualPrice } from '../../domain/Offer';
 
 /** The version of the `ruleSnapshot` shape, so a later reader knows what it holds (D2). */
 export const RULE_SNAPSHOT_VERSION = 1;
@@ -22,13 +24,14 @@ const INPUT_MESSAGES: Record<string, string> = {
  * without amounts (FR-PRC-07). A discount above the cap is refused here, on
  * the server, whatever the client sends (FR-DSC-04) — unless the caller
  * passes `allowAboveCap`, in which case the content carries the above-cap
- * discount for the approval path (FR-DSC-03; Slice 10).
+ * discount for the approval path (FR-DSC-03; Slice 10). A manual price
+ * (FR-PRC-09) is only for a "Price on request" result and takes no discount.
  */
 export function offerContentFrom(
   state: PricingScreenState,
   note: string | null,
   contactPersonId: string | null = null,
-  options: { allowAboveCap?: boolean } = {}
+  options: { allowAboveCap?: boolean; manualPrice?: OfferManualPrice | null } = {}
 ): OfferContent {
   const { outcome, settings, config } = state;
   if (outcome.kind === 'COMPANY_INCOMPLETE') {
@@ -49,6 +52,14 @@ export function offerContentFrom(
       `A discount above ${config.discountCap.toString()}% needs approval.`,
       'DISCOUNT_ABOVE_CAP'
     );
+  }
+
+  const manualPrice = options.manualPrice ?? null;
+  if (manualPrice && outcome.kind !== 'PRICE_ON_REQUEST') {
+    throw new InvalidPricingInputError('manualMonthlyPrice', 'A manual price is only for an offer with "Price on request".');
+  }
+  if (manualPrice && !state.discountPercent.isZero()) {
+    throw new InvalidPricingInputError('discountPercent', 'A manual price takes no discount.');
   }
 
   const band = config.bands.find((b) => employees! >= b.min && employees! <= b.max) ?? null;
@@ -104,7 +115,10 @@ export function offerContentFrom(
             pricePerEmployee: outcome.breakdown.pricePerEmployee,
             annualValue: outcome.netAnnualValue,
           }
-        : null,
+        : manualPrice
+          ? manualAmounts(manualPrice.monthlyPrice, employees!, config.contractMonths)
+          : null,
+    manualPrice,
     services: pkg!.services.map((service) => ({
       serviceId: service.id,
       nameSq: service.nameSq,
@@ -114,5 +128,25 @@ export function offerContentFrom(
     })),
     note,
     contactPersonId,
+  };
+}
+
+/**
+ * The amounts of a manual monthly price (FR-PRC-09): it is both the list and
+ * the net price, without fees or a discount; per employee and per year follow
+ * from it as for a calculated price (D8, FR-PRC-10).
+ */
+export function manualAmounts(monthlyPrice: Money, employees: number, contractMonths: number): OfferAmounts {
+  return {
+    baseFee: Money.zero(),
+    riskFee: Money.zero(),
+    visitFee: Money.zero(),
+    locationFee: Money.zero(),
+    listPrice: monthlyPrice,
+    discountPercent: Percent.zero(),
+    discountAmount: Money.zero(),
+    netMonthlyPrice: monthlyPrice,
+    pricePerEmployee: monthlyPrice.divideBy(Math.max(employees, 1)),
+    annualValue: monthlyPrice.multiplyBy(contractMonths),
   };
 }

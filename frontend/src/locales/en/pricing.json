@@ -89,7 +89,18 @@
       "frequencyId": "Choose an active visit frequency.",
       "packageId": "Choose an active package.",
       "contactPersonId": "Choose a contact person of this company.",
-      "reason": "Give a reason for the discount above the cap."
-    }
-  }
+      "reason": "Give a reason for the discount above the cap or for the manual price.",
+      "manualMonthlyPrice": "A manual price is only for an offer with \"Price on request\".",
+      "discountPercent": "Check the discount: a manual price takes none, and a discount above the cap needs a price."
+    },
+    "INVALID_FEE": "Enter a price of 0 or more, with up to two decimals."
+  },
+  "manualPrice": "Manual monthly price",
+  "manualPriceHint": "Optional. Your price is sent to the Sales Manager for approval.",
+  "manualPriceHintApprover": "Optional. You may set the monthly price directly, with a reason.",
+  "manualPriceInvalid": "Enter a price above 0, with up to two decimals.",
+  "manualPriceNoDiscount": "A manual price takes no discount. Set the discount to 0.",
+  "manualPriceReason": "Reason for the manual price",
+  "manualPriceReasonPlaceholder": "How the price was agreed",
+  "approvalCovers": "Covered by the approved {{percent}}% discount. Lowering the discount keeps the approval."
 }

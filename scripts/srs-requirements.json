@@ -333,6 +333,11 @@
       "requirement": "Each component shall be rounded to the cent (half up) and the monthly list price is the sum of the rounded components, so the breakdown always adds up to the total."
     },
     {
+      "id": "FR-PRC-09",
+      "priority": "Should",
+      "requirement": "For \"Price on request\" cases, a user with \"Discounts: approve\" (Sales Manager) may enter a manual monthly price with a reason. A Sales User may propose one, and it then needs Sales Manager approval like a discount above the cap (section 5)."
+    },
+    {
       "id": "FR-PRC-10",
       "priority": "Should",
       "requirement": "The pricing screen shall show the price per employee and the annual value (monthly net price × contract months, default 12, FR-PCF-08) for information."

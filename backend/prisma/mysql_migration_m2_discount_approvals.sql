@@ -2,7 +2,8 @@
 -- MySQL database.
 --
 -- Adds DiscountApproval, the request to apply a discount above the cap
--- (FR-DSC-03..12, discount-only; manual prices are deferred), and the
+-- (FR-DSC-03..12) and the manual price of a "Price on request" offer
+-- (FR-PRC-09), and the
 -- reminder interval on NotificationSettings (FR-DSC-12, default 24 hours,
 -- admin-controlled in Settings → Notifications).
 --
@@ -66,5 +67,30 @@ SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE 
 SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD CONSTRAINT `DiscountApproval_decidedByUserId_fkey` FOREIGN KEY (`decidedByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: DiscountApproval.DiscountApproval_decidedByUserId_fkey'' AS note');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET FOREIGN_KEY_CHECKS=1;
+
+-- FR-PRC-09: a manual price on a "Price on request" offer. A request now has
+-- a kind (DISCOUNT or MANUAL_PRICE); a manual-price request carries a monthly
+-- price instead of a percent and a list price, so those become nullable.
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'kind');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD COLUMN `kind` VARCHAR(191) NOT NULL DEFAULT ''DISCOUNT''', 'SELECT ''skip: DiscountApproval.kind'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'requestedMonthlyPrice');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD COLUMN `requestedMonthlyPrice` DECIMAL(12,2) NULL', 'SELECT ''skip: DiscountApproval.requestedMonthlyPrice'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'approvedMonthlyPrice');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD COLUMN `approvedMonthlyPrice` DECIMAL(12,2) NULL', 'SELECT ''skip: DiscountApproval.approvedMonthlyPrice'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'requestedPercent' AND IS_NULLABLE = 'NO');
+SET @sql := IF(@needed = 1, 'ALTER TABLE `DiscountApproval` MODIFY `requestedPercent` DECIMAL(7,2) NULL', 'SELECT ''skip: DiscountApproval.requestedPercent nullable'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'listPriceAtRequest' AND IS_NULLABLE = 'NO');
+SET @sql := IF(@needed = 1, 'ALTER TABLE `DiscountApproval` MODIFY `listPriceAtRequest` DECIMAL(12,2) NULL', 'SELECT ''skip: DiscountApproval.listPriceAtRequest nullable'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Quotation' AND COLUMN_NAME = 'manualMonthlyPrice');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Quotation` ADD COLUMN `manualMonthlyPrice` DECIMAL(12,2) NULL', 'SELECT ''skip: Quotation.manualMonthlyPrice'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Quotation' AND COLUMN_NAME = 'manualPriceReason');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Quotation` ADD COLUMN `manualPriceReason` TEXT NULL', 'SELECT ''skip: Quotation.manualPriceReason'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SELECT 'm2 discount approvals done' AS step, NOW() AS at;

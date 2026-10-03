@@ -22,6 +22,16 @@ export interface OfferAmounts {
   annualValue: Money;
 }
 
+/**
+ * A manual monthly price on a "Price on request" offer (FR-PRC-09), with why.
+ * The offer's amounts then carry it as both list and net price, without a
+ * discount; whether it may go final depends on its approval.
+ */
+export interface OfferManualPrice {
+  monthlyPrice: Money;
+  reason: string;
+}
+
 /** A service of the offer's package, copied when the offer was saved (FR-PRC-11). */
 export interface OfferServiceLine {
   serviceId: string | null;
@@ -44,8 +54,10 @@ export interface OfferContent {
   zoneId: string | null;
   pricingInputs: Record<string, unknown>;
   ruleSnapshot: Record<string, unknown>;
-  /** NULL on a "Price on request" draft (FR-PRC-07). */
+  /** NULL on a "Price on request" draft (FR-PRC-07), unless it has a manual price. */
   amounts: OfferAmounts | null;
+  /** FR-PRC-09: set only on a "Price on request" offer priced by hand. */
+  manualPrice: OfferManualPrice | null;
   services: OfferServiceLine[];
   /** Free text, such as special conditions (FR-OFR-03). */
   note: string | null;
@@ -164,6 +176,9 @@ export class Offer {
   get amounts(): OfferAmounts | null {
     return this.props.amounts;
   }
+  get manualPrice(): OfferManualPrice | null {
+    return this.props.manualPrice;
+  }
   get status(): QuotationStatus {
     return this.props.status;
   }
@@ -212,19 +227,22 @@ export class Offer {
    * within the cap it was priced with. The details the PDF shows are frozen
    * with it (D2), so the final document no longer follows the settings.
    * An approved above-cap discount passes its approval, which must cover
-   * this list price and discount (FR-DSC-08; Slice 10).
+   * this list price and discount (FR-DSC-08); a manual price needs its own
+   * approval (FR-PRC-09).
    */
   markReady(
     now: Date,
     discountCap: Percent,
     renderSnapshot: Record<string, unknown>,
-    approval?: { listPrice: Money; approvedPercent: Percent }
+    cover: { discount?: { listPrice: Money; approvedPercent: Percent }; manualPriceApproved?: boolean } = {}
   ): void {
     this.ensureLatest();
     this.ensureStatus(QuotationStatus.Draft, QuotationStatus.Ready);
     const amounts = this.props.amounts;
     if (!amounts) throw new OfferNotReadyError('NO_PRICE');
+    if (this.props.manualPrice && !cover.manualPriceApproved) throw new OfferNotReadyError('MANUAL_PRICE_NOT_APPROVED');
     if (amounts.discountPercent.exceeds(discountCap)) {
+      const approval = cover.discount;
       const covers =
         approval !== undefined &&
         approval.listPrice.equals(amounts.listPrice) &&
@@ -235,8 +253,8 @@ export class Offer {
   }
 
   /**
-   * DRAFT → PENDING_APPROVAL (FR-DSC-03): the salesperson asked for a
-   * discount above the cap with a reason. The offer cannot be downloaded as
+   * DRAFT → PENDING_APPROVAL (FR-DSC-03, FR-PRC-09): the salesperson asked
+   * for a discount above the cap, or proposed a manual price, with a reason. The offer cannot be downloaded as
    * final, marked as sent or used to win until approved.
    */
   requestApproval(now: Date): void {
@@ -246,26 +264,39 @@ export class Offer {
   }
 
   /**
-   * PENDING_APPROVAL → READY (FR-DSC-06, 07): the approver allowed the
-   * discount, possibly a lower percent. The amounts carry the approved
-   * percent, recomputed by the use case; the frozen details are taken as in
-   * `markReady`.
+   * PENDING_APPROVAL → READY (FR-DSC-06, 07, FR-PRC-09): the approver
+   * allowed the discount, possibly a lower percent, or the manual price,
+   * possibly another one. The amounts carry what was approved, recomputed by
+   * the use case; the frozen details are taken as in `markReady`.
    */
-  approvePending(amounts: OfferAmounts, now: Date, renderSnapshot: Record<string, unknown>): void {
+  approvePending(
+    price: { amounts: OfferAmounts; manualPrice: OfferManualPrice | null },
+    now: Date,
+    renderSnapshot: Record<string, unknown>
+  ): void {
     this.ensureLatest();
     this.ensureStatus(QuotationStatus.PendingApproval, QuotationStatus.Ready);
-    this.props = { ...this.props, amounts, status: QuotationStatus.Ready, readyAt: now, renderSnapshot, updatedAt: now };
+    this.props = {
+      ...this.props,
+      amounts: price.amounts,
+      manualPrice: price.manualPrice,
+      status: QuotationStatus.Ready,
+      readyAt: now,
+      renderSnapshot,
+      updatedAt: now,
+    };
   }
 
   /**
-   * PENDING_APPROVAL → DRAFT (FR-DSC-07): rejected, with the discount set
-   * back to the cap. The amounts carry the cap percent, recomputed by the use
-   * case; the comment is stored on the status-history row, not here.
+   * PENDING_APPROVAL → DRAFT (FR-DSC-07, FR-PRC-09): rejected. A discount
+   * goes back to the cap (the amounts carry the cap percent, recomputed by
+   * the use case); a manual price is dropped, leaving "Price on request".
+   * The comment is stored on the status-history row, not here.
    */
-  rejectPending(amounts: OfferAmounts, now: Date): void {
+  rejectPending(price: { amounts: OfferAmounts | null; manualPrice: OfferManualPrice | null }, now: Date): void {
     this.ensureLatest();
     this.ensureStatus(QuotationStatus.PendingApproval, QuotationStatus.Draft);
-    this.props = { ...this.props, amounts, status: QuotationStatus.Draft, updatedAt: now };
+    this.props = { ...this.props, amounts: price.amounts, manualPrice: price.manualPrice, status: QuotationStatus.Draft, updatedAt: now };
   }
 
   /** PENDING_APPROVAL → DRAFT (FR-DSC-10): the salesperson withdrew the request. */

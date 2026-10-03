@@ -43,12 +43,13 @@ export class OfferTransitionError extends DomainError {
 }
 
 /** Why a draft cannot become Ready (FR-OFR-09). */
-export type OfferNotReadyReason = 'NO_PRICE' | 'DISCOUNT_ABOVE_CAP';
+export type OfferNotReadyReason = 'NO_PRICE' | 'DISCOUNT_ABOVE_CAP' | 'MANUAL_PRICE_NOT_APPROVED';
 
 /**
  * The draft is not ready to be a final document: it has no price ("Price on
- * request", FR-PRC-07; a manual price comes in Slice 10), or its discount is
- * above the cap (FR-DSC-04; approval comes in Slice 10). Mapped to 409.
+ * request", FR-PRC-07), its manual price is not approved yet (FR-PRC-09), or
+ * its discount is above the cap without an approval covering it (FR-DSC-04,
+ * 08). Mapped to 409.
  */
 export class OfferNotReadyError extends DomainError {
   readonly code = 'OFFER_NOT_READY';
@@ -57,7 +58,9 @@ export class OfferNotReadyError extends DomainError {
     super(
       reason === 'NO_PRICE'
         ? 'An offer without a price cannot be made ready.'
-        : 'An offer with a discount above the cap cannot be made ready without approval.'
+        : reason === 'MANUAL_PRICE_NOT_APPROVED'
+          ? 'An offer with a manual price cannot be made ready until the price is approved.'
+          : 'An offer with a discount above the cap cannot be made ready without approval.'
     );
   }
 }

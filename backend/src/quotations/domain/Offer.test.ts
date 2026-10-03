@@ -26,6 +26,7 @@ const content = (overrides: Partial<OfferContent> = {}): OfferContent => ({
   services: [{ serviceId: 's1', nameSq: 'Vlerësimi i riskut', nameEn: 'Risk assessment', descriptionSq: null, descriptionEn: null }],
   note: null,
   contactPersonId: null,
+  manualPrice: null,
   ...overrides,
 });
 
@@ -108,6 +109,28 @@ describe('Offer document statuses (M2 Slice 9)', () => {
   it('FR-OFR-09 FR-DSC-04 a discount above the cap cannot become Ready', () => {
     const above = content().amounts!;
     expect(() => draft({ amounts: { ...above, discountPercent: Percent.of('15') } }).markReady(new Date(), CAP, SNAPSHOT)).toThrow(OfferNotReadyError);
+  });
+
+  it('FR-DSC-08 an approval covering the list price and a discount at or below it makes the offer Ready', () => {
+    const above = { ...content().amounts!, discountPercent: Percent.of('13') };
+    const approved = { listPrice: Money.of('49.40'), approvedPercent: Percent.of('15') };
+    const offer = draft({ amounts: above });
+    offer.markReady(new Date(), CAP, SNAPSHOT, { discount: approved });
+    expect(offer.status).toBe(QuotationStatus.Ready);
+    // Raised above the approval, or on another list price: not covered.
+    expect(() =>
+      draft({ amounts: { ...above, discountPercent: Percent.of('16') } }).markReady(new Date(), CAP, SNAPSHOT, { discount: approved })
+    ).toThrow(OfferNotReadyError);
+    expect(() =>
+      draft({ amounts: { ...above, listPrice: Money.of('60.00') } }).markReady(new Date(), CAP, SNAPSHOT, { discount: approved })
+    ).toThrow(OfferNotReadyError);
+  });
+
+  it('FR-PRC-09 a manual price becomes Ready only once that price is approved', () => {
+    const manual = draft({ manualPrice: { monthlyPrice: Money.of('49.40'), reason: 'By hand' } });
+    expect(() => manual.markReady(new Date(), CAP, SNAPSHOT)).toThrow(OfferNotReadyError);
+    manual.markReady(new Date(), CAP, SNAPSHOT, { manualPriceApproved: true });
+    expect(manual.status).toBe(QuotationStatus.Ready);
   });
 
   it('FR-OFR-09 only a Ready offer is marked as sent, and only a sent one is accepted, rejected or expired', () => {

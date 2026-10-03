@@ -83,6 +83,7 @@ export function buildOfferDocument(
             discountAmount: offer.discountAmount!,
             netMonthlyPrice: offer.netMonthlyPrice!,
             annualValue: offer.annualValue!,
+            manual: offer.manualMonthlyPrice !== null,
           },
     contractMonths: numberOr(rules.contractMonths),
     vatIncluded: false,

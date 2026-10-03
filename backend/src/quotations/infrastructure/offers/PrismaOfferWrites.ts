@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Offer, OfferLanguage, OfferProps } from '../../domain/Offer';
 import { IOfferWrites, OfferStatusChange } from '../../application/offers/ports/IOfferWriteTransaction';
-import { amountColumns, OFFER_INCLUDE, statusColumns, toOffer } from './prismaOfferRows';
+import { amountColumns, manualPriceColumns, OFFER_INCLUDE, statusColumns, toOffer } from './prismaOfferRows';
 
 /** The columns a draft's content writes; the identity columns are written once, on insert. */
 function contentColumns(props: OfferProps) {
@@ -17,6 +17,7 @@ function contentColumns(props: OfferProps) {
     pricingInputs: props.pricingInputs as Prisma.InputJsonObject,
     ruleSnapshot: props.ruleSnapshot as Prisma.InputJsonObject,
     ...amountColumns(props.amounts),
+    ...manualPriceColumns(props.manualPrice),
     ...statusColumns(props),
   };
 }
@@ -90,7 +91,7 @@ export class PrismaOfferWrites implements IOfferWrites {
 
   async saveAmounts(offer: Offer): Promise<void> {
     const props = offer.toProps();
-    await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: amountColumns(props.amounts) });
+    await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: { ...amountColumns(props.amounts), ...manualPriceColumns(props.manualPrice) } });
   }
 
   async recordStatusChange(change: OfferStatusChange): Promise<void> {

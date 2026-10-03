@@ -36,10 +36,18 @@ export const offerService = {
   pendingApprovals: async (tenantSlug: string, page = 1, pageSize = 25): Promise<PendingApprovalPage> =>
     (await api.get<PendingApprovalPage>(`${approvalsBase(tenantSlug)}/pending`, { params: { page, pageSize } })).data,
 
-  /** FR-DSC-06: approve at the requested percent, or a lower one. Returns the ready offer. */
-  approveDiscount: (tenantSlug: string, approvalId: string, approvedPercent?: string, comment?: string | null) =>
+  /**
+   * FR-DSC-06: approve at the requested percent, or a lower one; FR-PRC-09: a
+   * manual price at the requested price, or another. Returns the ready offer.
+   */
+  approveDiscount: (
+    tenantSlug: string,
+    approvalId: string,
+    approved: { approvedPercent?: string; approvedMonthlyPrice?: string },
+    comment?: string | null
+  ) =>
     api
-      .post<{ data: OfferView }>(`${approvalsBase(tenantSlug)}/${approvalId}/approve`, { approvedPercent, comment })
+      .post<{ data: OfferView }>(`${approvalsBase(tenantSlug)}/${approvalId}/approve`, { ...approved, comment })
       .then((response) => response.data.data),
 
   /** FR-DSC-06, 07: reject with a required comment. Returns the draft at the cap. */

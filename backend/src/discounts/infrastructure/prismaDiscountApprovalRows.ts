@@ -1,11 +1,14 @@
 import { Prisma } from '@prisma/client';
 import { Money } from '../../pricing/domain/Money';
 import { Percent } from '../../pricing/domain/Percent';
-import { DiscountApproval, DiscountApprovalStatus } from '../domain/DiscountApproval';
+import { DiscountApproval, DiscountApprovalKind, DiscountApprovalStatus } from '../domain/DiscountApproval';
 
 type ApprovalRow = Prisma.DiscountApprovalGetPayload<Record<string, never>>;
 
 const STATUS = ['PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'SUPERSEDED'] as const;
+
+const money = (value: Prisma.Decimal | null): Money | null => (value === null ? null : Money.of(value.toFixed(2)));
+const percent = (value: Prisma.Decimal | null): Percent | null => (value === null ? null : Percent.of(value.toFixed(2)));
 
 /** A discount-approval row as the domain entity. */
 export function toDiscountApproval(row: ApprovalRow): DiscountApproval {
@@ -17,9 +20,12 @@ export function toDiscountApproval(row: ApprovalRow): DiscountApproval {
     tenantId: row.tenantId,
     quotationId: row.quotationId,
     requestedByUserId: row.requestedByUserId,
-    requestedPercent: Percent.of(row.requestedPercent.toFixed(2)),
-    listPriceAtRequest: Money.of(row.listPriceAtRequest.toFixed(2)),
-    approvedPercent: row.approvedPercent === null ? null : Percent.of(row.approvedPercent.toFixed(2)),
+    kind: (row.kind === 'MANUAL_PRICE' ? 'MANUAL_PRICE' : 'DISCOUNT') as DiscountApprovalKind,
+    requestedPercent: percent(row.requestedPercent),
+    listPriceAtRequest: money(row.listPriceAtRequest),
+    requestedMonthlyPrice: money(row.requestedMonthlyPrice),
+    approvedPercent: percent(row.approvedPercent),
+    approvedMonthlyPrice: money(row.approvedMonthlyPrice),
     reason: row.reason,
     status,
     decidedByUserId: row.decidedByUserId,
@@ -35,6 +41,7 @@ export function approvalColumns(approval: DiscountApproval) {
   const props = approval.toProps();
   return {
     approvedPercent: props.approvedPercent?.toString() ?? null,
+    approvedMonthlyPrice: props.approvedMonthlyPrice?.toString() ?? null,
     status: props.status,
     decidedByUserId: props.decidedByUserId,
     decidedAt: props.decidedAt,
@@ -52,8 +59,10 @@ export function insertColumns(approval: DiscountApproval) {
     tenantId: props.tenantId,
     quotationId: props.quotationId,
     requestedByUserId: props.requestedByUserId,
-    requestedPercent: props.requestedPercent.toString(),
-    listPriceAtRequest: props.listPriceAtRequest.toString(),
+    kind: props.kind,
+    requestedPercent: props.requestedPercent?.toString() ?? null,
+    listPriceAtRequest: props.listPriceAtRequest?.toString() ?? null,
+    requestedMonthlyPrice: props.requestedMonthlyPrice?.toString() ?? null,
     reason: props.reason,
     createdAt: props.createdAt,
   };

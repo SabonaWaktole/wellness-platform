@@ -68,7 +68,14 @@
     "commentRequired": "Komenti është i detyrueshëm për refuzimin.",
     "withdrawTitle": "Tërhiq kërkesën për miratim",
     "withdrawMessage": "Oferta kthehet në draft. Ajo del nga lista e miratuesit.",
-    "requestedToast": "Kërkesa për miratim u dërgua. Menaxheri njoftohet."
+    "requestedToast": "Kërkesa për miratim u dërgua. Menaxheri njoftohet.",
+    "waitingManual": "Në pritje të miratimit për çmimin manual {{price}}. Shkarkimi final dhe dërgimi janë të çaktivizuara derisa të vendoset.",
+    "approveManualTitle": "Mirato çmimin manual {{price}} për {{reference}}",
+    "approveManualMessage": "Oferta bëhet gati për t’u shkarkuar me çmimin e miratuar. Mund të miratoni një çmim tjetër nga ai i propozuar.",
+    "approvedPrice": "Çmimi mujor i miratuar",
+    "approvePriceInvalid": "Vendosni një çmim mbi 0, me deri në dy shifra dhjetore.",
+    "rejectManualTitle": "Refuzo çmimin manual {{price}} për {{reference}}",
+    "rejectManualMessage": "Oferta kthehet në draft me \"Çmimi sipas kërkesës\". Komenti i shfaqet shitësit."
   },
   "errors": {
     "notFound": "Kjo ofertë nuk u gjet.",
@@ -77,7 +84,8 @@
     "OFFER_NOT_READY": "Kjo ofertë nuk mund të shënohet ende si gati.",
     "notReady": {
       "NO_PRICE": "Një ofertë pa çmim nuk mund të shënohet si gati.",
-      "DISCOUNT_ABOVE_CAP": "Zbritja është mbi maksimumin. Fillimisht duhet miratuar."
+      "DISCOUNT_ABOVE_CAP": "Zbritja është mbi maksimumin. Fillimisht duhet miratuar.",
+      "MANUAL_PRICE_NOT_APPROVED": "Çmimi manual duhet të miratohet para se oferta të bëhet gati."
     },
     "OFFER_INVALID_TRANSITION": "Statusi i ofertës ka ndryshuar. Rifreskoni faqen dhe provoni përsëri.",
     "OFFER_NOT_LATEST": "Një version i mëvonshëm e zëvendëson këtë ofertë. Përdorni versionin e fundit.",
@@ -99,8 +107,11 @@
       "reference": "Oferta",
       "salesperson": "Kërkuar nga",
       "requested": "Kërkuar",
-      "requestedAt": "Kërkuar më"
-    }
+      "requestedAt": "Kërkuar më",
+      "reason": "Arsyeja"
+    },
+    "discount": "{{percent}}% mbi {{listPrice}}",
+    "manualPrice": "Çmim manual {{price}}"
   },
   "list": {
     "breadcrumb": "Shitjet",
@@ -127,5 +138,6 @@
       "validUntil": "E vlefshme deri",
       "created": "Krijuar"
     }
-  }
+  },
+  "manualPrice": "Çmim manual. Arsyeja: {{reason}}"
 }

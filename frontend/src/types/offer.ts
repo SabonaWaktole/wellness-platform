@@ -99,9 +99,14 @@ export interface SaveOfferInput extends PricingChoices {
   alsoUpdateCompany: boolean;
   /** FR-OFR-02: null for the company's primary contact; left out keeps the offer's. */
   contactPersonId?: string | null;
-  /** FR-DSC-03: why the discount is above the cap; required when it is. */
+  /** FR-DSC-03, FR-PRC-09: why the discount is above the cap, or why the price is set by hand. */
   reason?: string | null;
+  /** FR-PRC-09: a manual monthly price on "Price on request". */
+  manualMonthlyPrice?: string | null;
 }
+
+/** What an approval is asked for: a discount above the cap, or a manual price (FR-PRC-09). */
+export type ApprovalKind = 'DISCOUNT' | 'MANUAL_PRICE';
 
 /** One row of the approver's pending list (FR-DSC-06). */
 export interface PendingApprovalView {
@@ -115,8 +120,13 @@ export interface PendingApprovalView {
   dealOwnerName: string;
   requestedByUserId: string;
   requestedByName: string;
-  requestedPercent: string;
-  listPriceAtRequest: string;
+  kind: ApprovalKind;
+  /** DISCOUNT only. */
+  requestedPercent: string | null;
+  /** DISCOUNT only. */
+  listPriceAtRequest: string | null;
+  /** MANUAL_PRICE only. */
+  requestedMonthlyPrice: string | null;
   reason: string;
   createdAt: string;
 }
@@ -158,7 +168,10 @@ export interface PendingApprovalSummary {
   id: string;
   requestedByUserId: string;
   requestedByName: string;
-  requestedPercent: string;
+  kind: ApprovalKind;
+  requestedPercent: string | null;
+  listPriceAtRequest: string | null;
+  requestedMonthlyPrice: string | null;
   reason: string;
   createdAt: string;
 }
@@ -193,6 +206,11 @@ export interface OfferView {
   permittedActions: OfferAction[];
   /** The pending discount approval, when the offer waits for one (FR-DSC-03). */
   pendingApproval: PendingApprovalSummary | null;
+  /** FR-DSC-08: the latest approved discount; it covers the offer while the list price stays and the discount is not raised. */
+  approvedDiscount?: { listPriceAtRequest: string; approvedPercent: string } | null;
+  /** FR-PRC-09: a manual monthly price on "Price on request", and why. */
+  manualMonthlyPrice?: string | null;
+  manualPriceReason?: string | null;
   language: 'sq' | 'en';
   note: string | null;
   createdByUserId: string;

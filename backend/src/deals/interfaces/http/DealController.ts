@@ -137,7 +137,7 @@ export class DealController {
   /** 201 for the deal's first draft, 200 when the draft is updated (FR-PRC-12). */
   saveOffer = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { note, alsoUpdateCompany, contactPersonId, reason, ...choices } = req.body;
+      const { note, alsoUpdateCompany, contactPersonId, reason, manualMonthlyPrice, ...choices } = req.body;
       const { offer, created } = await this.saveDraftOffer.execute({
         access: req.access!,
         tenantId: requireTenantId(req),
@@ -147,6 +147,7 @@ export class DealController {
         alsoUpdateCompany: alsoUpdateCompany ?? false,
         contactPersonId,
         reason: reason ?? null,
+        manualMonthlyPrice: manualMonthlyPrice ?? null,
       });
       res.status(created ? 201 : 200).json({ data: redactFields(offer, req.access!) });
     } catch (error) {

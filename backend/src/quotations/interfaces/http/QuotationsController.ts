@@ -164,6 +164,8 @@ export class QuotationsController {
     try {
       const tenantId = requireTenantId(req);
       const id = req.params.id as string;
+      // FR-RBAC-18: returning a quotation from approval is the old approval step.
+      if (await this.refusedUnderSalesProcess(tenantId, res)) return;
       const { reason } = req.body;
       const result = await this.returnQuotationToDraftUseCase.execute({
         tenantId,
@@ -266,6 +268,8 @@ export class QuotationsController {
   private async getPendingApprovals(req: Request, res: Response) {
     try {
       const tenantId = requireTenantId(req);
+      // FR-RBAC-18: the sales process approves discounts, listed under /discount-approvals.
+      if (await this.refusedUnderSalesProcess(tenantId, res)) return;
       const result = await this.getPendingApprovalsUseCase.execute({
         tenantId,
         access: req.access!

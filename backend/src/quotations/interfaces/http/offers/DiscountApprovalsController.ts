@@ -86,7 +86,12 @@ export class DiscountApprovalsController {
         access: req.access!,
         tenantId: requireTenantId(req),
         approvalId: idOf(req),
-        decision: { kind: 'APPROVE', approvedPercent: body.approvedPercent, comment: body.comment ?? null },
+        decision: {
+          kind: 'APPROVE',
+          approvedPercent: body.approvedPercent,
+          approvedMonthlyPrice: body.approvedMonthlyPrice,
+          comment: body.comment ?? null,
+        },
       });
       res.json({ data: redactFields(offer, req.access!) });
     } catch (error) {

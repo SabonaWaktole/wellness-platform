@@ -5,14 +5,17 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
 import { Deal } from '../../../deals/domain/Deal';
-import { DiscountApproval as DiscountApprovalEntity } from '../../../discounts/domain/DiscountApproval';
+import { DiscountApproval as DiscountApprovalEntity, DiscountApprovalProps } from '../../../discounts/domain/DiscountApproval';
 import { DiscountApprovalTransitionError, DiscountApprovalNotFoundError, SelfApprovalError } from '../../../discounts/domain/errors';
 import { Notification } from '../../../notifications/domain/Notification';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 import { IPermissionHolderDirectory } from '../../../notifications/application/ports/IPermissionHolderDirectory';
 import { PriceCalculator } from '../../../pricing/domain/PriceCalculator';
+import { Money } from '../../../pricing/domain/Money';
 import { Percent } from '../../../pricing/domain/Percent';
-import { parsePercent } from '../../../pricing/domain/PricingValues';
+import { parseFee, parsePercent } from '../../../pricing/domain/PricingValues';
+import { NotificationParams } from '../../../notifications/domain/NotificationType';
+import { manualAmounts } from './offerContent';
 import { Offer, OfferAmounts } from '../../domain/Offer';
 import { quotationReference } from '../../domain/quotationReference';
 import { QuotationStatus } from '../../domain/Quotation';
@@ -26,15 +29,17 @@ import { IOfferWriteTransaction, OfferWriteRepos } from './ports/IOfferWriteTran
 export const DECISION_COMMENT_MAX = 2000;
 
 export type DiscountDecisionInput =
-  | { kind: 'APPROVE'; approvedPercent?: unknown; comment?: string | null }
+  | { kind: 'APPROVE'; approvedPercent?: unknown; approvedMonthlyPrice?: unknown; comment?: string | null }
   | { kind: 'REJECT'; comment: string };
 
 /**
- * Deciding a discount above the cap (FR-DSC-06, 07, 09).
+ * Deciding a discount above the cap (FR-DSC-06, 07, 09) or a proposed manual
+ * price (FR-PRC-09).
  *
  * Approve takes the approved percent — the requested one, or a lower one —
- * onto the offer and makes it Ready; reject returns the offer to draft with
- * the discount set back to the cap it was priced with, and the comment shown.
+ * (or the approved manual price) onto the offer and makes it Ready; reject
+ * returns the offer to draft with the discount set back to the cap it was
+ * priced with (or without the manual price), and the comment shown.
  * The approver cannot be the requester (FR-DSC-09), and deciding needs
  * `discounts.approve` in scope on the deal's salesperson (FR-DSC-06,
  * NFR-SEC-04). The salesperson is notified either way (FR-DSC-07).
@@ -81,69 +86,65 @@ export class DecideDiscountApprovalUseCase {
       const cap = Percent.of(String(offer.toProps().ruleSnapshot.discountCapPercent ?? '0'));
       const contractMonths = Number(offer.toProps().ruleSnapshot.contractMonths ?? 12);
       const companyName = (await repos.deals.companyName(tenantId, offer.toProps().clientId)) ?? '';
-
-      const details = await this.documents.current(tenantId, {
-        clientId: offer.toProps().clientId,
-        contactPersonId: offer.toProps().contactPersonId,
-        salespersonUserId: deal.ownerUserId,
-      });
+      const isManualPrice = approval.kind === 'MANUAL_PRICE';
 
       if (decision.kind === 'APPROVE') {
-        const approvedPercent =
-          decision.approvedPercent === undefined
-            ? props.requestedPercent
-            : Percent.of(parsePercent(decision.approvedPercent, 'approvedPercent', 100));
-        approval.approve({ decidedByUserId: access.userId, approvedPercent, comment: decision.comment ?? null, now });
-        const next = this.amountsFor(amounts, approvedPercent, contractMonths);
-        offer.approvePending(next, now, { ...details });
+        const details = await this.documents.current(tenantId, {
+          clientId: offer.toProps().clientId,
+          contactPersonId: offer.toProps().contactPersonId,
+          salespersonUserId: deal.ownerUserId,
+        });
+        if (isManualPrice) {
+          const approvedMonthlyPrice =
+            decision.approvedMonthlyPrice === undefined || decision.approvedMonthlyPrice === null
+              ? props.requestedMonthlyPrice!
+              : Money.of(parseFee(decision.approvedMonthlyPrice, 'approvedMonthlyPrice'));
+          approval.approve({ decidedByUserId: access.userId, approvedMonthlyPrice, comment: decision.comment ?? null, now });
+          const manualPrice = { monthlyPrice: approvedMonthlyPrice, reason: offer.manualPrice?.reason ?? props.reason };
+          offer.approvePending(
+            { amounts: manualAmounts(approvedMonthlyPrice, offer.toProps().employeesPriced, contractMonths), manualPrice },
+            now,
+            { ...details }
+          );
+        } else {
+          const approvedPercent =
+            decision.approvedPercent === undefined || decision.approvedPercent === null
+              ? props.requestedPercent!
+              : Percent.of(parsePercent(decision.approvedPercent, 'approvedPercent', 100));
+          approval.approve({ decidedByUserId: access.userId, approvedPercent, comment: decision.comment ?? null, now });
+          offer.approvePending({ amounts: this.amountsFor(amounts, approvedPercent, contractMonths), manualPrice: null }, now, {
+            ...details,
+          });
+        }
         await repos.offers.saveStatus(offer);
         await repos.offers.saveAmounts(offer);
         await repos.approvals.update(approval);
         await recordOfferChange(repos, offer, QuotationStatus.PendingApproval, actorOf(access));
         await this.auditDecision(repos, tenantId, access, approval, offer, companyName);
-        pending.push(
-          ...(await this.notify(
-            repos,
-            tenantId,
-            access,
-            offer,
-            deal,
-            props.requestedByUserId,
-            companyName,
-            'DISCOUNT_APPROVED',
-            approvedPercent.toString()
-          ))
-        );
+        pending.push(...(await this.notify(repos, tenantId, access, offer, deal, approval, companyName, 'DISCOUNT_APPROVED')));
       } else {
         const comment = decision.comment.trim();
         approval.reject({ decidedByUserId: access.userId, comment, now });
-        const next = this.amountsFor(amounts, cap, contractMonths);
-        offer.rejectPending(next, now);
+        // FR-DSC-07: back to the cap; FR-PRC-09: back to "Price on request".
+        offer.rejectPending(
+          isManualPrice
+            ? { amounts: null, manualPrice: null }
+            : { amounts: this.amountsFor(amounts, cap, contractMonths), manualPrice: null },
+          now
+        );
         await repos.offers.saveStatus(offer);
         await repos.offers.saveAmounts(offer);
         await repos.approvals.update(approval);
         await recordOfferChange(repos, offer, QuotationStatus.PendingApproval, actorOf(access), comment);
         await this.auditDecision(repos, tenantId, access, approval, offer, companyName);
-        pending.push(
-          ...(await this.notify(
-            repos,
-            tenantId,
-            access,
-            offer,
-            deal,
-            props.requestedByUserId,
-            companyName,
-            'DISCOUNT_REJECTED',
-            cap.toString()
-          ))
-        );
+        pending.push(...(await this.notify(repos, tenantId, access, offer, deal, approval, companyName, 'DISCOUNT_REJECTED')));
       }
 
       // FR-DEAL-10, 11: the board and the list read the deal's value from the deal.
-      const nextAmounts = offer.amounts!;
+      const nextAmounts = offer.amounts;
       await repos.deals.setOfferValue(tenantId, deal.id, {
-        netMonthlyPrice: nextAmounts.netMonthlyPrice.toString(),
-        annualValue: nextAmounts.annualValue.toString(),
+        netMonthlyPrice: nextAmounts?.netMonthlyPrice.toString() ?? null,
+        annualValue: nextAmounts?.annualValue.toString() ?? null,
       });
     });
 
@@ -188,14 +189,7 @@ export class DecideDiscountApprovalUseCase {
       entityType: 'DiscountApproval',
       entityId: props.id,
       entityLabel: await offerAuditLabel(repos, offer),
-      changes: [
-        { field: 'status', old: 'PENDING', new: props.status },
-        { field: 'requestedPercent', old: null, new: props.requestedPercent.toString() },
-        { field: 'approvedPercent', old: null, new: props.approvedPercent?.toString() ?? null },
-        { field: 'listPriceAtRequest', old: null, new: props.listPriceAtRequest.toString() },
-        { field: 'comment', old: null, new: props.comment },
-        { field: 'company', old: null, new: companyName },
-      ],
+      changes: decisionChanges(props, companyName),
     });
   }
 
@@ -205,26 +199,55 @@ export class DecideDiscountApprovalUseCase {
     access: AccessContext,
     offer: Offer,
     deal: Deal,
-    requestedByUserId: string,
+    approval: DiscountApprovalEntity,
     companyName: string,
-    type: 'DISCOUNT_APPROVED' | 'DISCOUNT_REJECTED',
-    percent: string
+    type: 'DISCOUNT_APPROVED' | 'DISCOUNT_REJECTED'
   ): Promise<Notification[]> {
+    const props = approval.toProps();
     const notifications = new NotificationService(repos.notifications, this.users, undefined, this.permissionDirectory);
+    const params: NotificationParams = {
+      kind: props.kind,
+      reference: quotationReference(offer.toProps()),
+      clientName: companyName,
+      offerId: offer.id,
+      dealId: deal.id,
+    };
+    // What the offer now carries: the approved %, or the cap after a rejection (FR-DSC-07);
+    // the approved manual price (FR-PRC-09).
+    if (props.kind === 'DISCOUNT') params.approvedPercent = offer.amounts!.discountPercent.toString();
+    if (props.approvedMonthlyPrice) params.approvedMonthlyPrice = props.approvedMonthlyPrice.toString();
+    if (props.comment) params.comment = props.comment;
     return notifications.emit({
       tenantId,
-      recipientUserIds: [requestedByUserId],
+      recipientUserIds: [props.requestedByUserId],
       type,
-      params: {
-        reference: quotationReference(offer.toProps()),
-        clientName: companyName,
-        approvedPercent: percent,
-        offerId: offer.id,
-        dealId: deal.id,
-      },
+      params,
       actorUserId: access.userId,
       entityType: 'OFFER',
       entityId: deal.id,
     });
   }
+}
+
+/**
+ * FR-DSC-11: what one decision (or withdrawal) records — the requested and
+ * approved values, the list price and the comment.
+ */
+export function decisionChanges(props: DiscountApprovalProps, companyName: string) {
+  return [
+    { field: 'status', old: 'PENDING', new: props.status },
+    { field: 'kind', old: null, new: props.kind },
+    ...(props.kind === 'DISCOUNT'
+      ? [
+          { field: 'requestedPercent', old: null, new: props.requestedPercent?.toString() ?? null },
+          { field: 'approvedPercent', old: null, new: props.approvedPercent?.toString() ?? null },
+          { field: 'listPriceAtRequest', old: null, new: props.listPriceAtRequest?.toString() ?? null },
+        ]
+      : [
+          { field: 'requestedMonthlyPrice', old: null, new: props.requestedMonthlyPrice?.toString() ?? null },
+          { field: 'approvedMonthlyPrice', old: null, new: props.approvedMonthlyPrice?.toString() ?? null },
+        ]),
+    { field: 'comment', old: null, new: props.comment },
+    { field: 'company', old: null, new: companyName },
+  ];
 }

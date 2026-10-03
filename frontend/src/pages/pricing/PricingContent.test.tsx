@@ -210,6 +210,65 @@ describe('Pricing screen (M2 Slice 8)', () => {
     expect(await screen.findByText('deal page')).toBeInTheDocument();
   });
 
+  it('FR-DSC-08 a lower discount than the approved one on the same list price asks for no new approval', async () => {
+    vi.mocked(dealService.offers).mockResolvedValue([
+      {
+        id: 'o1',
+        status: 'READY',
+        superseded: false,
+        pendingApproval: null,
+        approvedDiscount: { listPriceAtRequest: '49.40', approvedPercent: '15.00' },
+        discountPercent: '15.00',
+        note: null,
+        contactPersonId: null,
+      } as unknown as OfferView,
+    ]);
+    vi.mocked(pricingService.calculate).mockResolvedValue(
+      view({ discountAboveCap: true, inputs: { ...view().inputs, discountPercent: '13.00' } })
+    );
+    vi.mocked(dealService.saveOffer).mockResolvedValue({ status: 'DRAFT' } as OfferView);
+    renderAt('/acme/deals/d1/pricing');
+    expect(await screen.findByText('Covered by the approved 15% discount. Lowering the discount keeps the approval.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Reason for the higher discount')).not.toBeInTheDocument();
+    const button = await screen.findByRole('button', { name: 'Save the offer' });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(dealService.saveOffer).toHaveBeenCalledWith('acme', 'd1', expect.objectContaining({ discountPercent: '13.00', reason: null }))
+    );
+  });
+
+  it('FR-PRC-09 on "Price on request" a Sales User proposes a manual price with a reason for approval', async () => {
+    vi.mocked(pricingService.calculate).mockResolvedValue(view({ result: { kind: 'PRICE_ON_REQUEST', reason: 'NO_BAND' } }));
+    vi.mocked(dealService.saveOffer).mockResolvedValue({ status: 'PENDING_APPROVAL' } as OfferView);
+    renderAt('/acme/deals/d1/pricing');
+    fireEvent.change(await screen.findByLabelText('Manual monthly price'), { target: { value: '300' } });
+    expect(await screen.findByText('Optional. Your price is sent to the Sales Manager for approval.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request approval' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Reason for the manual price'), { target: { value: 'Large site' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Request approval' }));
+    await waitFor(() =>
+      expect(dealService.saveOffer).toHaveBeenCalledWith(
+        'acme',
+        'd1',
+        expect.objectContaining({ manualMonthlyPrice: '300', reason: 'Large site' })
+      )
+    );
+  });
+
+  it('FR-PRC-09 whoever holds discounts.approve saves a manual price directly', async () => {
+    signIn({ 'offers.edit': 'TEAM', 'commercial.view': 'TEAM', 'discounts.approve': 'TEAM' });
+    vi.mocked(pricingService.calculate).mockResolvedValue(view({ result: { kind: 'PRICE_ON_REQUEST', reason: 'NO_BAND' } }));
+    renderAt('/acme/deals/d1/pricing');
+    fireEvent.change(await screen.findByLabelText('Manual monthly price'), { target: { value: '300' } });
+    fireEvent.change(await screen.findByLabelText('Reason for the manual price'), { target: { value: 'Agreed' } });
+    expect(await screen.findByRole('button', { name: 'Save the offer' })).toBeEnabled();
+    // A manual price takes no discount.
+    fireEvent.change(screen.getByLabelText('Discount %'), { target: { value: '5' } });
+    expect(await screen.findByText('A manual price takes no discount. Set the discount to 0.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save the offer' })).toBeDisabled();
+  });
+
   it('FR-PRC-04 a different employee count offers to update the company too, and sends the choice', async () => {
     vi.mocked(dealService.saveOffer).mockResolvedValue({} as OfferView);
     renderAt('/acme/deals/d1/pricing');
@@ -243,6 +302,7 @@ describe('Pricing screen (M2 Slice 8)', () => {
         alsoUpdateCompany: false,
         contactPersonId: null,
         reason: null,
+        manualMonthlyPrice: null,
       })
     );
     expect(await screen.findByText('deal page')).toBeInTheDocument();

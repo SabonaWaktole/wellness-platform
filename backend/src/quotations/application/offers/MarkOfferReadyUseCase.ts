@@ -1,6 +1,5 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
-import { Money } from '../../../pricing/domain/Money';
 import { Percent } from '../../../pricing/domain/Percent';
 import { EDIT_OFFERS, withActions } from './offerAccess';
 import { actorOf, ensureDealOpen, offerInScope, recordOfferChange } from './offerChanges';
@@ -38,27 +37,19 @@ export class MarkOfferReadyUseCase {
         salespersonUserId: deal.ownerUserId,
       });
       // The cap the offer was priced with (FR-OFR-04). An approved above-cap
-      // discount passes its approval instead (FR-DSC-08; Slice 10): the
-      // latest APPROVED request covering this list price and discount.
+      // discount passes its approval instead (FR-DSC-08): the latest approved
+      // one, if it covers this list price and discount. A manual price needs
+      // the approval of exactly that price (FR-PRC-09).
       const cap = Percent.of(String(props.ruleSnapshot.discountCapPercent ?? '0'));
-      const amounts = offer.amounts;
-      let approval: { listPrice: Money; approvedPercent: Percent } | undefined;
-      if (amounts && amounts.discountPercent.exceeds(cap)) {
-        const covering = (await repos.approvals.forOffer(tenantId, offerId))
-          .map((candidate) => candidate.toProps())
-          .find(
-            (candidate) =>
-              candidate.status === 'APPROVED' &&
-              candidate.approvedPercent !== null &&
-              candidate.listPriceAtRequest.equals(amounts.listPrice) &&
-              !amounts.discountPercent.exceeds(candidate.approvedPercent)
-          );
-        if (covering?.approvedPercent) {
-          approval = { listPrice: covering.listPriceAtRequest, approvedPercent: covering.approvedPercent };
-        }
-      }
+      const decided = await repos.approvals.forOffer(tenantId, offerId);
+      const approved = decided.map((candidate) => candidate.approvedDiscount).find((candidate) => candidate !== null) ?? null;
+      const latestPrice = decided.find((candidate) => candidate.kind === 'MANUAL_PRICE' && candidate.status === 'APPROVED');
+      const manualPrice = offer.manualPrice;
       const from = props.status;
-      offer.markReady(now, cap, { ...details }, approval);
+      offer.markReady(now, cap, { ...details }, {
+        discount: approved ? { listPrice: approved.listPriceAtRequest, approvedPercent: approved.approvedPercent } : undefined,
+        manualPriceApproved: manualPrice !== null && (latestPrice?.coversManualPrice(manualPrice.monthlyPrice) ?? false),
+      });
       await repos.offers.saveStatus(offer);
       await recordOfferChange(repos, offer, from, actorOf(access));
     });

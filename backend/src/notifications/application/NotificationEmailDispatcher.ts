@@ -63,7 +63,7 @@ export class NotificationEmailDispatcher {
   private async sendOne(
     notification: Notification,
     settings: { emailsRole(type: any, role: string): boolean },
-    tenant: { name: string; urlSlug: string }
+    tenant: { name: string; urlSlug: string; defaultLanguage?: string }
   ): Promise<void> {
     try {
       const recipient = await this.userRepo.findById(notification.recipientUserId);
@@ -79,6 +79,8 @@ export class NotificationEmailDispatcher {
         tenantSlug: tenant.urlSlug,
         entityType: notification.entityType,
         entityId: notification.entityId,
+        // The recipient's own language, else the workspace's (FR-DSC-05).
+        language: recipient.language ?? tenant.defaultLanguage ?? null,
       });
 
       await this.emailSender.sendTransactionalEmail(recipient.email, subject, html);

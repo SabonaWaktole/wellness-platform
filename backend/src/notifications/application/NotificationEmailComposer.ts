@@ -13,12 +13,12 @@ export interface ComposedEmail {
  * **On language.** The in-app notification stores an i18n key and renders in
  * whatever language the reader currently prefers (see NotificationType). Email
  * cannot do that — it is rendered once, at send time, and frozen in the
- * recipient's inbox. This composer therefore writes in English only, and the
- * wording deliberately lives here rather than in the frontend catalogues so
- * that nobody mistakes the two for the same text. Adding a language means
- * giving this class a catalogue keyed by language and passing the recipient's
- * `User.language` through from the dispatcher; the seam is the `type` switch
- * below and nothing else.
+ * recipient's inbox. The dispatcher passes the recipient's language (their
+ * own, else the workspace default). The discount-approval emails (M2 Slice
+ * 10) have an Albanian and an English catalogue in `discountLines`; every
+ * other type is still English only. The wording deliberately lives here
+ * rather than in the frontend catalogues so that nobody mistakes the two for
+ * the same text.
  *
  * **On content.** Bodies name the entity and link to it. They deliberately do
  * NOT restate figures — a quotation total in an inbox is a copy of business
@@ -35,14 +35,122 @@ export class NotificationEmailComposer {
     tenantSlug: string;
     entityType: string | null;
     entityId: string | null;
+    /** The recipient's language, 'sq' or 'en'; only the discount-approval emails follow it yet. */
+    language?: string | null;
   }): ComposedEmail {
-    const { subject, body } = this.lines(input.type, input.params);
-    const link = this.deepLink(input.tenantSlug, input.entityType, input.entityId);
+    const discount = this.discountLines(input.type, input.params, input.language === 'sq' ? 'sq' : 'en');
+    const language = discount?.language ?? 'en';
+    const { subject, body } = discount ?? this.lines(input.type, input.params);
+    const link = this.deepLink(input.tenantSlug, input.entityType, input.entityId, input.params);
 
     return {
       subject: `${subject} — ${input.tenantName}`,
-      html: this.wrap(subject, body, link, input.tenantName, input.entityType),
+      html: this.wrap(subject, body, link, input.tenantName, input.entityType, language),
     };
+  }
+
+  /**
+   * The discount-approval emails (FR-DSC-05, 07, 12, FR-PRC-09), in the
+   * recipient's language. They name the salesperson, the company, the offer
+   * and the percent; the list price and the reason stay behind the link, as
+   * for every other email (see "On content" above). Null for other types.
+   */
+  private discountLines(
+    type: NotificationType,
+    p: NotificationParams,
+    language: 'sq' | 'en'
+  ): { subject: string; body: string; language: 'sq' | 'en' } | null {
+    const ref = String(p.reference ?? '');
+    const client = esc(String(p.clientName ?? ''));
+    const who = esc(String(p.salespersonName ?? ''));
+    const manual = p.kind === 'MANUAL_PRICE';
+    const percent = esc(String(p.requestedPercent ?? p.approvedPercent ?? ''));
+    const r = `<strong>${esc(ref)}</strong>`;
+    const sq = language === 'sq';
+    let lines: { subject: string; body: string };
+    switch (type) {
+      case 'DISCOUNT_APPROVAL_REQUESTED':
+        lines = manual
+          ? sq
+            ? {
+                subject: `Një çmim manual për ${ref} pret miratimin tuaj`,
+                body: `${who} propozoi një çmim manual për ${r} (<strong>${client}</strong>), që ka "Çmimi sipas kërkesës". Një vendim është në pritje.`,
+              }
+            : {
+                subject: `A manual price on ${ref} needs your approval`,
+                body: `${who} proposed a manual price on ${r} for <strong>${client}</strong>, which has "Price on request". A decision is waiting.`,
+              }
+          : sq
+            ? {
+                subject: `Zbritja ${percent}% për ${ref} pret miratimin tuaj`,
+                body: `${who} kërkoi një zbritje prej <strong>${percent}%</strong> për ${r} (<strong>${client}</strong>), mbi kufirin e lejuar. Një vendim është në pritje.`,
+              }
+            : {
+                subject: `Discount ${percent}% on ${ref} needs your approval`,
+                body: `${who} asked for a <strong>${percent}%</strong> discount on ${r} for <strong>${client}</strong>, which is above the cap. A decision is waiting.`,
+              };
+        break;
+      case 'DISCOUNT_APPROVED':
+        lines = manual
+          ? sq
+            ? { subject: `Çmimi manual për ${ref} u miratua`, body: `Çmimi manual për ${r} u miratua. Oferta është gati për shkarkim.` }
+            : { subject: `The manual price on ${ref} was approved`, body: `The manual price on ${r} was approved. The offer is ready to download.` }
+          : sq
+            ? {
+                subject: `Zbritja ${percent}% për ${ref} u miratua`,
+                body: `Zbritja prej <strong>${percent}%</strong> për ${r} u miratua. Oferta është gati për shkarkim.`,
+              }
+            : {
+                subject: `Discount ${percent}% on ${ref} was approved`,
+                body: `The <strong>${percent}%</strong> discount on ${r} was approved. The offer is ready to download.`,
+              };
+        break;
+      case 'DISCOUNT_REJECTED':
+        lines = manual
+          ? sq
+            ? {
+                subject: `Çmimi manual për ${ref} u refuzua`,
+                body: `Çmimi manual për ${r} u refuzua. Oferta u kthye në draft me "Çmimi sipas kërkesës".`,
+              }
+            : {
+                subject: `The manual price on ${ref} was rejected`,
+                body: `The manual price on ${r} was rejected. The offer is back to draft with "Price on request".`,
+              }
+          : sq
+            ? {
+                subject: `Zbritja për ${ref} u refuzua`,
+                body: `Zbritja mbi kufirin për ${r} u refuzua. Oferta u kthye në draft me zbritjen në kufi.`,
+              }
+            : {
+                subject: `Discount on ${ref} was rejected`,
+                body: `The discount above the cap on ${r} was rejected. The offer is back to draft at the cap.`,
+              };
+        break;
+      case 'DISCOUNT_APPROVAL_REMINDER':
+        lines = manual
+          ? sq
+            ? {
+                subject: `Kujtesë: çmimi manual për ${ref} ende pret`,
+                body: `Çmimi manual i propozuar nga ${who} për ${r} (<strong>${client}</strong>) ende pret një vendim.`,
+              }
+            : {
+                subject: `Reminder: the manual price on ${ref} still waits`,
+                body: `The manual price ${who} proposed on ${r} for <strong>${client}</strong> is still waiting for a decision.`,
+              }
+          : sq
+            ? {
+                subject: `Kujtesë: zbritja ${percent}% për ${ref} ende pret`,
+                body: `Kërkesa e ${who} për një zbritje prej <strong>${percent}%</strong> për ${r} (<strong>${client}</strong>) ende pret një vendim.`,
+              }
+            : {
+                subject: `Reminder: discount ${percent}% on ${ref} still waits`,
+                body: `The <strong>${percent}%</strong> discount ${who} asked for on ${r} for <strong>${client}</strong> is still waiting for a decision.`,
+              };
+        break;
+      default:
+        return null;
+    }
+    return { ...lines, language };
   }
 
   private lines(
@@ -52,29 +160,13 @@ export class NotificationEmailComposer {
     const ref = String(p.reference ?? '');
     const client = String(p.clientName ?? 'a client');
     const when = String(p.scheduledAt ?? '');
-    const percent = String(p.requestedPercent ?? p.approvedPercent ?? '');
 
     switch (type) {
       case 'DISCOUNT_APPROVAL_REQUESTED':
-        return {
-          subject: `Discount ${percent}% on ${ref} needs your approval`,
-          body: `<strong>${esc(client)}</strong> was offered <strong>${esc(ref)}</strong> with a <strong>${esc(percent)}%</strong> discount, which is above the cap. A decision is waiting.`,
-        };
       case 'DISCOUNT_APPROVED':
-        return {
-          subject: `Discount ${percent}% on ${ref} was approved`,
-          body: `The <strong>${esc(percent)}%</strong> discount on <strong>${esc(ref)}</strong> was approved. The offer is ready to download.`,
-        };
       case 'DISCOUNT_REJECTED':
-        return {
-          subject: `Discount on ${ref} was rejected`,
-          body: `The discount above the cap on <strong>${esc(ref)}</strong> was rejected. The offer is back to draft at the cap.`,
-        };
       case 'DISCOUNT_APPROVAL_REMINDER':
-        return {
-          subject: `Reminder: discount ${percent}% on ${ref} still waits`,
-          body: `The <strong>${esc(percent)}%</strong> discount request on <strong>${esc(ref)}</strong> is still waiting for a decision.`,
-        };
+        return this.discountLines(type, p, 'en')!;
       case 'QUOTATION_SUBMITTED_FOR_APPROVAL':
         return {
           subject: `Quotation ${ref} needs your approval`,
@@ -167,8 +259,17 @@ export class NotificationEmailComposer {
     }
   }
 
-  private deepLink(tenantSlug: string, entityType: string | null, entityId: string | null): string | null {
+  private deepLink(
+    tenantSlug: string,
+    entityType: string | null,
+    entityId: string | null,
+    params: NotificationParams = {}
+  ): string | null {
     if (!entityType || !entityId) return null;
+    // FR-DSC-05: an approval request opens the deal on that offer.
+    if (entityType === 'OFFER' && typeof params.offerId === 'string') {
+      return `${this.appUrl}/${tenantSlug}/deals/${entityId}?offer=${encodeURIComponent(params.offerId)}`;
+    }
     const path =
       entityType === 'QUOTATION'
         ? `quotations/${entityId}`
@@ -191,16 +292,21 @@ export class NotificationEmailComposer {
     body: string,
     link: string | null,
     tenantName: string,
-    entityType: string | null
+    entityType: string | null,
+    language: 'sq' | 'en' = 'en'
   ): string {
+    const sq = language === 'sq';
     return renderEmailLayout({
       appUrl: this.appUrl,
       preheader: heading,
-      eyebrow: this.eyebrowFor(entityType),
+      eyebrow: sq && entityType === 'OFFER' ? 'Ofertë' : this.eyebrowFor(entityType),
       heading: esc(heading),
       bodyHtml: `<p>${body}</p>`,
-      cta: link ? { label: `Open in ${PRODUCT_NAME}`, url: link } : undefined,
-      footerNote: `You are receiving this because notification email is switched on for ${esc(tenantName)}. A Business Owner can change that under Settings → Notifications.`,
+      cta: link ? { label: sq ? `Hape në ${PRODUCT_NAME}` : `Open in ${PRODUCT_NAME}`, url: link } : undefined,
+      footerNote: sq
+        ? `E merrni këtë sepse email-i i njoftimeve është i aktivizuar për ${esc(tenantName)}. Një Pronar Biznesi mund ta ndryshojë te Cilësimet → Njoftimet.`
+        : `You are receiving this because notification email is switched on for ${esc(tenantName)}. A Business Owner can change that under Settings → Notifications.`,
+      language,
     });
   }
 

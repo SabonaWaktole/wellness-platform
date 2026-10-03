@@ -1,7 +1,6 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
-import { PendingApprovalView } from '../../../discounts/application/ports/IDiscountApprovalWrites';
-import { PrismaDiscountApprovalStore } from '../../../discounts/infrastructure/PrismaDiscountApprovalStore';
+import { IDiscountApprovalStore, PendingApprovalView } from '../../../discounts/application/ports/IDiscountApprovalStore';
 import { APPROVE_DISCOUNTS } from './offerAccess';
 
 /**
@@ -11,7 +10,7 @@ import { APPROVE_DISCOUNTS } from './offerAccess';
  */
 export class ListPendingApprovalsUseCase {
   constructor(
-    private readonly store: PrismaDiscountApprovalStore,
+    private readonly store: IDiscountApprovalStore,
     private readonly scopes: RecordScopeResolver
   ) {}
 

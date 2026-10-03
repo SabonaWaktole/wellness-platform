@@ -3,6 +3,7 @@ import { RecordScopeResolver } from '../../../access/application/RecordScopeReso
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { DiscountApprovalNotFoundError, DiscountApprovalTransitionError } from '../../../discounts/domain/errors';
 import { QuotationStatus } from '../../domain/Quotation';
+import { decisionChanges } from './DecideDiscountApprovalUseCase';
 import { EDIT_OFFERS, withActions } from './offerAccess';
 import { actorOf, offerAuditLabel, offerInScope, recordOfferChange } from './offerChanges';
 import { OfferView } from './offerViews';
@@ -57,11 +58,7 @@ export class WithdrawDiscountApprovalUseCase {
         entityType: 'DiscountApproval',
         entityId: props.id,
         entityLabel: await offerAuditLabel(repos, offer),
-        changes: [
-          { field: 'status', old: 'PENDING', new: 'WITHDRAWN' },
-          { field: 'requestedPercent', old: null, new: props.requestedPercent.toString() },
-          { field: 'listPriceAtRequest', old: null, new: props.listPriceAtRequest.toString() },
-        ],
+        changes: decisionChanges(approval.toProps(), (await repos.deals.companyName(tenantId, offer.toProps().clientId)) ?? ''),
       });
     });
     const [view] = await withActions([(await this.store.find(tenantId, offerId))!], access, this.scopes);

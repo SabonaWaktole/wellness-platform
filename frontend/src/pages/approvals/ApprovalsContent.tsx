@@ -13,7 +13,9 @@ import styles from '../deals/DealListContent.module.css';
 
 /**
  * Pending discount approvals (M2 Slice 10, FR-DSC-06): the queue of requests
- * whose deal is inside the viewer's `discounts.approve` scope, oldest first.
+ * whose deal is inside the viewer's `discounts.approve` scope, oldest first,
+ * with the company, salesperson, list price, requested % (or manual price,
+ * FR-PRC-09) and reason.
  * A row opens the offer's deal on that offer, where the inline approve /
  * reject steps live (the list shows the queue, the offer decides it).
  */
@@ -64,7 +66,16 @@ export const ApprovalsContent: React.FC = () => {
     {
       id: 'requested',
       header: t('approvalsList.columns.requested'),
-      render: (row) => `${row.requestedPercent}% · ${money.format(Number(row.listPriceAtRequest))}`,
+      // FR-DSC-06: the requested % on the list price; FR-PRC-09: the proposed manual price.
+      render: (row) =>
+        row.kind === 'MANUAL_PRICE'
+          ? t('approvalsList.manualPrice', { price: money.format(Number(row.requestedMonthlyPrice)) })
+          : t('approvalsList.discount', { percent: row.requestedPercent, listPrice: money.format(Number(row.listPriceAtRequest)) }),
+    },
+    {
+      id: 'reason',
+      header: t('approvalsList.columns.reason'),
+      render: (row) => row.reason,
     },
     {
       id: 'requestedAt',

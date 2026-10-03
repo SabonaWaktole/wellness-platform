@@ -74,10 +74,10 @@ const signIn = (permissions: Record<string, string | boolean>) =>
     isAuthenticated: true,
   } as any);
 
-const renderSection = (d: DealDetail = deal) =>
+const renderSection = (d: DealDetail = deal, path = '/acme/deals/d1') =>
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/acme/deals/d1']}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/:tenantSlug/deals/:dealId" element={<DealOffersSection deal={d} />} />
           <Route path="/:tenantSlug/deals/:dealId/pricing" element={<p>pricing screen</p>} />
@@ -248,7 +248,7 @@ describe('Offer document on the deal page (M2 Slice 9)', () => {
       permittedActions: ['WITHDRAW_APPROVAL'],
       pendingApproval: {
         id: 'ap1', requestedByUserId: 'u-a', requestedByName: 'Besa Test',
-        requestedPercent: '15.00', reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
+        kind: 'DISCOUNT', requestedPercent: '15.00', listPriceAtRequest: '49.40', requestedMonthlyPrice: null, reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
       },
     });
     vi.mocked(dealService.offers).mockResolvedValue([pending]);
@@ -267,7 +267,7 @@ describe('Offer document on the deal page (M2 Slice 9)', () => {
       permittedActions: ['APPROVE_DISCOUNT', 'REJECT_DISCOUNT'],
       pendingApproval: {
         id: 'ap1', requestedByUserId: 'u-b', requestedByName: 'Dritan Test',
-        requestedPercent: '15.00', reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
+        kind: 'DISCOUNT', requestedPercent: '15.00', listPriceAtRequest: '49.40', requestedMonthlyPrice: null, reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
       },
     });
     vi.mocked(dealService.offers).mockResolvedValue([pending]);
@@ -277,7 +277,42 @@ describe('Offer document on the deal page (M2 Slice 9)', () => {
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/Approved percent/), { target: { value: '12' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Approve discount' }));
-    await waitFor(() => expect(offerService.approveDiscount).toHaveBeenCalledWith('acme', 'ap1', '12', null));
+    await waitFor(() => expect(offerService.approveDiscount).toHaveBeenCalledWith('acme', 'ap1', { approvedPercent: '12' }, null));
+  });
+
+  it('FR-PRC-09 the approver approves a proposed manual price inline, possibly another price', async () => {
+    const pending = offer({
+      status: 'PENDING_APPROVAL',
+      priceOnRequest: 'NO_BAND',
+      manualMonthlyPrice: '300.00',
+      manualPriceReason: 'Large site',
+      listPrice: '300.00',
+      discountPercent: '0.00',
+      netMonthlyPrice: '300.00',
+      permittedActions: ['APPROVE_DISCOUNT', 'REJECT_DISCOUNT'],
+      pendingApproval: {
+        id: 'ap2', requestedByUserId: 'u-b', requestedByName: 'Dritan Test', kind: 'MANUAL_PRICE',
+        requestedPercent: null, listPriceAtRequest: null, requestedMonthlyPrice: '300.00', reason: 'Large site', createdAt: '2026-10-03T10:00:00Z',
+      },
+    });
+    vi.mocked(dealService.offers).mockResolvedValue([pending]);
+    vi.mocked(offerService.approveDiscount).mockResolvedValue(offer({ status: 'READY', permittedActions: ['EDIT', 'MARK_SENT'] }));
+    renderSection();
+    expect(await screen.findByText(/Waiting for approval of a manual price of €300\.00/)).toBeInTheDocument();
+    expect(screen.getByText('Manual price. Reason: Large site')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Approve discount' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(/Approved monthly price/), { target: { value: '320' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve discount' }));
+    await waitFor(() => expect(offerService.approveDiscount).toHaveBeenCalledWith('acme', 'ap2', { approvedMonthlyPrice: '320' }, null));
+  });
+
+  it('FR-DSC-05 a notification opens the deal on the offer it is about', async () => {
+    vi.mocked(dealService.offers).mockResolvedValue([offer({ id: 'o2', version: 2, reference: 'OF-2026-0007 v2' }), offer({ superseded: true })]);
+    renderSection(deal, '/acme/deals/d1?offer=o2');
+    const focused = await screen.findByTestId('offer-o2');
+    expect(focused).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByTestId('offer-o1')).not.toHaveAttribute('aria-current');
   });
 
   it('FR-DSC-06 rejecting needs a comment', async () => {
@@ -286,7 +321,7 @@ describe('Offer document on the deal page (M2 Slice 9)', () => {
       permittedActions: ['APPROVE_DISCOUNT', 'REJECT_DISCOUNT'],
       pendingApproval: {
         id: 'ap1', requestedByUserId: 'u-b', requestedByName: 'Dritan Test',
-        requestedPercent: '15.00', reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
+        kind: 'DISCOUNT', requestedPercent: '15.00', listPriceAtRequest: '49.40', requestedMonthlyPrice: null, reason: 'Loyal customer', createdAt: '2026-10-03T10:00:00Z',
       },
     });
     vi.mocked(dealService.offers).mockResolvedValue([pending]);

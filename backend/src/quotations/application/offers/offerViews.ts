@@ -13,12 +13,19 @@ export type OfferAction =
   | 'REJECT_DISCOUNT'
   | 'WITHDRAW_APPROVAL';
 
-/** The offer's pending discount approval, if it waits for one (FR-DSC-03). */
+/** The offer's pending approval, if it waits for one (FR-DSC-03, FR-PRC-09). */
 export interface PendingApprovalSummary {
   id: string;
   requestedByUserId: string;
   requestedByName: string;
-  requestedPercent: string;
+  /** A discount above the cap, or a manual price on "Price on request". */
+  kind: 'DISCOUNT' | 'MANUAL_PRICE';
+  /** DISCOUNT only. */
+  requestedPercent: string | null;
+  /** DISCOUNT only. */
+  listPriceAtRequest: string | null;
+  /** MANUAL_PRICE only. */
+  requestedMonthlyPrice: string | null;
   reason: string;
   createdAt: string;
 }
@@ -60,6 +67,15 @@ export interface OfferView {
   permittedActions: OfferAction[];
   /** The pending discount approval, when the offer waits for one (FR-DSC-03). */
   pendingApproval: PendingApprovalSummary | null;
+  /**
+   * The latest approved above-cap discount (FR-DSC-08). It still covers the
+   * offer while the list price stays the same and the discount is not raised
+   * above `approvedPercent`, so the pricing screen asks for no new approval.
+   */
+  approvedDiscount: { listPriceAtRequest: string; approvedPercent: string } | null;
+  /** FR-PRC-09: a manual monthly price on a "Price on request" offer, and why. */
+  manualMonthlyPrice: string | null;
+  manualPriceReason: string | null;
   language: OfferLanguage;
   note: string | null;
   createdByUserId: string;

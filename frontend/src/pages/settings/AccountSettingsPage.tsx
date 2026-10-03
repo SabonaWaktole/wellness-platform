@@ -112,6 +112,7 @@ export const AccountSettingsPage = () => {
   // for SUPER_ADMIN. Same class of bug as the duplicated nav arrays. Now reads
   // settings.manage (FR-RBAC-07) rather than the BUSINESS_OWNER role.
   const isBusinessOwner = usePermission('settings.manage');
+  const salesProcess = user?.tenantSalesWorkflow === 'SALES_PROCESS';
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saved, setSaved] = useState<TenantSettings | null>(null);
@@ -452,30 +453,34 @@ export const AccountSettingsPage = () => {
                 </div>
               </Card>
 
-              <Card padding="lg">
-                <div className={styles.cardHeader} style={{ borderBottom: '1px solid var(--color-outline-variant)', paddingBottom: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-                  <div>
-                    <h2 className={styles.cardTitle}>{t('company.quotations.title')}</h2>
-                    <p className={styles.cardSubtitle}>{t('company.quotations.subtitle')}</p>
+              {/* FR-RBAC-18: under the sales process, approval follows the discount cap and
+                  "Discounts: approve", so the old quotation approval switch does not apply. */}
+              {!salesProcess && (
+                <Card padding="lg">
+                  <div className={styles.cardHeader} style={{ borderBottom: '1px solid var(--color-outline-variant)', paddingBottom: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
+                    <div>
+                      <h2 className={styles.cardTitle}>{t('company.quotations.title')}</h2>
+                      <p className={styles.cardSubtitle}>{t('company.quotations.subtitle')}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={form.requiresQuotationApproval}
-                      onChange={(e) => setField('requiresQuotationApproval', e.target.checked)}
-                      disabled={loading || !isBusinessOwner}
-                      className={styles.checkbox}
-                    />
-                    <span className={styles.checkboxText}>{t('company.quotations.requireApproval')}</span>
-                  </label>
-                  <p className={styles.helperText} style={{ marginLeft: '26px' }}>
-                    {t('company.quotations.requireApprovalHint')}
-                  </p>
-                </div>
-              </Card>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        checked={form.requiresQuotationApproval}
+                        onChange={(e) => setField('requiresQuotationApproval', e.target.checked)}
+                        disabled={loading || !isBusinessOwner}
+                        className={styles.checkbox}
+                      />
+                      <span className={styles.checkboxText}>{t('company.quotations.requireApproval')}</span>
+                    </label>
+                    <p className={styles.helperText} style={{ marginLeft: '26px' }}>
+                      {t('company.quotations.requireApprovalHint')}
+                    </p>
+                  </div>
+                </Card>
+              )}
             </div>
           </div>
 

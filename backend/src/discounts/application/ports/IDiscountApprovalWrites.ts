@@ -1,22 +1,6 @@
 import { DiscountApproval } from '../../domain/DiscountApproval';
 
-/** One row of the approver's pending list (FR-DSC-06). Amounts are strings (NFR-ACC-02). */
-export interface PendingApprovalView {
-  id: string;
-  offerId: string;
-  dealId: string;
-  companyName: string;
-  dealTitle: string | null;
-  reference: string;
-  dealOwnerUserId: string;
-  dealOwnerName: string;
-  requestedByUserId: string;
-  requestedByName: string;
-  requestedPercent: string;
-  listPriceAtRequest: string;
-  reason: string;
-  createdAt: string;
-}
+export type { PendingApprovalView } from './IDiscountApprovalStore';
 
 /** Writes to discount approvals, on the offer's transaction (FR-DSC-11). */
 export interface IDiscountApprovalWrites {

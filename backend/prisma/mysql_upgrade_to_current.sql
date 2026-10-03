@@ -2621,6 +2621,31 @@ SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD CONSTRAINT `Disc
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 SET FOREIGN_KEY_CHECKS=1;
 
+-- FR-PRC-09: a manual price on a "Price on request" offer. A request now has
+-- a kind (DISCOUNT or MANUAL_PRICE); a manual-price request carries a monthly
+-- price instead of a percent and a list price, so those become nullable.
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'kind');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD COLUMN `kind` VARCHAR(191) NOT NULL DEFAULT ''DISCOUNT''', 'SELECT ''skip: DiscountApproval.kind'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'requestedMonthlyPrice');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD COLUMN `requestedMonthlyPrice` DECIMAL(12,2) NULL', 'SELECT ''skip: DiscountApproval.requestedMonthlyPrice'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'approvedMonthlyPrice');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `DiscountApproval` ADD COLUMN `approvedMonthlyPrice` DECIMAL(12,2) NULL', 'SELECT ''skip: DiscountApproval.approvedMonthlyPrice'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'requestedPercent' AND IS_NULLABLE = 'NO');
+SET @sql := IF(@needed = 1, 'ALTER TABLE `DiscountApproval` MODIFY `requestedPercent` DECIMAL(7,2) NULL', 'SELECT ''skip: DiscountApproval.requestedPercent nullable'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND COLUMN_NAME = 'listPriceAtRequest' AND IS_NULLABLE = 'NO');
+SET @sql := IF(@needed = 1, 'ALTER TABLE `DiscountApproval` MODIFY `listPriceAtRequest` DECIMAL(12,2) NULL', 'SELECT ''skip: DiscountApproval.listPriceAtRequest nullable'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Quotation' AND COLUMN_NAME = 'manualMonthlyPrice');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Quotation` ADD COLUMN `manualMonthlyPrice` DECIMAL(12,2) NULL', 'SELECT ''skip: Quotation.manualMonthlyPrice'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @needed := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Quotation' AND COLUMN_NAME = 'manualPriceReason');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `Quotation` ADD COLUMN `manualPriceReason` TEXT NULL', 'SELECT ''skip: Quotation.manualPriceReason'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 INSERT INTO `_prisma_migrations`
   (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
 SELECT
@@ -2751,6 +2776,16 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DiscountApproval'
   UNION ALL SELECT 'NotificationSettings.discountApprovalReminderHours', COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='NotificationSettings' AND COLUMN_NAME='discountApprovalReminderHours'
+  UNION ALL SELECT 'DiscountApproval.kind', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DiscountApproval' AND COLUMN_NAME='kind'
+  UNION ALL SELECT 'DiscountApproval.requestedMonthlyPrice', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DiscountApproval' AND COLUMN_NAME='requestedMonthlyPrice'
+  UNION ALL SELECT 'DiscountApproval.approvedMonthlyPrice', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='DiscountApproval' AND COLUMN_NAME='approvedMonthlyPrice'
+  UNION ALL SELECT 'Quotation.manualMonthlyPrice', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Quotation' AND COLUMN_NAME='manualMonthlyPrice'
+  UNION ALL SELECT 'Quotation.manualPriceReason', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Quotation' AND COLUMN_NAME='manualPriceReason'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

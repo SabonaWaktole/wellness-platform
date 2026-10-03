@@ -56,6 +56,8 @@ export interface OfferDocument {
     discountAmount: string;
     netMonthlyPrice: string;
     annualValue: string;
+    /** FR-PRC-09: a manual price, with no calculated fees to break down. */
+    manual: boolean;
   } | null;
   contractMonths: number | null;
   /** Prices are shown without VAT, and the PDF says so (Q5). */

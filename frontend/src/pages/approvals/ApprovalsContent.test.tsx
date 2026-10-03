@@ -19,8 +19,10 @@ const row = (overrides: object = {}) => ({
   dealOwnerName: 'Besa Test',
   requestedByUserId: 'u-a',
   requestedByName: 'Besa Test',
+  kind: 'DISCOUNT',
   requestedPercent: '15.00',
   listPriceAtRequest: '49.40',
+  requestedMonthlyPrice: null,
   reason: 'Loyal customer',
   createdAt: '2026-10-03T10:00:00Z',
   ...overrides,
@@ -53,7 +55,22 @@ describe('Discount approvals list (FR-DSC-06)', () => {
     expect(screen.getByText(/Kafe Blloku/)).toBeInTheDocument();
     expect(screen.getByText('Besa Test')).toBeInTheDocument();
     expect(screen.getByText(/15\.00%/)).toBeInTheDocument();
+    expect(screen.getByText(/49[.,]40/)).toBeInTheDocument();
+    expect(screen.getByText('Loyal customer')).toBeInTheDocument();
     expect(offerService.pendingApprovals).toHaveBeenCalledWith('acme', 1, 25);
+  });
+
+  it('FR-PRC-09 a proposed manual price shows the price instead of a percent', async () => {
+    vi.mocked(offerService.pendingApprovals).mockResolvedValue({
+      data: [row({ kind: 'MANUAL_PRICE', requestedPercent: null, listPriceAtRequest: null, requestedMonthlyPrice: '300.00', reason: 'Large site' })],
+      total: 1,
+      page: 1,
+      pageSize: 25,
+    });
+    renderPage();
+    expect(await screen.findByText(/Manual price/)).toBeInTheDocument();
+    expect(screen.getByText(/300[.,]00/)).toBeInTheDocument();
+    expect(screen.getByText('Large site')).toBeInTheDocument();
   });
 
   it('FR-DSC-06 an empty queue explains itself', async () => {

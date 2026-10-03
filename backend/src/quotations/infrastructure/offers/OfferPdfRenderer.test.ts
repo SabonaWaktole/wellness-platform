@@ -38,6 +38,7 @@ const document = (overrides: Partial<OfferDocument> = {}): OfferDocument => ({
     discountAmount: '0.00',
     netMonthlyPrice: '49.40',
     annualValue: '592.80',
+    manual: false,
   },
   contractMonths: 12,
   vatIncluded: false,
@@ -111,6 +112,29 @@ describe('OfferPdfRenderer (M2 Slice 9)', () => {
     const output = await textOf(document({ amounts: null }));
     expect(output).toContain('Çmimi sipas kërkesës');
     expect(output).not.toContain('49,40');
+  });
+
+  it('FR-PRC-09 a manual price prints the price and the year, without calculated fees', async () => {
+    const output = await textOf(
+      document({
+        amounts: {
+          baseFee: '0.00',
+          riskFee: '0.00',
+          visitFee: '0.00',
+          locationFee: '0.00',
+          listPrice: '300.00',
+          discountPercent: '0.00',
+          discountAmount: '0.00',
+          netMonthlyPrice: '300.00',
+          annualValue: '3600.00',
+          manual: true,
+        },
+      })
+    );
+    expect(output).toContain('300,00');
+    expect(output).toMatch(/3\D?600,00/);
+    expect(output).not.toContain(OFFER_PDF_LABELS.sq.baseFee);
+    expect(output).not.toContain(OFFER_PDF_LABELS.sq.listPrice);
   });
 
   it('NFR-PERF-02 an offer PDF is generated in under 3 seconds', async () => {

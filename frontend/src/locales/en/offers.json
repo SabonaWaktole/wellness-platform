@@ -68,7 +68,14 @@
     "commentRequired": "A comment is required to reject.",
     "withdrawTitle": "Withdraw the approval request",
     "withdrawMessage": "The offer returns to draft. It leaves the approver's list.",
-    "requestedToast": "The approval is requested. The manager is notified."
+    "requestedToast": "The approval is requested. The manager is notified.",
+    "waitingManual": "Waiting for approval of a manual price of {{price}}. The final download and sending are disabled until it is decided.",
+    "approveManualTitle": "Approve a manual price of {{price}} on {{reference}}",
+    "approveManualMessage": "The offer becomes ready to download at the approved price. You may approve another price than proposed.",
+    "approvedPrice": "Approved monthly price",
+    "approvePriceInvalid": "Enter a price above 0, with up to two decimals.",
+    "rejectManualTitle": "Reject the manual price of {{price}} on {{reference}}",
+    "rejectManualMessage": "The offer returns to draft with \"Price on request\". The comment is shown to the salesperson."
   },
   "errors": {
     "notFound": "This offer was not found.",
@@ -77,7 +84,8 @@
     "OFFER_NOT_READY": "This offer cannot be made ready yet.",
     "notReady": {
       "NO_PRICE": "An offer without a price cannot be made ready.",
-      "DISCOUNT_ABOVE_CAP": "The discount is above the maximum. It needs approval first."
+      "DISCOUNT_ABOVE_CAP": "The discount is above the maximum. It needs approval first.",
+      "MANUAL_PRICE_NOT_APPROVED": "The manual price needs approval before the offer can be made ready."
     },
     "OFFER_INVALID_TRANSITION": "The offer's status has changed. Reload the page and try again.",
     "OFFER_NOT_LATEST": "A later version replaces this offer. Use the latest version.",
@@ -99,8 +107,11 @@
       "reference": "Offer",
       "salesperson": "Requested by",
       "requested": "Requested",
-      "requestedAt": "Requested on"
-    }
+      "requestedAt": "Requested on",
+      "reason": "Reason"
+    },
+    "discount": "{{percent}}% on {{listPrice}}",
+    "manualPrice": "Manual price {{price}}"
   },
   "list": {
     "breadcrumb": "Sales",
@@ -127,5 +138,6 @@
       "validUntil": "Valid until",
       "created": "Created"
     }
-  }
+  },
+  "manualPrice": "Manual price. Reason: {{reason}}"
 }

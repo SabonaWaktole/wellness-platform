@@ -865,16 +865,19 @@ model Quotation {
 
   /// Amounts calculated on the server when the offer was saved (FR-OFR-03).
   /// NULL on a "Price on request" draft (FR-PRC-07) and on legacy quotations.
-  baseFee          Decimal? @db.Decimal(12, 2)
-  riskFee          Decimal? @db.Decimal(12, 2)
-  visitFee         Decimal? @db.Decimal(12, 2)
-  locationFee      Decimal? @db.Decimal(12, 2)
-  listPrice        Decimal? @db.Decimal(12, 2)
-  discountPercent  Decimal? @db.Decimal(7, 2)
-  discountAmount   Decimal? @db.Decimal(12, 2)
-  netMonthlyPrice  Decimal? @db.Decimal(12, 2)
-  pricePerEmployee Decimal? @db.Decimal(12, 2)
-  annualValue      Decimal? @db.Decimal(12, 2)
+  baseFee            Decimal? @db.Decimal(12, 2)
+  riskFee            Decimal? @db.Decimal(12, 2)
+  visitFee           Decimal? @db.Decimal(12, 2)
+  locationFee        Decimal? @db.Decimal(12, 2)
+  listPrice          Decimal? @db.Decimal(12, 2)
+  discountPercent    Decimal? @db.Decimal(7, 2)
+  discountAmount     Decimal? @db.Decimal(12, 2)
+  netMonthlyPrice    Decimal? @db.Decimal(12, 2)
+  pricePerEmployee   Decimal? @db.Decimal(12, 2)
+  annualValue        Decimal? @db.Decimal(12, 2)
+  // FR-PRC-09: a manual price on a "Price on request" offer (M2 Slice 10)
+  manualMonthlyPrice Decimal? @db.Decimal(12, 2)
+  manualPriceReason  String?  @db.Text
 
   /// M2 Slice 9: the offer's number (FR-OFR-08), e.g. OF-2026-0001, given
   /// from DocumentSequence when the quotation is created and never reused.
@@ -912,9 +915,9 @@ model Quotation {
   previousVersion Quotation?      @relation("QuotationVersions", fields: [previousVersionId], references: [id], onDelete: SetNull)
   laterVersions   Quotation[]     @relation("QuotationVersions")
 
-  lineItems     QuotationLineItem[]
-  services      QuotationService[]
-  statusHistory QuotationStatusHistory[]
+  lineItems         QuotationLineItem[]
+  services          QuotationService[]
+  statusHistory     QuotationStatusHistory[]
   discountApprovals DiscountApproval[]
 
   /// At most one — converting a second time is refused by
@@ -990,20 +993,24 @@ model DocumentSequence {
 /// MANUAL_PRICE kind yet. A new request supersedes the offer's earlier pending
 /// one; amounts stay on the offer, this row holds what was asked and decided.
 model DiscountApproval {
-  id                  String    @id @default(uuid())
-  tenantId            String
-  quotationId         String
-  requestedByUserId   String
-  requestedPercent    Decimal   @db.Decimal(7, 2)
-  listPriceAtRequest  Decimal   @db.Decimal(12, 2)
-  approvedPercent     Decimal?  @db.Decimal(7, 2)
-  reason              String    @db.Text
-  status              String    @default("PENDING")
-  decidedByUserId     String?
-  decidedAt           DateTime?
-  comment             String?   @db.Text
-  remindedAt          DateTime?
-  createdAt           DateTime  @default(now())
+  id                    String    @id @default(uuid())
+  tenantId              String
+  quotationId           String
+  requestedByUserId     String
+  /// DISCOUNT (above the cap) or MANUAL_PRICE (FR-PRC-09)
+  kind                  String    @default("DISCOUNT")
+  requestedPercent      Decimal?  @db.Decimal(7, 2)
+  requestedMonthlyPrice Decimal?  @db.Decimal(12, 2)
+  listPriceAtRequest    Decimal?  @db.Decimal(12, 2)
+  approvedPercent       Decimal?  @db.Decimal(7, 2)
+  approvedMonthlyPrice  Decimal?  @db.Decimal(12, 2)
+  reason                String    @db.Text
+  status                String    @default("PENDING")
+  decidedByUserId       String?
+  decidedAt             DateTime?
+  comment               String?   @db.Text
+  remindedAt            DateTime?
+  createdAt             DateTime  @default(now())
 
   tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)

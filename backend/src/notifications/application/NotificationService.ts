@@ -21,7 +21,15 @@ export interface EmitInput {
    * the subject's owner, minus the actor (M2 Slice 10, D9: discount
    * approvals, FR-DSC-05, 09).
    */
-  toPermission?: { key: string; subjectOwnerId: string | null };
+  toPermission?: {
+    key: string;
+    subjectOwnerId: string | null;
+    /**
+     * Left out besides the actor: e.g. the requester of a reminder, which has
+     * no actor (FR-DSC-09, 12: nobody is asked to decide their own request).
+     */
+    excludeUserId?: string;
+  };
   type: NotificationType;
   params: NotificationParams;
   actorUserId?: string | null;
@@ -123,7 +131,7 @@ export class NotificationService {
         input.toPermission.subjectOwnerId,
         input.actorUserId ?? undefined
       );
-      for (const id of approvers) ids.add(id);
+      for (const id of approvers) if (id !== input.toPermission.excludeUserId) ids.add(id);
     }
 
     // Rule 1: never tell someone what they just did.

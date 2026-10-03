@@ -190,11 +190,14 @@ class OfferPdfDrawing {
       this.doc.moveDown(0.6);
       return;
     }
-    this.row(this.t('baseFee'), this.money(amounts.baseFee));
-    this.row(this.t('riskFee'), this.money(amounts.riskFee));
-    this.row(this.t('visitFee'), this.money(amounts.visitFee));
-    this.row(this.t('locationFee'), this.money(amounts.locationFee));
-    this.row(this.t('listPrice'), this.money(amounts.listPrice), { bold: true, ruleAbove: true });
+    // FR-PRC-09: a manual price has no calculated fees, so only the price and the year show.
+    if (!amounts.manual) {
+      this.row(this.t('baseFee'), this.money(amounts.baseFee));
+      this.row(this.t('riskFee'), this.money(amounts.riskFee));
+      this.row(this.t('visitFee'), this.money(amounts.visitFee));
+      this.row(this.t('locationFee'), this.money(amounts.locationFee));
+      this.row(this.t('listPrice'), this.money(amounts.listPrice), { bold: true, ruleAbove: true });
+    }
     if (Number(amounts.discountPercent) !== 0) {
       this.row(this.t('discount', { percent: this.percent(amounts.discountPercent) }), `− ${this.money(amounts.discountAmount)}`);
     }
