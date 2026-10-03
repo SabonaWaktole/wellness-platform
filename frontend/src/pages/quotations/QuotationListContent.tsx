@@ -194,7 +194,7 @@ export const QuotationListContent: React.FC = () => {
                     <tr key={quotation.id}>
                       <td>
                         <span className={styles.quoteIdLink} onClick={() => navigate(`/${tenantSlug}/quotations/${quotation.id}`)}>
-                          {quotation.id.split('-')[0].toUpperCase()}
+                          {quotation.reference}
                         </span>
                       </td>
                       <td>

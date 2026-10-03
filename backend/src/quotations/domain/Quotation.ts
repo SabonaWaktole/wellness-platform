@@ -1,8 +1,11 @@
 import { QuotationLineItem } from './QuotationLineItem';
+import { quotationReference } from './quotationReference';
 
 export enum QuotationStatus {
   Draft = 'DRAFT',
   PendingApproval = 'PENDING_APPROVAL',
+  /** M2 Slice 9: an offer that may be downloaded as final and marked as sent (FR-OFR-09). */
+  Ready = 'READY',
   Sent = 'SENT',
   Accepted = 'ACCEPTED',
   Rejected = 'REJECTED',
@@ -19,6 +22,9 @@ export class Quotation {
   sentAt: Date | null;
   respondedAt: Date | null;
   lineItems: QuotationLineItem[];
+  /** M2 Slice 9: OF-2026-0001, given when the quotation is created (FR-OFR-08). */
+  number: string | null;
+  version: number;
 
   /**
    * Display name of the client, hydrated from the joined Client row on read.
@@ -55,6 +61,8 @@ export class Quotation {
     sentAt: Date | null;
     respondedAt: Date | null;
     lineItems: QuotationLineItem[];
+    number: string | null;
+    version: number;
     clientName?: string;
     clientAssignedUserId?: string | null;
     shareToken?: string | null;
@@ -69,6 +77,8 @@ export class Quotation {
     this.sentAt = props.sentAt;
     this.respondedAt = props.respondedAt;
     this.lineItems = props.lineItems;
+    this.number = props.number;
+    this.version = props.version;
     this.clientName = props.clientName;
     this.clientAssignedUserId = props.clientAssignedUserId;
     this._shareToken = props.shareToken ?? null;
@@ -90,6 +100,9 @@ export class Quotation {
       clientId: this.clientId,
       clientName: this.clientName,
       createdByUserId: this.createdByUserId,
+      number: this.number,
+      version: this.version,
+      reference: this.reference,
       status: this.status,
       createdAt: this.createdAt,
       sentAt: this.sentAt,
@@ -100,6 +113,11 @@ export class Quotation {
       shareToken: this._shareToken,
       shareTokenIssuedAt: this._shareTokenIssuedAt,
     };
+  }
+
+  /** What every screen and notification shows (FR-OFR-08, TD-021). */
+  get reference(): string {
+    return quotationReference(this);
   }
 
   get shareToken(): string | null {
@@ -151,6 +169,8 @@ export class Quotation {
     createdAt?: Date;
     sentAt?: Date | null;
     respondedAt?: Date | null;
+    number?: string | null;
+    version?: number;
     clientName?: string;
     clientAssignedUserId?: string | null;
     shareToken?: string | null;
@@ -176,6 +196,8 @@ export class Quotation {
       sentAt: props.sentAt ?? null,
       respondedAt: props.respondedAt ?? null,
       lineItems: props.lineItems,
+      number: props.number ?? null,
+      version: props.version ?? 1,
       clientName: props.clientName,
       clientAssignedUserId: props.clientAssignedUserId,
       shareToken: props.shareToken ?? null,

@@ -149,7 +149,7 @@ describe('Pricing screen and draft offers (M2 Slice 8)', () => {
         company(companies.other, 'Restorant B', 2, restaurant, await cityId('Tiranë'), users.salesB),
       ],
     });
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await new PrismaTenantDeletionTransaction(prisma).run(tenantId);

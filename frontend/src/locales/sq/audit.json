@@ -53,7 +53,8 @@
     "Service": "Shërbim",
     "ServicePackage": "Paketë shërbimesh",
     "SalesScript": "Skripti i shitjes",
-    "Deal": "Marrëveshje"
+    "Deal": "Marrëveshje",
+    "Offer": "Ofertë"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
@@ -62,7 +63,8 @@
     "lists": "Listat e cilësimeve",
     "pricing": "Çmimet",
     "salesScript": "Skripti i shitjes",
-    "deals": "Marrëveshjet"
+    "deals": "Marrëveshjet",
+    "offers": "Ofertat"
   },
   "actors": {
     "system": "Sistemi",

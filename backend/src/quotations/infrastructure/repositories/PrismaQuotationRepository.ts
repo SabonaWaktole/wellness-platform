@@ -47,6 +47,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       respondedAt: raw.respondedAt,
       shareToken: raw.shareToken,
       shareTokenIssuedAt: raw.shareTokenIssuedAt,
+      number: raw.number,
+      version: raw.version,
       lineItems
     });
   }
@@ -91,6 +93,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         respondedAt: raw.respondedAt,
         shareToken: raw.shareToken,
         shareTokenIssuedAt: raw.shareTokenIssuedAt,
+        number: raw.number,
+        version: raw.version,
         lineItems
       });
     });
@@ -173,6 +177,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         respondedAt: raw.respondedAt,
         shareToken: raw.shareToken,
         shareTokenIssuedAt: raw.shareTokenIssuedAt,
+        number: raw.number,
+        version: raw.version,
         lineItems
       });
     });
@@ -204,7 +210,9 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         sentAt: quotation.sentAt,
         respondedAt: quotation.respondedAt,
         shareToken: quotation.shareToken,
-        shareTokenIssuedAt: quotation.shareTokenIssuedAt
+        shareTokenIssuedAt: quotation.shareTokenIssuedAt,
+        number: quotation.number,
+        version: quotation.version
       }
     });
   }

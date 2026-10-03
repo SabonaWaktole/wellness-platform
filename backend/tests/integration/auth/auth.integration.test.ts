@@ -272,6 +272,8 @@ class InMemoryTenantRepository implements ITenantRepository {
     }
   }
 
+  async setSalesWorkflow(): Promise<void> {}
+
   getAll(): Tenant[] { return [...this.tenants]; }
   clear(): void { this.tenants = []; }
 }

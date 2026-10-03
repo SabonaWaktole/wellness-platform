@@ -10,8 +10,12 @@ import { IPricingSubjectReader } from '../../../pricing/application/ports/IPrici
 import { EDIT_OFFERS } from '../../../pricing/application/use-cases/ListActivePackagesUseCase';
 import { pricingSubjectInScope } from '../../../pricing/application/use-cases/CalculatePriceUseCase';
 import { PricingSubjectNotFoundError } from '../../../pricing/domain/errors';
+import { InvalidPricingInputError } from '../../../pricing/domain/errors';
 import { Offer } from '../../domain/Offer';
-import { OfferNotEditableError } from '../../domain/offerErrors';
+import { OfferNotEditableError, OfferReviseFirstError } from '../../domain/offerErrors';
+import { QuotationStatus } from '../../domain/Quotation';
+import { withActions } from './offerAccess';
+import { actorOf, recordOfferChange } from './offerChanges';
 import { offerContentFrom } from './offerContent';
 import { OfferView } from './offerViews';
 import { IOfferStore } from './ports/IOfferStore';
@@ -31,11 +35,19 @@ export interface SaveDraftOfferInput {
   note: string | null;
   /** FR-PRC-04: also write the employees priced to the company record. */
   alsoUpdateCompany: boolean;
+  /**
+   * FR-OFR-02: the contact the offer is addressed to; null for the
+   * company's primary contact, undefined to keep the offer's.
+   */
+  contactPersonId?: string | null;
 }
 
 /**
- * Saving the pricing screen (FR-PRC-12, FR-OFR-01): creates the deal's draft
- * offer, or updates it, from a calculation made again on the server
+ * Saving the pricing screen (FR-PRC-12, FR-OFR-01): updates the deal's
+ * latest offer while it is a draft or Ready (a Ready one becomes a draft
+ * again), or creates a new numbered offer (FR-OFR-08) when the deal has none
+ * or its latest was answered or expired. A sent offer is changed only by
+ * revising it (FR-OFR-11). The calculation is made again on the server
  * (FR-OFR-03). In one transaction it also sets the deal's value, moves the
  * deal to Offer Prepared on its first offer (FR-DEAL-08) and, when asked,
  * updates the company's employee count with an audit entry (FR-PRC-04).
@@ -61,30 +73,46 @@ export class SaveDraftOfferUseCase {
 
     const state = await this.screen.resolve(tenantId, subject, input.choices);
     if (!state.discountPercent.isZero()) await this.ensureInScope(access, APPLY_DISCOUNTS, deal.ownerUserId);
-    const content = offerContentFrom(state, input.note);
+    const content = offerContentFrom(state, input.note, input.contactPersonId ?? null);
     const employees = content.employeesPriced;
     const updateCompany = input.alsoUpdateCompany && employees !== subject.employeeCount;
     if (updateCompany) await this.ensureInScope(access, EDIT_COMPANIES, subject.companyAssigneeId);
 
     const now = this.now();
-    const { offerId, created } = await this.writeTx.run(async ({ offers, deals, auditTrail }) => {
+    const { offerId, created } = await this.writeTx.run(async (repos) => {
+      const { offers, deals, auditTrail } = repos;
       const live = await deals.find(tenantId, deal.id);
       if (!live) throw new PricingSubjectNotFoundError();
       if (!live.isOpen) throw new OfferNotEditableError('A closed deal takes no new offer.');
 
+      if (input.contactPersonId && !(await offers.isContactOf(tenantId, subject.clientId, input.contactPersonId))) {
+        throw new InvalidPricingInputError('contactPersonId', 'Choose a contact person of this company.');
+      }
+
       const first = (await offers.countForDeal(tenantId, deal.id)) === 0;
-      let offer = await offers.currentDraft(tenantId, deal.id);
-      const isNew = !offer;
-      if (offer) {
-        offer.replaceDraft(content, now);
+      const latest = await offers.latest(tenantId, deal.id);
+      let offer: Offer;
+      let isNew = false;
+      if (latest && (latest.status === QuotationStatus.Draft || latest.status === QuotationStatus.Ready)) {
+        offer = latest;
+        const keepContact = input.contactPersonId === undefined ? offer.toProps().contactPersonId : content.contactPersonId;
+        const previous = offer.replaceDraft({ ...content, contactPersonId: keepContact }, now);
         await offers.update(offer);
+        // A Ready offer goes back to draft: that is a status change (FR-OFR-15).
+        if (previous !== QuotationStatus.Draft) await recordOfferChange(repos, offer, previous, actorOf(access));
+      } else if (latest?.status === QuotationStatus.Sent) {
+        throw new OfferReviseFirstError();
+      } else if (latest?.status === QuotationStatus.PendingApproval) {
+        throw new OfferNotEditableError('This offer is waiting for approval.');
       } else {
+        isNew = true;
         offer = Offer.draft({
           id: randomUUID(),
           tenantId,
           clientId: subject.clientId,
           dealId: deal.id,
           createdByUserId: access.userId,
+          number: await repos.numbers.next(tenantId, now),
           language: await offers.workspaceLanguage(tenantId),
           content,
           now,
@@ -126,7 +154,8 @@ export class SaveDraftOfferUseCase {
       return { offerId: offer.id, created: isNew };
     });
 
-    return { offer: (await this.store.find(tenantId, offerId))!, created };
+    const [offer] = await withActions([(await this.store.find(tenantId, offerId))!], access, this.scopes);
+    return { offer, created };
   }
 
   private async ensureInScope(access: AccessContext, key: string, ownerId: string | null): Promise<void> {

@@ -1434,6 +1434,14 @@ Fix properly means a real human-facing quotation number — a per-tenant sequenc
 backfill, so it is a larger piece of work than site 1 and should be scoped
 separately. **Site 1 can and should be fixed on its own first.**
 
+**Sites 2 and 3 done in M2 Slice 9 (2026-10-03).** Quotations and offers carry
+a per-tenant yearly number (`OF-2026-0001`, `Quotation.number` + `version`,
+from `DocumentSequence`). The reference migration numbered every existing row,
+and the API returns `reference`. `quotationReference({ number, version })` is
+the one formatter, used by every notification, the company history, the
+public view and the PDF. The list and detail pages show `reference` and no
+longer slice the id.
+
 ### Why this is logged rather than fixed
 
 Group 3 Stage 3 is a string-extraction pass. Resolving an id to a name is a

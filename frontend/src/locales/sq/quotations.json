@@ -2,6 +2,7 @@
   "status": {
     "draft": "Draft",
     "pendingApproval": "Në pritje të miratimit",
+    "ready": "Gati",
     "sent": "Dërguar",
     "accepted": "Pranuar",
     "rejected": "Refuzuar",

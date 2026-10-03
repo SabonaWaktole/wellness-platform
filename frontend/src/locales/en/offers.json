@@ -1,0 +1,92 @@
+{
+  "superseded": "Replaced by a later version",
+  "sentOn": "Sent {{sent}}",
+  "sentValid": "Sent {{sent}} · valid until {{until}}",
+  "statusNote": "Note: {{note}}",
+  "preview": {
+    "title": "Offer {{reference}}"
+  },
+  "actions": {
+    "preview": "Preview",
+    "language": "PDF language",
+    "download": "Download PDF",
+    "edit": "Edit offer",
+    "markReady": "Mark ready",
+    "markSent": "Mark as sent",
+    "markAccepted": "Mark accepted",
+    "markRejected": "Mark rejected",
+    "revise": "Revise"
+  },
+  "languages": {
+    "sq": "Albanian",
+    "en": "English"
+  },
+  "done": {
+    "ready": "The offer is ready to download and send.",
+    "sent": "The offer is marked as sent.",
+    "accepted": "The offer is marked accepted.",
+    "rejected": "The offer is marked rejected.",
+    "revised": "A new version was made. Change its price on the pricing screen."
+  },
+  "sent": {
+    "title": "Mark {{reference}} as sent",
+    "message": "Email the PDF to the company yourself, then record the date you sent it. The offer's validity starts from that date.",
+    "date": "Date sent"
+  },
+  "accepted": {
+    "title": "Mark {{reference}} accepted",
+    "message": "Record that the company accepted this offer. Winning the deal is a separate step."
+  },
+  "rejected": {
+    "title": "Mark {{reference}} rejected",
+    "message": "Record that the company turned this offer down. You can add why."
+  },
+  "response": {
+    "note": "Note (optional)"
+  },
+  "revise": {
+    "title": "Revise {{reference}}",
+    "message": "This makes version {{version}} of {{number}} as a draft. The version already sent stays as it is and can still be downloaded."
+  },
+  "errors": {
+    "notFound": "This offer was not found.",
+    "forbidden": "You do not have permission to do this.",
+    "generic": "Something went wrong. Please try again.",
+    "OFFER_NOT_READY": "This offer cannot be made ready yet.",
+    "notReady": {
+      "NO_PRICE": "An offer without a price cannot be made ready.",
+      "DISCOUNT_ABOVE_CAP": "The discount is above the maximum. It needs approval first."
+    },
+    "OFFER_INVALID_TRANSITION": "The offer's status has changed. Reload the page and try again.",
+    "OFFER_NOT_LATEST": "A later version replaces this offer. Use the latest version.",
+    "OFFER_NOT_EDITABLE": "This offer can no longer be changed.",
+    "OFFER_REVISE_FIRST": "This offer has been sent. Revise it to make a new version.",
+    "INVALID_SENT_DATE": "Choose a date sent that is not in the future and not before the offer was made."
+  },
+  "list": {
+    "breadcrumb": "Sales",
+    "title": "Offers",
+    "searchLabel": "Search offers",
+    "searchPlaceholder": "Company or offer number",
+    "statuses": "Status",
+    "salesperson": "Salesperson",
+    "allSalespeople": "All salespeople",
+    "createdFrom": "Created from",
+    "createdTo": "Created to",
+    "clear": "Clear filters",
+    "loadFailed": "The offers could not be loaded.",
+    "empty": "No offers yet",
+    "emptyMessage": "Offers are made from a deal's pricing screen.",
+    "emptyFiltered": "No offers match these filters",
+    "emptyFilteredMessage": "Try fewer filters.",
+    "itemLabel": "offers",
+    "columns": {
+      "reference": "Offer",
+      "status": "Status",
+      "salesperson": "Salesperson",
+      "price": "Net price",
+      "validUntil": "Valid until",
+      "created": "Created"
+    }
+  }
+}

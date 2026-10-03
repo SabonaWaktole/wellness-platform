@@ -74,6 +74,27 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
     });
   }
 
+  async listSalesProcessTenants(): Promise<{ id: string; timeZone: string }[]> {
+    const rows = await this.prisma.tenant.findMany({ where: { salesWorkflow: 'SALES_PROCESS' }, select: { id: true, timezone: true } });
+    return rows.map((row) => ({ id: row.id, timeZone: row.timezone }));
+  }
+
+  async findOffersPastValidity(tenantId: string, today: string): Promise<{ id: string; tenantId: string }[]> {
+    return this.prisma.quotation.findMany({
+      where: {
+        tenantId,
+        status: 'SENT',
+        dealId: { not: null },
+        supersededAt: null,
+        // A @db.Date column: before today's date means the last valid day has passed.
+        validUntil: { lt: new Date(`${today}T00:00:00.000Z`) },
+      },
+      select: { id: true, tenantId: true },
+      orderBy: { validUntil: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+  }
+
   async findQuotationsDueExpiry(
     tenantId: string,
     now: Date,
@@ -101,10 +122,15 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
         status: 'SENT',
         respondedAt: null,
         sentAt: { not: null, lte: cutoff },
+        // Offers (M2) expire on their validity date and are followed up by
+        // hand (FR-OFR-13, Slice 11), not by these legacy sweeps.
+        dealId: null,
         ...extraWhere,
       },
       select: {
         id: true,
+        number: true,
+        version: true,
         tenantId: true,
         createdByUserId: true,
         sentAt: true,
@@ -116,6 +142,8 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
 
     return rows.map((r) => ({
       id: r.id,
+      number: r.number,
+      version: r.version,
       tenantId: r.tenantId,
       createdByUserId: r.createdByUserId,
       // Non-null by the `sentAt: { not: null }` filter above; Prisma's type

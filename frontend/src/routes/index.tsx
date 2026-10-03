@@ -30,6 +30,7 @@ import { ProductForm } from '../pages/inventory/ProductForm/ProductForm';
 import { WarehouseList } from '../pages/inventory/WarehouseList/WarehouseList';
 import { CategoryList } from '../pages/inventory/CategoryList/CategoryList';
 import { QuotationList } from '../pages/quotations/QuotationList';
+import { OfferList } from '../pages/offers/OfferList';
 import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 import { QuotationDetail } from '../pages/quotations/QuotationDetail';
 import { PublicQuotationPage } from '../pages/quotations/PublicQuotationPage';
@@ -431,6 +432,17 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <NotificationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The offers list (M2 Slice 9, FR-OFR-14): offers are commercial (FR-RBAC-17).
+        path: 'offers',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="commercial.view">
+              <OfferList />
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

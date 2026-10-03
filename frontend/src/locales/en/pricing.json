@@ -26,6 +26,9 @@
   "discount": "Discount %",
   "discountHint": "Up to {{cap}}% without approval.",
   "discountInvalid": "Enter a percentage from 0 to 100, with up to two decimals.",
+  "contact": "Addressed to",
+  "contactPrimary": "{{name}} (primary contact)",
+  "contactNone": "The primary contact",
   "note": "Note on the offer",
   "notePlaceholder": "Special conditions, for example",
   "choose": "Choose…",
@@ -71,6 +74,7 @@
     "DISCOUNT_ABOVE_CAP": "The discount is above the cap and needs approval.",
     "COMPANY_INCOMPLETE": "Complete the company record first.",
     "OFFER_NOT_EDITABLE": "This offer can no longer be changed.",
+    "OFFER_REVISE_FIRST": "This offer has been sent. Revise it from the deal page to make a new version.",
     "INVALID_PERCENT": "Enter a percentage from 0 to 100, with up to two decimals.",
     "INVALID_PRICING_INPUT": "Check the inputs.",
     "fields": {
@@ -78,7 +82,8 @@
       "businessTypeId": "Choose an active business type.",
       "zoneId": "Choose one of the zones of the company's city.",
       "frequencyId": "Choose an active visit frequency.",
-      "packageId": "Choose an active package."
+      "packageId": "Choose an active package.",
+      "contactPersonId": "Choose a contact person of this company."
     }
   }
 }

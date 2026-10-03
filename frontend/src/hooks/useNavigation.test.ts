@@ -131,6 +131,25 @@ describe('useNavigation', () => {
     });
   });
 
+  describe('the sales process (M2 Slice 9, D6)', () => {
+    const SALES = { 'commercial.view': 'OWN', 'quotations.manage': 'OWN', 'deals.view': 'OWN' };
+
+    it('FR-OFR-14 a sales-process workspace lists Offers, for a user with commercial.view, and no legacy Quotations', () => {
+      const ids = idsFor({ role: 'STAFF', tenantSalesWorkflow: 'SALES_PROCESS', permissions: SALES });
+      expect(ids).toContain('offers');
+      expect(ids).not.toContain('quotations');
+      expect(idsFor({ role: 'STAFF', tenantSalesWorkflow: 'SALES_PROCESS', permissions: { 'quotations.manage': 'OWN' } })).not.toContain('offers');
+    });
+
+    it('a workspace on the legacy quotations keeps Quotations and has no Offers', () => {
+      const ids = idsFor({ role: 'STAFF', tenantSalesWorkflow: 'LEGACY_QUOTATIONS', permissions: SALES });
+      expect(ids).toContain('quotations');
+      expect(ids).not.toContain('offers');
+      // Not told: the legacy workflow, the default.
+      expect(idsFor({ role: 'STAFF', permissions: SALES })).not.toContain('offers');
+    });
+  });
+
   describe('settings availability', () => {
     // settings/profile carries no permission gate, so every tenant user can
     // reach their own profile.

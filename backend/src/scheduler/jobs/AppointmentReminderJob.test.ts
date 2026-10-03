@@ -25,6 +25,8 @@ describe('AppointmentReminderJob', () => {
       findQuotationsNeedingFollowUp: jest.fn().mockResolvedValue([]),
       markQuotationFollowedUp: jest.fn().mockResolvedValue(undefined),
       findQuotationsDueExpiry: jest.fn().mockResolvedValue([]),
+      listSalesProcessTenants: jest.fn().mockResolvedValue([]),
+      findOffersPastValidity: jest.fn().mockResolvedValue([]),
       findInvoicesPastDue: jest.fn().mockResolvedValue([]),
       findContractsPastEnd: jest.fn().mockResolvedValue([]),
       findContractsNearingExpiry: jest.fn().mockResolvedValue([]),

@@ -30,7 +30,8 @@ export class WorkspaceOwnerRequiredError extends Error {
 }
 
 /**
- * Seeds the Wellness Albania workspace with its regional defaults (FR-LNG-04).
+ * Seeds the Wellness Albania workspace with its regional defaults (FR-LNG-04)
+ * and the sales process workflow (D6).
  *
  * The platform defaults are set first because they are exactly what
  * CreateTenantWithOwnerUseCase reads when it provisions a workspace, so the
@@ -48,6 +49,11 @@ export class ProvisionWellnessWorkspaceUseCase {
     const existing = await this.tenants.findBySlug(WELLNESS_WORKSPACE.urlSlug);
 
     if (existing) {
+      // Not a setting an Administrator edits (D6): this workspace always runs
+      // the sales process, so even a plain re-run puts it there.
+      if (!existing.runsSalesProcess()) {
+        await this.tenants.setSalesWorkflow(existing.id, 'SALES_PROCESS');
+      }
       if (!input.updateExisting) {
         return { outcome: 'unchanged', tenantId: existing.id };
       }
@@ -69,6 +75,9 @@ export class ProvisionWellnessWorkspaceUseCase {
       ownerEmail: input.owner.email,
       ownerPassword: input.owner.password,
     });
+    // D6: offers come from deals, and the quotation email and public link
+    // are off (FR-OFR-07, FR-RBAC-18).
+    await this.tenants.setSalesWorkflow(tenant.id, 'SALES_PROCESS');
     return { outcome: 'created', tenantId: tenant.id };
   }
 }

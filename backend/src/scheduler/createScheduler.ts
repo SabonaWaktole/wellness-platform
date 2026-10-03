@@ -19,6 +19,8 @@ import { NotificationEmailComposer } from '../notifications/application/Notifica
 import { NotificationEmailDispatcher } from '../notifications/application/NotificationEmailDispatcher';
 import { PrismaQuotationWriteTransaction } from '../quotations/infrastructure/PrismaQuotationWriteTransaction';
 import { ExpireQuotationUseCase } from '../quotations/application/use-cases/ExpireQuotationUseCase';
+import { ExpireOfferUseCase } from '../quotations/application/offers/ExpireOfferUseCase';
+import { PrismaOfferWriteTransaction } from '../quotations/infrastructure/offers/PrismaOfferWriteTransaction';
 import { PrismaInvoiceWriteTransaction } from '../invoices/infrastructure/PrismaInvoiceWriteTransaction';
 import { MarkInvoiceOverdueUseCase } from '../invoices/application/use-cases/MarkInvoiceOverdueUseCase';
 import { PrismaContractWriteTransaction } from '../contracts/infrastructure/PrismaContractWriteTransaction';
@@ -73,7 +75,7 @@ export function createScheduler(): Scheduler {
   const jobs: ScheduledJob[] = [
     new AppointmentReminderJob(queries, settingsRepository, notifications),
     new QuotationFollowUpJob(queries, settingsRepository, notifications),
-    new QuotationExpiryJob(queries, settingsRepository, expireQuotation),
+    new QuotationExpiryJob(queries, settingsRepository, expireQuotation, new ExpireOfferUseCase(new PrismaOfferWriteTransaction())),
     new InvoiceOverdueJob(queries, markInvoiceOverdue),
     new ContractExpiryJob(queries, expireContract, notifications),
     new ContractRenewalReminderJob(queries, notifications),

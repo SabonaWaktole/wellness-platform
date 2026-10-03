@@ -1,0 +1,26 @@
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.language {
+  width: auto;
+  min-width: 0;
+}
+
+.preview {
+  width: 100%;
+  height: min(75vh, 900px);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-container);
+}
+
+.dialogField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}

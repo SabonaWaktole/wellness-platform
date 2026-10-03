@@ -89,5 +89,7 @@ export const dealSchemas = {
     packageId: z.string().min(1).max(64),
     note: z.string().max(OFFER_NOTE_MAX).nullable().optional(),
     alsoUpdateCompany: z.boolean().optional(),
+    // FR-OFR-02: null is the company's primary contact; left out keeps the offer's.
+    contactPersonId: z.string().min(1).max(64).nullable().optional(),
   }),
 };

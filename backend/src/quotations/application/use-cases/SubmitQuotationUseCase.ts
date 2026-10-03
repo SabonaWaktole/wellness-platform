@@ -93,7 +93,7 @@ export class SubmitQuotationUseCase {
             toRole: UserRole.BUSINESS_OWNER,
             type: 'QUOTATION_SUBMITTED_FOR_APPROVAL',
             // Snapshot: the reference as shown on the quotation page.
-            params: { reference: quotationReference(quotation.id) },
+            params: { reference: quotationReference(quotation) },
             actorUserId: input.actingUserId,
             entityType: 'QUOTATION',
             entityId: quotation.id,

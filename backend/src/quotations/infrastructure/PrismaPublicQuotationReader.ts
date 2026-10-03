@@ -14,6 +14,7 @@ export class PrismaPublicQuotationReader implements IPublicQuotationReader {
         tenant: {
           select: {
             name: true,
+            salesWorkflow: true,
             logoUrl: true,
             currency: true,
             locale: true,
@@ -47,7 +48,8 @@ export class PrismaPublicQuotationReader implements IPublicQuotationReader {
     return {
       quotationId: row.id,
       tenantId: row.tenantId,
-      reference: quotationReference(row.id),
+      salesProcess: row.tenant.salesWorkflow === 'SALES_PROCESS',
+      reference: quotationReference(row),
       status: row.status,
       issuedAt: row.createdAt,
       sentAt: row.sentAt,

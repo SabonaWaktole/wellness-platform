@@ -14,6 +14,11 @@ export interface PublicQuotationView {
    */
   quotationId: string;
   tenantId: string;
+  /**
+   * The workspace runs the sales process (D6): it has no public link and
+   * sends no quotation email (FR-OFR-07). Never part of the public body.
+   */
+  salesProcess?: boolean;
   reference: string;
   status: string;
   issuedAt: Date;
@@ -73,6 +78,9 @@ export class GetPublicQuotationUseCase {
 
     const view = await this.reader.findByShareToken(token);
     if (!view) return null;
+
+    // FR-OFR-07: a sales-process workspace has no public quotation link.
+    if (view.salesProcess) return null;
 
     /*
      * A quotation returned to Draft stops being publicly readable even though

@@ -36,6 +36,8 @@ export const AUDITED_ENTITY_TYPES = [
   'Deal',
   // Milestone 2 Slice 7: the activity results list (FR-ACT-03).
   'ActivityResult',
+  // Milestone 2 Slice 9: an offer's status changes and new versions (FR-OFR-15).
+  'Offer',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -46,7 +48,7 @@ export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
  * so a slice that starts auditing a new entity type registers it here too.
  * Group and type labels are translations in the frontend's audit.json.
  */
-export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists', 'pricing', 'salesScript', 'deals'] as const;
+export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists', 'pricing', 'salesScript', 'deals', 'offers'] as const;
 
 export type AuditEntityGroup = (typeof AUDIT_ENTITY_GROUP_KEYS)[number];
 
@@ -64,6 +66,7 @@ export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types
   },
   { group: 'salesScript', types: ['SalesScript'] },
   { group: 'deals', types: ['Deal'] },
+  { group: 'offers', types: ['Offer'] },
 ];
 
 export function typesForGroup(group: AuditEntityGroup): readonly AuditedEntityType[] {

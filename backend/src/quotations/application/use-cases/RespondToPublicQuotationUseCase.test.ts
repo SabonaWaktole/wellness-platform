@@ -82,6 +82,15 @@ describe('RespondToPublicQuotationUseCase', () => {
     expect(acceptUseCase.execute).not.toHaveBeenCalled();
   });
 
+  it('FR-OFR-07 a workspace on the sales process cannot be answered through a public link', async () => {
+    reader.findByShareToken.mockResolvedValue({ ...view('SENT'), salesProcess: true });
+
+    const result = await useCase.execute({ token: 'tok', decision: 'accept' });
+
+    expect(result).toEqual({ outcome: 'not_found' });
+    expect(acceptUseCase.execute).not.toHaveBeenCalled();
+  });
+
   it('never queries on a blank token', async () => {
     const result = await useCase.execute({ token: '   ', decision: 'accept' });
 

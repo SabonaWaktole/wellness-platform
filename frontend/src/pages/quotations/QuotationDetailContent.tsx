@@ -173,11 +173,11 @@ export const QuotationDetailContent: React.FC = () => {
             onClick={() => navigate(`/${tenantSlug}/quotations`)}
           >
             <ArrowLeft size={14} />
-            {t('detail.breadcrumb', { reference: quotation.id.split('-')[0].toUpperCase() })}
+            {t('detail.breadcrumb', { reference: quotation.reference })}
           </button>
           <div className={styles.headerTitleRow}>
             <h1 className={styles.title}>
-            {t('detail.title', { reference: quotation.id.split('-')[0].toUpperCase() })}
+            {t('detail.title', { reference: quotation.reference })}
           </h1>
             <Badge variant={getStatusBadgeVariant(quotation.status)}>
               {statusLabel.quotation(quotation.status)}

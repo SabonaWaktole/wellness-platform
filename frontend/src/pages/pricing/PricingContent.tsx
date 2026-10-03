@@ -16,8 +16,10 @@ import { useDealText } from '../../hooks/useDealText';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { usePermission } from '../../hooks/usePermission';
+import { clientService } from '../../services/clientService';
 import { dealService } from '../../services/dealService';
 import { pricingService } from '../../services/pricingService';
+import type { ContactPerson } from '../../types/client';
 import { OPEN_DEAL_STAGES, type DealSummary } from '../../types/deal';
 import type { OfferView, PricingChoices, PricingScreenView, PricingTarget } from '../../types/offer';
 import { lookupLabel } from '../../utils/lookupLabel';
@@ -34,6 +36,8 @@ interface FormState {
   discount: string;
   note: string;
   alsoUpdateCompany: boolean;
+  /** FR-OFR-02: '' is the company's primary contact. */
+  contactPersonId: string;
 }
 
 const WHOLE_NUMBER = /^\d+$/;
@@ -88,7 +92,8 @@ export const PricingContent: React.FC = () => {
   const canEditCompany = usePermission('companies.edit');
   const businessTypes = useActiveLookups('business-types');
 
-  const [prefill, setPrefill] = useState<{ choices: PricingChoices; note: string } | null>(null);
+  const [prefill, setPrefill] = useState<{ choices: PricingChoices; note: string; contactPersonId: string } | null>(null);
+  const [contacts, setContacts] = useState<ContactPerson[]>([]);
   const [form, setForm] = useState<FormState | null>(null);
   const [view, setView] = useState<PricingScreenView | null>(null);
   const [calcError, setCalcError] = useState<string | null>(null);
@@ -101,16 +106,21 @@ export const PricingContent: React.FC = () => {
   useEffect(() => {
     if (!tenantSlug) return;
     if (!dealId || !canSeeOffers) {
-      setPrefill({ choices: {}, note: '' });
+      setPrefill({ choices: {}, note: '', contactPersonId: '' });
       return;
     }
     dealService
       .offers(tenantSlug, dealId)
       .then((offers) => {
-        const draft = offers.find((offer) => offer.status === 'DRAFT');
-        setPrefill(draft ? { choices: choicesOf(draft), note: draft.note ?? '' } : { choices: {}, note: '' });
+        // The offer the pricing screen changes: the latest one still a draft or ready (Slice 9).
+        const draft = offers.find((offer) => !offer.superseded && (offer.status === 'DRAFT' || offer.status === 'READY'));
+        setPrefill(
+          draft
+            ? { choices: choicesOf(draft), note: draft.note ?? '', contactPersonId: draft.contactPersonId ?? '' }
+            : { choices: {}, note: '', contactPersonId: '' }
+        );
       })
-      .catch(() => setPrefill({ choices: {}, note: '' }));
+      .catch(() => setPrefill({ choices: {}, note: '', contactPersonId: '' }));
   }, [tenantSlug, dealId, canSeeOffers]);
 
   // From a company, the offer is saved on one of its open deals.
@@ -154,6 +164,7 @@ export const PricingContent: React.FC = () => {
               discount: result.inputs.discountPercent ?? chosen.discountPercent ?? '0',
               note: prefill?.note ?? '',
               alsoUpdateCompany: false,
+              contactPersonId: prefill?.contactPersonId ?? '',
             }
         );
       })
@@ -166,6 +177,16 @@ export const PricingContent: React.FC = () => {
     value === undefined ? '' : new Intl.NumberFormat(money.locale || undefined, { maximumFractionDigits: 2 }).format(Number(value));
 
   const companyId = view?.subject.clientId ?? clientId;
+
+  // FR-OFR-02: the offer is addressed to the primary contact unless another is chosen.
+  useEffect(() => {
+    if (!tenantSlug || !companyId) return;
+    clientService
+      .getClient(tenantSlug, companyId)
+      .then((company) => setContacts(company.contacts ?? []))
+      .catch(() => setContacts([]));
+  }, [tenantSlug, companyId]);
+  const primaryContact = contacts.find((contact) => contact.isPrimary) ?? null;
   const backTo = dealId ? `/${tenantSlug}/deals/${dealId}` : `/${tenantSlug}/clients/${clientId}`;
   const editCompany = `/${tenantSlug}/clients/${companyId}/edit`;
   const result = view?.result;
@@ -199,6 +220,7 @@ export const PricingContent: React.FC = () => {
         discountPercent: form.discount.trim() || '0',
         note: form.note.trim() || null,
         alsoUpdateCompany: offerUpdateCompany && form.alsoUpdateCompany,
+        contactPersonId: form.contactPersonId || null,
       });
       toast.success(t('saved'));
       navigate(`/${tenantSlug}/deals/${saveDealId}`);
@@ -363,6 +385,21 @@ export const PricingContent: React.FC = () => {
                 error={invalidDiscount ? t('discountInvalid') : undefined}
                 onChange={(e) => set('discount')(e.target.value)}
               />
+
+              {saveDealId && contacts.length > 0 && (
+                <SelectInput label={t('contact')} value={form.contactPersonId} onChange={(e) => set('contactPersonId')(e.target.value)}>
+                  <option value="">
+                    {primaryContact ? t('contactPrimary', { name: primaryContact.name }) : t('contactNone')}
+                  </option>
+                  {contacts
+                    .filter((contact) => !contact.isPrimary)
+                    .map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.position ? `${contact.name} · ${contact.position}` : contact.name}
+                      </option>
+                    ))}
+                </SelectInput>
+              )}
 
               {saveDealId && (
                 <TextareaInput
