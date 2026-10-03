@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `DiscountApproval` (
     `remindedAt` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     PRIMARY KEY (`id`)
-);
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DiscountApproval' AND INDEX_NAME = 'DiscountApproval_tenantId_status_createdAt_idx');
 SET @sql := IF(@needed = 0, 'CREATE INDEX `DiscountApproval_tenantId_status_createdAt_idx` ON `DiscountApproval`(`tenantId`, `status`, `createdAt`)', 'SELECT ''skip: DiscountApproval_tenantId_status_createdAt_idx'' AS note');
