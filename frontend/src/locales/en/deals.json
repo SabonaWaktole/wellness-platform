@@ -101,8 +101,6 @@
     "recordActivity": "Record activity",
     "noActivities": "No activities on this deal yet.",
     "activitiesLoadFailed": "The activities could not be loaded.",
-    "followUps": "Follow-ups",
-    "followUpsSoon": "The follow-ups planned for this deal will appear here.",
     "actions": "Deal actions",
     "edit": "Edit",
     "delete": "Delete deal",
@@ -177,5 +175,10 @@
       "REJECTED": "Rejected",
       "EXPIRED": "Expired"
     }
+  },
+  "markers": {
+    "overdueFollowUp": "Overdue follow-up",
+    "stale_one": "No activity for {{count}} day",
+    "stale_other": "No activity for {{count}} days"
   }
 }

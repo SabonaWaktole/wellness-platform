@@ -23,6 +23,9 @@ const deal = (id: string, overrides: Partial<DealSummary>): DealSummary => ({
   updatedAt: '2026-10-01T08:00:00Z',
   closedAt: null,
   nextFollowUpAt: null,
+  lastActivityAt: '2026-10-02T08:00:00Z',
+  hasOverdueFollowUp: false,
+  isStale: false,
   ...overrides,
 });
 

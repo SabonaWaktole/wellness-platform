@@ -8,7 +8,7 @@ export interface NotificationItem {
   type: string;
   params: Record<string, string | number>;
   actorUserId: string | null;
-  entityType: 'QUOTATION' | 'APPOINTMENT' | 'CLIENT' | 'FORM' | 'OFFER' | null;
+  entityType: 'QUOTATION' | 'APPOINTMENT' | 'CLIENT' | 'FORM' | 'OFFER' | 'FOLLOW_UP' | null;
   entityId: string | null;
   readAt: string | null;
   createdAt: string;

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CalendarClock, MoreVertical, Plus } from 'lucide-react';
+import { DealMarkers } from './DealMarkers';
 import { Button } from '../../components/ui/Button/Button';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
 import { useToast } from '../../components/ui/Toast/toastContext';
@@ -271,11 +272,12 @@ const DealCard: React.FC<DealCardProps> = ({ deal, movable, onOpen, onMove, onDr
         )}
       </div>
       {deal.nextFollowUpAt && (
-        <div className={styles.cardFollowUp}>
+        <div className={`${styles.cardFollowUp} ${deal.hasOverdueFollowUp ? styles.cardFollowUpOverdue : ''}`}>
           <CalendarClock size={14} aria-hidden="true" />
           {t('board.nextFollowUp', { date: dates.date(deal.nextFollowUpAt) })}
         </div>
       )}
+      <DealMarkers deal={deal} />
     </article>
   );
 };

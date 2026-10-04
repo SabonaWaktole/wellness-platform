@@ -252,3 +252,18 @@
 .logoutItem:hover .navIcon {
   color: var(--color-error);
 }
+
+/* FR-FUP-07: the overdue follow-ups count beside its menu item. */
+.navBadge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-error, #d92d20);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}

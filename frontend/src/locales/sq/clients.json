@@ -148,9 +148,13 @@
         "CONTRACT_STATUS_CHANGED": "Kontrata {{reference}}: {{from}} → {{to}}",
         "PAYMENT_RECEIVED": "U mor pagesa · kontrata {{reference}}",
         "DEAL_CREATED": "Marrëveshje e krijuar: {{deal}}",
-        "DEAL_STAGE_CHANGED": "Marrëveshja {{deal}}: {{from}} → {{to}}"
+        "DEAL_STAGE_CHANGED": "Marrëveshja {{deal}}: {{from}} → {{to}}",
+        "FOLLOW_UP_SCHEDULED": "Ndjekje e planifikuar: {{type}}",
+        "FOLLOW_UP_COMPLETED": "Ndjekje e përfunduar: {{type}}",
+        "FOLLOW_UP_CANCELLED": "Ndjekje e anuluar: {{type}}"
       },
       "appointmentScheduledFor": "Planifikuar për {{date}}",
+      "followUpDue": "Afati {{date}}",
       "offerTotal": "Totali: {{amount}}",
       "contractValidity": "E vlefshme {{from}} – {{to}}",
       "contractPrice": "{{amount}} / {{period}}",
@@ -191,7 +195,9 @@
       "contactPersonId": "Zgjidh personin e kontaktit.",
       "resultId": "Zgjidh rezultatin.",
       "dealId": "Zgjidh një marrëveshje të hapur të kësaj kompanie."
-    }
+    },
+    "completeTitle": "Përfundo ndjekjen",
+    "saved": "Aktiviteti u ruajt."
   },
   "form": {
     "createTitle": "Shto klient të ri",

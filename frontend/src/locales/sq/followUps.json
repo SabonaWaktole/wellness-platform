@@ -1,0 +1,107 @@
+{
+  "title": "Ndjekjet",
+  "subtitle": "Telefonata dhe vizita për t'u rikthyer, sipas kohës kur duhen bërë.",
+  "tabs": {
+    "mine": "Ndjekjet e mia",
+    "team": "Ekipi"
+  },
+  "groups": {
+    "overdue": "Të vonuara",
+    "today": "Sot",
+    "upcoming": "Në vijim"
+  },
+  "groupEmpty": {
+    "overdue": "Asgjë e vonuar.",
+    "today": "Asgjë tjetër për sot.",
+    "upcoming": "Asgjë e planifikuar pas sotit."
+  },
+  "empty": "Nuk ka ndjekje të hapura. Planifikoni një nga kompania, marrëveshja ose menjëherë pasi të regjistroni një aktivitet.",
+  "loading": "Po ngarkohen ndjekjet…",
+  "loadFailed": "Ndjekjet nuk u ngarkuan. Provoni përsëri.",
+  "type": {
+    "CALL": "Telefonatë",
+    "EMAIL": "Email",
+    "VISIT": "Vizitë",
+    "MEETING": "Takim",
+    "ONLINE_MEETING": "Takim online"
+  },
+  "item": {
+    "due": "Afati {{date}}",
+    "overdue": "E vonuar",
+    "with": "me {{name}}",
+    "assignedTo": "Për {{name}}",
+    "openCompany": "Hap kompaninë",
+    "openDeal": "Hap marrëveshjen"
+  },
+  "actions": {
+    "label": "Veprimet për ndjekjen me {{company}}",
+    "complete": "Përfundo",
+    "reschedule": "Ricakto",
+    "cancel": "Anulo ndjekjen",
+    "reassign": "Ricakto personin"
+  },
+  "quick": {
+    "label": "Ndjekje",
+    "interval": "+{{days}} ditë",
+    "intervalAria": "Ndjekje pas {{days}} ditësh",
+    "custom": "Datë tjetër",
+    "scheduled": "Ndjekja u planifikua për {{date}}",
+    "after": "Të planifikohet një ndjekje?",
+    "afterHint": "Shënimi do të jetë veprimi i radhës që shkruat.",
+    "done": "Mbyll"
+  },
+  "form": {
+    "title": "Planifiko një ndjekje",
+    "date": "Data",
+    "time": "Ora",
+    "type": "Lloji i kontaktit",
+    "note": "Shënim",
+    "save": "Planifiko",
+    "cancel": "Anulo"
+  },
+  "reschedule": {
+    "title": "Ricakto ndjekjen",
+    "reason": "Arsyeja (opsionale)",
+    "save": "Ricakto",
+    "done": "Ndjekja u zhvendos në {{date}}"
+  },
+  "cancel": {
+    "title": "Anulo ndjekjen",
+    "reason": "Arsyeja",
+    "save": "Anulo ndjekjen",
+    "keep": "Mbaje",
+    "done": "Ndjekja u anulua"
+  },
+  "reassign": {
+    "title": "Ricakto personin e ndjekjes",
+    "label": "Shitësi",
+    "save": "Ricakto",
+    "done": "Ndjekja iu dha {{name}}"
+  },
+  "complete": {
+    "done": "Ndjekja u përfundua"
+  },
+  "team": {
+    "salesperson": "Shitësi",
+    "everyone": "Të gjithë",
+    "overdueOnly": "Vetëm të vonuarat",
+    "readOnly": "Mund t'i shihni ndjekjet e ekipit, por jo t'i ndryshoni.",
+    "empty": "Asnjë ndjekje e hapur nuk përputhet."
+  },
+  "section": {
+    "title": "Ndjekjet",
+    "none": "Nuk ka ndjekje të hapura."
+  },
+  "errors": {
+    "dueAt": "Një ndjekje nuk mund të jetë në të kaluarën.",
+    "dueDate": "Zgjidhni një datë të vlefshme.",
+    "time": "Zgjidhni një orë të vlefshme.",
+    "reason": "Jepni një arsye.",
+    "note": "Shënimi është shumë i gjatë.",
+    "assignedUserId": "Nuk mund t'ia jepni këtë ndjekje atij personi.",
+    "dealId": "Zgjidhni një marrëveshje të hapur të kësaj kompanie.",
+    "closed": "Kjo ndjekje është përfunduar ose anuluar.",
+    "notFound": "Kjo ndjekje nuk ekziston më ose nuk mund ta shihni.",
+    "generic": "Nuk funksionoi. Provoni përsëri."
+  }
+}

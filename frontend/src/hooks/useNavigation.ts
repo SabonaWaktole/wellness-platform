@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { NavItem } from '../components/layout/Sidebar/Sidebar';
+import { useOverdueFollowUpCount } from './useOverdueFollowUpCount';
 
 /**
  * A nav entry before its label is resolved.
@@ -37,6 +38,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'offers', labelKey: 'nav.offers', icon: 'description', permission: 'commercial.view', workflow: 'SALES_PROCESS' },
   // Pending discount approvals (M2 Slice 10, FR-DSC-06): whoever may approve sees the queue.
   { id: 'approvals', labelKey: 'nav.approvals', icon: 'task_alt', permission: 'discounts.approve', workflow: 'SALES_PROCESS' },
+  // My follow-ups (M2 Slice 11, FR-FUP-07), with the overdue count as a badge.
+  { id: 'follow-ups', labelKey: 'nav.followUps', icon: 'follow_up', permission: 'calendar.view' },
   { id: 'appointments', labelKey: 'nav.appointments', icon: 'event', permission: 'calendar.view' },
   { id: 'inventory', labelKey: 'nav.inventory', icon: 'inventory_2', permission: 'inventory.manage' },
   { id: 'quotations', labelKey: 'nav.quotations', icon: 'description', permission: 'quotations.manage', workflow: 'LEGACY_QUOTATIONS' },
@@ -111,12 +114,19 @@ export const useNavigation = (user?: any | null, currentPath?: string): NavItem[
    * Deriving the exclusions from the item list itself cannot fall behind it,
    * and it is what lets a new entry work without another manual edit.
    */
+  // FR-FUP-07: polled only where the item is shown.
+  const showsFollowUps = baseItems.some((item) => item.id === 'follow-ups');
+  const overdueFollowUps = useOverdueFollowUpCount(user?.tenantSlug, showsFollowUps);
+
   const matchesPath = (id: string) => currentPath?.includes(`/${id}`) ?? false;
   const anotherItemMatches = baseItems.some(item => item.id !== 'dashboard' && matchesPath(item.id));
 
   return baseItems.map(({ labelKey, permission: _permission, workflow: _workflow, ...item }) => ({
     ...item,
     label: t(labelKey),
+    ...(item.id === 'follow-ups' && overdueFollowUps > 0
+      ? { badge: overdueFollowUps, badgeLabel: t('nav.followUpsOverdue', { count: overdueFollowUps }) }
+      : {}),
     isActive:
       matchesPath(item.id) ||
       (item.id === 'dashboard' &&

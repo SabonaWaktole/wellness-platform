@@ -1,0 +1,132 @@
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 8px);
+}
+
+.quickLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 16px);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-md, 16px);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 8px);
+}
+
+.formError {
+  margin: 0;
+  color: var(--color-error, #b42318);
+  font-size: var(--font-size-body-sm);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 8px);
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-xs, 8px);
+  padding: var(--spacing-sm, 12px);
+  border: 1px solid var(--border-subtle, #e4e7ec);
+  border-left: 4px solid var(--border-subtle, #e4e7ec);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-primary, #fff);
+  min-width: 0;
+}
+
+.itemOverdue {
+  border-left-color: var(--color-error, #d92d20);
+  background: var(--surface-error-subtle, #fef3f2);
+}
+
+.itemHighlighted {
+  outline: 2px solid var(--color-primary, #2e90fa);
+  outline-offset: 2px;
+}
+
+.itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.itemTitle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.itemMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.due {
+  font-size: var(--font-size-body-sm);
+}
+
+.dueOverdue {
+  color: var(--color-error, #d92d20);
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.itemActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+.afterSave {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 12px);
+}
