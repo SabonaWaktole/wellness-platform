@@ -328,6 +328,30 @@ export class Offer {
     this.respond(QuotationStatus.Accepted, now);
   }
 
+  /**
+   * Winning the deal (FR-DEAL-14, 15): a Ready or Sent latest version becomes
+   * Accepted with the deal. Returns false, changing nothing, if it already is.
+   */
+  acceptForWin(now: Date): boolean {
+    this.ensureLatest();
+    if (this.props.status === QuotationStatus.Accepted) return false;
+    if (this.props.status !== QuotationStatus.Ready && this.props.status !== QuotationStatus.Sent) {
+      throw new OfferTransitionError(this.props.status, QuotationStatus.Accepted);
+    }
+    this.props = { ...this.props, status: QuotationStatus.Accepted, respondedAt: now, updatedAt: now };
+    return true;
+  }
+
+  /**
+   * Losing the deal (FR-DEAL-16): an open offer, whether draft, waiting for
+   * approval, ready or sent, becomes Rejected with it.
+   */
+  rejectForLoss(now: Date): void {
+    const open = [QuotationStatus.Draft, QuotationStatus.PendingApproval, QuotationStatus.Ready, QuotationStatus.Sent];
+    if (!open.includes(this.props.status)) throw new OfferTransitionError(this.props.status, QuotationStatus.Rejected);
+    this.props = { ...this.props, status: QuotationStatus.Rejected, respondedAt: now, updatedAt: now };
+  }
+
   /** SENT → REJECTED (FR-OFR-12). */
   reject(now: Date): void {
     this.respond(QuotationStatus.Rejected, now);

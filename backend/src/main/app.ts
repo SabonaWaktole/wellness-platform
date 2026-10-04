@@ -181,6 +181,9 @@ import { CreateDealUseCase } from '../deals/application/use-cases/CreateDealUseC
 import { UpdateDealUseCase } from '../deals/application/use-cases/UpdateDealUseCase';
 import { ChangeDealStageUseCase } from '../deals/application/use-cases/ChangeDealStageUseCase';
 import { ReassignDealUseCase } from '../deals/application/use-cases/ReassignDealUseCase';
+import { WinDealUseCase } from '../deals/application/use-cases/WinDealUseCase';
+import { LoseDealUseCase } from '../deals/application/use-cases/LoseDealUseCase';
+import { ReopenDealUseCase } from '../deals/application/use-cases/ReopenDealUseCase';
 import { DeleteDealUseCase } from '../deals/application/use-cases/DeleteDealUseCase';
 import { SearchDealsUseCase } from '../deals/application/use-cases/SearchDealsUseCase';
 import { GetPipelineBoardUseCase } from '../deals/application/use-cases/GetPipelineBoardUseCase';
@@ -599,7 +602,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
       userRepository,
       permissionDirectory,
       notificationEmailDispatcher
-    )
+    ),
+    // Won and lost (M2 Slice 13): one transaction over the deal, its offers, follow-ups and company.
+    new WinDealUseCase(offerWriteTransaction, recordScopes, getDeal),
+    new LoseDealUseCase(offerWriteTransaction, recordScopes, getDeal),
+    new ReopenDealUseCase(dealWriteTransaction, recordScopes, getDeal)
   );
   app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
 

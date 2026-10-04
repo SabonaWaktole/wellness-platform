@@ -21,6 +21,16 @@ export interface IDealWrites {
    * from the deal (FR-DEAL-10, 11).
    */
   setOfferValue(tenantId: string, dealId: string, value: { netMonthlyPrice: string | null; annualValue: string | null }): Promise<void>;
+  /** Whether the lost reason is an active one of the workspace (FR-DEAL-16). */
+  isActiveLostReason(tenantId: string, reasonId: string): Promise<boolean>;
+  /**
+   * Sets the company's status to Client, in the locked STATUS field and its
+   * mirror column (M1 Q9). Returns the previous status and the company's
+   * name for the audit entry; null when there is no such company.
+   */
+  makeClient(tenantId: string, clientId: string): Promise<{ previous: string | null; companyName: string } | null>;
+  /** The deal's open follow-ups, cancelled with the reason (FR-DEAL-15, 16). Returns how many. */
+  cancelOpenFollowUps(tenantId: string, dealId: string, reason: string, now: Date): Promise<number>;
   /** Whether any of the deal's offers, of any version, was marked as sent (FR-DEAL-19). */
   hasSentOffer(tenantId: string, dealId: string): Promise<boolean>;
 }

@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 import { requireTenant, requireTenantId } from '@main/interfaces/http/tenantContext';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactFields } from '../../../access/domain/redactFields';
-import { DealHasSentOfferError, DealNotFoundError, DealStageNotAllowedError, InvalidDealError } from '../../domain/errors';
+import { DealHasSentOfferError, DealNotFoundError, DealNotWinnableError, DealStageNotAllowedError, InvalidDealError } from '../../domain/errors';
 import { DealStage } from '../../domain/DealStage';
 import { DealType } from '../../domain/DealType';
 import { CreateDealUseCase } from '../../application/use-cases/CreateDealUseCase';
@@ -11,6 +11,9 @@ import { GetDealUseCase } from '../../application/use-cases/GetDealUseCase';
 import { UpdateDealUseCase } from '../../application/use-cases/UpdateDealUseCase';
 import { ChangeDealStageUseCase } from '../../application/use-cases/ChangeDealStageUseCase';
 import { ReassignDealUseCase } from '../../application/use-cases/ReassignDealUseCase';
+import { WinDealUseCase } from '../../application/use-cases/WinDealUseCase';
+import { LoseDealUseCase } from '../../application/use-cases/LoseDealUseCase';
+import { ReopenDealUseCase } from '../../application/use-cases/ReopenDealUseCase';
 import { DeleteDealUseCase } from '../../application/use-cases/DeleteDealUseCase';
 import { SearchDealsUseCase } from '../../application/use-cases/SearchDealsUseCase';
 import { GetPipelineBoardUseCase } from '../../application/use-cases/GetPipelineBoardUseCase';
@@ -45,7 +48,8 @@ function sendDealError(res: Response, next: NextFunction, error: unknown) {
     error instanceof DealStageNotAllowedError ||
     error instanceof OfferNotEditableError ||
     error instanceof OfferReviseFirstError ||
-    error instanceof DealHasSentOfferError
+    error instanceof DealHasSentOfferError ||
+    error instanceof DealNotWinnableError
   ) {
     return res.status(409).json({ error: error.message, code: error.code });
   }
@@ -71,7 +75,10 @@ export class DealController {
     private readonly pipeline: GetPipelineBoardUseCase,
     private readonly dealActivities: GetDealActivitiesUseCase,
     private readonly dealOffers: GetDealOffersUseCase,
-    private readonly saveDraftOffer: SaveDraftOfferUseCase
+    private readonly saveDraftOffer: SaveDraftOfferUseCase,
+    private readonly winDeal: WinDealUseCase,
+    private readonly loseDeal: LoseDealUseCase,
+    private readonly reopenDeal: ReopenDealUseCase
   ) {}
 
   private handle =
@@ -180,6 +187,38 @@ export class DealController {
       tenantId: requireTenantId(req),
       id: idOf(req),
       stage: req.body.stage as DealStage,
+    })
+  );
+
+  win = this.handle((req) =>
+    this.winDeal.execute({
+      access: req.access!,
+      tenantId: requireTenantId(req),
+      id: idOf(req),
+      offerId: req.body.offerId,
+      closingDate: req.body.closingDate,
+      closeFollowUps: req.body.closeFollowUps,
+    })
+  );
+
+  lose = this.handle((req) =>
+    this.loseDeal.execute({
+      access: req.access!,
+      tenantId: requireTenantId(req),
+      id: idOf(req),
+      reasonId: req.body.reasonId,
+      note: req.body.note ?? null,
+      closingDate: req.body.closingDate,
+    })
+  );
+
+  reopen = this.handle((req) =>
+    this.reopenDeal.execute({
+      access: req.access!,
+      tenantId: requireTenantId(req),
+      id: idOf(req),
+      stage: req.body.stage as DealStage,
+      comment: req.body.comment,
     })
   );
 

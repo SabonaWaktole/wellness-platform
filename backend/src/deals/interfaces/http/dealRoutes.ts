@@ -7,7 +7,7 @@ import { loadAccess } from '../../../main/interfaces/http/middlewares/loadAccess
 import { requirePermission } from '../../../main/interfaces/http/middlewares/requirePermission';
 import { validateRequest } from '../../../main/interfaces/http/middlewares/validateRequest';
 import { ResolveAccessContextUseCase } from '../../../access/application/use-cases/ResolveAccessContextUseCase';
-import { DELETE_DEALS, EDIT_DEALS, REASSIGN_DEALS, VIEW_COMMERCIAL, VIEW_DEALS } from '../../application/dealAccess';
+import { DELETE_DEALS, EDIT_DEALS, REASSIGN_DEALS, REOPEN_DEALS, VIEW_COMMERCIAL, VIEW_DEALS } from '../../application/dealAccess';
 import { EDIT_OFFERS } from '../../../pricing/application/use-cases/ListActivePackagesUseCase';
 import { DealController } from './DealController';
 import { dealSchemas } from './dealSchemas';
@@ -45,6 +45,10 @@ export const createDealRouter = (
   router.post('/', edit, validateRequest(dealSchemas.create), controller.create);
   router.patch('/:id', edit, validateRequest(dealSchemas.update), controller.update);
   router.post('/:id/stage', edit, validateRequest(dealSchemas.stage), controller.stage);
+  // Slice 13: winning and losing need deals.edit, reopening deals.reopen (FR-DEAL-14, 16, 17).
+  router.post('/:id/win', edit, validateRequest(dealSchemas.win), controller.win);
+  router.post('/:id/lose', edit, validateRequest(dealSchemas.lose), controller.lose);
+  router.post('/:id/reopen', requirePermission(REOPEN_DEALS), validateRequest(dealSchemas.reopen), controller.reopen);
   router.post('/:id/reassign', requirePermission(REASSIGN_DEALS), validateRequest(dealSchemas.reassign), controller.reassign);
   router.delete('/:id', requirePermission(DELETE_DEALS), controller.remove);
 

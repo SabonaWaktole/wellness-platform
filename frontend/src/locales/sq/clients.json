@@ -151,7 +151,9 @@
         "DEAL_STAGE_CHANGED": "Marrëveshja {{deal}}: {{from}} → {{to}}",
         "FOLLOW_UP_SCHEDULED": "Ndjekje e planifikuar: {{type}}",
         "FOLLOW_UP_COMPLETED": "Ndjekje e përfunduar: {{type}}",
-        "FOLLOW_UP_CANCELLED": "Ndjekje e anuluar: {{type}}"
+        "FOLLOW_UP_CANCELLED": "Ndjekje e anuluar: {{type}}",
+        "DEAL_WON": "Marrëveshja {{deal}} u fitua",
+        "DEAL_LOST": "Marrëveshja {{deal}} u humb"
       },
       "appointmentScheduledFor": "Planifikuar për {{date}}",
       "followUpDue": "Afati {{date}}",
@@ -159,7 +161,8 @@
       "contractValidity": "E vlefshme {{from}} – {{to}}",
       "contractPrice": "{{amount}} / {{period}}",
       "paymentPaid": "{{paid}} nga {{amount}}",
-      "paymentMethod": "Mënyra: {{method}}"
+      "paymentMethod": "Mënyra: {{method}}",
+      "dealWonValue": "{{monthly}} në muaj, {{annual}} në vit"
     },
     "calculatePrice": "Llogarit çmimin"
   },

@@ -151,7 +151,9 @@
         "DEAL_STAGE_CHANGED": "Deal {{deal}}: {{from}} → {{to}}",
         "FOLLOW_UP_SCHEDULED": "Follow-up scheduled: {{type}}",
         "FOLLOW_UP_COMPLETED": "Follow-up completed: {{type}}",
-        "FOLLOW_UP_CANCELLED": "Follow-up cancelled: {{type}}"
+        "FOLLOW_UP_CANCELLED": "Follow-up cancelled: {{type}}",
+        "DEAL_WON": "Deal {{deal}} won",
+        "DEAL_LOST": "Deal {{deal}} lost"
       },
       "appointmentScheduledFor": "Scheduled for {{date}}",
       "followUpDue": "Due {{date}}",
@@ -159,7 +161,8 @@
       "contractValidity": "Valid {{from}} – {{to}}",
       "contractPrice": "{{amount}} / {{period}}",
       "paymentPaid": "{{paid}} of {{amount}}",
-      "paymentMethod": "Method: {{method}}"
+      "paymentMethod": "Method: {{method}}",
+      "dealWonValue": "{{monthly}} a month, {{annual}} a year"
     },
     "calculatePrice": "Calculate price"
   },

@@ -17,6 +17,6 @@ export function dealErrorMessage(error: unknown, t: TFunction): string {
   if (field) return t(`deals:errors.fields.${field}`, { defaultValue: t('deals:errors.INVALID_DEAL') });
   if (response?.status === 403) return t('deals:errors.forbidden');
   const code = response?.data?.code;
-  if (code === 'DEAL_STAGE_NOT_ALLOWED' || code === 'DEAL_NOT_FOUND') return t(`deals:errors.${code}`);
+  if (code === 'DEAL_STAGE_NOT_ALLOWED' || code === 'DEAL_NOT_FOUND' || code === 'DEAL_NOT_WINNABLE') return t(`deals:errors.${code}`);
   return t('deals:errors.generic');
 }

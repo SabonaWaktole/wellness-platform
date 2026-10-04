@@ -63,6 +63,11 @@ export interface OfferView {
   dealOwnerName: string;
   /** The deal is not won, lost or deleted: its offers can still change. */
   dealOpen: boolean;
+  /**
+   * Set when the offer was just marked accepted: the salesperson may now win
+   * the deal with it (FR-OFR-12). Absent on every other read.
+   */
+  canWinDeal?: boolean;
   /** What this viewer may do with the offer now (FR-OFR-09); filled by the use case. */
   permittedActions: OfferAction[];
   /** The pending discount approval, when the offer waits for one (FR-DSC-03). */

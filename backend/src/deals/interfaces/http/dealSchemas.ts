@@ -58,6 +58,13 @@ export const dealSchemas = {
     .strict(),
   update: z.object(dealFields).partial().strict(),
   stage: z.object({ stage: z.string().min(1).max(50) }).strict(),
+  win: z
+    .object({ offerId: z.string().min(1).optional(), closingDate: calendarDate.optional(), closeFollowUps: z.boolean().default(false) })
+    .strict(),
+  lose: z
+    .object({ reasonId: z.string().min(1), note: z.string().max(5000).nullable().optional(), closingDate: calendarDate.optional() })
+    .strict(),
+  reopen: z.object({ stage: z.string().min(1).max(50), comment: z.string().max(5000) }).strict(),
   reassign: z.object({ ownerUserId: z.string().min(1) }).strict(),
   list: z.object({
     clientId: z.string().optional(),

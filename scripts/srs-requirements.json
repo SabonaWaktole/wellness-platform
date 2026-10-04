@@ -881,6 +881,31 @@
       "id": "FR-CAL-08",
       "priority": "Must",
       "requirement": "The calendar shall respect the workspace time zone (Europe/Tirane) and the user's language for day and month names."
+    },
+    {
+      "id": "FR-DEAL-14",
+      "priority": "Must",
+      "requirement": "A deal shall be won from one of its ready, sent or accepted offers, recording the closing date, the agreed monthly price and annual value, the package and the salesperson. The agreed price is read from the offer and cannot be typed."
+    },
+    {
+      "id": "FR-DEAL-15",
+      "priority": "Must",
+      "requirement": "Winning a deal shall turn its company into a Client and, when the user confirms, close the deal's open follow-ups."
+    },
+    {
+      "id": "FR-DEAL-16",
+      "priority": "Must",
+      "requirement": "A deal shall be lost with a reason chosen from the predefined lost reasons and an optional note; its open offers become Rejected and its open follow-ups are closed."
+    },
+    {
+      "id": "FR-DEAL-17",
+      "priority": "Should",
+      "requirement": "A user with \"Deals: reopen\" shall reopen a won or lost deal into an open stage with a comment; the previous result is kept in the history."
+    },
+    {
+      "id": "FR-DEAL-18",
+      "priority": "Must",
+      "requirement": "Winning, losing, reopening and every change of the agreed values shall be recorded in the audit trail."
     }
   ]
 }

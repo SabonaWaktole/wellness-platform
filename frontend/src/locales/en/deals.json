@@ -113,7 +113,8 @@
     "reassignConfirm": "Change salesperson",
     "reassigned": "The deal now belongs to {{name}}.",
     "loadFailed": "The deal could not be loaded.",
-    "notFound": "This deal does not exist or is not one of yours."
+    "notFound": "This deal does not exist or is not one of yours.",
+    "historyNote": "Note: {{note}}"
   },
   "form": {
     "createTitle": "New deal",
@@ -153,8 +154,14 @@
       "type": "Choose New contract, Renewal or Extra services.",
       "title": "The title is too long.",
       "notes": "The notes are too long.",
-      "expectedCloseDate": "Enter a valid date."
-    }
+      "expectedCloseDate": "Enter a valid date.",
+      "lostReasonId": "Choose why the deal was lost.",
+      "lostNote": "The note is too long.",
+      "comment": "Say why the deal is reopened.",
+      "closingDate": "The closing date cannot be in the future.",
+      "stage": "Choose an open stage."
+    },
+    "DEAL_NOT_WINNABLE": "This offer cannot win the deal."
   },
   "offers": {
     "calculate": "Calculate price",
@@ -180,5 +187,49 @@
     "overdueFollowUp": "Overdue follow-up",
     "stale_one": "No activity for {{count}} day",
     "stale_other": "No activity for {{count}} days"
+  },
+  "win": {
+    "action": "Win deal",
+    "title": "Win this deal",
+    "noOffer": "This deal has no ready, sent or accepted offer to win with. Make an offer ready first.",
+    "fromOffer": "Values from offer {{reference}}",
+    "offer": "Offer",
+    "monthly": "Agreed monthly price",
+    "annual": "Agreed annual value",
+    "salesperson": "Salesperson",
+    "figuresHidden": "The agreed values are taken from the deal's latest offer.",
+    "closingDate": "Closing date",
+    "closeFollowUps": "Close {{count}} open follow-up(s) of this deal",
+    "confirm": "Win deal",
+    "done": "Deal won. The company is now a Client."
+  },
+  "lose": {
+    "action": "Mark as lost",
+    "title": "Mark this deal as lost",
+    "hint": "Open offers become Rejected and open follow-ups are closed.",
+    "reason": "Reason",
+    "note": "Note",
+    "confirm": "Mark as lost",
+    "done": "Deal marked as lost.",
+    "reasonsFailed": "The lost reasons could not be loaded."
+  },
+  "reopen": {
+    "action": "Reopen",
+    "title": "Reopen this deal",
+    "stage": "Reopen into",
+    "comment": "Why is it reopened?",
+    "confirm": "Reopen deal",
+    "done": "Deal reopened."
+  },
+  "result": {
+    "wonTitle": "Won",
+    "lostTitle": "Lost",
+    "closingDate": "Closing date",
+    "agreedMonthly": "Agreed monthly price",
+    "agreedAnnual": "Agreed annual value",
+    "package": "Package",
+    "offer": "Offer",
+    "reason": "Reason",
+    "note": "Note"
   }
 }
