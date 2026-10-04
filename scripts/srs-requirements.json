@@ -841,6 +841,46 @@
       "id": "FR-FUP-10",
       "priority": "Should",
       "requirement": "The Sales Manager can reassign a follow-up to another salesperson."
+    },
+    {
+      "id": "FR-CAL-01",
+      "priority": "Must",
+      "requirement": "The salesperson calendar shall show, in day, week and month views and an agenda list: follow-ups (including calls to make), meetings, visits, online meetings and other planned activities, and overdue items. Each type has its own colour and icon."
+    },
+    {
+      "id": "FR-CAL-02",
+      "priority": "Must",
+      "requirement": "The user shall plan a meeting, visit, online meeting or call from the calendar or from a company/deal, with company, deal, contact person, start and end time, place (for visits) and note."
+    },
+    {
+      "id": "FR-CAL-03",
+      "priority": "Must",
+      "requirement": "Clicking a calendar item shall open a panel with its details and actions (complete, reschedule, cancel, open company, open deal)."
+    },
+    {
+      "id": "FR-CAL-04",
+      "priority": "Must",
+      "requirement": "Overdue items shall be shown on today's date in an \"Overdue\" section of the day and agenda views, not only on their original date."
+    },
+    {
+      "id": "FR-CAL-05",
+      "priority": "Must",
+      "requirement": "The Sales Manager calendar shall show the items of all Sales Users, with a filter to show one, several or all salespeople and a colour per salesperson; overdue follow-ups are included."
+    },
+    {
+      "id": "FR-CAL-06",
+      "priority": "Must",
+      "requirement": "The CEO shall see all calendars, read-only. The Administrator and Reception have no sales calendar unless granted (M1 matrix)."
+    },
+    {
+      "id": "FR-CAL-07",
+      "priority": "Could",
+      "requirement": "The user can reschedule an item by dragging it to another time on desktop."
+    },
+    {
+      "id": "FR-CAL-08",
+      "priority": "Must",
+      "requirement": "The calendar shall respect the workspace time zone (Europe/Tirane) and the user's language for day and month names."
     }
   ]
 }
