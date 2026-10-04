@@ -1,6 +1,6 @@
 /**
- * Seeds the Milestone 1 UAT users and data into the Wellness Albania
- * workspace (deploy/uat-milestone-1.md). Run after `seed:wellness`.
+ * Seeds the Milestone 1 and 2 UAT users and data into the Wellness Albania
+ * workspace (deploy/uat-milestone-1.md, deploy/uat-milestone-2.md). Run after `seed:wellness`.
  *
  * Starts the real app on an ephemeral local port and writes everything
  * through its API as the workspace's Administrator, so the data passes the
@@ -64,6 +64,7 @@ async function main(): Promise<void> {
     console.log(`  ADMINISTRATOR  ${result.users.admin.email}  (the workspace owner)`);
     console.log(`\n${result.companiesCreated} UAT companies and ${result.bulkCreated} bulk companies created.`);
     console.log(`${result.dealsCreated} UAT deals and ${result.bulkDealsCreated} bulk deals created.`);
+    console.log(`${result.plannedCreated} follow-ups and meetings created for Sales User A and B.`);
     console.log(`${result.bulkFollowUpsCreated} bulk follow-ups created.`);
   } finally {
     server.close();

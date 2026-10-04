@@ -59,6 +59,8 @@ interface UatCompanySpec {
 
 export const UAT_COMPANIES: UatCompanySpec[] = [
   { name: 'UAT Kafe Blloku', owner: 'salesA', businessType: 'Kafene', area: 'Tiranë', city: 'Tiranë', employees: 8, status: ClientStatus.CLIENT, contract: true },
+  // UAT-1 (M2): 2 employees, a Medium-risk business type, Tiranë — the Example A pricing, deal won at the end.
+  { name: 'UAT Restorant Tirana', owner: 'salesA', businessType: 'Restorant', area: 'Tiranë', city: 'Tiranë', employees: 2, status: ClientStatus.LEAD },
   { name: 'UAT Qendra e Thirrjeve Arta', owner: 'salesA', businessType: 'Qendër thirrjesh', area: 'Tiranë', city: 'Tiranë', employees: 120, status: ClientStatus.PROSPECT },
   { name: 'UAT Fabrika Durrës', owner: 'salesB', businessType: 'Fabrikë', area: 'Durrës', city: 'Durrës', employees: 300, status: ClientStatus.CLIENT, contract: true },
   { name: 'UAT Kafe Plazhi', owner: 'salesB', businessType: 'Kafene', area: 'Durrës', city: 'Durrës', employees: 6, status: ClientStatus.LEAD },
@@ -70,9 +72,14 @@ export const UAT_COMPANIES: UatCompanySpec[] = [
 export const BULK_PREFIX = 'UAT Bulk Company ';
 export const BULK_DEAL_PREFIX = 'UAT Bulk Deal ';
 const BULK_FOLLOW_UP_PREFIX = 'UAT bulk follow-up ';
+/** Marks the named follow-ups and meetings, so a re-run adds only what is missing. */
+export const UAT_PLANNED_PREFIX = 'UAT planned: ';
+/** The company whose second deal is the one UAT-2 loses. */
+export const UAT2_DEAL_COMPANY = 'UAT Kafe Blloku';
+export const UAT2_DEAL_TITLE = 'UAT-2 deal';
 
 /** The salespeople whose named companies get a seeded deal; the leaver's are left to UAT-5. */
-const DEAL_OWNERS: ReadonlyArray<Owner> = ['salesA', 'salesB'];
+const DEAL_OWNERS: ReadonlyArray<'salesA' | 'salesB'> = ['salesA', 'salesB'];
 
 export interface SeedUatOptions {
   prisma: PrismaClient;
@@ -96,6 +103,8 @@ export interface SeedUatResult {
   companiesCreated: number;
   bulkCreated: number;
   dealsCreated: number;
+  /** The named follow-ups and meetings of Sales User A and B (UAT-4). */
+  plannedCreated: number;
   bulkDealsCreated: number;
   bulkFollowUpsCreated: number;
 }
@@ -255,13 +264,78 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
   // Checked per company rather than per run, so a workspace seeded before
   // Milestone 2 gets its deals on the next run.
   let dealsCreated = 0;
-  for (const spec of UAT_COMPANIES.filter((c) => DEAL_OWNERS.includes(c.owner))) {
+  for (const spec of UAT_COMPANIES.filter((c) => c.owner === 'salesA' || c.owner === 'salesB')) {
     const company = await prisma.client.findFirst({ where: { tenantId, name: spec.name, deletedAt: null } });
     if (!company || (await prisma.deal.count({ where: { tenantId, clientId: company.id } })) > 0) continue;
     await api.call('POST', '/deals', { clientId: company.id, type: 'NEW_CONTRACT' });
     dealsCreated += 1;
     log(`deal + ${spec.name}`);
   }
+
+  // The second deal UAT-2 loses, next to the company's first one (UAT-1 uses UAT Restorant Tirana).
+  const uat2Company = await prisma.client.findFirst({ where: { tenantId, name: UAT2_DEAL_COMPANY, deletedAt: null } });
+  if (uat2Company && (await prisma.deal.count({ where: { tenantId, clientId: uat2Company.id, title: UAT2_DEAL_TITLE } })) === 0) {
+    await api.call('POST', '/deals', { clientId: uat2Company.id, type: 'NEW_CONTRACT', title: UAT2_DEAL_TITLE });
+    dealsCreated += 1;
+    log(`deal + ${UAT2_DEAL_TITLE} (${UAT2_DEAL_COMPANY})`);
+  }
+
+  // --- Follow-ups and meetings for Sales User A and B (UAT-4) ------------
+  // Straight to the database: the API refuses a follow-up in the past, and
+  // UAT-4 needs one due yesterday (shown as overdue). Each salesperson gets,
+  // on their first named company and its deal: a follow-up due yesterday, one
+  // in three days, an in-person meeting tomorrow and an online meeting in two.
+  let plannedCreated = 0;
+  const DAY = 24 * 60 * 60 * 1000;
+  const at = (days: number, hour: number) => {
+    const d = new Date(Date.now() + days * DAY);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  };
+  for (const key of DEAL_OWNERS) {
+    const spec = UAT_COMPANIES.find((c) => c.owner === key);
+    const company = spec && (await prisma.client.findFirst({ where: { tenantId, name: spec.name, deletedAt: null } }));
+    if (!company) continue;
+    const deal = await prisma.deal.findFirst({ where: { tenantId, clientId: company.id }, orderBy: { createdAt: 'asc' } });
+    const contact = await prisma.contactPerson.findFirst({ where: { tenantId, clientId: company.id, isPrimary: true, deletedAt: null } });
+    const items = [
+      { label: 'follow-up due yesterday', kind: 'FOLLOW_UP', type: 'CALL', when: at(-1, 10), intervalDays: null as number | null },
+      { label: 'follow-up in 3 days', kind: 'FOLLOW_UP', type: 'CALL', when: at(3, 10), intervalDays: 3 },
+      { label: 'meeting tomorrow', kind: 'PLANNED', type: 'MEETING', when: at(1, 11), place: 'Zyra e klientit' },
+      { label: 'online meeting in 2 days', kind: 'PLANNED', type: 'ONLINE_MEETING', when: at(2, 14) },
+    ];
+    for (const item of items) {
+      const notes = `${UAT_PLANNED_PREFIX}${key} ${item.label}`;
+      if ((await prisma.appointment.count({ where: { tenantId, notes } })) > 0) continue;
+      await prisma.appointment.create({
+        data: {
+          id: randomUUID(),
+          tenantId,
+          clientId: company.id,
+          assignedUserId: users[key].id,
+          dealId: deal?.id ?? null,
+          contactPersonId: contact?.id ?? null,
+          scheduledAt: item.when,
+          endAt: item.kind === 'PLANNED' ? new Date(item.when.getTime() + 60 * 60 * 1000) : null,
+          place: 'place' in item ? item.place : null,
+          intervalDays: item.intervalDays ?? null,
+          status: 'SCHEDULED',
+          kind: item.kind,
+          type: item.type,
+          notes,
+        },
+      });
+      plannedCreated += 1;
+    }
+    log(`planned + follow-ups and meetings for ${key} (${company.name})`);
+  }
+
+  // --- The seeded pricing and script must be there (UAT-1, UAT-5) --------
+  // Both are written when the workspace is provisioned (seed:wellness), so
+  // this only checks them, and fails early rather than during the UAT.
+  const publishedScript = await prisma.salesScript.count({ where: { tenantId, status: 'PUBLISHED' } });
+  if (publishedScript === 0) throw new Error('The workspace has no published sales script — run seed:wellness first.');
+  if ((await prisma.pricingSettings.count({ where: { tenantId } })) === 0) throw new Error('The workspace has no pricing configuration — run seed:wellness first.');
 
   // --- Bulk companies for NFR-PERF-01 ------------------------------------
   let bulkCreated = 0;
@@ -410,5 +484,5 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     }
   }
 
-  return { users, companiesCreated, bulkCreated, dealsCreated, bulkDealsCreated, bulkFollowUpsCreated };
+  return { users, companiesCreated, bulkCreated, dealsCreated, plannedCreated, bulkDealsCreated, bulkFollowUpsCreated };
 }
