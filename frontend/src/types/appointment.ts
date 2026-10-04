@@ -13,6 +13,16 @@ export interface Appointment {
   clientId: string;
   assignedUserId: string;
   scheduledAt: string;
+  /** M2 Slice 12: planned items have a type, an end, a place, a deal and a contact. */
+  endAt?: string | null;
+  kind?: string;
+  type?: string;
+  dealId?: string | null;
+  contactPersonId?: string | null;
+  place?: string | null;
+  dealTitle?: string | null;
+  dealType?: string | null;
+  contactName?: string | null;
   status: AppointmentStatus;
   notes?: string;
   history: Array<{

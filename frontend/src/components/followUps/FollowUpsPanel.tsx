@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, CalendarPlus } from 'lucide-react';
 import { Card } from '../ui/Card/Card';
+import { Button } from '../ui/Button/Button';
+import { PlanActivityDialog } from '../calendar/PlanActivityDialog';
 import { usePermission } from '../../hooks/usePermission';
 import { onFollowUpsChanged } from '../../hooks/useOverdueFollowUpCount';
 import { followUpService } from '../../services/followUpService';
@@ -24,12 +26,16 @@ export const FollowUpsPanel: React.FC<{
   /** False on a closed deal: it takes no new follow-ups. */
   canSchedule?: boolean;
   onChanged?: () => void;
+  /** Called after a meeting, visit or call was planned from here (FR-CAL-02). */
+  onPlanned?: () => void;
   titleClassName?: string;
   headerClassName?: string;
-}> = ({ clientId, dealId, canSchedule = true, onChanged, titleClassName, headerClassName }) => {
+}> = ({ clientId, dealId, canSchedule = true, onChanged, onPlanned, titleClassName, headerClassName }) => {
   const { t } = useTranslation('followUps');
   const { tenantSlug } = useParams();
   const canView = usePermission('calendar.view');
+  const canPlan = usePermission('activities.add');
+  const [isPlanning, setIsPlanning] = useState(false);
   const [items, setItems] = useState<FollowUp[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -64,6 +70,11 @@ export const FollowUpsPanel: React.FC<{
         <h2 className={titleClassName}>
           <CalendarClock size={18} aria-hidden="true" /> {t('section.title')}
         </h2>
+        {canPlan && canSchedule && (
+          <Button variant="outline" size="sm" icon={<CalendarPlus size={16} />} onClick={() => setIsPlanning(true)}>
+            {t('section.plan')}
+          </Button>
+        )}
       </div>
       <div className={styles.afterSave}>
         {canSchedule && (
@@ -74,6 +85,16 @@ export const FollowUpsPanel: React.FC<{
         {items?.length === 0 && <p className={styles.muted}>{t('section.none')}</p>}
         {items && items.length > 0 && <FollowUpList items={items} showCompany={false} showAssignee />}
       </div>
+      <PlanActivityDialog
+        isOpen={isPlanning}
+        onClose={() => setIsPlanning(false)}
+        clientId={clientId}
+        dealId={dealId}
+        onSaved={() => {
+          setIsPlanning(false);
+          onPlanned?.();
+        }}
+      />
     </Card>
   );
 };

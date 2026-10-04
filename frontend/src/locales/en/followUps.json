@@ -90,7 +90,8 @@
   },
   "section": {
     "title": "Follow-ups",
-    "none": "No open follow-ups."
+    "none": "No open follow-ups.",
+    "plan": "Plan a meeting or visit"
   },
   "errors": {
     "dueAt": "A follow-up cannot be due in the past.",

@@ -18,10 +18,13 @@
  * deliberately drifted copy — replacing this file's day-end calculation with a
  * naive `start + 24h` fails exactly the two DST rows, on this side only.
  *
- * THREE functions are now mirrored: dayKeyInZone, isSameDayInZone and
- * dayBoundsInZone (plus the private zoneOffsetMs). Each addition raises the
- * cost of the duplication — see TD-026 for the conditions under which this
- * should become a shared package instead.
+ * FOUR functions are now mirrored: dayKeyInZone, isSameDayInZone,
+ * dayBoundsInZone and instantInZone (plus the private zoneOffsetMs).
+ * instantInZone joined with the sales calendar (M2 Slice 12), where dropping
+ * an item on a time slot has to become the right instant on a day that
+ * changes its clocks; a second fixture table, WALL_CLOCK_FIXTURES, pins it in
+ * both suites. Each addition raises the cost of the duplication — see TD-026
+ * for the conditions under which this should become a shared package instead.
  * ---------------------------------------------------------------------------
  *
  * This replaces `isSameDayLocal`, which compared browser-local date components.
@@ -128,4 +131,20 @@ export function dayBoundsInZone(
   );
 
   return { start, end };
+}
+
+/**
+ * The instant at which the wall clock in `timeZone` reads `hour:minute` on
+ * the calendar day `dayKey` (`YYYY-MM-DD`).
+ *
+ * Two passes, because the offset to subtract is the one in effect at the
+ * answer, which is not known until the first guess. A wall time that a
+ * spring-forward skips resolves an hour later; one that a fall-back repeats
+ * resolves to its first occurrence.
+ */
+export function instantInZone(dayKey: string, hour: number, minute: number, timeZone: string): Date {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const asIfUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  const firstGuess = asIfUtc - zoneOffsetMs(new Date(asIfUtc), timeZone);
+  return new Date(asIfUtc - zoneOffsetMs(new Date(firstGuess), timeZone));
 }

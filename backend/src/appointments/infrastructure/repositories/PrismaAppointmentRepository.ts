@@ -5,6 +5,15 @@ import { AppointmentStatus } from '../../domain/enums/AppointmentStatus';
 import { ALL_RECORDS, RecordScope } from '../../../access/domain/RecordScope';
 import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 
+/** What an appointment needs from its neighbours: names to show, never written back. */
+const APPOINTMENT_INCLUDE = {
+  auditLogs: { orderBy: { createdAt: 'asc' } },
+  client: { select: { name: true, email: true } },
+  assignedUser: { select: { firstName: true, lastName: true, email: true } },
+  deal: { select: { title: true, type: true } },
+  contactPerson: { select: { name: true } },
+} satisfies Prisma.AppointmentInclude;
+
 export class PrismaAppointmentRepository implements IAppointmentRepository {
   constructor(private prisma: PrismaClient) {}
 
@@ -40,6 +49,9 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
       updatedAt: record.updatedAt,
       clientTenantId: record.tenantId,
       assignedUserTenantId: record.tenantId,
+      dealTitle: record.deal?.title ?? null,
+      dealType: record.deal?.type ?? null,
+      contactName: record.contactPerson?.name ?? null,
       clientName: record.client?.name,
       clientEmail: record.client?.email ?? undefined,
       staffName: record.assignedUser
@@ -51,11 +63,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
   async findById(id: string, tenantId: string): Promise<Appointment | null> {
     const record = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
-      include: {
-        auditLogs: { orderBy: { createdAt: 'asc' } },
-        client: { select: { name: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
-      }
+      include: APPOINTMENT_INCLUDE
     });
     if (!record) return null;
     return this.mapToDomain(record);
@@ -64,11 +72,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
   async findByClientId(clientId: string, tenantId: string): Promise<Appointment[]> {
     const records = await this.prisma.appointment.findMany({
       where: { clientId, tenantId },
-      include: {
-        auditLogs: { orderBy: { createdAt: 'asc' } },
-        client: { select: { name: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
       orderBy: { scheduledAt: 'desc' }
     });
     return records.map(r => this.mapToDomain(r));
@@ -90,11 +94,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
 
     const records = await this.prisma.appointment.findMany({
       where,
-      include: {
-        auditLogs: { orderBy: { createdAt: 'asc' } },
-        client: { select: { name: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
       orderBy: { scheduledAt: 'asc' }
     });
 
@@ -112,11 +112,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     const records = await this.prisma.appointment.findMany({
       where,
       take: limit,
-      include: {
-        auditLogs: { orderBy: { createdAt: 'asc' } },
-        client: { select: { name: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
       orderBy: { scheduledAt: 'asc' }
     });
 
@@ -129,11 +125,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     const records = await this.prisma.appointment.findMany({
       where,
       take: limit,
-      include: {
-        auditLogs: { orderBy: { createdAt: 'asc' } },
-        client: { select: { name: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
       orderBy: { updatedAt: 'desc' }
     });
 

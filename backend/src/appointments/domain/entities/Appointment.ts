@@ -47,6 +47,10 @@ export interface AppointmentProps {
   clientName?: string;
   clientEmail?: string;
   staffName?: string;
+  /** The deal's own title (NULL: the default "<company> – <type>"), its type, and the contact's name. */
+  dealTitle?: string | null;
+  dealType?: string | null;
+  contactName?: string | null;
 }
 
 export class Appointment {
@@ -69,6 +73,9 @@ export class Appointment {
   private _clientName?: string;
   private _clientEmail?: string;
   private _staffName?: string;
+  private _dealTitle: string | null;
+  private _dealType: string | null;
+  private _contactName: string | null;
 
   private constructor(props: AppointmentProps) {
     this._id = props.id;
@@ -90,6 +97,9 @@ export class Appointment {
     this._clientName = props.clientName;
     this._clientEmail = props.clientEmail;
     this._staffName = props.staffName;
+    this._dealTitle = props.dealTitle ?? null;
+    this._dealType = props.dealType ?? null;
+    this._contactName = props.contactName ?? null;
   }
 
   static create(props: AppointmentProps): Appointment {
@@ -132,6 +142,9 @@ export class Appointment {
   get clientName(): string | undefined { return this._clientName; }
   get clientEmail(): string | undefined { return this._clientEmail; }
   get staffName(): string | undefined { return this._staffName; }
+  get dealTitle(): string | null { return this._dealTitle; }
+  get dealType(): string | null { return this._dealType; }
+  get contactName(): string | null { return this._contactName; }
 
   confirm(): void {
     this.assertNotTerminal();

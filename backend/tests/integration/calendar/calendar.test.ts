@@ -229,6 +229,37 @@ describe('Sales calendar (M2 Slice 12)', () => {
       });
     });
 
+    it('FR-CAL-02 the company\'s appointment list carries the type, place, deal and contact too', async () => {
+      const created = (
+        await as('salesA')
+          .post('/appointments', {
+            clientId: companies.a,
+            assignedUserId: users.salesA,
+            scheduledAt: at(13, 10).toISOString(),
+            endAt: at(13, 11).toISOString(),
+            type: 'VISIT',
+            place: 'Rruga e Durrësit 5',
+            dealId: dealA,
+            contactPersonId: contacts.a,
+          })
+          .expect(201)
+      ).body;
+      const list = (
+        await as('salesA')
+          .get(`/appointments/search?startDate=${at(13, 0).toISOString()}&endDate=${at(14, 0).toISOString()}&clientId=${companies.a}`)
+          .expect(200)
+      ).body;
+      expect(list.find((entry: any) => entry.id === created.id)).toMatchObject({
+        kind: 'PLANNED',
+        type: 'VISIT',
+        place: 'Rruga e Durrësit 5',
+        dealId: dealA,
+        dealType: 'NEW_CONTRACT',
+        contactName: 'Elira Hoxha',
+        endAt: at(13, 11).toISOString(),
+      });
+    });
+
     it('FR-CAL-02 an item can be updated: type, end, place, deal and contact', async () => {
       const created = (
         await as('salesA')

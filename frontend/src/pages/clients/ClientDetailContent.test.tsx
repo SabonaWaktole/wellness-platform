@@ -41,8 +41,8 @@ vi.mock('../../components/activities/ActivityDialog', () => ({
   ActivityDialog: ({ isOpen, initialChannel }: { isOpen: boolean; initialChannel: string }) =>
     isOpen ? <div data-testid="activity-dialog">{initialChannel}</div> : null,
 }));
-vi.mock('../../components/forms/AppointmentForm/AppointmentForm', () => ({
-  AppointmentForm: () => <div data-testid="appointment-form" />
+vi.mock('../../components/calendar/PlanActivityDialog', () => ({
+  PlanActivityDialog: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="plan-activity-dialog" /> : null),
 }));
 
 describe('ClientDetailContent Timeline', () => {

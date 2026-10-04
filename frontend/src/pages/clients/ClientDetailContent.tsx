@@ -9,7 +9,6 @@ import { Badge } from '../../components/ui/Badge/Badge';
 import { Avatar } from '../../components/ui/Avatar/Avatar';
 import { Button } from '../../components/ui/Button/Button';
 import { SalesScriptButton } from '../../components/salesScript/SalesScriptButton';
-import { SlideOver } from '../../components/ui/SlideOver';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
 import { Tabs } from '../../components/ui/Tabs';
 import { usePermission } from '../../hooks/usePermission';
@@ -17,7 +16,8 @@ import { ClientContractsTab } from '../../components/clients/ClientContractsTab'
 import { ClientDealsTab } from '../../components/clients/ClientDealsTab';
 import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
-import { AppointmentForm } from '../../components/forms/AppointmentForm/AppointmentForm';
+import { PlanActivityDialog } from '../../components/calendar/PlanActivityDialog';
+import { appointmentToCalendarItem } from '../../utils/appointmentUtils';
 import { ActivityDialog } from '../../components/activities/ActivityDialog';
 import { FollowUpsPanel } from '../../components/followUps/FollowUpsPanel';
 import { channelIcon } from '../../components/activities/channelIcon';
@@ -88,7 +88,7 @@ export const ClientDetailContent: React.FC = () => {
     loadMore: loadMoreHistory,
   } = useClientHistory(clientId || '');
   const { customFields, fetchSettings } = useClientSettings();
-  const { appointments, isLoading: isAppointmentsLoading, updateAppointmentLocally, fetchClientAppointments } = useClientAppointments(clientId || '');
+  const { appointments, isLoading: isAppointmentsLoading, fetchClientAppointments } = useClientAppointments(clientId || '');
   // Staff list resolves assignedUserId to a name. Only fetchStaff is called;
   // pending invitations are a Business-Owner-only endpoint.
   const { staff, fetchStaff } = useTeam();
@@ -110,6 +110,7 @@ export const ClientDetailContent: React.FC = () => {
   const contacts = useMemo(() => (client?.contacts ?? []).map(({ id, name }) => ({ id, name })), [client]);
   const [isAppointmentSlideOverOpen, setIsAppointmentSlideOverOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
   const openActivity = (channel: ActivityChannel) => {
     setEditingActivity(null);
@@ -140,10 +141,15 @@ export const ClientDetailContent: React.FC = () => {
 
 
 
-  const handleAppointmentUpdated = (updated: Appointment) => {
-    updateAppointmentLocally(updated);
-    setSelectedAppointment(updated);
-    fetchHistory(); // Refresh timeline when an appointment status changes
+  // The open appointment shows what the list now holds.
+  useEffect(() => {
+    setSelectedAppointment((current) => (current ? appointments.find((entry) => entry.id === current.id) ?? current : current));
+  }, [appointments]);
+
+  // Reload the list, and the timeline, which shows what happened to an appointment.
+  const handleAppointmentChanged = () => {
+    fetchClientAppointments();
+    fetchHistory();
   };
 
   useEffect(() => {
@@ -287,7 +293,7 @@ export const ClientDetailContent: React.FC = () => {
           </Card>
 
           {/* M2 Slice 11: the company's open follow-ups and one click for another (FR-FUP-01). */}
-          {clientId && <FollowUpsPanel clientId={clientId} titleClassName={styles.cardTitle} headerClassName={styles.cardHeader} />}
+          {clientId && <FollowUpsPanel clientId={clientId} onPlanned={handleAppointmentChanged} titleClassName={styles.cardTitle} headerClassName={styles.cardHeader} />}
 
           {/* Company profile (Slice 11: FR-CMP-01, 02, 03) */}
           <Card padding="lg">
@@ -498,6 +504,8 @@ export const ClientDetailContent: React.FC = () => {
                     <div className={styles.appointmentInfo}>
                       <span className={styles.appointmentDate}>
                         {dates.dateTime(app.scheduledAt)}
+                        {' · '}
+                        {t(`calendar.type.${app.type ?? 'MEETING'}`, { ns: 'appointments' })}
                       </span>
                       <span className={styles.appointmentNotes}>{app.notes || t('detail.noNotes')}</span>
                     </div>
@@ -520,29 +528,31 @@ export const ClientDetailContent: React.FC = () => {
         onSaved={() => fetchHistory()}
       />
 
-      <SlideOver
-        isOpen={isAppointmentSlideOverOpen}
-        onClose={() => setIsAppointmentSlideOverOpen(false)}
-        title={t('detail.scheduleAppointment')}
-      >
-        <div className={styles.slideOverBody}>
-          <AppointmentForm
-            lockedClientId={clientId}
-            onSubmit={() => {
-              setIsAppointmentSlideOverOpen(false);
-              fetchClientAppointments();
-              fetchHistory();
-            }}
-            onCancel={() => setIsAppointmentSlideOverOpen(false)}
-          />
-        </div>
-      </SlideOver>
+      <PlanActivityDialog
+        isOpen={isAppointmentSlideOverOpen || !!editingAppointment}
+        onClose={() => {
+          setIsAppointmentSlideOverOpen(false);
+          setEditingAppointment(null);
+        }}
+        clientId={clientId}
+        clientName={client?.name ?? undefined}
+        item={editingAppointment ? appointmentToCalendarItem(editingAppointment) : null}
+        onSaved={() => {
+          setIsAppointmentSlideOverOpen(false);
+          setEditingAppointment(null);
+          handleAppointmentChanged();
+        }}
+      />
 
       <AppointmentDetailPanel
         isOpen={!!selectedAppointment}
         onClose={() => setSelectedAppointment(null)}
-        appointment={selectedAppointment}
-        onAppointmentUpdated={handleAppointmentUpdated}
+        item={selectedAppointment ? appointmentToCalendarItem(selectedAppointment) : null}
+        onChanged={handleAppointmentChanged}
+        onEdit={() => {
+          setEditingAppointment(selectedAppointment);
+          setSelectedAppointment(null);
+        }}
       />
     </div>
   );

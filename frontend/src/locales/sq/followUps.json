@@ -90,7 +90,8 @@
   },
   "section": {
     "title": "Ndjekjet",
-    "none": "Nuk ka ndjekje të hapura."
+    "none": "Nuk ka ndjekje të hapura.",
+    "plan": "Planifiko takim ose vizitë"
   },
   "errors": {
     "dueAt": "Një ndjekje nuk mund të jetë në të kaluarën.",
