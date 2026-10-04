@@ -35,13 +35,15 @@ export class NotificationEmailComposer {
     tenantSlug: string;
     entityType: string | null;
     entityId: string | null;
-    /** The recipient's language, 'sq' or 'en'; only the discount-approval emails follow it yet. */
+    /** The recipient's language, 'sq' or 'en'; the discount-approval and follow-up emails follow it. */
     language?: string | null;
   }): ComposedEmail {
-    const discount = this.discountLines(input.type, input.params, input.language === 'sq' ? 'sq' : 'en');
-    const language = discount?.language ?? 'en';
-    const { subject, body } = discount ?? this.lines(input.type, input.params);
-    const link = this.deepLink(input.tenantSlug, input.entityType, input.entityId, input.params);
+    const recipientLanguage = input.language === 'sq' ? 'sq' : 'en';
+    const localised =
+      this.discountLines(input.type, input.params, recipientLanguage) ?? this.followUpLines(input.type, input.params, recipientLanguage);
+    const language = localised?.language ?? 'en';
+    const { subject, body } = localised ?? this.lines(input.type, input.params);
+    const link = this.deepLink(input.tenantSlug, input.type, input.entityType, input.entityId, input.params);
 
     return {
       subject: `${subject} — ${input.tenantName}`,
@@ -153,6 +155,51 @@ export class NotificationEmailComposer {
     return { ...lines, language };
   }
 
+  /**
+   * The follow-up emails (FR-FUP-02, 09, 10), in the recipient's language.
+   * They name the company and leave the time behind the link: the email is
+   * composed without the workspace's time zone, and a time in the wrong zone
+   * is worse than none. Null for other types.
+   */
+  private followUpLines(
+    type: NotificationType,
+    p: NotificationParams,
+    language: 'sq' | 'en'
+  ): { subject: string; body: string; language: 'sq' | 'en' } | null {
+    const client = String(p.clientName ?? '');
+    const sq = language === 'sq';
+    let lines: { subject: string; body: string };
+    switch (type) {
+      case 'FOLLOW_UP_ASSIGNED':
+        lines = sq
+          ? { subject: `Ju u caktua një ndjekje me ${client}`, body: `Ju u caktua një ndjekje me <strong>${esc(client)}</strong>. E gjeni te "Ndjekjet e mia".` }
+          : { subject: `A follow-up with ${client} was given to you`, body: `A follow-up with <strong>${esc(client)}</strong> was given to you. It is in "My follow-ups".` };
+        break;
+      case 'FOLLOW_UP_DUE':
+        lines = sq
+          ? { subject: `Ndjekja me ${client} është për tani`, body: `Ndjekja juaj me <strong>${esc(client)}</strong> ka ardhur në kohë.` }
+          : { subject: `Your follow-up with ${client} is due`, body: `Your follow-up with <strong>${esc(client)}</strong> is due now.` };
+        break;
+      case 'FOLLOW_UP_DAILY_SUMMARY': {
+        const today = Number(p.today ?? 0);
+        const overdue = Number(p.overdue ?? 0);
+        lines = sq
+          ? {
+              subject: `Ndjekjet e sotme: ${today}`,
+              body: `Sot keni <strong>${today}</strong> ndjekje${overdue > 0 ? ` dhe <strong>${overdue}</strong> të vonuara nga ditët e kaluara` : ''}.`,
+            }
+          : {
+              subject: `Today's follow-ups: ${today}`,
+              body: `You have <strong>${today}</strong> follow-up${today === 1 ? '' : 's'} today${overdue > 0 ? `, and <strong>${overdue}</strong> overdue from earlier days` : ''}.`,
+            };
+        break;
+      }
+      default:
+        return null;
+    }
+    return { ...lines, language };
+  }
+
   private lines(
     type: NotificationType,
     p: NotificationParams
@@ -242,6 +289,10 @@ export class NotificationEmailComposer {
           subject: `${client}'s contract has expired`,
           body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> reached its end date and is now marked expired.`,
         };
+      case 'FOLLOW_UP_ASSIGNED':
+      case 'FOLLOW_UP_DUE':
+      case 'FOLLOW_UP_DAILY_SUMMARY':
+        return this.followUpLines(type, p, 'en')!;
       case 'INVITATION_ACCEPTED':
         return {
           subject: `${String(p.memberName ?? 'A new member')} joined the workspace`,
@@ -261,11 +312,18 @@ export class NotificationEmailComposer {
 
   private deepLink(
     tenantSlug: string,
+    type: NotificationType,
     entityType: string | null,
     entityId: string | null,
     params: NotificationParams = {}
   ): string | null {
+    // FR-FUP-09: the daily summary has no single follow-up; it opens the list.
+    if (type === 'FOLLOW_UP_DAILY_SUMMARY') {
+      return `${this.appUrl}/${tenantSlug}/follow-ups`;
+    }
     if (!entityType || !entityId) return null;
+    // A follow-up opens "My follow-ups" on it.
+    if (entityType === 'FOLLOW_UP') return `${this.appUrl}/${tenantSlug}/follow-ups?open=${encodeURIComponent(entityId)}`;
     // FR-DSC-05: an approval request opens the deal on that offer.
     if (entityType === 'OFFER' && typeof params.offerId === 'string') {
       return `${this.appUrl}/${tenantSlug}/deals/${entityId}?offer=${encodeURIComponent(params.offerId)}`;
@@ -299,7 +357,7 @@ export class NotificationEmailComposer {
     return renderEmailLayout({
       appUrl: this.appUrl,
       preheader: heading,
-      eyebrow: sq && entityType === 'OFFER' ? 'Ofertë' : this.eyebrowFor(entityType),
+      eyebrow: sq ? (entityType === 'OFFER' ? 'Ofertë' : entityType === 'FOLLOW_UP' ? 'Ndjekje' : this.eyebrowFor(entityType)) : this.eyebrowFor(entityType),
       heading: esc(heading),
       bodyHtml: `<p>${body}</p>`,
       cta: link ? { label: sq ? `Hape në ${PRODUCT_NAME}` : `Open in ${PRODUCT_NAME}`, url: link } : undefined,
@@ -324,6 +382,8 @@ export class NotificationEmailComposer {
         return 'Form';
       case 'CONTRACT':
         return 'Contract';
+      case 'FOLLOW_UP':
+        return 'Follow-up';
       default:
         return 'Notification';
     }

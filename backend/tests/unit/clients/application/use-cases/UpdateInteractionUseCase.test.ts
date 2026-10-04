@@ -26,7 +26,7 @@ describe('UpdateInteractionUseCase (FR-ACT-06)', () => {
   const edit = { channel: InteractionChannel.CALL, content: 'Called twice', contactPersonId: 'contact-1', resultId: 'result-1', nextAction: 'Send the offer' };
 
   const useCase = () => {
-    const writeTx: IInteractionWriteTransaction = { run: (work) => work({ interactions: interactionRepo, deals: {} as any }) };
+    const writeTx: IInteractionWriteTransaction = { run: (work) => work({ interactions: interactionRepo, deals: {} as any, followUps: {} as any }) };
     return new UpdateInteractionUseCase(
       clientRepo,
       interactionRepo,

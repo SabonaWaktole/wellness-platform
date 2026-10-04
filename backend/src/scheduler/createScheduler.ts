@@ -3,6 +3,9 @@ import { RecordScopeResolver } from '../access/application/RecordScopeResolver';
 import { PrismaTeamRoster } from '../access/infrastructure/PrismaTeamRoster';
 import { PrismaDiscountApprovalStore } from '../discounts/infrastructure/PrismaDiscountApprovalStore';
 import { DiscountApprovalReminderJob } from './jobs/DiscountApprovalReminderJob';
+import { FollowUpDueJob } from './jobs/FollowUpDueJob';
+import { FollowUpDailySummaryJob } from './jobs/FollowUpDailySummaryJob';
+import { PrismaFollowUpSchedulerQueries } from '../appointments/infrastructure/followUps/PrismaFollowUpSchedulerQueries';
 import { PrismaPermissionHolderDirectory } from '../notifications/infrastructure/PrismaPermissionHolderDirectory';
 import { PrismaSchedulerQueries } from './PrismaSchedulerQueries';
 import { AppointmentReminderJob } from './jobs/AppointmentReminderJob';
@@ -73,6 +76,8 @@ export function createScheduler(): Scheduler {
     emailDispatcher
   );
 
+  const followUpQueries = new PrismaFollowUpSchedulerQueries();
+
   const markInvoiceOverdue = new MarkInvoiceOverdueUseCase(new PrismaInvoiceWriteTransaction());
 
   const expireContract = new ExpireContractUseCase(new PrismaContractWriteTransaction());
@@ -82,6 +87,8 @@ export function createScheduler(): Scheduler {
     new QuotationFollowUpJob(queries, settingsRepository, notifications),
     new QuotationExpiryJob(queries, settingsRepository, expireQuotation, new ExpireOfferUseCase(new PrismaOfferWriteTransaction())),
     new DiscountApprovalReminderJob(new PrismaDiscountApprovalStore(), settingsRepository, notifications),
+    new FollowUpDueJob(followUpQueries, settingsRepository, notifications),
+    new FollowUpDailySummaryJob(followUpQueries, settingsRepository, notifications),
     new InvoiceOverdueJob(queries, markInvoiceOverdue),
     new ContractExpiryJob(queries, expireContract, notifications),
     new ContractRenewalReminderJob(queries, notifications),

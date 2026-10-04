@@ -50,7 +50,7 @@ describe('AddInteractionUseCase', () => {
     deals = { find: jest.fn(), companyName: jest.fn(), insert: jest.fn(), update: jest.fn(), recordChange: jest.fn(), setOfferValue: jest.fn(), hasSentOffer: jest.fn() };
     contacts = { listByClient: jest.fn().mockResolvedValue([{ id: 'contact-1' }]) };
     lookups = { findById: jest.fn().mockResolvedValue({ id: 'result-1', active: true }), list: jest.fn() };
-    const writeTx: IInteractionWriteTransaction = { run: (work) => work({ interactions: interactionRepo, deals }) };
+    const writeTx: IInteractionWriteTransaction = { run: (work) => work({ interactions: interactionRepo, deals, followUps: {} as any }) };
     useCase = new AddInteractionUseCase(
       clientRepo,
       { contacts: contacts as any, lookups: lookups as any, scopes: scopeResolver() },

@@ -28,6 +28,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
       assignedUserId: record.assignedUserId,
       scheduledAt: record.scheduledAt,
       status: record.status as AppointmentStatus,
+      kind: record.kind,
       notes: record.notes || undefined,
       history: history,
       createdAt: record.createdAt,

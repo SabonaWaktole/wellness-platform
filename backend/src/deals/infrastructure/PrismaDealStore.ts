@@ -7,6 +7,9 @@ import { CLOSED_DEAL_STAGES, DealStage, isOpenStage, OPEN_DEAL_STAGES } from '..
 import { DealDetail, DealSummary } from '../application/dealViews';
 import { BoardCursor, DealCompany, DealListFilters, DealSort, IDealStore } from '../application/ports/IDealStore';
 import { DEAL_SUMMARY_INCLUDE, displayName, toSummary } from './prismaDealRows';
+import { dealMarkers } from '../domain/SalesSettings';
+import { ISalesSettingsStore } from '../application/ports/ISalesSettingsStore';
+import { PrismaSalesSettingsStore } from './PrismaSalesSettingsStore';
 
 /** The column each list sort reads. */
 const SORT_COLUMNS: Record<DealSort['field'], keyof Prisma.DealOrderByWithRelationInput> = {
@@ -22,7 +25,11 @@ const SORT_COLUMNS: Record<DealSort['field'], keyof Prisma.DealOrderByWithRelati
  * the deal's own salesperson, which is never NULL.
  */
 export class PrismaDealStore implements IDealStore {
-  constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
+  constructor(
+    private readonly prisma: PrismaClient = defaultPrisma,
+    private readonly salesSettings: ISalesSettingsStore = new PrismaSalesSettingsStore(prisma),
+    private readonly now: () => Date = () => new Date()
+  ) {}
 
   async detail(tenantId: string, id: string, scope: RecordScope): Promise<DealDetail | null> {
     const row = await this.prisma.deal.findFirst({
@@ -47,8 +54,9 @@ export class PrismaDealStore implements IDealStore {
       },
     });
     if (!row) return null;
+    const [summary] = await this.withFollowUps(tenantId, [toSummary(row)]);
     return {
-      ...toSummary(row),
+      ...summary,
       notes: row.notes,
       createdByUserId: row.createdByUserId,
       contacts: row.client.contactPersons,
@@ -109,7 +117,7 @@ export class PrismaDealStore implements IDealStore {
       }),
       this.prisma.deal.count({ where }),
     ]);
-    return { items: rows.map(toSummary), total };
+    return { items: await this.withFollowUps(tenantId, rows.map(toSummary)), total };
   }
 
   async boardCounts(
@@ -156,7 +164,7 @@ export class PrismaDealStore implements IDealStore {
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take,
     });
-    return rows.map(toSummary);
+    return this.withFollowUps(tenantId, rows.map(toSummary));
   }
 
   async company(tenantId: string, clientId: string): Promise<DealCompany | null> {
@@ -176,6 +184,42 @@ export class PrismaDealStore implements IDealStore {
   async isActiveUser(tenantId: string, userId: string): Promise<boolean> {
     const count = await this.prisma.user.count({ where: { id: userId, tenantId, isActive: true, deletedAt: null } });
     return count > 0;
+  }
+
+  /**
+   * FR-DEAL-12, FR-DEAL-10: each deal's earliest open follow-up and its latest
+   * activity other than a note, two grouped queries for the whole page on the
+   * `(tenantId, dealId, …)` indexes, then the markers at the workspace's days.
+   */
+  private async withFollowUps(tenantId: string, summaries: DealSummary[]): Promise<DealSummary[]> {
+    if (summaries.length === 0) return summaries;
+    const dealIds = summaries.map((summary) => summary.id);
+    const [followUps, activities, settings] = await Promise.all([
+      this.prisma.appointment.groupBy({
+        by: ['dealId'],
+        where: { tenantId, dealId: { in: dealIds }, kind: 'FOLLOW_UP', status: { in: ['SCHEDULED', 'CONFIRMED'] } },
+        _min: { scheduledAt: true },
+      }),
+      this.prisma.interaction.groupBy({
+        by: ['dealId'],
+        where: { tenantId, dealId: { in: dealIds }, channel: { not: 'NOTE' } },
+        _max: { occurredAt: true },
+      }),
+      this.salesSettings.get(tenantId),
+    ]);
+    const nextFollowUp = new Map(followUps.map((group) => [group.dealId, group._min.scheduledAt]));
+    const lastActivity = new Map(activities.map((group) => [group.dealId, group._max.occurredAt]));
+    const now = this.now();
+    return summaries.map((summary) => {
+      const next = nextFollowUp.get(summary.id) ?? null;
+      const last = lastActivity.get(summary.id) ?? new Date(summary.createdAt);
+      return {
+        ...summary,
+        nextFollowUpAt: next?.toISOString() ?? null,
+        lastActivityAt: last.toISOString(),
+        ...dealMarkers({ isOpen: isOpenStage(summary.stage), nextFollowUpAt: next, lastActivityAt: last, staleDealDays: settings.staleDealDays, now }),
+      };
+    });
   }
 
   /** Live deals of the workspace inside `scope`. Its own AND array, so callers can add an OR beside the scope's. */

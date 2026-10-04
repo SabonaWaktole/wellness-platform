@@ -11,6 +11,9 @@ export type AppointmentPermission = 'calendar.view' | 'activities.add';
  * Loads one appointment, as long as its assignee is inside the viewer's scope
  * of `key` (FR-RBAC-11). Outside it the appointment is "not found", exactly
  * like one that does not exist (FR-RBAC-05: 404, not 403).
+ *
+ * A follow-up (M2 Slice 11) is changed under `followups.manage`, not
+ * `activities.add`, so these routes cannot reach past the follow-up rules.
  */
 export async function findReachableAppointment(
   repository: IAppointmentRepository,
@@ -20,7 +23,9 @@ export async function findReachableAppointment(
   id: string,
   tenantId: string
 ): Promise<Appointment> {
-  const [appointment, scope] = await Promise.all([repository.findById(id, tenantId), scopes.resolve(access, key)]);
+  const appointment = await repository.findById(id, tenantId);
+  const effectiveKey = appointment?.kind === 'FOLLOW_UP' && key === 'activities.add' ? 'followups.manage' : key;
+  const scope = await scopes.resolve(access, effectiveKey);
   if (!appointment || !admits(scope, appointment.assignedUserId)) {
     throw new Error('Appointment not found');
   }
