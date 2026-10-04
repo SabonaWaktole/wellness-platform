@@ -10,6 +10,8 @@ export interface RescheduleAppointmentDTO {
   tenantId: string;
   access: AccessContext;
   newDate: Date;
+  /** FR-CAL-07: a new end. Without one the item keeps its length. */
+  newEnd?: Date;
   reason: string;
   changedByUserId: string;
 }
@@ -31,7 +33,7 @@ export class RescheduleAppointmentUseCase {
       dto.tenantId
     );
 
-    appointment.reschedule(dto.newDate, dto.reason, dto.changedByUserId);
+    appointment.reschedule(dto.newDate, dto.reason, dto.changedByUserId, dto.newEnd);
 
     await this.appointmentRepository.update(appointment);
 

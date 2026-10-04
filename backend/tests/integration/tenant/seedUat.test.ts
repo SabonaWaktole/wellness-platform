@@ -40,6 +40,7 @@ describe('UAT seed (Slice 15)', () => {
       emailDomain: `${slug}.example.com`,
       bulkCompanies: 30,
       bulkDeals: 40,
+      bulkFollowUps: 60,
     });
 
   const signIn = async (email: string) => {
@@ -79,6 +80,7 @@ describe('UAT seed (Slice 15)', () => {
     expect(second.bulkCreated).toBe(0);
     expect(second.dealsCreated).toBe(0);
     expect(second.bulkDealsCreated).toBe(0);
+    expect(second.bulkFollowUpsCreated).toBe(0);
     expect(await prisma.client.count({ where: { tenantId } })).toBe(UAT_COMPANIES.length + 30);
     expect(await prisma.client.count({ where: { tenantId, name: { startsWith: BULK_PREFIX } } })).toBe(30);
   });
@@ -99,6 +101,16 @@ describe('UAT seed (Slice 15)', () => {
     expect(bulk).toHaveLength(40);
     expect(new Set(bulk.map((deal) => deal.stageKey)).size).toBe(7);
     expect(bulk.every((deal) => deal.stageHistory.length === 1)).toBe(true);
+  });
+
+  it('NFR-PERF-03 seeds bulk open follow-ups, due before and after today, on both salespeople', async () => {
+    expect(first.bulkFollowUpsCreated).toBe(60);
+    const bulk = await prisma.appointment.findMany({ where: { tenantId, kind: 'FOLLOW_UP', notes: { startsWith: 'UAT bulk follow-up ' } } });
+    expect(bulk).toHaveLength(60);
+    expect(bulk.every((item) => item.status === 'SCHEDULED')).toBe(true);
+    expect(bulk.some((item) => item.scheduledAt.getTime() < Date.now())).toBe(true);
+    expect(bulk.some((item) => item.scheduledAt.getTime() > Date.now())).toBe(true);
+    expect(new Set(bulk.map((item) => item.assignedUserId)).size).toBe(2);
   });
 
   it('UAT-2 every named company has two contacts, one of them primary', async () => {

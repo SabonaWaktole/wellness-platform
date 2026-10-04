@@ -5,6 +5,7 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRepository';
 import { Appointment } from '../../domain/entities/Appointment';
 import { DomainError } from '../../../shared/domain/errors/DomainError';
+import { IPlanningLinks } from '../../domain/repositories/IPlanningLinks';
 import { NotificationService } from '../../../notifications/application/NotificationService';
 
 export interface CreateAppointmentDTO {
@@ -13,6 +14,13 @@ export interface CreateAppointmentDTO {
   assignedUserId: string;
   scheduledAt: Date;
   notes?: string;
+  /** FR-CAL-02: CALL, VISIT, MEETING or ONLINE_MEETING. Defaults to a meeting. */
+  type?: string;
+  dealId?: string | null;
+  contactPersonId?: string | null;
+  endAt?: Date | null;
+  /** Where a visit takes place. */
+  place?: string | null;
   /**
    * Who is creating it. Added for notifications: cancel and reschedule already
    * carried `changedByUserId`, but create carried no actor at all, so
@@ -22,12 +30,29 @@ export interface CreateAppointmentDTO {
   access: AccessContext;
 }
 
+/** The deal and the contact have to be the company's own (FR-CAL-02). */
+export async function assertLinks(
+  links: IPlanningLinks,
+  tenantId: string,
+  clientId: string,
+  dealId?: string | null,
+  contactPersonId?: string | null
+): Promise<void> {
+  if (dealId && !(await links.dealBelongsToCompany(tenantId, clientId, dealId))) {
+    throw new DomainError('That deal does not belong to this company.');
+  }
+  if (contactPersonId && !(await links.contactBelongsToCompany(tenantId, clientId, contactPersonId))) {
+    throw new DomainError('That contact does not belong to this company.');
+  }
+}
+
 export class CreateAppointmentUseCase {
   constructor(
     private readonly appointmentRepository: IAppointmentRepository,
     private readonly clientRepository: any, // IClientRepository in reality
     private readonly userRepository: any, // IUserRepository in reality
     private readonly scopes: RecordScopeResolver,
+    private readonly links: IPlanningLinks,
     private readonly notifications?: NotificationService
   ) {}
 
@@ -57,13 +82,20 @@ export class CreateAppointmentUseCase {
       throw new DomainError('Assigned user does not belong to this tenant');
     }
 
-    const appointment = Appointment.create({
+    await assertLinks(this.links, dto.tenantId, dto.clientId, dto.dealId, dto.contactPersonId);
+
+    const appointment = Appointment.plan({
       id: crypto.randomUUID(), // Assuming a UUID generator or pass it in
       tenantId: dto.tenantId,
       clientId: dto.clientId,
       assignedUserId: dto.assignedUserId,
       scheduledAt: dto.scheduledAt,
       notes: dto.notes,
+      type: dto.type,
+      dealId: dto.dealId,
+      contactPersonId: dto.contactPersonId,
+      endAt: dto.endAt,
+      place: dto.place,
       clientTenantId: client.tenantId,
       assignedUserTenantId: user.tenantId,
     });

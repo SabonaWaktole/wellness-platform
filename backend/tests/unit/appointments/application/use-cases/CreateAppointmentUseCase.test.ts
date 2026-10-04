@@ -9,6 +9,10 @@ describe('CreateAppointmentUseCase', () => {
   let mockAppointmentRepo: any;
   let mockClientRepo: any;
   let mockUserRepo: any;
+  const planningLinks = {
+    dealBelongsToCompany: jest.fn().mockResolvedValue(true),
+    contactBelongsToCompany: jest.fn().mockResolvedValue(true),
+  };
 
   beforeEach(() => {
     mockAppointmentRepo = {
@@ -25,7 +29,8 @@ describe('CreateAppointmentUseCase', () => {
       mockAppointmentRepo,
       mockClientRepo,
       mockUserRepo,
-      scopeResolver()
+      scopeResolver(),
+      planningLinks
     );
   });
 
