@@ -213,6 +213,20 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
           ...POSITIVE,
         };
       }
+      // M2 Slice 11: a follow-up, scheduled, completed or cancelled (FR-FUP-06).
+      case 'FOLLOW_UP_SCHEDULED':
+      case 'FOLLOW_UP_COMPLETED':
+      case 'FOLLOW_UP_CANCELLED': {
+        const Icon = channelIcon(d.followUpType);
+        const due = d.scheduledAt ? t('detail.timeline.followUpDue', { date: dates.dateTime(d.scheduledAt) }) : '';
+        const extra = entry.type === 'FOLLOW_UP_CANCELLED' ? d.cancelReason : d.notes;
+        return {
+          title: t(`detail.timeline.events.${entry.type}`, { type: t(`followUps:type.${d.followUpType}`, { defaultValue: d.followUpType }) }),
+          content: [due, extra].filter(Boolean).join(' · ') || undefined,
+          icon: <Icon size={16} />,
+          ...(entry.type === 'FOLLOW_UP_CANCELLED' ? NEGATIVE : entry.type === 'FOLLOW_UP_COMPLETED' ? POSITIVE : PRIMARY),
+        };
+      }
       default:
         if (entry.type.startsWith('APPOINTMENT_')) {
           const tone = d.status === 'CANCELLED' ? NEGATIVE : d.status === 'COMPLETED' || d.status === 'CONFIRMED' ? POSITIVE : PRIMARY;

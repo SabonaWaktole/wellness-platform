@@ -1,0 +1,26 @@
+.markers {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--font-size-label-sm, 12px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.overdue {
+  background: var(--surface-error-subtle, #fef3f2);
+  color: var(--color-error, #b42318);
+}
+
+.stale {
+  background: var(--surface-warning-subtle, #fffaeb);
+  color: var(--color-warning-strong, #93370d);
+}

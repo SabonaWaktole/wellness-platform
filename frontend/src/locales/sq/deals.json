@@ -101,8 +101,6 @@
     "recordActivity": "Regjistro aktivitet",
     "noActivities": "Ende nuk ka aktivitete për këtë marrëveshje.",
     "activitiesLoadFailed": "Aktivitetet nuk u ngarkuan.",
-    "followUps": "Ndjekjet",
-    "followUpsSoon": "Ndjekjet e planifikuara për këtë marrëveshje do të shfaqen këtu.",
     "actions": "Veprimet e marrëveshjes",
     "edit": "Ndrysho",
     "delete": "Fshi marrëveshjen",
@@ -177,5 +175,10 @@
       "REJECTED": "Refuzuar",
       "EXPIRED": "Skaduar"
     }
+  },
+  "markers": {
+    "overdueFollowUp": "Ndjekje e vonuar",
+    "stale_one": "Pa aktivitet prej {{count}} dite",
+    "stale_other": "Pa aktivitet prej {{count}} ditësh"
   }
 }

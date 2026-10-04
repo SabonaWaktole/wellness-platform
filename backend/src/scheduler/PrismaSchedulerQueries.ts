@@ -30,6 +30,8 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
         // restart should catch up on work that is still useful, not spam.
         scheduledAt: { gte: now, lte: horizon },
         status: { in: ['SCHEDULED', 'CONFIRMED'] },
+        // A follow-up has its own notice at its due time (FollowUpDueJob, FR-FUP-09).
+        kind: { not: 'FOLLOW_UP' },
       },
       select: {
         id: true,

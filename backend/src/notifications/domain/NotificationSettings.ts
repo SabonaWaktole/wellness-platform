@@ -14,6 +14,10 @@ export interface NotificationSettingsProps {
   quotationExpiryDays: number;
   /** M2 Slice 10: a pending discount approval older than this many hours reminds its approvers once (FR-DSC-12). */
   discountApprovalReminderHours: number;
+  /** M2 Slice 11: a follow-up coming due notifies its salesperson in the app (FR-FUP-09). */
+  followUpDueNotificationsEnabled: boolean;
+  /** M2 Slice 11: the 07:30 summary of each salesperson's day, in the app and by email (FR-FUP-09). */
+  followUpDailySummaryEnabled: boolean;
 }
 
 /** The subset a caller may change. Every field optional — this is a PATCH. */
@@ -74,6 +78,8 @@ export class NotificationSettings {
   readonly quotationAutoExpireEnabled: boolean;
   readonly quotationExpiryDays: number;
   readonly discountApprovalReminderHours: number;
+  readonly followUpDueNotificationsEnabled: boolean;
+  readonly followUpDailySummaryEnabled: boolean;
 
   private constructor(props: NotificationSettingsProps) {
     this.tenantId = props.tenantId;
@@ -87,6 +93,8 @@ export class NotificationSettings {
     this.quotationAutoExpireEnabled = props.quotationAutoExpireEnabled;
     this.quotationExpiryDays = props.quotationExpiryDays;
     this.discountApprovalReminderHours = props.discountApprovalReminderHours;
+    this.followUpDueNotificationsEnabled = props.followUpDueNotificationsEnabled;
+    this.followUpDailySummaryEnabled = props.followUpDailySummaryEnabled;
   }
 
   /**
@@ -122,6 +130,8 @@ export class NotificationSettings {
       quotationAutoExpireEnabled: false,
       quotationExpiryDays: 30,
       discountApprovalReminderHours: 24,
+      followUpDueNotificationsEnabled: true,
+      followUpDailySummaryEnabled: false,
     });
   }
 
@@ -138,10 +148,14 @@ export class NotificationSettings {
     quotationAutoExpireEnabled: boolean;
     quotationExpiryDays: number;
     discountApprovalReminderHours?: number;
+    followUpDueNotificationsEnabled?: boolean;
+    followUpDailySummaryEnabled?: boolean;
   }): NotificationSettings {
     return new NotificationSettings({
       ...props,
       discountApprovalReminderHours: props.discountApprovalReminderHours ?? 24,
+      followUpDueNotificationsEnabled: props.followUpDueNotificationsEnabled ?? true,
+      followUpDailySummaryEnabled: props.followUpDailySummaryEnabled ?? false,
       // A stored type that has since been removed from the catalogue is
       // filtered out rather than throwing. A settings row must never be able to
       // make a workspace unreadable.
@@ -175,6 +189,9 @@ export class NotificationSettings {
       quotationExpiryDays: patch.quotationExpiryDays ?? this.quotationExpiryDays,
       discountApprovalReminderHours:
         patch.discountApprovalReminderHours ?? this.discountApprovalReminderHours,
+      followUpDueNotificationsEnabled:
+        patch.followUpDueNotificationsEnabled ?? this.followUpDueNotificationsEnabled,
+      followUpDailySummaryEnabled: patch.followUpDailySummaryEnabled ?? this.followUpDailySummaryEnabled,
     });
     next.assertValid();
     return next;
@@ -219,8 +236,15 @@ export class NotificationSettings {
     }
   }
 
-  /** Does this event type email at all, for anyone? */
+  /**
+   * Does this event type email at all, for anyone?
+   *
+   * The follow-up daily summary is an email by definition (FR-FUP-09), so its
+   * own switch governs it rather than the event list, and it is left out of
+   * `availableEventTypes`.
+   */
   emailsFor(type: NotificationType): boolean {
+    if (type === 'FOLLOW_UP_DAILY_SUMMARY') return this.emailEnabled && this.followUpDailySummaryEnabled;
     return this.emailEnabled && this.emailEventTypes.includes(type);
   }
 
@@ -241,9 +265,11 @@ export class NotificationSettings {
       quotationAutoExpireEnabled: this.quotationAutoExpireEnabled,
       quotationExpiryDays: this.quotationExpiryDays,
       discountApprovalReminderHours: this.discountApprovalReminderHours,
+      followUpDueNotificationsEnabled: this.followUpDueNotificationsEnabled,
+      followUpDailySummaryEnabled: this.followUpDailySummaryEnabled,
       // The catalogue travels with the settings so the UI never hard-codes a
       // list that can fall behind the server's.
-      availableEventTypes: NOTIFICATION_TYPES,
+      availableEventTypes: NOTIFICATION_TYPES.filter((type) => type !== 'FOLLOW_UP_DAILY_SUMMARY'),
       availableRecipientRoles: EMAILABLE_ROLES,
       limits: LIMITS,
     };

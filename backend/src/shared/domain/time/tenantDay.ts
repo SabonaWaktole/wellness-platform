@@ -128,3 +128,23 @@ export function dayBoundsInZone(
 
   return { start, end };
 }
+
+/**
+ * The instant at which the wall clock in `timeZone` reads `hour:minute` on
+ * the calendar day `dayKey` (`YYYY-MM-DD`).
+ *
+ * BACKEND ONLY, not mirrored: the frontend never turns a wall time into an
+ * instant; it sends the day and the time and the server does it (M2 Slice
+ * 11, follow-up due times in the workspace zone, FR-FUP-01).
+ *
+ * Two passes, because the offset to subtract is the one in effect at the
+ * answer, which is not known until the first guess. A wall time that a
+ * spring-forward skips resolves an hour later; one that a fall-back repeats
+ * resolves to its first occurrence.
+ */
+export function instantInZone(dayKey: string, hour: number, minute: number, timeZone: string): Date {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const asIfUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  const firstGuess = asIfUtc - zoneOffsetMs(new Date(asIfUtc), timeZone);
+  return new Date(asIfUtc - zoneOffsetMs(new Date(firstGuess), timeZone));
+}

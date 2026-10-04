@@ -1,0 +1,94 @@
+/* ============================================================================
+ * FollowUpsContent (FR-FUP-07, 08): "My follow-ups" and the team's.
+ * One column at every width, so it reads the same on a phone (NFR-USE-02).
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.breadcrumb {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.message {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--font-size-title-md, 1.05rem);
+  font-weight: 600;
+}
+
+.groupOverdue {
+  color: var(--color-error, #d92d20);
+}
+
+.count {
+  font-size: var(--font-size-label-md);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-md);
+}
+
+.filter {
+  min-width: 200px;
+  flex: 1 1 200px;
+  max-width: 320px;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}

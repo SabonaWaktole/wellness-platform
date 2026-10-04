@@ -9,6 +9,7 @@ import { Pagination } from '../../components/ui/Pagination/Pagination';
 import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { StatusBadge } from '../../components/ui/StatusBadge/StatusBadge';
+import { DealMarkers } from './DealMarkers';
 import { Can } from '../../components/auth/Can';
 import { useActiveLookups } from '../../hooks/useActiveLookups';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -162,6 +163,7 @@ export const DealListContent: React.FC = () => {
         <div className={styles.dealCell}>
           <span className={styles.dealTitle}>{text.title(deal)}</span>
           <span className={styles.dealCompany}>{deal.companyName}</span>
+          <DealMarkers deal={deal} />
         </div>
       ),
     },

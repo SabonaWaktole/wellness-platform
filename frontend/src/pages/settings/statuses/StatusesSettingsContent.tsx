@@ -7,6 +7,7 @@ import { Button } from '../../../components/ui/Button';
 import { ColorPicker } from '../../../components/ui/ColorPicker';
 import { useStatusLabelsStore } from '../../../store/useStatusLabelsStore';
 import { statusLabelService, type StatusDomain, type StatusLabelItem } from '../../../services/statusLabelService';
+import { salesSettingsService } from '../../../services/followUpService';
 import { lookupLabel } from '../../../utils/lookupLabel';
 import styles from './StatusesSettingsContent.module.css';
 
@@ -207,6 +208,92 @@ function StatusDomainSection({ domain }: { domain: StatusDomain }) {
   );
 }
 
+/**
+ * FR-DEAL-12: after how many days without activity an open deal is
+ * highlighted on the board and the list (default 14). Beside the deal stages,
+ * since both shape how the pipeline reads.
+ */
+function StaleDealDaysSection() {
+  const { t } = useTranslation('settings');
+  const { tenantSlug } = useParams();
+  const [days, setDays] = useState<number | null>(null);
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!tenantSlug) return;
+    salesSettingsService
+      .get(tenantSlug)
+      .then((settings) => {
+        setDays(settings.staleDealDays);
+        setDraft(String(settings.staleDealDays));
+      })
+      .catch(() => setError(t('statuses.staleDeals.loadFailed')));
+  }, [tenantSlug, t]);
+
+  const save = async () => {
+    if (!tenantSlug) return;
+    const value = Number(draft);
+    if (!Number.isInteger(value) || value < 1 || value > 365) {
+      setError(t('statuses.staleDeals.invalid'));
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const settings = await salesSettingsService.update(tenantSlug, { staleDealDays: value });
+      setDays(settings.staleDealDays);
+      setSaved(true);
+    } catch {
+      setError(t('statuses.staleDeals.saveFailed'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card padding="md" className={styles.section}>
+      <h3 className={styles.sectionTitle}>{t('statuses.staleDeals.title')}</h3>
+      <p className={styles.mutedText}>{t('statuses.staleDeals.hint')}</p>
+      <div className={styles.staleRow}>
+        <label htmlFor="staleDealDays">{t('statuses.staleDeals.label')}</label>
+        <input
+          id="staleDealDays"
+          type="number"
+          min={1}
+          max={365}
+          className={styles.staleInput}
+          value={draft}
+          disabled={days === null || saving}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            setSaved(false);
+          }}
+        />
+        <span>{t('statuses.staleDeals.days')}</span>
+        <Button
+          size="sm"
+          aria-label={t('statuses.staleDeals.saveAria')}
+          onClick={save}
+          isLoading={saving}
+          disabled={days === null || draft === String(days)}
+        >
+          {t('statuses.staleDeals.save')}
+        </Button>
+      </div>
+      {error && (
+        <p className={styles.errorText} role="alert">
+          {error}
+        </p>
+      )}
+      {saved && <p className={styles.mutedText} role="status">{t('statuses.staleDeals.saved')}</p>}
+    </Card>
+  );
+}
+
 /** Settings → Statuses (Slice 10: FR-SET-07, 08). */
 export const StatusesSettingsContent = () => {
   const { t } = useTranslation('settings');
@@ -220,6 +307,7 @@ export const StatusesSettingsContent = () => {
       {DOMAINS.map((domain) => (
         <StatusDomainSection key={domain} domain={domain} />
       ))}
+      <StaleDealDaysSection />
       <p className={styles.mutedText}>{t('statuses.waivedNotice')}</p>
     </div>
   );

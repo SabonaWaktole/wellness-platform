@@ -148,9 +148,13 @@
         "CONTRACT_STATUS_CHANGED": "Contract {{reference}}: {{from}} → {{to}}",
         "PAYMENT_RECEIVED": "Payment received · contract {{reference}}",
         "DEAL_CREATED": "Deal created: {{deal}}",
-        "DEAL_STAGE_CHANGED": "Deal {{deal}}: {{from}} → {{to}}"
+        "DEAL_STAGE_CHANGED": "Deal {{deal}}: {{from}} → {{to}}",
+        "FOLLOW_UP_SCHEDULED": "Follow-up scheduled: {{type}}",
+        "FOLLOW_UP_COMPLETED": "Follow-up completed: {{type}}",
+        "FOLLOW_UP_CANCELLED": "Follow-up cancelled: {{type}}"
       },
       "appointmentScheduledFor": "Scheduled for {{date}}",
+      "followUpDue": "Due {{date}}",
       "offerTotal": "Total: {{amount}}",
       "contractValidity": "Valid {{from}} – {{to}}",
       "contractPrice": "{{amount}} / {{period}}",
@@ -191,7 +195,9 @@
       "contactPersonId": "Choose the contact person.",
       "resultId": "Choose a result.",
       "dealId": "Choose an open deal of this company."
-    }
+    },
+    "completeTitle": "Complete follow-up",
+    "saved": "Activity saved."
   },
   "form": {
     "createTitle": "Add New Client",

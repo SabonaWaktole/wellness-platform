@@ -17,6 +17,8 @@ export interface AppointmentProps {
   assignedUserId: string;
   scheduledAt: Date;
   status?: AppointmentStatus;
+  /** M2 Slice 11 (plan D1): FOLLOW_UP or PLANNED. Written by the follow-up use cases only; read here for access. */
+  kind?: string;
   notes?: string;
   history?: RescheduleLog[];
   createdAt?: Date;
@@ -40,6 +42,7 @@ export class Appointment {
   private _assignedUserId: string;
   private _scheduledAt: Date;
   private _status: AppointmentStatus;
+  private _kind: string;
   private _notes?: string;
   private _history: RescheduleLog[];
   private _createdAt: Date;
@@ -55,6 +58,7 @@ export class Appointment {
     this._assignedUserId = props.assignedUserId;
     this._scheduledAt = props.scheduledAt;
     this._status = props.status ?? AppointmentStatus.SCHEDULED;
+    this._kind = props.kind ?? 'PLANNED';
     this._notes = props.notes;
     this._history = props.history ?? [];
     this._createdAt = props.createdAt ?? new Date();
@@ -81,6 +85,7 @@ export class Appointment {
   get assignedUserId(): string { return this._assignedUserId; }
   get scheduledAt(): Date { return this._scheduledAt; }
   get status(): AppointmentStatus { return this._status; }
+  get kind(): string { return this._kind; }
   get notes(): string | undefined { return this._notes; }
   get history(): RescheduleLog[] { return [...this._history]; }
   get createdAt(): Date { return this._createdAt; }

@@ -1,10 +1,13 @@
 import { IInteractionRepository } from '../../domain/repositories/IInteractionRepository';
 import { IDealWrites } from '../../../deals/application/ports/IDealWriteTransaction';
+import { IFollowUpWrites } from '../../../appointments/application/followUps/ports/IFollowUpWriteTransaction';
 
 export interface InteractionWriteRepos {
   interactions: IInteractionRepository;
   /** The linked deal is read and, on a first activity, moved on the same connection (FR-DEAL-08). */
   deals: IDealWrites;
+  /** The follow-up an activity completes is closed on the same connection (M2 Slice 11, FR-FUP-06). */
+  followUps: IFollowUpWrites;
 }
 
 /**

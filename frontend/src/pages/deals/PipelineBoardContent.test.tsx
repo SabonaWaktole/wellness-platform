@@ -29,6 +29,9 @@ const card = (id: string, stage: DealStage, overrides: Partial<DealSummary> = {}
   netMonthlyPrice: null,
   annualValue: null,
   nextFollowUpAt: null,
+  lastActivityAt: '2026-10-02T08:00:00Z',
+  hasOverdueFollowUp: false,
+  isStale: false,
   ...overrides,
 });
 
@@ -76,6 +79,16 @@ describe('Pipeline board (FR-DEAL-10, FR-DEAL-13)', () => {
     expect(within(contacted).getByText('Company a – New contract')).toBeInTheDocument();
     expect(within(contacted).getAllByText('Besa Test')).toHaveLength(2);
     expect(screen.getAllByRole('region', { name: /, \d+ deals$/ })).toHaveLength(9);
+  });
+
+  it('FR-DEAL-12 FR-DEAL-10 a card shows its next follow-up and the overdue marker', async () => {
+    vi.mocked(dealService.board).mockResolvedValue(
+      boardWith([{ ...card('a', 'CONTACTED'), nextFollowUpAt: '2026-10-01T07:00:00Z', hasOverdueFollowUp: true }, card('b', 'CONTACTED')])
+    );
+    renderBoard();
+    const contacted = await waitFor(() => column(/^Contacted/));
+    expect(within(contacted).getByText('Overdue follow-up')).toBeInTheDocument();
+    expect(within(contacted).getByText(/^Follow-up /)).toBeInTheDocument();
   });
 
   it('FR-DEAL-10 dragging a card from Contacted to Interested moves it and updates both counts', async () => {

@@ -57,6 +57,12 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        * ContactPerson and ActivityResult as well as Client and User, so they
        * go before the deals.
        */
+      /*
+       * Follow-ups (M2 Slice 11) are appointments that name the activity
+       * that completed them under RESTRICT, as well as their deal and
+       * contact, so they go before all three.
+       */
+      await tx.appointment.deleteMany({ where: { tenantId } });
       await tx.interaction.deleteMany({ where: { tenantId } });
       /*
        * Deals (M2 Slice 6) and offers (M2 Slice 8) reference each other: a
@@ -77,7 +83,6 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.contract.deleteMany({ where: { tenantId } });
       await tx.ownershipTransfer.deleteMany({ where: { tenantId } });
       await tx.notification.deleteMany({ where: { tenantId } });
-      await tx.appointment.deleteMany({ where: { tenantId } });
       await tx.quotation.deleteMany({ where: { tenantId } });
       /*
        * Deals hold RESTRICT references to Client, User, LostReason and
@@ -129,6 +134,7 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
       await tx.visitFrequency.deleteMany({ where: { tenantId } });
       await tx.employeeBand.deleteMany({ where: { tenantId } });
       await tx.pricingSettings.deleteMany({ where: { tenantId } });
+      await tx.salesSettings.deleteMany({ where: { tenantId } });
       // Services and packages (M2 Slice 4): their links cascade from both.
       await tx.servicePackage.deleteMany({ where: { tenantId } });
       await tx.service.deleteMany({ where: { tenantId } });

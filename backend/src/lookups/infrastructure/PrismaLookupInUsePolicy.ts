@@ -42,9 +42,14 @@ export class PrismaLookupInUsePolicy implements ILookupInUsePolicy {
       case LookupList.ActivityResults:
         // An activity keeps its result (M2 Slice 7, FR-ACT-03).
         return this.prisma.interaction.count({ where: { tenantId, resultId: id } });
-      case LookupList.FollowUpIntervals:
-        // Nothing points at this list until follow-ups do (M2 Slice 11).
-        return 0;
+      case LookupList.FollowUpIntervals: {
+        // A follow-up scheduled with this interval (M2 Slice 11), open or
+        // closed. Days are unique per workspace, so they name the interval.
+        // Deactivating stays allowed: it only hides the button.
+        const interval = await this.prisma.followUpInterval.findFirst({ where: { tenantId, id }, select: { days: true } });
+        if (!interval) return 0;
+        return this.prisma.appointment.count({ where: { tenantId, kind: 'FOLLOW_UP', intervalDays: interval.days } });
+      }
     }
   }
 }

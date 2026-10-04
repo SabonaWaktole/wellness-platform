@@ -22,6 +22,10 @@ export interface NotificationSettings {
   quotationExpiryDays: number;
   /** M2 Slice 10: a pending discount approval older than this many hours reminds its approvers once. */
   discountApprovalReminderHours: number;
+  /** M2 Slice 11: a follow-up coming due notifies its salesperson (FR-FUP-09). */
+  followUpDueNotificationsEnabled: boolean;
+  /** M2 Slice 11: the 07:30 summary of each salesperson's follow-ups, also by email (FR-FUP-09). */
+  followUpDailySummaryEnabled: boolean;
 
   /*
    * Served with the settings rather than hard-coded here. The catalogue of

@@ -7,10 +7,21 @@ import { dealService } from '../../services/dealService';
 import { lookupService } from '../../services/lookupService';
 import { useAuthStore } from '../../store/useAuthStore';
 import type { ActivityView } from '../../types/client';
+import type { FollowUp } from '../../types/followUp';
+import { followUpService } from '../../services/followUpService';
+import { ToastProvider } from '../ui/Toast';
 
 vi.mock('../../services/clientService', () => ({ clientService: { addInteraction: vi.fn(), updateInteraction: vi.fn() } }));
 vi.mock('../../services/dealService', () => ({ dealService: { list: vi.fn() } }));
 vi.mock('../../services/lookupService', () => ({ lookupService: { list: vi.fn() } }));
+vi.mock('../../services/followUpService', () => ({ followUpService: { schedule: vi.fn(), complete: vi.fn() } }));
+vi.mock('../../hooks/useActiveLookups', () => ({
+  useActiveLookups: () => [
+    { id: 'i3', days: 3, nameSq: '3 ditë', nameEn: '3 days', order: 1, active: true },
+    { id: 'i5', days: 5, nameSq: '5 ditë', nameEn: '5 days', order: 2, active: true },
+    { id: 'i7', days: 7, nameSq: '7 ditë', nameEn: '7 days', order: 3, active: true },
+  ],
+}));
 
 const SALES_USER = { 'activities.add': 'OWN', 'notes.add': 'OWN', 'deals.view': 'OWN' };
 const RECEPTION = { 'notes.add': 'ALL' };
@@ -134,3 +145,103 @@ describe('ActivityDialog (FR-ACT-01, 02, 06)', () => {
     );
   });
 });
+
+describe('ActivityDialog and follow-ups (M2 Slice 11)', () => {
+  const SALES_WITH_FOLLOW_UPS = { ...SALES_USER, 'followups.manage': 'OWN' };
+  const followUp = (overrides: Partial<FollowUp> = {}): FollowUp => ({
+    id: 'f1', clientId: 'c1', companyName: 'Kafe Blloku', dealId: 'd1', dealTitle: null, dealType: 'NEW_CONTRACT',
+    contactPersonId: 'p2', contactName: 'Arben Leka', assignedUserId: 'u-a', assignedUserName: 'Besa Test', type: 'VISIT',
+    status: 'SCHEDULED', scheduledAt: '2026-10-08T07:00:00Z', notes: null, intervalDays: 3, completedInteractionId: null,
+    cancelReason: null, isOverdue: false, history: [], createdAt: '2026-10-05T08:00:00Z', updatedAt: '2026-10-05T08:00:00Z',
+    ...overrides,
+  });
+  const renderWithToasts = (props: Partial<ActivityDialogProps> = {}) => {
+    const handlers = { onClose: vi.fn(), onSaved: vi.fn() };
+    render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/acme/clients/c1']}>
+          <Routes>
+            <Route
+              path="/:tenantSlug/clients/:clientId"
+              element={<ActivityDialog isOpen clientId="c1" contacts={[{ id: 'p1', name: 'Elira Hoxha' }, { id: 'p2', name: 'Arben Leka' }]} {...handlers} {...props} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    );
+    return handlers;
+  };
+  const fillCall = async () => {
+    fireEvent.change(screen.getByLabelText(/Contact person/), { target: { value: 'p1' } });
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Reached – interested' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/Result/), { target: { value: 'r1' } });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    signIn(SALES_WITH_FOLLOW_UPS);
+    vi.mocked(lookupService.list).mockResolvedValue(RESULTS as any);
+    vi.mocked(dealService.list).mockResolvedValue({ items: DEALS, total: 2, page: 1, pageSize: 100 } as any);
+    vi.mocked(clientService.addInteraction).mockResolvedValue({ id: 'i9', channel: 'CALL', dealId: null, nextAction: 'Send the offer' } as any);
+    vi.mocked(followUpService.schedule).mockResolvedValue(followUp({ id: 'f9' }));
+  });
+
+  it('FR-ACT-04 saving a call and clicking "+5 days" creates both the activity and the follow-up', async () => {
+    const { onSaved, onClose } = renderWithToasts();
+    await fillCall();
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }));
+
+    // The dialog stays open on the follow-up buttons (FR-FUP-01).
+    expect(await screen.findByText('Schedule a follow-up?')).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'i9' }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('button', { name: /Follow up in \d days/ }).map((button) => button.textContent)).toEqual(['+3 days', '+5 days', '+7 days']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Follow up in 5 days' }));
+    await waitFor(() => expect(followUpService.schedule).toHaveBeenCalledWith('acme', expect.objectContaining({ clientId: 'c1', fromActivityId: 'i9', intervalDays: 5 })));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('FR-ACT-04 "Done" closes the dialog without scheduling a follow-up', async () => {
+    const { onClose } = renderWithToasts();
+    await fillCall();
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalled();
+    expect(followUpService.schedule).not.toHaveBeenCalled();
+  });
+
+  it('FR-ACT-04 without followups.manage the dialog closes on save, with no follow-up buttons', async () => {
+    signIn(SALES_USER);
+    const { onClose } = renderWithToasts();
+    await fillCall();
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.queryByText('Schedule a follow-up?')).not.toBeInTheDocument();
+  });
+
+  it('FR-FUP-06 completing a follow-up opens the activity form pre-filled with its type and contact, and saves through the follow-up', async () => {
+    vi.mocked(followUpService.complete).mockResolvedValue({
+      followUp: followUp({ status: 'COMPLETED' }),
+      activity: { id: 'i10', channel: 'VISIT', dealId: 'd1', nextAction: null } as any,
+    });
+    const { onSaved } = renderWithToasts({ completing: followUp() });
+
+    expect(screen.getByRole('heading', { name: 'Complete follow-up' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Visit' })).toHaveAttribute('aria-checked', 'true');
+    // A follow-up is completed by contact with the client, not a note.
+    expect(screen.queryByRole('radio', { name: 'Note' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Contact person/)).toHaveValue('p2');
+
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Reached – interested' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/Result/), { target: { value: 'r1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }));
+
+    await waitFor(() =>
+      expect(followUpService.complete).toHaveBeenCalledWith('acme', 'f1', expect.objectContaining({ channel: 'VISIT', contactPersonId: 'p2', resultId: 'r1', dealId: 'd1' }))
+    );
+    expect(clientService.addInteraction).not.toHaveBeenCalled();
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'i10' }));
+  });
+});
+

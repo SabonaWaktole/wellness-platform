@@ -180,6 +180,9 @@ model Tenant {
 
   // M2 Slice 10: discount approvals above the cap (FR-DSC-03..12)
   discountApprovals DiscountApproval[]
+
+  // M2 Slice 11: workspace sales settings (FR-DEAL-12)
+  salesSettings SalesSettings?
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -258,6 +261,17 @@ model NotificationSettings {
   /// M2 Slice 10: a pending discount approval older than this many hours
   /// reminds its approvers once (FR-DSC-12). Admin-controlled (Settings → Notifications).
   discountApprovalReminderHours Int @default(24)
+
+  /// M2 Slice 11: a follow-up that reaches its due time notifies its
+  /// salesperson in the app (FR-FUP-09).
+  followUpDueNotificationsEnabled Boolean @default(true)
+  /// M2 Slice 11: a 07:30 email listing each salesperson's follow-ups for the
+  /// day, in the workspace time zone (FR-FUP-09). Off until switched on.
+  followUpDailySummaryEnabled     Boolean @default(false)
+  /// The workspace day (YYYY-MM-DD) whose summary has gone out. Written only
+  /// by the scheduler, which claims a day by moving this forward, so one day
+  /// is never summarised twice.
+  followUpSummarySentOn           String?
 
   updatedAt DateTime @updatedAt
 
@@ -618,6 +632,8 @@ model ContactPerson {
   interactions Interaction[]
   /// M2 Slice 9: offers addressed to this contact (FR-OFR-02).
   offers       Quotation[]
+  /// M2 Slice 11: follow-ups with this contact.
+  appointments Appointment[]
 
   @@index([tenantId, clientId])
   @@index([tenantId, phone])
@@ -687,16 +703,18 @@ model Interaction {
   updatedAt         DateTime?
   updatedByUserId   String?
 
-  tenant          Tenant           @relation(fields: [tenantId], references: [id])
-  client          Client           @relation(fields: [clientId], references: [id])
-  authorUser      User             @relation("InteractionAuthor", fields: [authorUserId], references: [id])
-  outcomeCategory OutcomeCategory? @relation(fields: [outcomeCategoryId], references: [id])
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  client            Client           @relation(fields: [clientId], references: [id])
+  authorUser        User             @relation("InteractionAuthor", fields: [authorUserId], references: [id])
+  outcomeCategory   OutcomeCategory? @relation(fields: [outcomeCategoryId], references: [id])
   /// Restrict: contacts, deals and results are soft-deleted or refused while
   /// in use, never removed under an activity.
-  contactPerson   ContactPerson?   @relation(fields: [contactPersonId], references: [id], onDelete: Restrict)
-  deal            Deal?            @relation(fields: [dealId], references: [id], onDelete: Restrict)
-  result          ActivityResult?  @relation(fields: [resultId], references: [id], onDelete: Restrict)
-  updatedBy       User?            @relation("InteractionUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  contactPerson     ContactPerson?   @relation(fields: [contactPersonId], references: [id], onDelete: Restrict)
+  deal              Deal?            @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  result            ActivityResult?  @relation(fields: [resultId], references: [id], onDelete: Restrict)
+  updatedBy         User?            @relation("InteractionUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  /// M2 Slice 11: the follow-up this activity completed (FR-FUP-06).
+  completedFollowUp Appointment?     @relation("FollowUpCompletion")
 
   @@index([tenantId, clientId])
   @@index([tenantId, authorUserId])
@@ -727,10 +745,35 @@ model Appointment {
   /// `remindedAt IS NULL`, so a reminder can never go twice for one time.
   remindedAt DateTime?
 
-  tenant       Tenant                @relation(fields: [tenantId], references: [id])
-  client       Client                @relation(fields: [clientId], references: [id])
-  assignedUser User                  @relation("AssignedAppointments", fields: [assignedUserId], references: [id])
-  auditLogs    AppointmentAuditLog[]
+  /// M2 Slice 11 (plan D1): one scheduled-activity entity. FOLLOW_UP is a
+  /// follow-up (FR-FUP-01); PLANNED is a planned meeting, visit, online
+  /// meeting or call (Slice 12). Existing rows are PLANNED meetings.
+  kind                   String    @default("PLANNED")
+  /// CALL, EMAIL, VISIT, MEETING or ONLINE_MEETING: the type of contact.
+  type                   String    @default("MEETING")
+  dealId                 String?
+  contactPersonId        String?
+  endAt                  DateTime?
+  place                  String?
+  /// The interval a follow-up was scheduled with (+3, +5, +7), or NULL for a
+  /// custom date. Keeps an interval that is in use from being deleted.
+  intervalDays           Int?
+  /// The activity that completed the follow-up (FR-FUP-06).
+  completedInteractionId String?   @unique
+  cancelReason           String?
+  /// When the follow-up's "due now" notification went out (FR-FUP-09). NULL
+  /// means not yet; a reschedule clears it, as it clears `remindedAt`.
+  dueNotifiedAt          DateTime?
+
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  client               Client                @relation(fields: [clientId], references: [id])
+  assignedUser         User                  @relation("AssignedAppointments", fields: [assignedUserId], references: [id])
+  auditLogs            AppointmentAuditLog[]
+  /// Restrict: deals and contacts are soft-deleted, activities never removed
+  /// under a follow-up.
+  deal                 Deal?                 @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  contactPerson        ContactPerson?        @relation(fields: [contactPersonId], references: [id], onDelete: Restrict)
+  completedInteraction Interaction?          @relation("FollowUpCompletion", fields: [completedInteractionId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, scheduledAt])
   @@index([tenantId, assignedUserId])
@@ -738,6 +781,12 @@ model Appointment {
   /// Drives the reminder sweep, which scans upcoming appointments by status and
   /// time across all tenants rather than within one.
   @@index([status, scheduledAt])
+  /// "My follow-ups", the overdue count and the calendar (M2 Slice 11, 12).
+  @@index([tenantId, assignedUserId, status, scheduledAt])
+  /// A deal's follow-ups, its next one and its overdue marker (FR-DEAL-12).
+  @@index([tenantId, dealId, status])
+  @@index([dealId])
+  @@index([contactPersonId])
 }
 
 model AppointmentAuditLog {
@@ -1823,6 +1872,18 @@ model PricingSettings {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
+/// Workspace sales settings (M2 Slice 11), one row per workspace, with the
+/// defaults below until the Administrator saves one.
+model SalesSettings {
+  tenantId      String   @id
+  /// An open deal with no activity for this many days is highlighted on the
+  /// board and the list (FR-DEAL-12).
+  staleDealDays Int      @default(14)
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
 /// An employee band of the pricing model (FR-PCF-01): the base fee for the
 /// first employee plus a fee per extra employee. Active bands never overlap;
 /// that rule lives in the domain (PricingConfigRules).
@@ -2078,6 +2139,8 @@ model Deal {
   stageHistory DealStageHistory[]
   interactions Interaction[]
   offers       Quotation[]        @relation("DealOffers")
+  /// M2 Slice 11: its follow-ups (FR-DEAL-03).
+  appointments Appointment[]
 
   @@index([tenantId, ownerUserId, stageKey])
   @@index([tenantId, clientId])

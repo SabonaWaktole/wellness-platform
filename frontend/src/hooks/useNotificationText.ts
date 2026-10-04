@@ -54,6 +54,11 @@ export const useNotificationText = (staff: DisplayablePerson[] | undefined) => {
         params.scheduledAt = dates.dateTime(params.scheduledAt);
       }
 
+      // A follow-up's type of contact is a key (M2 Slice 11), shown in the reader's language.
+      if (typeof params.followUpType === 'string') {
+        params.followUpType = t(`followUpType.${params.followUpType}`, { defaultValue: params.followUpType });
+      }
+
       for (const key of MONEY_PARAMS) {
         if (typeof params[key] === 'string') params[key] = money.format(Number(params[key]));
       }

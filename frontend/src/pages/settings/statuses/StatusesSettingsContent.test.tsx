@@ -4,9 +4,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { StatusesSettingsContent } from './StatusesSettingsContent';
 import { useStatusLabelsStore } from '../../../store/useStatusLabelsStore';
 import { statusLabelService } from '../../../services/statusLabelService';
+import { salesSettingsService } from '../../../services/followUpService';
 
 vi.mock('../../../services/statusLabelService', () => ({
   statusLabelService: { list: vi.fn(), update: vi.fn(), reorder: vi.fn() },
+}));
+vi.mock('../../../services/followUpService', () => ({
+  salesSettingsService: { get: vi.fn(), update: vi.fn() },
 }));
 
 const CONTRACT_LABELS = [
@@ -29,6 +33,7 @@ describe('StatusesSettingsContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useStatusLabelsStore.setState({ byDomain: {}, loading: {} });
+    vi.mocked(salesSettingsService.get).mockResolvedValue({ staleDealDays: 14 });
     (statusLabelService.list as any).mockImplementation((_slug: string, domain: string) =>
       Promise.resolve(domain === 'contract' ? CONTRACT_LABELS : domain === 'deal' ? DEAL_LABELS : PAYMENT_LABELS)
     );
@@ -74,5 +79,28 @@ describe('StatusesSettingsContent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move Aktive up' }));
 
     await waitFor(() => expect(statusLabelService.reorder).toHaveBeenCalledWith('acme', 'contract', ['ACTIVE', 'DRAFT']));
+  });
+
+  it('FR-DEAL-12 the Administrator sets after how many days without activity a deal is highlighted', async () => {
+    vi.mocked(salesSettingsService.update).mockResolvedValue({ staleDealDays: 21 });
+    renderAt();
+    const input = await screen.findByLabelText('Highlight open deals with no activity for');
+    await waitFor(() => expect(input).toHaveValue(14));
+
+    fireEvent.change(input, { target: { value: '21' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save the days without activity' }));
+
+    await waitFor(() => expect(salesSettingsService.update).toHaveBeenCalledWith('acme', { staleDealDays: 21 }));
+    expect(await screen.findByText('Saved.')).toBeInTheDocument();
+  });
+
+  it('FR-DEAL-12 refuses a number of days outside 1 to 365 before saving', async () => {
+    renderAt();
+    const input = await screen.findByLabelText('Highlight open deals with no activity for');
+    await waitFor(() => expect(input).toHaveValue(14));
+    fireEvent.change(input, { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save the days without activity' }));
+    expect(await screen.findByText('Enter a whole number of days from 1 to 365.')).toBeInTheDocument();
+    expect(salesSettingsService.update).not.toHaveBeenCalled();
   });
 });

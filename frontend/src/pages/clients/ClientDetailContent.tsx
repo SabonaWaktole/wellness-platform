@@ -19,6 +19,7 @@ import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { AppointmentForm } from '../../components/forms/AppointmentForm/AppointmentForm';
 import { ActivityDialog } from '../../components/activities/ActivityDialog';
+import { FollowUpsPanel } from '../../components/followUps/FollowUpsPanel';
 import { channelIcon } from '../../components/activities/channelIcon';
 import { ACTIVITY_CHANNELS, type ActivityChannel, type ActivityView } from '../../types/client';
 import type { Appointment } from '../../types/appointment';
@@ -284,6 +285,9 @@ export const ClientDetailContent: React.FC = () => {
               )}
             </div>
           </Card>
+
+          {/* M2 Slice 11: the company's open follow-ups and one click for another (FR-FUP-01). */}
+          {clientId && <FollowUpsPanel clientId={clientId} titleClassName={styles.cardTitle} headerClassName={styles.cardHeader} />}
 
           {/* Company profile (Slice 11: FR-CMP-01, 02, 03) */}
           <Card padding="lg">

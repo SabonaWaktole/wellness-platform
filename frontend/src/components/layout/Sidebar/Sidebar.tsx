@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Calendar, Package, FileText, BarChart3,
   Settings, Building, CreditCard, Search, ClipboardCheck, Plus,
-  HelpCircle, LogOut, Receipt, FileSignature, Columns3,
+  HelpCircle, LogOut, Receipt, FileSignature, Columns3, CalendarClock,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
@@ -32,6 +32,8 @@ const iconMap: Record<string, LucideIcon> = {
   contract: FileSignature,
   // The sales pipeline: columns of cards, as the board shows it.
   pipeline: Columns3,
+  // Follow-ups (M2 Slice 11): a clock on a calendar, apart from appointments.
+  follow_up: CalendarClock,
 };
 
 export interface NavItem {
@@ -40,6 +42,12 @@ export interface NavItem {
   label: string;
   icon: string;
   isActive?: boolean;
+  /**
+   * A count beside the label, e.g. overdue follow-ups (FR-FUP-07). Shown only
+   * above zero; `badgeLabel` is its accessible text.
+   */
+  badge?: number;
+  badgeLabel?: string;
 }
 
 export interface SidebarProps {
@@ -141,6 +149,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <IconComponent className={styles.navIcon} size={20} />
               <span className={styles.navLabel}>{item.label}</span>
+              {!!item.badge && item.badge > 0 && (
+                <span className={styles.navBadge} aria-label={item.badgeLabel}>
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
             </a>
           );
         })}

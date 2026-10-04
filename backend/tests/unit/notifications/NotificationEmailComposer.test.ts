@@ -78,4 +78,33 @@ describe('NotificationEmailComposer', () => {
     );
     expect(request('sq', { kind: 'MANUAL_PRICE' }).subject).toContain('Një çmim manual për OF-2026-0001 pret miratimin tuaj');
   });
+
+  const followUp = (type: 'FOLLOW_UP_DUE' | 'FOLLOW_UP_ASSIGNED' | 'FOLLOW_UP_DAILY_SUMMARY', language: string | null, params: object = {}) =>
+    composer.compose({
+      type,
+      params: { clientName: 'Kafe Blloku', scheduledAt: '2026-10-08T07:00:00.000Z', followUpType: 'CALL', ...params },
+      tenantName: 'Wellness Albania',
+      tenantSlug: 'wellness-albania',
+      entityType: type === 'FOLLOW_UP_DAILY_SUMMARY' ? null : 'FOLLOW_UP',
+      entityId: type === 'FOLLOW_UP_DAILY_SUMMARY' ? null : 'fu-1',
+      language,
+    });
+
+  it('FR-FUP-09 a due follow-up names the company and opens it in "My follow-ups", in the recipient\'s language', () => {
+    const en = followUp('FOLLOW_UP_DUE', 'en');
+    expect(en.subject).toContain('Your follow-up with Kafe Blloku is due');
+    expect(en.html).toContain('https://app.wellness.test/wellness-albania/follow-ups?open=fu-1');
+    expect(followUp('FOLLOW_UP_DUE', 'sq').subject).toContain('Ndjekja me Kafe Blloku është për tani');
+  });
+
+  it('FR-FUP-09 the daily summary counts the day and the overdue, and opens the list', () => {
+    const email = followUp('FOLLOW_UP_DAILY_SUMMARY', 'en', { day: '2026-10-08', today: 3, overdue: 1 });
+    expect(email.subject).toContain("Today's follow-ups: 3");
+    expect(email.html).toContain('<strong>1</strong> overdue');
+    expect(email.html).toContain('https://app.wellness.test/wellness-albania/follow-ups');
+  });
+
+  it('FR-FUP-10 a follow-up given to someone names the company', () => {
+    expect(followUp('FOLLOW_UP_ASSIGNED', 'sq').subject).toContain('Ju u caktua një ndjekje me Kafe Blloku');
+  });
 });

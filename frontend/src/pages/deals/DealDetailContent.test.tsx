@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { DealDetailContent } from './DealDetailContent';
 import { dealService } from '../../services/dealService';
+import { followUpService } from '../../services/followUpService';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ToastProvider } from '../../components/ui/Toast';
 import type { DealDetail } from '../../types/deal';
@@ -11,6 +12,13 @@ vi.mock('../../services/dealService', () => ({
   dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn(), activities: vi.fn(), offers: vi.fn(), list: vi.fn() },
 }));
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
+vi.mock('../../services/followUpService', () => ({ followUpService: { list: vi.fn(), schedule: vi.fn() } }));
+vi.mock('../../hooks/useActiveLookups', () => ({
+  useActiveLookups: () => [
+    { id: 'i3', days: 3, nameSq: '3 ditë', nameEn: '3 days', order: 1, active: true },
+    { id: 'i5', days: 5, nameSq: '5 ditë', nameEn: '5 days', order: 2, active: true },
+  ],
+}));
 vi.mock('../../hooks/useTeam', () => ({
   useTeam: () => ({
     staff: [
@@ -37,6 +45,9 @@ const detail = (overrides: Partial<DealDetail> = {}): DealDetail => ({
   netMonthlyPrice: null,
   annualValue: null,
   nextFollowUpAt: null,
+  lastActivityAt: '2026-10-02T08:00:00Z',
+  hasOverdueFollowUp: false,
+  isStale: false,
   notes: 'Wants a visit first',
   createdByUserId: 'u-a',
   contacts: [{ id: 'p1', name: 'Alba Hoxha', position: 'Drejtore', phone: '+355690000002', email: null, isPrimary: true }],
@@ -68,8 +79,16 @@ const renderPage = () =>
 describe('Deal page (FR-DEAL-03)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setPermissions({ 'deals.view': 'TEAM', 'deals.edit': 'TEAM', 'commercial.view': 'TEAM', 'script.view': true });
+    setPermissions({
+      'deals.view': 'TEAM',
+      'deals.edit': 'TEAM',
+      'commercial.view': 'TEAM',
+      'script.view': true,
+      'calendar.view': 'TEAM',
+      'followups.manage': 'TEAM',
+    });
     vi.mocked(dealService.get).mockResolvedValue(detail());
+    vi.mocked(followUpService.list).mockResolvedValue([]);
     vi.mocked(dealService.activities).mockResolvedValue([]);
     vi.mocked(dealService.offers).mockResolvedValue([]);
   });
@@ -87,6 +106,27 @@ describe('Deal page (FR-DEAL-03)', () => {
     for (const section of ['Offers', 'Activities', 'Follow-ups', 'Stage history']) {
       expect(screen.getByRole('heading', { name: section })).toBeInTheDocument();
     }
+  });
+
+  it('FR-DEAL-03 FR-FUP-01 lists the deal\'s open follow-ups, and "+3 days" schedules one on this deal', async () => {
+    vi.mocked(followUpService.list).mockResolvedValue([
+      {
+        id: 'f1', clientId: 'c1', companyName: 'Kafe Blloku', dealId: 'd1', dealTitle: null, dealType: 'NEW_CONTRACT',
+        contactPersonId: 'p1', contactName: 'Alba Hoxha', assignedUserId: 'u-a', assignedUserName: 'Besa Test', type: 'CALL',
+        status: 'SCHEDULED', scheduledAt: '2026-10-01T07:00:00Z', notes: 'Send the revised offer', intervalDays: 3,
+        completedInteractionId: null, cancelReason: null, isOverdue: true, history: [], createdAt: '2026-09-28T08:00:00Z', updatedAt: '2026-09-28T08:00:00Z',
+      },
+    ]);
+    vi.mocked(followUpService.schedule).mockResolvedValue({} as any);
+    renderPage();
+    expect(await screen.findByText('Send the revised offer')).toBeInTheDocument();
+    expect(followUpService.list).toHaveBeenCalledWith('acme', { dealId: 'd1' });
+    expect(screen.getByText('Overdue')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Follow up in 3 days' }));
+    await waitFor(() =>
+      expect(followUpService.schedule).toHaveBeenCalledWith('acme', expect.objectContaining({ clientId: 'c1', dealId: 'd1', intervalDays: 3 }))
+    );
   });
 
   it('FR-DEAL-09 lists every stage change with who made it, or "Automatic"', async () => {
