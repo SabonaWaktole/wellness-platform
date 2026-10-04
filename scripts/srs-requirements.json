@@ -781,6 +781,66 @@
       "id": "FR-DSC-12",
       "priority": "Could",
       "requirement": "A pending request older than a configurable number of hours (default 24) shall remind the approver once."
+    },
+    {
+      "id": "FR-ACT-04",
+      "priority": "Must",
+      "requirement": "After saving an activity, the user shall be offered the one-click follow-up buttons (FR-FUP-01) in the same dialog."
+    },
+    {
+      "id": "FR-DEAL-12",
+      "priority": "Should",
+      "requirement": "Deals with an overdue follow-up, or with no activity for a configurable number of days (default 14), shall be highlighted on the board and the list."
+    },
+    {
+      "id": "FR-FUP-01",
+      "priority": "Must",
+      "requirement": "On the company page, the deal page and after saving an activity, the user shall schedule a follow-up with one click: one button per active follow-up interval from Milestone 1 (default 3, 5, 7 days) and a \"Custom date\" button."
+    },
+    {
+      "id": "FR-FUP-02",
+      "priority": "Must",
+      "requirement": "A follow-up shall have: company, deal (optional), type of next contact (default Call), due date and time (default time 09:00, editable), assigned salesperson (default the deal's or company's), and a short note (default the activity's \"next action\")."
+    },
+    {
+      "id": "FR-FUP-03",
+      "priority": "Should",
+      "requirement": "Follow-up days shall be calendar days. If the due date falls on a Saturday or Sunday it moves to the next Monday (Q12)."
+    },
+    {
+      "id": "FR-FUP-04",
+      "priority": "Must",
+      "requirement": "A follow-up shall appear automatically in the assigned salesperson's calendar and in \"My follow-ups\"."
+    },
+    {
+      "id": "FR-FUP-05",
+      "priority": "Must",
+      "requirement": "A follow-up not completed by its due date and time shall be marked Overdue (shown in red) until it is completed, rescheduled or cancelled."
+    },
+    {
+      "id": "FR-FUP-06",
+      "priority": "Must",
+      "requirement": "The user completes a follow-up by recording the activity that happened (FR-ACT-02); the follow-up is then closed and linked to that activity. The user can also reschedule it (new date, previous date kept in its history) or cancel it with a reason."
+    },
+    {
+      "id": "FR-FUP-07",
+      "priority": "Must",
+      "requirement": "\"My follow-ups\" shall list the user's open follow-ups grouped as Overdue, Today, and Upcoming, with the count of overdue items also shown in the main menu."
+    },
+    {
+      "id": "FR-FUP-08",
+      "priority": "Must",
+      "requirement": "The Sales Manager shall see the follow-ups of the whole team with a salesperson filter, and a list of all overdue follow-ups across the team. The CEO sees the same, read-only."
+    },
+    {
+      "id": "FR-FUP-09",
+      "priority": "Should",
+      "requirement": "The assigned salesperson shall receive an in-app notification when a follow-up becomes due (at its due time), and an optional daily email summary of the day's follow-ups."
+    },
+    {
+      "id": "FR-FUP-10",
+      "priority": "Should",
+      "requirement": "The Sales Manager can reassign a follow-up to another salesperson."
     }
   ]
 }
