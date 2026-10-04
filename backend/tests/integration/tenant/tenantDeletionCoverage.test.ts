@@ -37,6 +37,7 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // Best-effort: a passing test leaves nothing to clean up. This only fires
     // if an assertion failed mid-test and the transaction never got to run.
     if (tenantIds.length > 0) {
+      await prisma.appointment.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.formSubmission.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.formVersion.deleteMany({ where: { tenantId: { in: tenantIds } } });
       await prisma.clientForm.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -243,9 +244,10 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
     // An activity holds RESTRICT keys on Deal, ContactPerson, ActivityResult
     // and two users (M2 Slice 7), so it has to go before every one of them.
     const activityResult = await prisma.activityResult.findFirstOrThrow({ where: { tenantId } });
+    const interactionId = randomUUID();
     await prisma.interaction.create({
       data: {
-        id: randomUUID(),
+        id: interactionId,
         tenantId,
         clientId,
         authorUserId: staff.id,
@@ -259,6 +261,25 @@ describe('Tenant deletion covers every table with a tenantId foreign key', () =>
         updatedByUserId: owner.id,
       },
     });
+
+    // A follow-up holds RESTRICT keys on the activity that completed it, its
+    // deal and its contact (M2 Slice 11), so it has to go before all three.
+    await prisma.appointment.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        clientId,
+        assignedUserId: staff.id,
+        scheduledAt: new Date(),
+        status: 'COMPLETED',
+        kind: 'FOLLOW_UP',
+        type: 'CALL',
+        dealId,
+        contactPersonId: contactId,
+        completedInteractionId: interactionId,
+      },
+    });
+    await prisma.salesSettings.create({ data: { tenantId, staleDealDays: 10 } });
 
     // StatusLabel cascades cleanly (no RESTRICT anywhere), but is still
     // covered here so a tenant with an edited status label is proven clean too.
