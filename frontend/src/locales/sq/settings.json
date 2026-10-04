@@ -365,6 +365,10 @@
     "discountApprovalsSection": "Miratimet e zbritjeve",
     "discountReminderHoursLabel": "Orët para kujtesës për miratuesin",
     "discountReminderHoursHint": "Një kërkesë në pritje e kujton miratuesin një herë, pasi të ketë pritur kaq.",
+    "salesFollowUpsSection": "Ndjekjet e shitjeve",
+    "followUpDueEnabled": "Njofto shitësin kur një ndjekje është për t'u bërë",
+    "followUpSummaryEnabled": "Dërgoji çdo shitësi me email në orën 07:30 përmbledhjen e ndjekjeve të ditës",
+    "followUpSummaryHint": "Dërgohet sipas zonës kohore të hapësirës së punës, shitësve që kanë ndjekje për atë ditë ose të vonuara.",
     "followUpSection": "Quotation follow-ups",
     "followUpEnabled": "Remind staff about unanswered quotations",
     "followUpDaysLabel": "Days to wait before reminding",
@@ -395,7 +399,9 @@
       "DISCOUNT_APPROVAL_REMINDER": "Kujtesë për miratimin e zbritjes",
       "CLIENT_ASSIGNED": "Client assigned",
       "INVITATION_ACCEPTED": "Invitation accepted",
-      "FORM_SUBMITTED": "Form submitted"
+      "FORM_SUBMITTED": "Form submitted",
+      "FOLLOW_UP_ASSIGNED": "Ndjekje e caktuar dikujt",
+      "FOLLOW_UP_DUE": "Ndjekje për t'u bërë"
     },
     "role": {
       "BUSINESS_OWNER": "Business Owners",
@@ -871,6 +877,18 @@
       "INVALID_STATUS_LABEL": "Kontrolloni vlerat: etiketa në shqip është e detyrueshme dhe ngjyra duhet të jetë një vlerë hex e vlefshme.",
       "INVALID_STATUS_ORDER": "Lista ndryshoi ndërkohë që po e rendisnit. Ringarkoni faqen dhe provoni përsëri.",
       "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri."
+    },
+    "staleDeals": {
+      "title": "Theksimet në pipeline",
+      "hint": "Një marrëveshje e hapur pa aktivitet për më gjatë se kaq shënohet në tabelë dhe në listë.",
+      "label": "Thekso marrëveshjet e hapura pa aktivitet për",
+      "days": "ditë",
+      "save": "Ruaj",
+      "saveAria": "Ruaj ditët pa aktivitet",
+      "saved": "U ruajt.",
+      "invalid": "Shkruani një numër të plotë ditësh nga 1 deri në 365.",
+      "loadFailed": "Cilësimi nuk u ngarkua.",
+      "saveFailed": "Cilësimi nuk u ruajt. Provoni përsëri."
     }
   },
   "salesScript": {

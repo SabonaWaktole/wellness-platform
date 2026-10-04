@@ -6,8 +6,9 @@ import { DealType } from '../domain/DealType';
  *
  * `netMonthlyPrice` and `annualValue` are the deal's offer value (Slice 8),
  * null until it has a priced offer, under the names `redactFields` guards
- * (FR-RBAC-17). `nextFollowUpAt` comes from its follow-ups, null until
- * Slice 11.
+ * (FR-RBAC-17). `nextFollowUpAt` is its earliest open follow-up (Slice 11).
+ * `hasOverdueFollowUp` and `isStale` are the FR-DEAL-12 markers, decided
+ * when the deal is read.
  */
 export interface DealSummary {
   id: string;
@@ -27,6 +28,10 @@ export interface DealSummary {
   netMonthlyPrice: string | null;
   annualValue: string | null;
   nextFollowUpAt: string | null;
+  /** Its latest activity other than a note, else its creation (FR-DEAL-12). */
+  lastActivityAt: string;
+  hasOverdueFollowUp: boolean;
+  isStale: boolean;
 }
 
 export interface DealContactView {

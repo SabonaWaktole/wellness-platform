@@ -162,4 +162,21 @@ describe('NotificationSettings', () => {
     expect(json.availableEventTypes).toContain('APPOINTMENT_REMINDER');
     expect(json.availableRecipientRoles).not.toContain(UserRole.SUPER_ADMIN);
   });
+
+  it('FR-FUP-09 the follow-up notice is on and the daily summary off by default', () => {
+    const settings = NotificationSettings.defaults(tenantId);
+    expect(settings.followUpDueNotificationsEnabled).toBe(true);
+    expect(settings.followUpDailySummaryEnabled).toBe(false);
+  });
+
+  it('FR-FUP-09 the daily summary emails when its own switch is on, not through the event list', () => {
+    const off = NotificationSettings.defaults(tenantId);
+    expect(off.emailsFor('FOLLOW_UP_DAILY_SUMMARY')).toBe(false);
+
+    const on = off.withPatch({ followUpDailySummaryEnabled: true });
+    expect(on.emailsFor('FOLLOW_UP_DAILY_SUMMARY')).toBe(true);
+    expect(on.withPatch({ emailEnabled: false }).emailsFor('FOLLOW_UP_DAILY_SUMMARY')).toBe(false);
+    expect(on.toJSON().availableEventTypes).not.toContain('FOLLOW_UP_DAILY_SUMMARY');
+  });
 });
+

@@ -37,6 +37,16 @@
     "DISCOUNT_APPROVAL_REQUESTED_manual": "{{actor}} propozoi çmimin manual {{requestedMonthlyPrice}} për {{reference}} ({{clientName}}). Arsyeja: {{reason}}",
     "DISCOUNT_APPROVED_manual": "{{actor}} miratoi çmimin manual {{approvedMonthlyPrice}} për {{reference}}",
     "DISCOUNT_REJECTED_manual": "{{actor}} refuzoi çmimin manual për {{reference}}",
-    "DISCOUNT_APPROVAL_REMINDER_manual": "Kujtesë: çmimi manual {{requestedMonthlyPrice}} i propozuar nga {{salespersonName}} për {{reference}} ({{clientName}}) ende pret miratim"
+    "DISCOUNT_APPROVAL_REMINDER_manual": "Kujtesë: çmimi manual {{requestedMonthlyPrice}} i propozuar nga {{salespersonName}} për {{reference}} ({{clientName}}) ende pret miratim",
+    "FOLLOW_UP_ASSIGNED": "{{actor}} ju caktoi një ndjekje ({{followUpType}}) me {{clientName}}, afati {{scheduledAt}}",
+    "FOLLOW_UP_DUE": "Ndjekja është për tani: {{followUpType}} me {{clientName}}",
+    "FOLLOW_UP_DAILY_SUMMARY": "Sot: {{today}} ndjekje, dhe {{overdue}} të vonuara nga ditët e kaluara"
+  },
+  "followUpType": {
+    "CALL": "telefonatë",
+    "EMAIL": "email",
+    "VISIT": "vizitë",
+    "MEETING": "takim",
+    "ONLINE_MEETING": "takim online"
   }
 }

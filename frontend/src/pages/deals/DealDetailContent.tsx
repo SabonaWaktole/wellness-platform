@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarClock, Mail, MoreVertical, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, Mail, MoreVertical, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
@@ -26,13 +26,14 @@ import type { DealDetail, DealStage } from '../../types/deal';
 import { dealErrorMessage } from './dealErrors';
 import { DealActivitiesSection } from './DealActivitiesSection';
 import { DealOffersSection } from './DealOffersSection';
+import { FollowUpsPanel } from '../../components/followUps/FollowUpsPanel';
 import styles from './DealDetailContent.module.css';
 
 /**
  * The deal page (FR-DEAL-03): company, contact persons, stage, value,
  * salesperson, expected close, notes and the stage history (FR-DEAL-09) on
- * one page, with the sales script button, the deal's offers (Slice 8) and its
- * activities (Slice 7). The follow-ups section is filled by Slice 11.
+ * one page, with the sales script button, the deal's offers (Slice 8), its
+ * activities (Slice 7) and its follow-ups (Slice 11).
  */
 export const DealDetailContent: React.FC = () => {
   const { t } = useTranslation('deals');
@@ -288,7 +289,15 @@ export const DealDetailContent: React.FC = () => {
 
           <DealOffersSection deal={deal} onDealChanged={load} />
           <DealActivitiesSection deal={deal} onDealChanged={load} />
-          <Placeholder icon={<CalendarClock size={18} />} title={t('detail.followUps')} text={t('detail.followUpsSoon')} />
+          {/* FR-DEAL-03, FR-FUP-01: the deal's follow-ups (Slice 11). */}
+          <FollowUpsPanel
+            clientId={deal.clientId}
+            dealId={deal.id}
+            canSchedule={open}
+            onChanged={load}
+            titleClassName={styles.sectionTitle}
+            headerClassName={styles.sectionHeader}
+          />
         </div>
       </div>
 
@@ -331,16 +340,3 @@ export const DealDetailContent: React.FC = () => {
     </div>
   );
 };
-
-/** A section a later slice fills (follow-ups: Slice 11). */
-const Placeholder: React.FC<{ icon: React.ReactNode; title: string; text: string }> = ({ icon, title, text }) => (
-  <Card padding="lg">
-    <h2 className={styles.sectionTitle}>
-      <span className={styles.sectionIcon} aria-hidden="true">
-        {icon}
-      </span>
-      {title}
-    </h2>
-    <p className={styles.muted}>{text}</p>
-  </Card>
-);

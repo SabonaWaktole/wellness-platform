@@ -14,6 +14,9 @@ import { dealService } from '../../services/dealService';
 import { lookupLabel } from '../../utils/lookupLabel';
 import { isOpenStage, type DealSummary } from '../../types/deal';
 import { ACTIVITY_CHANNELS, type ActivityChannel, type ActivityInput, type ActivityView, type Interaction } from '../../types/client';
+import type { FollowUp } from '../../types/followUp';
+import { followUpService } from '../../services/followUpService';
+import { FollowUpQuickButtons } from '../followUps/FollowUpQuickButtons';
 import { activityErrorField, activityErrorMessage } from './activityErrors';
 import { channelIcon } from './channelIcon';
 import styles from './ActivityDialog.module.css';
@@ -30,6 +33,12 @@ export interface ActivityDialogProps {
   dealId?: string;
   /** Present to edit this activity instead of recording a new one (FR-ACT-06). */
   activity?: ActivityView | null;
+  /**
+   * Present to complete this follow-up by recording the activity that
+   * happened (FR-FUP-06): the form opens on its type, deal and contact, and
+   * saving closes the follow-up with the activity, together.
+   */
+  completing?: FollowUp | null;
   onSaved: (interaction: Interaction) => void;
 }
 
@@ -56,15 +65,18 @@ export const ActivityDialog: React.FC<ActivityDialogProps> = ({
   initialChannel = 'CALL',
   dealId: presetDealId,
   activity,
+  completing,
   onSaved,
 }) => {
   const { t, i18n } = useTranslation('clients');
   const { t: tc } = useTranslation('common');
+  const { t: tf } = useTranslation('followUps');
   const { tenantSlug } = useParams();
   const dealText = useDealText();
   const canAddNotes = usePermission('notes.add');
   const canAddActivities = usePermission('activities.add');
   const canSeeDeals = usePermission('deals.view');
+  const canScheduleFollowUps = usePermission('followups.manage');
 
   const [channel, setChannel] = useState<ActivityChannel>(initialChannel);
   const [occurredAt, setOccurredAt] = useState('');
@@ -79,6 +91,8 @@ export const ActivityDialog: React.FC<ActivityDialogProps> = ({
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** FR-ACT-04: the activity just saved, while the dialog offers the follow-up buttons. */
+  const [saved, setSaved] = useState<Interaction | null>(null);
 
   const isNote = channel === 'NOTE';
   const editing = !!activity;
@@ -88,18 +102,19 @@ export const ActivityDialog: React.FC<ActivityDialogProps> = ({
   // that must not wipe what the user is typing.
   useEffect(() => {
     if (!isOpen) return;
-    setChannel(activity?.channel ?? initialChannel);
+    setChannel(activity?.channel ?? completing?.type ?? initialChannel);
     setOccurredAt(toLocalInput(activity ? new Date(activity.occurredAt) : new Date()));
-    setContactPersonId(activity?.contact?.id ?? (contacts.length === 1 ? contacts[0].id : ''));
+    setContactPersonId(activity?.contact?.id ?? completing?.contactPersonId ?? (contacts.length === 1 ? contacts[0].id : ''));
     setResultId(activity?.result?.id ?? '');
-    setDealId(activity?.dealId ?? presetDealId ?? '');
+    setDealId(activity?.dealId ?? completing?.dealId ?? presetDealId ?? '');
     setClientFeedback(activity?.clientFeedback ?? '');
     setNextAction(activity?.nextAction ?? '');
     setContent(activity?.content ?? '');
     setErrors({});
     setFormError(null);
+    setSaved(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, activity, initialChannel, presetDealId]);
+  }, [isOpen, activity, completing, initialChannel, presetDealId]);
 
   useEffect(() => {
     if (!isOpen || !tenantSlug) return;
@@ -120,9 +135,11 @@ export const ActivityDialog: React.FC<ActivityDialogProps> = ({
   }, [isOpen, tenantSlug, clientId, canSeeDeals]);
 
   // A note and an activity sit behind different permissions (D3), and an
-  // edit cannot turn one into the other.
+  // edit cannot turn one into the other. A follow-up is completed by contact
+  // with the client, never by a note (FR-FUP-06).
   const channelAllowed = (candidate: ActivityChannel) => {
     const candidateIsNote = candidate === 'NOTE';
+    if (completing && candidateIsNote) return false;
     if (editing && candidateIsNote !== (activity!.channel === 'NOTE')) return false;
     return candidateIsNote ? canAddNotes : canAddActivities;
   };
@@ -160,11 +177,16 @@ export const ActivityDialog: React.FC<ActivityDialogProps> = ({
     };
     setSaving(true);
     try {
-      const saved = editing
+      const recorded = editing
         ? await clientService.updateInteraction(tenantSlug, clientId, activity!.id, input)
-        : await clientService.addInteraction(tenantSlug, clientId, input);
-      onSaved(saved);
-      onClose();
+        : completing
+          ? (await followUpService.complete(tenantSlug, completing.id, input)).activity
+          : await clientService.addInteraction(tenantSlug, clientId, input);
+      onSaved(recorded);
+      // FR-ACT-04: after a new activity, the one-click follow-up buttons, in
+      // this same dialog. A note is not contact with the client.
+      if (!editing && recorded.channel !== 'NOTE' && canScheduleFollowUps) setSaved(recorded);
+      else onClose();
     } catch (error) {
       const field = activityErrorField(error) as Field | null;
       if (field) setErrors({ [field]: activityErrorMessage(error, t) });
@@ -178,121 +200,136 @@ export const ActivityDialog: React.FC<ActivityDialogProps> = ({
     <SlideOver
       isOpen={isOpen}
       onClose={onClose}
-      title={editing ? t('activity.editTitle') : t('activity.title')}
+      title={editing ? t('activity.editTitle') : completing ? t('activity.completeTitle') : t('activity.title')}
       footer={
-        <div className={styles.footer}>
-          <Button variant="outline" onClick={onClose}>
-            {tc('actions.cancel')}
-          </Button>
-          <Button onClick={save} disabled={saving}>
-            {saving ? tc('state.saving') : t('activity.save')}
-          </Button>
-        </div>
+        saved ? (
+          <div className={styles.footer}>
+            <Button onClick={onClose}>{tf('quick.done')}</Button>
+          </div>
+        ) : (
+          <div className={styles.footer}>
+            <Button variant="outline" onClick={onClose}>
+              {tc('actions.cancel')}
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? tc('state.saving') : t('activity.save')}
+            </Button>
+          </div>
+        )
       }
     >
-      <div className={styles.form}>
-        {formError && (
-          <p className={styles.formError} role="alert">
-            {formError}
-          </p>
-        )}
+      {saved ? (
+        <div className={styles.form}>
+          <p role="status">{t('activity.saved')}</p>
+          <h3 className={styles.legend}>{tf('quick.after')}</h3>
+          {saved.nextAction && <p className={styles.hint}>{tf('quick.afterHint')}</p>}
+          <FollowUpQuickButtons clientId={clientId} dealId={saved.dealId} fromActivityId={saved.id} hideLabel onScheduled={onClose} />
+        </div>
+      ) : (
+        <div className={styles.form}>
+          {formError && (
+            <p className={styles.formError} role="alert">
+              {formError}
+            </p>
+          )}
 
-        <fieldset className={styles.types}>
-          <legend className={styles.legend}>{t('activity.type')}</legend>
-          <div className={styles.typeButtons} role="radiogroup" aria-label={t('activity.type')}>
-            {ACTIVITY_CHANNELS.filter(channelAllowed).map((candidate) => {
-              const Icon = channelIcon(candidate);
-              const selected = candidate === channel;
-              return (
-                <button
-                  key={candidate}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  className={`${styles.typeButton} ${selected ? styles.typeButtonSelected : ''}`}
-                  onClick={() => setChannel(candidate)}
-                >
-                  <Icon size={16} aria-hidden="true" />
-                  {t(`detail.channels.${candidate}`)}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+          <fieldset className={styles.types}>
+            <legend className={styles.legend}>{t('activity.type')}</legend>
+            <div className={styles.typeButtons} role="radiogroup" aria-label={t('activity.type')}>
+              {ACTIVITY_CHANNELS.filter(channelAllowed).map((candidate) => {
+                const Icon = channelIcon(candidate);
+                const selected = candidate === channel;
+                return (
+                  <button
+                    key={candidate}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`${styles.typeButton} ${selected ? styles.typeButtonSelected : ''}`}
+                    onClick={() => setChannel(candidate)}
+                  >
+                    <Icon size={16} aria-hidden="true" />
+                    {t(`detail.channels.${candidate}`)}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
 
-        <TextInput
-          type="datetime-local"
-          label={t('activity.occurredAt')}
-          value={occurredAt}
-          max={toLocalInput(new Date())}
-          onChange={(event) => setOccurredAt(event.target.value)}
-          error={errors.occurredAt}
-        />
+          <TextInput
+            type="datetime-local"
+            label={t('activity.occurredAt')}
+            value={occurredAt}
+            max={toLocalInput(new Date())}
+            onChange={(event) => setOccurredAt(event.target.value)}
+            error={errors.occurredAt}
+          />
 
-        {!isNote && (
-          <>
-            <SelectInput
-              label={t('activity.contact')}
-              required
-              value={contactPersonId}
-              onChange={(event) => setContactPersonId(event.target.value)}
-              error={errors.contactPersonId}
-              helperText={contacts.length === 0 ? t('activity.noContacts') : undefined}
-            >
-              <option value="">{t('activity.chooseContact')}</option>
-              {contacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.name}
+          {!isNote && (
+            <>
+              <SelectInput
+                label={t('activity.contact')}
+                required
+                value={contactPersonId}
+                onChange={(event) => setContactPersonId(event.target.value)}
+                error={errors.contactPersonId}
+                helperText={contacts.length === 0 ? t('activity.noContacts') : undefined}
+              >
+                <option value="">{t('activity.chooseContact')}</option>
+                {contacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.name}
+                  </option>
+                ))}
+              </SelectInput>
+
+              <SelectInput
+                label={t('activity.result')}
+                required
+                value={resultId}
+                onChange={(event) => setResultId(event.target.value)}
+                error={errors.resultId}
+              >
+                <option value="">{t('activity.chooseResult')}</option>
+                {resultOptions.map((result) => (
+                  <option key={result.id} value={result.id}>
+                    {lookupLabel(result, i18n.language)}
+                  </option>
+                ))}
+              </SelectInput>
+            </>
+          )}
+
+          {canSeeDeals && (deals.length > 0 || dealId) && (
+            <SelectInput label={t('activity.deal')} value={dealId} onChange={(event) => setDealId(event.target.value)} error={errors.dealId}>
+              <option value="">{t('activity.noDeal')}</option>
+              {deals.map((deal) => (
+                <option key={deal.id} value={deal.id}>
+                  {dealText.title(deal)}
                 </option>
               ))}
+              {dealId && !deals.some((deal) => deal.id === dealId) && <option value={dealId}>{t('activity.currentDeal')}</option>}
             </SelectInput>
+          )}
 
-            <SelectInput
-              label={t('activity.result')}
-              required
-              value={resultId}
-              onChange={(event) => setResultId(event.target.value)}
-              error={errors.resultId}
-            >
-              <option value="">{t('activity.chooseResult')}</option>
-              {resultOptions.map((result) => (
-                <option key={result.id} value={result.id}>
-                  {lookupLabel(result, i18n.language)}
-                </option>
-              ))}
-            </SelectInput>
-          </>
-        )}
+          {!isNote && (
+            <>
+              <TextareaInput label={t('activity.clientFeedback')} rows={2} value={clientFeedback} onChange={(event) => setClientFeedback(event.target.value)} />
+              <TextareaInput label={t('activity.nextAction')} rows={2} value={nextAction} onChange={(event) => setNextAction(event.target.value)} />
+            </>
+          )}
 
-        {canSeeDeals && (deals.length > 0 || dealId) && (
-          <SelectInput label={t('activity.deal')} value={dealId} onChange={(event) => setDealId(event.target.value)} error={errors.dealId}>
-            <option value="">{t('activity.noDeal')}</option>
-            {deals.map((deal) => (
-              <option key={deal.id} value={deal.id}>
-                {dealText.title(deal)}
-              </option>
-            ))}
-            {dealId && !deals.some((deal) => deal.id === dealId) && <option value={dealId}>{t('activity.currentDeal')}</option>}
-          </SelectInput>
-        )}
-
-        {!isNote && (
-          <>
-            <TextareaInput label={t('activity.clientFeedback')} rows={2} value={clientFeedback} onChange={(event) => setClientFeedback(event.target.value)} />
-            <TextareaInput label={t('activity.nextAction')} rows={2} value={nextAction} onChange={(event) => setNextAction(event.target.value)} />
-          </>
-        )}
-
-        <TextareaInput
-          label={isNote ? t('activity.note') : t('activity.notes')}
-          required={isNote}
-          rows={isNote ? 5 : 3}
-          placeholder={t('activity.notesPlaceholder')}
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          error={errors.content}
-        />
-      </div>
+          <TextareaInput
+            label={isNote ? t('activity.note') : t('activity.notes')}
+            required={isNote}
+            rows={isNote ? 5 : 3}
+            placeholder={t('activity.notesPlaceholder')}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            error={errors.content}
+          />
+        </div>
+      )}
     </SlideOver>
   );
 };

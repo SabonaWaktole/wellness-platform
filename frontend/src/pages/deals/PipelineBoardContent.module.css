@@ -264,3 +264,9 @@
   font-size: var(--font-size-body-sm);
   color: var(--text-secondary);
 }
+
+/* FR-DEAL-12: the next follow-up is already past due. */
+.cardFollowUpOverdue {
+  color: var(--color-error, #b42318);
+  font-weight: 600;
+}

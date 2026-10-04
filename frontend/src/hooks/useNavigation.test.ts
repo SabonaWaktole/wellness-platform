@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useNavigation } from './useNavigation';
+import { followUpService } from '../services/followUpService';
 import '../i18n';
 
 /**
@@ -159,6 +160,23 @@ describe('useNavigation', () => {
     });
   });
 
+  describe('follow-ups (M2 Slice 11)', () => {
+    it('FR-FUP-07 the menu badge shows 2 when two follow-ups are overdue', async () => {
+      const count = vi.spyOn(followUpService, 'overdueCount').mockResolvedValue(2);
+      const { result } = renderHook(() => useNavigation({ ...SALES_USER, tenantSlug: 'acme' }, '/acme/dashboard'));
+      await waitFor(() => expect(result.current.find((item) => item.id === 'follow-ups')?.badge).toBe(2));
+      expect(count).toHaveBeenCalledWith('acme');
+      count.mockRestore();
+    });
+
+    it('FR-FUP-07 Reception, with no calendar.view, has no follow-ups item and nothing is polled', () => {
+      const count = vi.spyOn(followUpService, 'overdueCount').mockResolvedValue(0);
+      expect(idsFor({ ...RECEPTION, tenantSlug: 'acme' })).not.toContain('follow-ups');
+      expect(count).not.toHaveBeenCalled();
+      count.mockRestore();
+    });
+  });
+
   describe('structural guarantees', () => {
     it('emits no duplicate ids, which would collide as React keys', () => {
       for (const user of [ADMINISTRATOR, SALES_USER, RECEPTION, SUPER_ADMIN, null]) {
@@ -177,7 +195,7 @@ describe('useNavigation', () => {
 
       expect(afterwards).toEqual(first);
       expect(idsFor(ADMINISTRATOR)).toEqual([
-        'dashboard', 'clients', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'reports', 'settings',
+        'dashboard', 'clients', 'follow-ups', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'reports', 'settings',
       ]);
     });
 

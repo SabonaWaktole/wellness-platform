@@ -40,6 +40,7 @@ import { FormPrintPage } from '../pages/settings/FormPrintPage';
 import { FormSubmissionPrintPage } from '../pages/settings/FormSubmissionPrintPage';
 import { NotificationSettingsPage } from '../pages/settings/NotificationSettingsPage';
 import { ApprovalsPage } from '../pages/approvals/ApprovalsPage';
+import { FollowUpsPage } from '../pages/followUps/FollowUpsPage';
 import { CreateQuotation } from '../pages/quotations/CreateQuotation';
 import { EditQuotation } from '../pages/quotations/EditQuotation';
 import { InvoiceList } from '../pages/invoices/InvoiceList';
@@ -443,6 +444,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="commercial.view">
               <OfferList />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // My follow-ups and the team's (M2 Slice 11, FR-FUP-07, 08).
+        path: 'follow-ups',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="calendar.view">
+              <FollowUpsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

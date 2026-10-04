@@ -1,0 +1,107 @@
+{
+  "title": "Follow-ups",
+  "subtitle": "Calls and visits to come back to, grouped by when they are due.",
+  "tabs": {
+    "mine": "My follow-ups",
+    "team": "Team"
+  },
+  "groups": {
+    "overdue": "Overdue",
+    "today": "Today",
+    "upcoming": "Upcoming"
+  },
+  "groupEmpty": {
+    "overdue": "Nothing overdue.",
+    "today": "Nothing else due today.",
+    "upcoming": "Nothing scheduled after today."
+  },
+  "empty": "No open follow-ups. Schedule one from a company, a deal or right after recording an activity.",
+  "loading": "Loading follow-ups…",
+  "loadFailed": "The follow-ups could not be loaded. Try again.",
+  "type": {
+    "CALL": "Call",
+    "EMAIL": "Email",
+    "VISIT": "Visit",
+    "MEETING": "Meeting",
+    "ONLINE_MEETING": "Online meeting"
+  },
+  "item": {
+    "due": "Due {{date}}",
+    "overdue": "Overdue",
+    "with": "with {{name}}",
+    "assignedTo": "For {{name}}",
+    "openCompany": "Open the company",
+    "openDeal": "Open the deal"
+  },
+  "actions": {
+    "label": "Actions for the follow-up with {{company}}",
+    "complete": "Complete",
+    "reschedule": "Reschedule",
+    "cancel": "Cancel follow-up",
+    "reassign": "Reassign"
+  },
+  "quick": {
+    "label": "Follow up",
+    "interval": "+{{days}} days",
+    "intervalAria": "Follow up in {{days}} days",
+    "custom": "Custom date",
+    "scheduled": "Follow-up scheduled for {{date}}",
+    "after": "Schedule a follow-up?",
+    "afterHint": "The note will be the next action you wrote.",
+    "done": "Done"
+  },
+  "form": {
+    "title": "Schedule a follow-up",
+    "date": "Date",
+    "time": "Time",
+    "type": "Type of contact",
+    "note": "Note",
+    "save": "Schedule",
+    "cancel": "Cancel"
+  },
+  "reschedule": {
+    "title": "Reschedule follow-up",
+    "reason": "Reason (optional)",
+    "save": "Reschedule",
+    "done": "Follow-up moved to {{date}}"
+  },
+  "cancel": {
+    "title": "Cancel follow-up",
+    "reason": "Reason",
+    "save": "Cancel follow-up",
+    "keep": "Keep it",
+    "done": "Follow-up cancelled"
+  },
+  "reassign": {
+    "title": "Reassign follow-up",
+    "label": "Salesperson",
+    "save": "Reassign",
+    "done": "Follow-up given to {{name}}"
+  },
+  "complete": {
+    "done": "Follow-up completed"
+  },
+  "team": {
+    "salesperson": "Salesperson",
+    "everyone": "Everyone",
+    "overdueOnly": "Overdue only",
+    "readOnly": "You can see the team's follow-ups but not change them.",
+    "empty": "No open follow-ups match."
+  },
+  "section": {
+    "title": "Follow-ups",
+    "none": "No open follow-ups."
+  },
+  "errors": {
+    "dueAt": "A follow-up cannot be due in the past.",
+    "dueDate": "Choose a valid date.",
+    "time": "Choose a valid time.",
+    "reason": "Give a reason.",
+    "note": "The note is too long.",
+    "assignedUserId": "You cannot give a follow-up to that person.",
+    "dealId": "Choose an open deal of this company.",
+    "closed": "This follow-up is already completed or cancelled.",
+    "notFound": "This follow-up no longer exists or is not yours to see.",
+    "generic": "That did not work. Try again."
+  }
+}

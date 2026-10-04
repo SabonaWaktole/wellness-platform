@@ -58,6 +58,15 @@ export const NOTIFICATION_TYPES = [
   'DISCOUNT_APPROVED',
   'DISCOUNT_REJECTED',
   'DISCOUNT_APPROVAL_REMINDER',
+
+  /*
+   * Follow-ups (M2 Slice 11). ASSIGNED has an actor (someone gave you a
+   * follow-up, FR-FUP-02, 10); DUE and the daily summary are the clock's
+   * (FR-FUP-09), like the reminders above.
+   */
+  'FOLLOW_UP_ASSIGNED',
+  'FOLLOW_UP_DUE',
+  'FOLLOW_UP_DAILY_SUMMARY',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -75,6 +84,8 @@ export const NOTIFICATION_ENTITY_TYPES = [
   // M2 Slice 10: a discount approval points at its offer; the deal id travels
   // in params so the UI opens the deal page on that offer.
   'OFFER',
+  // M2 Slice 11: a follow-up; the UI opens "My follow-ups" on it.
+  'FOLLOW_UP',
 ] as const;
 export type NotificationEntityType = (typeof NOTIFICATION_ENTITY_TYPES)[number];
 

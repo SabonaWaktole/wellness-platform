@@ -164,7 +164,7 @@ describe('Discounts above the cap and approval (M2 Slice 10)', () => {
     await as('salesA').get(`/offers/${body.data.id}/pdf?lang=sq&disposition=attachment`).expect(409);
     // The preview still renders, with the draft watermark.
     await as('salesA').get(`/offers/${body.data.id}/pdf?lang=sq&disposition=inline`).expect(200);
-    await as('salesA').post(`/offers/${body.data.id}/mark-sent`, { sentDate: '2026-10-03' }).expect(409);
+    await as('salesA').post(`/offers/${body.data.id}/mark-sent`, { sentDate: new Date().toISOString().slice(0, 10) }).expect(409);
     const res = await saveOffer('salesA', dealId, await exampleA({ discountPercent: '5' }));
     expect(res.status).toBe(409);
   });

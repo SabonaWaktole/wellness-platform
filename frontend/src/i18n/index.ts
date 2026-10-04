@@ -27,6 +27,7 @@ import enAudit from '../locales/en/audit.json';
 import enDeals from '../locales/en/deals.json';
 import enPricing from '../locales/en/pricing.json';
 import enOffers from '../locales/en/offers.json';
+import enFollowUps from '../locales/en/followUps.json';
 
 import sqCommon from '../locales/sq/common.json';
 import sqAuth from '../locales/sq/auth.json';
@@ -44,6 +45,7 @@ import sqAudit from '../locales/sq/audit.json';
 import sqDeals from '../locales/sq/deals.json';
 import sqPricing from '../locales/sq/pricing.json';
 import sqOffers from '../locales/sq/offers.json';
+import sqFollowUps from '../locales/sq/followUps.json';
 
 import elCommon from '../locales/el/common.json';
 import elAuth from '../locales/el/auth.json';
@@ -61,6 +63,7 @@ import elAudit from '../locales/el/audit.json';
 import elDeals from '../locales/el/deals.json';
 import elPricing from '../locales/el/pricing.json';
 import elOffers from '../locales/el/offers.json';
+import elFollowUps from '../locales/el/followUps.json';
 
 import itCommon from '../locales/it/common.json';
 import itAuth from '../locales/it/auth.json';
@@ -78,6 +81,7 @@ import itAudit from '../locales/it/audit.json';
 import itDeals from '../locales/it/deals.json';
 import itPricing from '../locales/it/pricing.json';
 import itOffers from '../locales/it/offers.json';
+import itFollowUps from '../locales/it/followUps.json';
 
 /**
  * Catalogues are imported statically rather than fetched at runtime.
@@ -106,6 +110,7 @@ export const resources = {
     deals: enDeals,
     pricing: enPricing,
     offers: enOffers,
+    followUps: enFollowUps,
   },
   sq: {
     common: sqCommon,
@@ -124,6 +129,7 @@ export const resources = {
     deals: sqDeals,
     pricing: sqPricing,
     offers: sqOffers,
+    followUps: sqFollowUps,
   },
   el: {
     common: elCommon,
@@ -142,6 +148,7 @@ export const resources = {
     deals: elDeals,
     pricing: elPricing,
     offers: elOffers,
+    followUps: elFollowUps,
   },
   it: {
     common: itCommon,
@@ -160,6 +167,7 @@ export const resources = {
     deals: itDeals,
     pricing: itPricing,
     offers: itOffers,
+    followUps: itFollowUps,
   },
 } as const;
 

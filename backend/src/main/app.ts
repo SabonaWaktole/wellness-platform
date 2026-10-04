@@ -204,6 +204,31 @@ import { UpdateStatusLabelUseCase } from '../statuses/application/use-cases/Upda
 import { ReorderStatusLabelsUseCase } from '../statuses/application/use-cases/ReorderStatusLabelsUseCase';
 import { StatusLabelsController } from '../statuses/interfaces/http/StatusLabelsController';
 import { createStatusLabelRouter } from '../statuses/interfaces/http/statusLabelRoutes';
+import { prisma as sharedPrisma } from '../shared/infrastructure/prisma/client';
+import { PrismaFollowUpStore } from '../appointments/infrastructure/followUps/PrismaFollowUpStore';
+import { PrismaFollowUpWriteTransaction } from '../appointments/infrastructure/followUps/PrismaFollowUpWriteTransaction';
+import { ScheduleFollowUpUseCase } from '../appointments/application/followUps/ScheduleFollowUpUseCase';
+import { CompleteFollowUpUseCase } from '../appointments/application/followUps/CompleteFollowUpUseCase';
+import {
+  CancelFollowUpUseCase,
+  ReassignFollowUpUseCase,
+  RescheduleFollowUpUseCase,
+} from '../appointments/application/followUps/ChangeFollowUpUseCases';
+import {
+  CountMyOverdueFollowUpsUseCase,
+  GetFollowUpUseCase,
+  ListFollowUpsUseCase,
+  ListMyFollowUpsUseCase,
+} from '../appointments/application/followUps/ListFollowUpsUseCases';
+import { FollowUpController } from '../appointments/interfaces/http/followUps/FollowUpController';
+import { createFollowUpRouter } from '../appointments/interfaces/http/followUps/followUpRoutes';
+import { AddInteractionUseCase } from '../clients/application/use-cases/AddInteractionUseCase';
+import { PrismaClientRepository as FollowUpClientRepository } from '../clients/infrastructure/repositories/PrismaClientRepository';
+import { PrismaContactPersonRepository } from '../clients/infrastructure/repositories/PrismaContactPersonRepository';
+import { PrismaInteractionWriteTransaction } from '../clients/infrastructure/repositories/PrismaInteractionWriteTransaction';
+import { PrismaSalesSettingsStore } from '../deals/infrastructure/PrismaSalesSettingsStore';
+import { GetSalesSettingsUseCase, UpdateSalesSettingsUseCase } from '../deals/application/use-cases/SalesSettingsUseCases';
+import { createSalesSettingsRouter } from '../deals/interfaces/http/salesSettingsRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -606,6 +631,43 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   app.use(
     '/api/:tenantSlug/discount-approvals',
     createDiscountApprovalRouter(discountApprovalsController, tokenService, tenantRepository, resolveAccessContext)
+  );
+
+  // Follow-ups (M2 Slice 11: FR-FUP-01..10, FR-ACT-04, FR-DEAL-08): scheduled
+  // with one click, "My follow-ups" and its overdue count, the team view,
+  // and completing one by recording the activity in the same transaction.
+  const followUpStore = new PrismaFollowUpStore();
+  const followUpWriteTransaction = new PrismaFollowUpWriteTransaction();
+  const followUpActivities = new AddInteractionUseCase(
+    new FollowUpClientRepository(sharedPrisma),
+    { contacts: new PrismaContactPersonRepository(sharedPrisma), lookups: lookupStore, scopes: recordScopes },
+    new PrismaInteractionWriteTransaction()
+  );
+  const followUpController = new FollowUpController(
+    new ScheduleFollowUpUseCase(followUpStore, dealStore, followUpWriteTransaction, recordScopes, notificationService),
+    new CompleteFollowUpUseCase(followUpStore, followUpWriteTransaction, followUpActivities, recordScopes),
+    new RescheduleFollowUpUseCase(followUpStore, followUpWriteTransaction, recordScopes),
+    new CancelFollowUpUseCase(followUpStore, followUpWriteTransaction, recordScopes),
+    new ReassignFollowUpUseCase(followUpStore, followUpWriteTransaction, recordScopes, dealStore, notificationService),
+    new ListMyFollowUpsUseCase(followUpStore),
+    new CountMyOverdueFollowUpsUseCase(followUpStore),
+    new ListFollowUpsUseCase(followUpStore, recordScopes),
+    new GetFollowUpUseCase(followUpStore, recordScopes)
+  );
+  app.use('/api/:tenantSlug/follow-ups', createFollowUpRouter(followUpController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Workspace sales settings (M2 Slice 11): the days without activity after
+  // which a deal is highlighted (FR-DEAL-12).
+  const salesSettingsStore = new PrismaSalesSettingsStore();
+  app.use(
+    '/api/:tenantSlug/sales-settings',
+    createSalesSettingsRouter(
+      new GetSalesSettingsUseCase(salesSettingsStore),
+      new UpdateSalesSettingsUseCase(salesSettingsStore),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
   );
 
   // Settings → Statuses: contract and payment status labels, and the deal

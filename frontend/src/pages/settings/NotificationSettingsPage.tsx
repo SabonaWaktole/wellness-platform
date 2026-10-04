@@ -37,6 +37,8 @@ const toFormState = (settings: NotificationSettings): FormState => ({
   quotationAutoExpireEnabled: settings.quotationAutoExpireEnabled,
   quotationExpiryDays: settings.quotationExpiryDays,
   discountApprovalReminderHours: settings.discountApprovalReminderHours,
+  followUpDueNotificationsEnabled: settings.followUpDueNotificationsEnabled,
+  followUpDailySummaryEnabled: settings.followUpDailySummaryEnabled,
 });
 
 /**
@@ -326,6 +328,36 @@ export const NotificationSettingsPage = () => {
                     />
                     <span className={styles.unit}>{t('notifications.hours')}</span>
                   </div>
+                </Card>
+
+                {/* M2 Slice 11, FR-FUP-09: sales follow-ups. */}
+                <Card padding="lg">
+                  <div className={styles.cardHeaderWithIcon}>
+                    <FileClock size={17} />
+                    <h2 className={styles.cardTitle}>{t('notifications.salesFollowUpsSection')}</h2>
+                  </div>
+
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={form.followUpDueNotificationsEnabled}
+                      onChange={(e) => setField('followUpDueNotificationsEnabled', e.target.checked)}
+                      disabled={!isBusinessOwner || saving}
+                    />
+                    <span>{t('notifications.followUpDueEnabled')}</span>
+                  </label>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={form.followUpDailySummaryEnabled}
+                      onChange={(e) => setField('followUpDailySummaryEnabled', e.target.checked)}
+                      disabled={!isBusinessOwner || saving}
+                    />
+                    <span>{t('notifications.followUpSummaryEnabled')}</span>
+                  </label>
+                  <p className={styles.helperText}>{t('notifications.followUpSummaryHint')}</p>
                 </Card>
 
                 <Card padding="lg">

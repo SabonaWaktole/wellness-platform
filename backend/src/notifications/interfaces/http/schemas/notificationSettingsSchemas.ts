@@ -56,6 +56,9 @@ export const notificationSettingsSchema = z
       .min(LIMITS.discountApprovalReminderHours.min)
       .max(LIMITS.discountApprovalReminderHours.max)
       .optional(),
+
+    followUpDueNotificationsEnabled: z.boolean().optional(),
+    followUpDailySummaryEnabled: z.boolean().optional(),
   })
   .strict();
 

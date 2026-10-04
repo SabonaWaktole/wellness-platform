@@ -37,8 +37,11 @@ export function toSummary(row: SummaryRow): DealSummary {
     // The deal's offer value, copied onto the deal when the offer is saved (Slice 8).
     netMonthlyPrice: row.offerNetMonthlyPrice?.toFixed(2) ?? null,
     annualValue: row.offerAnnualValue?.toFixed(2) ?? null,
-    // From the follow-ups (Slice 11).
+    // From the follow-ups and activities (Slice 11), filled in by PrismaDealStore.
     nextFollowUpAt: null,
+    lastActivityAt: row.createdAt.toISOString(),
+    hasOverdueFollowUp: false,
+    isStale: false,
   };
 }
 

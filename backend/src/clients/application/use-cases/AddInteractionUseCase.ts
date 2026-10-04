@@ -6,7 +6,7 @@ import { DomainError } from '../../../shared/domain/errors/DomainError';
 import { DealStage } from '../../../deals/domain/DealStage';
 import { addKeyFor } from '../activityAccess';
 import { ActivityReferenceReaders, checkActivityReferences } from '../activityReferences';
-import { IInteractionWriteTransaction } from '../ports/IInteractionWriteTransaction';
+import { IInteractionWriteTransaction, InteractionWriteRepos } from '../ports/IInteractionWriteTransaction';
 import { randomUUID } from 'crypto';
 
 interface AddInteractionDTO extends ActivityDetails {
@@ -28,8 +28,15 @@ export class AddInteractionUseCase {
   /**
    * D3: a NOTE needs `notes.add`, every other channel `activities.add` — and
    * the company has to be inside that permission's scope (FR-RBAC-11).
+   *
+   * `alsoWithin` runs in the same transaction, after the activity is saved:
+   * completing a follow-up closes it there, so the activity and the closed
+   * follow-up commit together or not at all (M2 Slice 11, FR-FUP-06).
    */
-  async execute(dto: AddInteractionDTO): Promise<Interaction> {
+  async execute(
+    dto: AddInteractionDTO,
+    alsoWithin?: (repos: InteractionWriteRepos, interaction: Interaction) => Promise<void>
+  ): Promise<Interaction> {
     const key = addKeyFor(dto.channel);
     dto.access.ensure(key);
     const scope = await this.readers.scopes.resolve(dto.access, key);
@@ -44,7 +51,8 @@ export class AddInteractionUseCase {
       now
     );
 
-    return this.writeTx.run(async ({ interactions, deals }) => {
+    return this.writeTx.run(async (repos) => {
+      const { interactions, deals } = repos;
       const deal = await checkActivityReferences(this.readers, deals, {
         access: dto.access,
         tenantId: dto.tenantId,
@@ -62,6 +70,7 @@ export class AddInteractionUseCase {
           await deals.recordChange(dto.tenantId, change);
         }
       }
+      if (alsoWithin) await alsoWithin(repos, interaction);
       return interaction;
     });
   }

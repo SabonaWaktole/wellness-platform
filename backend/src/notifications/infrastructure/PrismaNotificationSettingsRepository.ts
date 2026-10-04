@@ -24,9 +24,21 @@ export class PrismaNotificationSettingsRepository implements INotificationSettin
     quotationAutoExpireEnabled: boolean;
     quotationExpiryDays: number;
     discountApprovalReminderHours: number;
+    followUpDueNotificationsEnabled: boolean;
+    followUpDailySummaryEnabled: boolean;
   }) {
     return {
-      ...row,
+      tenantId: row.tenantId,
+      emailEnabled: row.emailEnabled,
+      appointmentRemindersEnabled: row.appointmentRemindersEnabled,
+      appointmentReminderLeadMinutes: row.appointmentReminderLeadMinutes,
+      quotationFollowUpEnabled: row.quotationFollowUpEnabled,
+      quotationFollowUpDays: row.quotationFollowUpDays,
+      quotationAutoExpireEnabled: row.quotationAutoExpireEnabled,
+      quotationExpiryDays: row.quotationExpiryDays,
+      discountApprovalReminderHours: row.discountApprovalReminderHours,
+      followUpDueNotificationsEnabled: row.followUpDueNotificationsEnabled,
+      followUpDailySummaryEnabled: row.followUpDailySummaryEnabled,
       emailEventTypes: jsonToStringArray(row.emailEventTypes),
       emailRecipientRoles: jsonToStringArray(row.emailRecipientRoles),
     };
@@ -44,6 +56,8 @@ export class PrismaNotificationSettingsRepository implements INotificationSettin
       quotationAutoExpireEnabled: settings.quotationAutoExpireEnabled,
       quotationExpiryDays: settings.quotationExpiryDays,
       discountApprovalReminderHours: settings.discountApprovalReminderHours,
+      followUpDueNotificationsEnabled: settings.followUpDueNotificationsEnabled,
+      followUpDailySummaryEnabled: settings.followUpDailySummaryEnabled,
     };
 
     await this.prisma.notificationSettings.upsert({

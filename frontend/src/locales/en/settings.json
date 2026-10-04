@@ -365,6 +365,10 @@
     "discountApprovalsSection": "Discount approvals",
     "discountReminderHoursLabel": "Hours before reminding the approver",
     "discountReminderHoursHint": "A pending discount request reminds its approvers once, after waiting this long.",
+    "salesFollowUpsSection": "Sales follow-ups",
+    "followUpDueEnabled": "Notify the salesperson when a follow-up is due",
+    "followUpSummaryEnabled": "Email each salesperson a summary of the day's follow-ups at 07:30",
+    "followUpSummaryHint": "Sent in the workspace's time zone, to salespeople with follow-ups due that day or overdue.",
     "followUpSection": "Quotation follow-ups",
     "followUpEnabled": "Remind staff about unanswered quotations",
     "followUpDaysLabel": "Days to wait before reminding",
@@ -395,7 +399,9 @@
       "DISCOUNT_APPROVAL_REMINDER": "Discount approval reminder",
       "CLIENT_ASSIGNED": "Client assigned",
       "INVITATION_ACCEPTED": "Invitation accepted",
-      "FORM_SUBMITTED": "Form submitted"
+      "FORM_SUBMITTED": "Form submitted",
+      "FOLLOW_UP_ASSIGNED": "Follow-up given to someone",
+      "FOLLOW_UP_DUE": "Follow-up due"
     },
     "role": {
       "BUSINESS_OWNER": "Business Owners",
@@ -871,6 +877,18 @@
       "INVALID_STATUS_LABEL": "Check the values: the Albanian label is required and the colour must be a valid hex value.",
       "INVALID_STATUS_ORDER": "The list changed while you were reordering it. Reload the page and try again.",
       "generic": "Something went wrong. Please try again."
+    },
+    "staleDeals": {
+      "title": "Pipeline highlights",
+      "hint": "An open deal with no activity for longer than this is marked on the board and the list.",
+      "label": "Highlight open deals with no activity for",
+      "days": "days",
+      "save": "Save",
+      "saveAria": "Save the days without activity",
+      "saved": "Saved.",
+      "invalid": "Enter a whole number of days from 1 to 365.",
+      "loadFailed": "The setting could not be loaded.",
+      "saveFailed": "The setting could not be saved. Try again."
     }
   },
   "salesScript": {

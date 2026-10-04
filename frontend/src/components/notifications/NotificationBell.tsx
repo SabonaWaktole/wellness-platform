@@ -10,6 +10,8 @@ import styles from './NotificationBell.module.css';
 
 /** Where a notification takes you when clicked. */
 const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
+  // FR-FUP-09: the daily summary opens the list it summarises.
+  if (n.type === 'FOLLOW_UP_DAILY_SUMMARY') return `/${tenantSlug}/follow-ups`;
   if (!n.entityId) return null;
   switch (n.entityType) {
     case 'QUOTATION': return `/${tenantSlug}/quotations/${n.entityId}`;
@@ -22,6 +24,8 @@ const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
       const offerId = typeof n.params?.offerId === 'string' ? n.params.offerId : null;
       return offerId ? `/${tenantSlug}/deals/${n.entityId}?offer=${offerId}` : `/${tenantSlug}/deals/${n.entityId}`;
     }
+    // M2 Slice 11: "My follow-ups", on that follow-up.
+    case 'FOLLOW_UP': return `/${tenantSlug}/follow-ups?open=${n.entityId}`;
     default: return null;
   }
 };

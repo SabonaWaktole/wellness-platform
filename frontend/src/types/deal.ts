@@ -42,7 +42,14 @@ export interface DealSummary {
   closedAt: string | null;
   netMonthlyPrice?: string | null;
   annualValue?: string | null;
+  /** The earliest open follow-up (Slice 11). */
   nextFollowUpAt: string | null;
+  /** The latest activity other than a note, else when the deal was created. */
+  lastActivityAt: string;
+  /** FR-DEAL-12: an open follow-up is past due. */
+  hasOverdueFollowUp: boolean;
+  /** FR-DEAL-12: no activity for the workspace's number of days (default 14). */
+  isStale: boolean;
 }
 
 export interface DealContact {

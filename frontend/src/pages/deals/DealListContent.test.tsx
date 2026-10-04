@@ -38,6 +38,9 @@ const deal = (id: string, overrides: Partial<DealSummary> = {}): DealSummary => 
   netMonthlyPrice: null,
   annualValue: null,
   nextFollowUpAt: null,
+  lastActivityAt: '2026-10-02T08:00:00Z',
+  hasOverdueFollowUp: false,
+  isStale: false,
   ...overrides,
 });
 
@@ -77,6 +80,20 @@ describe('Deal list (FR-DEAL-11)', () => {
     await screen.findAllByText('Deal 1');
     fireEvent.change(screen.getByRole('combobox', { name: 'Salesperson' }), { target: { value: 'u-b' } });
     await waitFor(() => expect(lastParams()).toMatchObject({ ownerUserId: 'u-b', page: 1 }));
+  });
+
+  it('FR-DEAL-12 a deal with a follow-up due yesterday shows the overdue marker; a quiet deal the stale one', async () => {
+    const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString();
+    vi.mocked(dealService.list).mockResolvedValue({
+      items: [deal('1', { hasOverdueFollowUp: true }), deal('2', { isStale: true, lastActivityAt: twentyDaysAgo }), deal('3')],
+      total: 3,
+      page: 1,
+      pageSize: 25,
+    });
+    renderList();
+    await screen.findAllByText('Deal 1');
+    expect(screen.getAllByText('Overdue follow-up').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No activity for 20 days').length).toBeGreaterThan(0);
   });
 
   it('FR-DEAL-11 filters by stage, type and business type, and sorts by expected close date', async () => {
