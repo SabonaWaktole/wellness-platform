@@ -1,4 +1,4 @@
-import { dayKeyInZone, isSameDayInZone, dayBoundsInZone } from '@shared/domain/time/tenantDay';
+import { dayKeyInZone, isSameDayInZone, dayBoundsInZone, instantInZone } from '@shared/domain/time/tenantDay';
 
 /**
  * ===========================================================================
@@ -69,10 +69,35 @@ export const TIMEZONE_DAY_FIXTURES: Array<{
     expectedStart: '2026-07-27T22:00:00.000Z', expectedEnd: '2026-07-28T22:00:00.000Z' },
 ];
 
+/**
+ * SHARED FIXTURE — MUST MATCH THE OTHER PACKAGE'S COPY EXACTLY (see above).
+ * `instantInZone(dayKey, hour, minute, timeZone)` and the instant it gives.
+ */
+export const WALL_CLOCK_FIXTURES: Array<{ name: string; dayKey: string; hour: number; minute: number; timeZone: string; expected: string }> = [
+  { name: 'Tirane in summer (UTC+2)', dayKey: '2026-07-27', hour: 9, minute: 0, timeZone: 'Europe/Tirane', expected: '2026-07-27T07:00:00.000Z' },
+  { name: 'Tirane in winter (UTC+1)', dayKey: '2026-01-15', hour: 9, minute: 0, timeZone: 'Europe/Tirane', expected: '2026-01-15T08:00:00.000Z' },
+  { name: 'Tirane, a time after the spring-forward jump', dayKey: '2026-03-29', hour: 10, minute: 15, timeZone: 'Europe/Tirane', expected: '2026-03-29T08:15:00.000Z' },
+  { name: 'Tirane, a time before the spring-forward jump', dayKey: '2026-03-29', hour: 1, minute: 30, timeZone: 'Europe/Tirane', expected: '2026-03-29T00:30:00.000Z' },
+  { name: 'Tirane, a time the spring-forward skips resolves an hour later', dayKey: '2026-03-29', hour: 2, minute: 30, timeZone: 'Europe/Tirane', expected: '2026-03-29T01:30:00.000Z' },
+  { name: 'New York, the fall-back day after the repeat', dayKey: '2026-11-01', hour: 12, minute: 0, timeZone: 'America/New_York', expected: '2026-11-01T17:00:00.000Z' },
+  { name: 'half-hour zone (UTC+5:45)', dayKey: '2026-07-27', hour: 8, minute: 30, timeZone: 'Asia/Kathmandu', expected: '2026-07-27T02:45:00.000Z' },
+  { name: 'UTC itself', dayKey: '2026-07-27', hour: 23, minute: 59, timeZone: 'UTC', expected: '2026-07-27T23:59:00.000Z' },
+];
+
 describe('tenantDay (backend)', () => {
   describe('dayKeyInZone — shared fixture', () => {
     it.each(TIMEZONE_DAY_FIXTURES)('$name', ({ instant, timeZone, expectedDay }) => {
       expect(dayKeyInZone(new Date(instant), timeZone)).toBe(expectedDay);
+    });
+  });
+
+  describe('instantInZone — shared fixture', () => {
+    it.each(WALL_CLOCK_FIXTURES)('$name', ({ dayKey, hour, minute, timeZone, expected }) => {
+      expect(instantInZone(dayKey, hour, minute, timeZone).toISOString()).toBe(expected);
+    });
+
+    it.each(WALL_CLOCK_FIXTURES)('$name — reads back as the same day', ({ dayKey, hour, minute, timeZone }) => {
+      expect(dayKeyInZone(instantInZone(dayKey, hour, minute, timeZone), timeZone)).toBe(dayKey);
     });
   });
 

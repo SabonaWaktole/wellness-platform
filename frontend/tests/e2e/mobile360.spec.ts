@@ -88,6 +88,13 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       ['discount approvals', () => 'approvals'],
       // M2 Slice 11: My follow-ups (FR-FUP-07)
       ['my follow-ups', () => 'follow-ups'],
+      // M2 Slice 12: the sales calendar's day and agenda views (FR-CAL-01)
+      ['calendar (day)', () => 'appointments?view=day'],
+      ['calendar (agenda)', () => 'appointments?view=agenda'],
+      ['calendar (week)', () => 'appointments?view=week'],
+      ['calendar (month)', () => 'appointments?view=month'],
+      // M2 Slice 6: the deal edit form
+      ['deal edit form', () => `deals/${dealId}/edit`],
     ];
 
     test('NFR-USE-02 FR-SCR-02 the sales script panel covers the phone screen and closes', async ({ page }) => {

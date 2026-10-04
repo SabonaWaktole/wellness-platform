@@ -61,10 +61,18 @@ export function toDeal(row: DealRow): Deal {
     updatedAt: row.updatedAt,
     closedAt: row.closedAt,
     deletedAt: row.deletedAt,
+    wonAt: row.wonAt,
+    lostAt: row.lostAt,
+    lostReasonId: row.lostReasonId,
+    lostNote: row.lostNote,
+    agreedMonthlyPrice: row.agreedMonthlyPrice?.toFixed(2) ?? null,
+    agreedAnnualValue: row.agreedAnnualValue?.toFixed(2) ?? null,
+    packageId: row.packageId,
+    wonQuotationId: row.wonQuotationId,
   });
 }
 
-/** The columns a domain deal writes. The won and lost columns belong to Slice 13's actions. */
+/** The columns a domain deal writes, including the result of a won or lost deal (Slice 13). */
 export function dealColumns(deal: Deal) {
   const props = deal.toProps();
   return {
@@ -77,5 +85,13 @@ export function dealColumns(deal: Deal) {
     updatedAt: props.updatedAt,
     closedAt: props.closedAt,
     deletedAt: props.deletedAt,
+    wonAt: props.wonAt,
+    lostAt: props.lostAt,
+    lostReasonId: props.lostReasonId,
+    lostNote: props.lostNote,
+    agreedMonthlyPrice: props.agreedMonthlyPrice,
+    agreedAnnualValue: props.agreedAnnualValue,
+    packageId: props.packageId,
+    wonQuotationId: props.wonQuotationId,
   };
 }

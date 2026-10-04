@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Mail, MoreVertical, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, Mail, MoreVertical, Pencil, Phone, RotateCcw, ThumbsDown, Trophy, Trash2, UserRound } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
@@ -26,6 +26,8 @@ import type { DealDetail, DealStage } from '../../types/deal';
 import { dealErrorMessage } from './dealErrors';
 import { DealActivitiesSection } from './DealActivitiesSection';
 import { DealOffersSection } from './DealOffersSection';
+import { LoseDealModal, ReopenDealModal, WinDealModal } from './DealClosingModals';
+import { lookupLabel } from '../../utils/lookupLabel';
 import { FollowUpsPanel } from '../../components/followUps/FollowUpsPanel';
 import styles from './DealDetailContent.module.css';
 
@@ -36,7 +38,7 @@ import styles from './DealDetailContent.module.css';
  * activities (Slice 7) and its follow-ups (Slice 11).
  */
 export const DealDetailContent: React.FC = () => {
-  const { t } = useTranslation('deals');
+  const { t, i18n } = useTranslation('deals');
   const { t: tc } = useTranslation('common');
   const { tenantSlug, dealId } = useParams();
   const navigate = useNavigate();
@@ -48,6 +50,7 @@ export const DealDetailContent: React.FC = () => {
   const canEdit = usePermission('deals.edit');
   const canReassign = usePermission('companies.reassign');
   const canDelete = usePermission('deals.delete');
+  const canReopen = usePermission('deals.reopen');
   const { staff, fetchStaff } = useTeam();
 
   const [deal, setDeal] = useState<DealDetail | null>(null);
@@ -56,6 +59,8 @@ export const DealDetailContent: React.FC = () => {
   const [newOwner, setNewOwner] = useState('');
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [closing, setClosing] = useState<'win' | 'lose' | 'reopen' | null>(null);
+  const [winOfferId, setWinOfferId] = useState<string | undefined>();
 
   const load = useCallback(async () => {
     if (!tenantSlug || !dealId) return;
@@ -88,6 +93,7 @@ export const DealDetailContent: React.FC = () => {
   if (!deal) return <p className={styles.message}>{tc('state.loading')}</p>;
 
   const open = isOpenStage(deal.stage);
+  const closedOn = (deal.stage === 'WON' ? deal.wonAt : deal.lostAt) ?? deal.closedAt;
 
   const moveTo = async (stage: DealStage) => {
     if (!tenantSlug || stage === deal.stage) return;
@@ -146,6 +152,21 @@ export const DealDetailContent: React.FC = () => {
         </div>
         <div className={styles.headerActions}>
           <SalesScriptButton outline />
+          {canEdit && open && (
+            <>
+              <Button variant="success" icon={<Trophy size={16} />} onClick={() => { setWinOfferId(undefined); setClosing('win'); }}>
+                {t('win.action')}
+              </Button>
+              <Button variant="outline" icon={<ThumbsDown size={16} />} onClick={() => setClosing('lose')}>
+                {t('lose.action')}
+              </Button>
+            </>
+          )}
+          {canReopen && !open && (
+            <Button variant="outline" icon={<RotateCcw size={16} />} onClick={() => setClosing('reopen')}>
+              {t('reopen.action')}
+            </Button>
+          )}
           {canEdit && (
             <Button variant="outline" icon={<Pencil size={16} />} onClick={() => navigate(`/${tenantSlug}/deals/${deal.id}/edit`)}>
               {t('detail.edit')}
@@ -228,6 +249,67 @@ export const DealDetailContent: React.FC = () => {
             </dl>
           </Card>
 
+          {!open && (
+            <Card padding="lg">
+              <h2 className={styles.sectionTitle}>{deal.stage === 'WON' ? t('result.wonTitle') : t('result.lostTitle')}</h2>
+              <dl className={styles.facts}>
+                {closedOn && (
+                  <div className={styles.fact}>
+                    <dt>{t('result.closingDate')}</dt>
+                    <dd>{dates.dateTime(closedOn)}</dd>
+                  </div>
+                )}
+                {deal.stage === 'WON' ? (
+                  <>
+                    {deal.agreedMonthlyPrice != null && (
+                      <div className={styles.fact}>
+                        <dt>{t('result.agreedMonthly')}</dt>
+                        <dd>{t('perMonth', { amount: money.format(Number(deal.agreedMonthlyPrice)) })}</dd>
+                      </div>
+                    )}
+                    {deal.agreedAnnualValue != null && (
+                      <div className={styles.fact}>
+                        <dt>{t('result.agreedAnnual')}</dt>
+                        <dd>{t('perYear', { amount: money.format(Number(deal.agreedAnnualValue)) })}</dd>
+                      </div>
+                    )}
+                    {deal.packageNameSq && (
+                      <div className={styles.fact}>
+                        <dt>{t('result.package')}</dt>
+                        <dd>{lookupLabel({ nameSq: deal.packageNameSq, nameEn: deal.packageNameEn }, i18n.language)}</dd>
+                      </div>
+                    )}
+                    {deal.wonQuotationReference && (
+                      <div className={styles.fact}>
+                        <dt>{t('result.offer')}</dt>
+                        <dd>{deal.wonQuotationReference}</dd>
+                      </div>
+                    )}
+                    <div className={styles.fact}>
+                      <dt>{t('detail.salesperson')}</dt>
+                      <dd>{deal.ownerName}</dd>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {deal.lostReasonSq && (
+                      <div className={styles.fact}>
+                        <dt>{t('result.reason')}</dt>
+                        <dd>{lookupLabel({ nameSq: deal.lostReasonSq, nameEn: deal.lostReasonEn }, i18n.language)}</dd>
+                      </div>
+                    )}
+                    {deal.lostNote && (
+                      <div className={styles.fact}>
+                        <dt>{t('result.note')}</dt>
+                        <dd>{deal.lostNote}</dd>
+                      </div>
+                    )}
+                  </>
+                )}
+              </dl>
+            </Card>
+          )}
+
           <Card padding="lg">
             <h2 className={styles.sectionTitle}>{t('detail.contacts')}</h2>
             {deal.contacts.length === 0 ? (
@@ -282,12 +364,20 @@ export const DealDetailContent: React.FC = () => {
                   <span className={styles.muted}>
                     {t('detail.historyBy', { date: dates.dateTime(change.at), actor: change.changedByName ?? t('detail.automatic') })}
                   </span>
+                  {change.note && <span className={styles.muted}>{t('detail.historyNote', { note: change.note })}</span>}
                 </li>
               ))}
             </ol>
           </Card>
 
-          <DealOffersSection deal={deal} onDealChanged={load} />
+          <DealOffersSection
+            deal={deal}
+            onDealChanged={load}
+            onCanWin={(offerId) => {
+              setWinOfferId(offerId);
+              setClosing('win');
+            }}
+          />
           <DealActivitiesSection deal={deal} onDealChanged={load} />
           {/* FR-DEAL-03, FR-FUP-01: the deal's follow-ups (Slice 11). */}
           <FollowUpsPanel
@@ -300,6 +390,14 @@ export const DealDetailContent: React.FC = () => {
           />
         </div>
       </div>
+
+      {tenantSlug && (
+        <>
+          <WinDealModal tenantSlug={tenantSlug} deal={deal} offerId={winOfferId} isOpen={closing === 'win'} onClose={() => setClosing(null)} onDone={(won) => { setDeal(won); setClosing(null); }} />
+          <LoseDealModal tenantSlug={tenantSlug} deal={deal} isOpen={closing === 'lose'} onClose={() => setClosing(null)} onDone={(lost) => { setDeal(lost); setClosing(null); }} />
+          <ReopenDealModal tenantSlug={tenantSlug} deal={deal} isOpen={closing === 'reopen'} onClose={() => setClosing(null)} onDone={(reopened) => { setDeal(reopened); setClosing(null); }} />
+        </>
+      )}
 
       <Modal isOpen={isReassignOpen} onClose={() => setIsReassignOpen(false)} title={t('detail.reassignTitle')} maxWidth="sm">
         <div className={styles.modalBody}>

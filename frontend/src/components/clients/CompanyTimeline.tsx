@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { lookupLabel } from '../../utils/lookupLabel';
 import {
   Banknote,
   Briefcase,
@@ -99,7 +100,7 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
   onLoadMore,
   onEditActivity,
 }) => {
-  const { t } = useTranslation('clients');
+  const { t, i18n } = useTranslation('clients');
   const canEditActivity = useCanEditActivity();
   const statusLabel = useStatusLabel();
   const dates = useDateFormat();
@@ -187,6 +188,25 @@ export const CompanyTimeline: React.FC<CompanyTimelineProps> = ({
           status: statusLabel.deal('NEW_LEAD'),
           icon: <Briefcase size={16} />,
           ...PRIMARY,
+        };
+      case 'DEAL_WON':
+        return {
+          title: t('detail.timeline.events.DEAL_WON', { deal: d.title ?? statusLabel.dealType(d.type) }),
+          content:
+            d.agreedMonthlyPrice != null
+              ? t('detail.timeline.dealWonValue', { monthly: money.format(Number(d.agreedMonthlyPrice)), annual: money.format(Number(d.agreedAnnualValue ?? 0)) })
+              : undefined,
+          status: statusLabel.deal('WON'),
+          icon: <Briefcase size={16} />,
+          ...PRIMARY,
+        };
+      case 'DEAL_LOST':
+        return {
+          title: t('detail.timeline.events.DEAL_LOST', { deal: d.title ?? statusLabel.dealType(d.type) }),
+          content: [lookupLabel({ nameSq: d.lostReasonSq ?? '', nameEn: d.lostReasonEn }, i18n.language), d.lostNote].filter(Boolean).join(' — ') || undefined,
+          status: statusLabel.deal('LOST'),
+          icon: <Briefcase size={16} />,
+          ...NEUTRAL,
         };
       case 'DEAL_STAGE_CHANGED':
         return {

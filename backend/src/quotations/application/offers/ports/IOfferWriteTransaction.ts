@@ -15,6 +15,8 @@ export interface IOfferWrites {
   find(tenantId: string, id: string): Promise<Offer | null>;
   /** The deal's latest offer that no later version replaces, whatever its status, or null. */
   latest(tenantId: string, dealId: string): Promise<Offer | null>;
+  /** The deal's offers that no later version replaces and that are still open: Draft, Pending approval, Ready or Sent (FR-DEAL-16). */
+  openForDeal(tenantId: string, dealId: string): Promise<Offer[]>;
   /** How many offers the deal has had, drafts included. */
   countForDeal(tenantId: string, dealId: string): Promise<number>;
   /** A new offer or version with its services and its first status-history row (NONE → DRAFT). */

@@ -1,3 +1,4 @@
+import { quotationReference } from '../../quotations/domain/quotationReference';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 import { insensitiveContains } from '../../shared/infrastructure/prisma/caseInsensitiveFilter';
@@ -46,6 +47,9 @@ export class PrismaDealStore implements IDealStore {
             },
           },
         },
+        lostReason: { select: { nameSq: true, nameEn: true } },
+        package: { select: { nameSq: true, nameEn: true } },
+        wonQuotation: { select: { id: true, number: true, version: true } },
         stageHistory: {
           where: { tenantId },
           orderBy: [{ at: 'asc' }, { id: 'asc' }],
@@ -59,6 +63,19 @@ export class PrismaDealStore implements IDealStore {
       ...summary,
       notes: row.notes,
       createdByUserId: row.createdByUserId,
+      wonAt: row.wonAt?.toISOString() ?? null,
+      lostAt: row.lostAt?.toISOString() ?? null,
+      lostReasonId: row.lostReasonId,
+      lostReasonSq: row.lostReason?.nameSq ?? null,
+      lostReasonEn: row.lostReason?.nameEn ?? null,
+      lostNote: row.lostNote,
+      agreedMonthlyPrice: row.agreedMonthlyPrice?.toFixed(2) ?? null,
+      agreedAnnualValue: row.agreedAnnualValue?.toFixed(2) ?? null,
+      packageId: row.packageId,
+      packageNameSq: row.package?.nameSq ?? null,
+      packageNameEn: row.package?.nameEn ?? null,
+      wonQuotationId: row.wonQuotationId,
+      wonQuotationReference: row.wonQuotation ? quotationReference(row.wonQuotation) : null,
       contacts: row.client.contactPersons,
       history: row.stageHistory.map((change) => ({
         id: change.id,
@@ -67,6 +84,7 @@ export class PrismaDealStore implements IDealStore {
         changedByUserId: change.changedByUserId,
         changedByName: change.changedBy ? displayName(change.changedBy) : null,
         at: change.at.toISOString(),
+        note: change.note,
       })),
     };
   }

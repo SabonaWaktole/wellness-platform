@@ -1,6 +1,6 @@
 import { apiClient as api } from '../api';
 import type { ActivityView } from '../types/client';
-import type { BoardColumn, DealDetail, DealInput, DealListParams, DealPage, DealStage, NewDealInput, PipelineBoard } from '../types/deal';
+import type { BoardColumn, DealDetail, DealInput, DealListParams, DealPage, DealStage, LoseDealInput, NewDealInput, PipelineBoard, WinDealInput } from '../types/deal';
 import type { OfferView, SaveOfferInput } from '../types/offer';
 
 /** The deals API (M2 Slice 6: FR-DEAL-01..11, 13, 19). Every response is scoped and redacted on the server. */
@@ -48,6 +48,18 @@ export const dealService = {
 
   changeStage: async (tenantSlug: string, id: string, stage: DealStage): Promise<DealDetail> =>
     (await api.post<{ data: DealDetail }>(`${base(tenantSlug)}/${id}/stage`, { stage })).data.data,
+
+  /** FR-DEAL-14, 15: wins the deal with an offer; the agreed values come from the offer. */
+  win: async (tenantSlug: string, id: string, input: WinDealInput): Promise<DealDetail> =>
+    (await api.post<{ data: DealDetail }>(`${base(tenantSlug)}/${id}/win`, input)).data.data,
+
+  /** FR-DEAL-16: loses the deal for a predefined reason. */
+  lose: async (tenantSlug: string, id: string, input: LoseDealInput): Promise<DealDetail> =>
+    (await api.post<{ data: DealDetail }>(`${base(tenantSlug)}/${id}/lose`, input)).data.data,
+
+  /** FR-DEAL-17: needs `deals.reopen`. */
+  reopen: async (tenantSlug: string, id: string, stage: DealStage, comment: string): Promise<DealDetail> =>
+    (await api.post<{ data: DealDetail }>(`${base(tenantSlug)}/${id}/reopen`, { stage, comment })).data.data,
 
   reassign: async (tenantSlug: string, id: string, ownerUserId: string): Promise<DealDetail> =>
     (await api.post<{ data: DealDetail }>(`${base(tenantSlug)}/${id}/reassign`, { ownerUserId })).data.data,

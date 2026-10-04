@@ -5,8 +5,10 @@ import { TimelineEntry } from '../../../shared/application/timeline/TimelineEntr
 /**
  * A company's deals (FR-DEAL-20): each deal's creation and every later stage
  * change, under `deals.view`, so Reception never sees them (FR-RBAC-17).
- * A deleted deal leaves the timeline with the deal. Won and lost entries
- * join in Slice 13. The first history row is the creation itself, so it is
+ * A deleted deal leaves the timeline with the deal. Won and lost
+ * (Slice 13) are entries of their own, with the closing date; the agreed
+ * values are named as the guarded fields, so they are removed without
+ * `commercial.view` (FR-RBAC-17). The first history row is the creation itself, so it is
  * not repeated as a stage change.
  */
 export class PrismaDealTimelineSource implements TimelineSource {
@@ -18,7 +20,7 @@ export class PrismaDealTimelineSource implements TimelineSource {
   async load(tenantId: string, clientId: string): Promise<TimelineEntry[]> {
     const deals = await this.prisma.deal.findMany({
       where: { tenantId, clientId, deletedAt: null },
-      include: { stageHistory: { where: { tenantId, fromStage: { not: null } } } },
+      include: { lostReason: { select: { nameSq: true, nameEn: true } }, stageHistory: { where: { tenantId, fromStage: { not: null } } } },
     });
 
     return deals.flatMap((deal) => {
@@ -40,7 +42,41 @@ export class PrismaDealTimelineSource implements TimelineSource {
         actorId: change.changedByUserId,
         details: { ...about, fromStage: change.fromStage, toStage: change.toStage },
       }));
-      return [created, ...changes];
+      // The stage change into Won or Lost is shown as its own event, not twice.
+      // A deal that was reopened keeps its old Won and Lost rows as stage changes.
+      const stageChanges = changes.filter((entry) => entry.details.toStage !== deal.stageKey || !['WON', 'LOST'].includes(deal.stageKey));
+      const closer = (stage: string) => [...deal.stageHistory].reverse().find((row) => row.toStage === stage)?.changedByUserId ?? deal.ownerUserId;
+      const closed: TimelineEntry[] = [];
+      if (deal.stageKey === 'WON' && deal.wonAt) {
+        closed.push({
+          id: `deal-won:${deal.id}`,
+          category: this.category,
+          type: 'DEAL_WON',
+          timestamp: deal.wonAt.toISOString(),
+          actorId: closer('WON'),
+          details: {
+            ...about,
+            agreedMonthlyPrice: deal.agreedMonthlyPrice?.toFixed(2) ?? null,
+            agreedAnnualValue: deal.agreedAnnualValue?.toFixed(2) ?? null,
+          },
+        });
+      }
+      if (deal.stageKey === 'LOST' && deal.lostAt) {
+        closed.push({
+          id: `deal-lost:${deal.id}`,
+          category: this.category,
+          type: 'DEAL_LOST',
+          timestamp: deal.lostAt.toISOString(),
+          actorId: closer('LOST'),
+          details: {
+            ...about,
+            lostReasonSq: deal.lostReason?.nameSq ?? null,
+            lostReasonEn: deal.lostReason?.nameEn ?? null,
+            lostNote: deal.lostNote,
+          },
+        });
+      }
+      return [created, ...stageChanges, ...closed];
     });
   }
 }

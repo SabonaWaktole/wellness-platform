@@ -48,7 +48,7 @@ export const BusinessOwnerDashboard = () => {
           <Button variant="outline" icon={<CalendarCheck size={18} />} onClick={() => navigate(`/${tenantSlug}/appointments`)}>
             {t('viewSchedule')}
           </Button>
-          <Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate(`/${tenantSlug}/appointments/new`)}>
+          <Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate(`/${tenantSlug}/appointments?plan=1`)}>
             {t('newAppointmentFull')}
           </Button>
         </div>

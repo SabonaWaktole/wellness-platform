@@ -18,10 +18,13 @@
  * deliberately drifted copy — replacing the day-end calculation with a naive
  * `start + 24h` fails exactly the two DST rows, on the drifted side only.
  *
- * THREE functions are now mirrored: dayKeyInZone, isSameDayInZone and
- * dayBoundsInZone (plus the private zoneOffsetMs). Each addition raises the
- * cost of the duplication — see TD-026 for the conditions under which this
- * should become a shared package instead.
+ * FOUR functions are now mirrored: dayKeyInZone, isSameDayInZone,
+ * dayBoundsInZone and instantInZone (plus the private zoneOffsetMs).
+ * instantInZone joined with the sales calendar (M2 Slice 12), where dropping
+ * an item on a time slot has to become the right instant on a day that
+ * changes its clocks; a second fixture table, WALL_CLOCK_FIXTURES, pins it in
+ * both suites. Each addition raises the cost of the duplication — see TD-026
+ * for the conditions under which this should become a shared package instead.
  * ---------------------------------------------------------------------------
  *
  * Why this exists at all: before it, three different notions of "day" were in
@@ -133,9 +136,9 @@ export function dayBoundsInZone(
  * The instant at which the wall clock in `timeZone` reads `hour:minute` on
  * the calendar day `dayKey` (`YYYY-MM-DD`).
  *
- * BACKEND ONLY, not mirrored: the frontend never turns a wall time into an
- * instant; it sends the day and the time and the server does it (M2 Slice
- * 11, follow-up due times in the workspace zone, FR-FUP-01).
+ * Mirrored in the frontend since M2 Slice 12, where a drag on the calendar
+ * turns a time slot into an instant (before that the frontend sent the day and
+ * the time and the server did it: follow-up due times, FR-FUP-01).
  *
  * Two passes, because the offset to subtract is the one in effect at the
  * answer, which is not known until the first guess. A wall time that a

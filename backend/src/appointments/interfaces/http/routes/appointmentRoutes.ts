@@ -13,6 +13,7 @@ import { GetAppointmentHistoryUseCase } from '../../../application/use-cases/Get
 import { PrismaAppointmentRepository } from '../../../infrastructure/repositories/PrismaAppointmentRepository';
 import { PrismaClientRepository } from '../../../../clients/infrastructure/repositories/PrismaClientRepository';
 import { PrismaUserRepository } from '../../../../auth/infrastructure/repositories/PrismaUserRepository';
+import { PrismaPlanningLinks } from '../../../infrastructure/repositories/PrismaPlanningLinks';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../../main/interfaces/http/middlewares/resolveTenant';
@@ -53,9 +54,11 @@ export const createAppointmentRouter = (
     notificationService ??
     new NotificationService(new PrismaNotificationRepository(prisma), userRepo);
 
+  const planningLinks = new PrismaPlanningLinks(prisma);
+
   // Use Cases
-  const createAppointmentUseCase = new CreateAppointmentUseCase(appointmentRepo, clientRepo, userRepo, scopes, notifications);
-  const updateAppointmentUseCase = new UpdateAppointmentUseCase(appointmentRepo, scopes, clientRepo, userRepo);
+  const createAppointmentUseCase = new CreateAppointmentUseCase(appointmentRepo, clientRepo, userRepo, scopes, planningLinks, notifications);
+  const updateAppointmentUseCase = new UpdateAppointmentUseCase(appointmentRepo, scopes, clientRepo, userRepo, planningLinks);
   const rescheduleAppointmentUseCase = new RescheduleAppointmentUseCase(appointmentRepo, scopes, notifications);
   const cancelAppointmentUseCase = new CancelAppointmentUseCase(appointmentRepo, scopes, notifications);
   const updateAppointmentStatusUseCase = new UpdateAppointmentStatusUseCase(appointmentRepo, scopes);

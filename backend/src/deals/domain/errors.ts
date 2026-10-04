@@ -21,7 +21,11 @@ export type InvalidDealField =
   | 'clientId'
   | 'ownerUserId'
   | 'stage'
-  | 'cursor';
+  | 'cursor'
+  | 'lostReasonId'
+  | 'lostNote'
+  | 'comment'
+  | 'closingDate';
 
 /** A deal field is refused. Mapped to 400 with the field, so the form can show it. */
 export class InvalidDealError extends DomainError {
@@ -56,5 +60,14 @@ export class DealHasSentOfferError extends DomainError {
 
   constructor() {
     super('A deal with an offer marked as sent cannot be deleted.');
+  }
+}
+
+/** The offer cannot win this deal (FR-DEAL-14). Mapped to 409. */
+export class DealNotWinnableError extends DomainError {
+  readonly code = 'DEAL_NOT_WINNABLE';
+
+  constructor(message: string) {
+    super(message);
   }
 }

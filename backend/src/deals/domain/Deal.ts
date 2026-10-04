@@ -1,6 +1,6 @@
 import { DealStage, isDealStage, isOpenStage, stageRank } from './DealStage';
 import { DealType, isDealType } from './DealType';
-import { DealStageNotAllowedError, InvalidDealError } from './errors';
+import { DealNotWinnableError, DealStageNotAllowedError, InvalidDealError } from './errors';
 
 const TITLE_MAX = 200;
 const NOTES_MAX = 5000;
@@ -21,7 +21,39 @@ export interface DealProps {
   updatedAt: Date;
   closedAt: Date | null;
   deletedAt: Date | null;
+  /** The result of a closed deal (Slice 13). Cleared by reopening; the history note keeps them. */
+  wonAt: Date | null;
+  lostAt: Date | null;
+  lostReasonId: string | null;
+  lostNote: string | null;
+  /** Two-decimal strings copied from the won offer (FR-DEAL-14), never typed. */
+  agreedMonthlyPrice: string | null;
+  agreedAnnualValue: string | null;
+  packageId: string | null;
+  wonQuotationId: string | null;
 }
+
+/**
+ * What a deal needs to know of an offer to be won with it (FR-DEAL-14).
+ * The offer's use case builds it from the stored offer, so the price comes
+ * from the offer and cannot be passed in.
+ */
+export interface WinningOffer {
+  id: string;
+  dealId: string;
+  /** The status key: READY, SENT or ACCEPTED qualify. */
+  status: string;
+  /** True once a later version replaces it. */
+  superseded: boolean;
+  hasPendingApproval: boolean;
+  netMonthlyPrice: string | null;
+  annualValue: string | null;
+  packageId: string | null;
+}
+
+const WINNING_STATUSES = ['READY', 'SENT', 'ACCEPTED'];
+const LOST_NOTE_MAX = 2000;
+const COMMENT_MAX = 2000;
 
 /** One row of the stage history (FR-DEAL-09). `changedByUserId` null means the platform moved the deal. */
 export interface DealStageChange {
@@ -31,6 +63,8 @@ export interface DealStageChange {
   toStage: DealStage;
   changedByUserId: string | null;
   at: Date;
+  /** Reopening keeps the previous result here (FR-DEAL-17). */
+  note?: string | null;
 }
 
 export interface OpenDealInput {
@@ -80,6 +114,14 @@ export class Deal {
       updatedAt: input.now,
       closedAt: null,
       deletedAt: null,
+      wonAt: null,
+      lostAt: null,
+      lostReasonId: null,
+      lostNote: null,
+      agreedMonthlyPrice: null,
+      agreedAnnualValue: null,
+      packageId: null,
+      wonQuotationId: null,
     });
     const change: DealStageChange = {
       id: input.newId(),
@@ -130,6 +172,9 @@ export class Deal {
   get deletedAt(): Date | null {
     return this.props.deletedAt;
   }
+  get closedAt(): Date | null {
+    return this.props.closedAt;
+  }
   get isOpen(): boolean {
     return isOpenStage(this.props.stage);
   }
@@ -162,6 +207,77 @@ export class Deal {
       return null;
     }
     return this.changeStage(target, null, now, newId);
+  }
+
+  /**
+   * FR-DEAL-14: wins the deal with one of its offers. The offer must be this
+   * deal's latest version, Ready, Sent or Accepted, with no approval waiting.
+   * The agreed price, annual value and package are read from the offer.
+   */
+  win(offer: WinningOffer, closingDate: Date, userId: string, now: Date, newId: () => string): DealStageChange {
+    if (!this.isOpen) throw new DealStageNotAllowedError('A closed deal cannot be won. Reopen it first.');
+    if (offer.dealId !== this.props.id) throw new DealNotWinnableError('That offer belongs to another deal.');
+    if (offer.superseded) throw new DealNotWinnableError('Only the latest version of the offer can win the deal.');
+    if (offer.hasPendingApproval) throw new DealNotWinnableError('The offer has an approval waiting.');
+    if (!WINNING_STATUSES.includes(offer.status)) {
+      throw new DealNotWinnableError('Win the deal with an offer that is ready, sent or accepted.');
+    }
+    if (offer.netMonthlyPrice === null || offer.annualValue === null) {
+      throw new DealNotWinnableError('The offer has no price yet.');
+    }
+    const change = this.changeStage(DealStage.Won, userId, now, newId)!;
+    this.props.wonAt = closingDate;
+    this.props.closedAt = closingDate;
+    this.props.agreedMonthlyPrice = offer.netMonthlyPrice;
+    this.props.agreedAnnualValue = offer.annualValue;
+    this.props.packageId = offer.packageId;
+    this.props.wonQuotationId = offer.id;
+    return change;
+  }
+
+  /** FR-DEAL-16: loses the deal for one of the active lost reasons, which the use case checks. */
+  lose(reasonId: string, note: string | null, closingDate: Date, userId: string, now: Date, newId: () => string): DealStageChange {
+    if (!this.isOpen) throw new DealStageNotAllowedError('A closed deal cannot be lost. Reopen it first.');
+    if (!reasonId?.trim()) throw new InvalidDealError('lostReasonId', 'Choose why the deal was lost.');
+    const cleaned = note?.trim() ?? '';
+    if (cleaned.length > LOST_NOTE_MAX) {
+      throw new InvalidDealError('lostNote', `The note can be at most ${LOST_NOTE_MAX} characters.`);
+    }
+    const change = this.changeStage(DealStage.Lost, userId, now, newId)!;
+    this.props.lostAt = closingDate;
+    this.props.closedAt = closingDate;
+    this.props.lostReasonId = reasonId;
+    this.props.lostNote = cleaned || null;
+    return change;
+  }
+
+  /**
+   * FR-DEAL-17: a won or lost deal goes back to an open stage. The result
+   * fields are cleared and kept in the history row's note, with who and why.
+   */
+  reopen(target: DealStage, comment: string, userId: string, now: Date, newId: () => string): DealStageChange {
+    if (this.isOpen) throw new DealStageNotAllowedError('Only a won or lost deal can be reopened.');
+    if (!isDealStage(target) || !isOpenStage(target)) {
+      throw new InvalidDealError('stage', 'Reopen the deal into an open stage.');
+    }
+    const cleaned = comment?.trim() ?? '';
+    if (!cleaned) throw new InvalidDealError('comment', 'Say why the deal is reopened.');
+    if (cleaned.length > COMMENT_MAX) throw new InvalidDealError('comment', `The comment can be at most ${COMMENT_MAX} characters.`);
+    const previous = this.props.stage === DealStage.Won
+      ? `Won ${this.props.agreedMonthlyPrice ?? '-'}/month, ${this.props.agreedAnnualValue ?? '-'}/year, offer ${this.props.wonQuotationId ?? '-'}`
+      : `Lost reason ${this.props.lostReasonId ?? '-'}${this.props.lostNote ? `: ${this.props.lostNote}` : ''}`;
+    const change = this.changeStage(target, userId, now, newId)!;
+    change.note = `${cleaned} (was: ${previous})`;
+    this.props.closedAt = null;
+    this.props.wonAt = null;
+    this.props.lostAt = null;
+    this.props.lostReasonId = null;
+    this.props.lostNote = null;
+    this.props.agreedMonthlyPrice = null;
+    this.props.agreedAnnualValue = null;
+    this.props.packageId = null;
+    this.props.wonQuotationId = null;
+    return change;
   }
 
   /** Hands the deal to another salesperson (FR-DEAL-05). Returns the previous one. */

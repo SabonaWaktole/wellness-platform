@@ -17,7 +17,7 @@ export const DEAL_STAGES = [
 ] as const;
 export type DealStage = (typeof DEAL_STAGES)[number];
 
-/** Won and Lost are reached through their own actions (Slice 13), never a stage move (FR-DEAL-07). */
+/** Won and Lost are reached through their own win and lose actions (Slice 13), never a stage move (FR-DEAL-07). */
 export const CLOSED_DEAL_STAGES: readonly DealStage[] = ['WON', 'LOST'];
 export const OPEN_DEAL_STAGES: readonly DealStage[] = DEAL_STAGES.filter((stage) => !CLOSED_DEAL_STAGES.includes(stage));
 export const isOpenStage = (stage: string): boolean => OPEN_DEAL_STAGES.includes(stage as DealStage);
@@ -69,9 +69,28 @@ export interface DealStageChange {
   changedByUserId: string | null;
   changedByName: string | null;
   at: string;
+  /** Reopening keeps the previous result here (FR-DEAL-17). */
+  note: string | null;
 }
 
-export interface DealDetail extends DealSummary {
+/** What a won or lost deal records (Slice 13). The agreed values are absent without `commercial.view`. */
+export interface DealResult {
+  wonAt: string | null;
+  lostAt: string | null;
+  lostReasonId: string | null;
+  lostReasonSq: string | null;
+  lostReasonEn: string | null;
+  lostNote: string | null;
+  agreedMonthlyPrice?: string | null;
+  agreedAnnualValue?: string | null;
+  packageId: string | null;
+  packageNameSq: string | null;
+  packageNameEn: string | null;
+  wonQuotationId: string | null;
+  wonQuotationReference: string | null;
+}
+
+export interface DealDetail extends DealSummary, DealResult {
   notes: string | null;
   createdByUserId: string;
   contacts: DealContact[];
@@ -130,4 +149,18 @@ export interface DealInput {
 export interface NewDealInput extends DealInput {
   clientId: string;
   ownerUserId?: string | null;
+}
+
+export interface WinDealInput {
+  /** Defaults to the deal's latest offer. */
+  offerId?: string;
+  /** `YYYY-MM-DD`; defaults to today on the server. */
+  closingDate?: string;
+  closeFollowUps: boolean;
+}
+
+export interface LoseDealInput {
+  reasonId: string;
+  note?: string | null;
+  closingDate?: string;
 }

@@ -9,7 +9,10 @@ import { ToastProvider } from '../../components/ui/Toast';
 import type { DealDetail } from '../../types/deal';
 
 vi.mock('../../services/dealService', () => ({
-  dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn(), activities: vi.fn(), offers: vi.fn(), list: vi.fn() },
+  dealService: { get: vi.fn(), changeStage: vi.fn(), reassign: vi.fn(), remove: vi.fn(), activities: vi.fn(), offers: vi.fn(), list: vi.fn(), win: vi.fn(), lose: vi.fn(), reopen: vi.fn() },
+}));
+vi.mock('../../services/lookupService', () => ({
+  lookupService: { list: vi.fn().mockResolvedValue([{ id: 'r1', nameSq: 'Çmimi', nameEn: 'Price', order: 0, active: true }]) },
 }));
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
 vi.mock('../../services/followUpService', () => ({ followUpService: { list: vi.fn(), schedule: vi.fn() } }));
@@ -48,12 +51,23 @@ const detail = (overrides: Partial<DealDetail> = {}): DealDetail => ({
   lastActivityAt: '2026-10-02T08:00:00Z',
   hasOverdueFollowUp: false,
   isStale: false,
+  wonAt: null,
+  lostAt: null,
+  lostReasonId: null,
+  lostReasonSq: null,
+  lostReasonEn: null,
+  lostNote: null,
+  packageId: null,
+  packageNameSq: null,
+  packageNameEn: null,
+  wonQuotationId: null,
+  wonQuotationReference: null,
   notes: 'Wants a visit first',
   createdByUserId: 'u-a',
   contacts: [{ id: 'p1', name: 'Alba Hoxha', position: 'Drejtore', phone: '+355690000002', email: null, isPrimary: true }],
   history: [
-    { id: 'h1', fromStage: null, toStage: 'NEW_LEAD', changedByUserId: 'u-a', changedByName: 'Besa Test', at: '2026-10-01T08:00:00Z' },
-    { id: 'h2', fromStage: 'NEW_LEAD', toStage: 'CONTACTED', changedByUserId: null, changedByName: null, at: '2026-10-02T08:00:00Z' },
+    { id: 'h1', fromStage: null, toStage: 'NEW_LEAD', changedByUserId: 'u-a', changedByName: 'Besa Test', at: '2026-10-01T08:00:00Z', note: null },
+    { id: 'h2', fromStage: 'NEW_LEAD', toStage: 'CONTACTED', changedByUserId: null, changedByName: null, at: '2026-10-02T08:00:00Z', note: null },
   ],
   ...overrides,
 });
@@ -222,5 +236,64 @@ describe('Deal page activities (FR-ACT-05)', () => {
     renderPage();
     expect(await screen.findByText('No activities on this deal yet.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Record activity' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Won and lost on the deal page (FR-DEAL-14..17)', () => {
+  const offer = { id: 'o1', reference: 'OF-2026-0001', status: 'SENT', superseded: false, netMonthlyPrice: '49.40', annualValue: '592.80', permittedActions: [], dealOpen: true, version: 1, createdAt: '2026-10-02T08:00:00Z', updatedAt: '2026-10-02T08:00:00Z', readyAt: '2026-10-02T08:00:00Z', sentAt: '2026-10-02T12:00:00Z', validUntil: '2026-11-01', respondedAt: null, statusNote: null, note: null, createdByName: 'Besa Test', services: [], pendingApproval: null, language: 'sq' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setPermissions({ 'deals.view': 'TEAM', 'deals.edit': 'TEAM', 'deals.reopen': 'TEAM', 'commercial.view': 'TEAM', 'followups.manage': 'TEAM' });
+    vi.mocked(dealService.get).mockResolvedValue(detail());
+    vi.mocked(followUpService.list).mockResolvedValue([]);
+    vi.mocked(dealService.activities).mockResolvedValue([]);
+    vi.mocked(dealService.offers).mockResolvedValue([offer] as any);
+  });
+
+  it('FR-DEAL-14 the win dialog shows the offer\'s values read-only and sends no price', async () => {
+    vi.mocked(dealService.win).mockResolvedValue(
+      detail({ stage: 'WON', agreedMonthlyPrice: '49.40', agreedAnnualValue: '592.80', wonQuotationReference: 'OF-2026-0001', wonAt: '2026-10-04T00:00:00Z', closedAt: '2026-10-04T00:00:00Z' })
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Win deal' }));
+    expect((await screen.findAllByText('OF-2026-0001')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/49\.40/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('textbox', { name: /price/i })).toBeNull();
+    fireEvent.click(within(screen.getByText('Win this deal').closest('div')!.parentElement!).getByRole('button', { name: 'Win deal' }));
+    await waitFor(() => expect(dealService.win).toHaveBeenCalledWith('acme', 'd1', expect.objectContaining({ offerId: 'o1', closeFollowUps: true })));
+    const args = vi.mocked(dealService.win).mock.calls[0][2] as Record<string, unknown>;
+    expect(args).not.toHaveProperty('agreedMonthlyPrice');
+    expect(await screen.findByRole('heading', { name: 'Won' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reopen' })).toBeInTheDocument();
+  });
+
+  it('FR-DEAL-16 the lost dialog needs a reason', async () => {
+    vi.mocked(dealService.lose).mockResolvedValue(detail({ stage: 'LOST', lostReasonId: 'r1', lostReasonSq: 'Çmimi', lostReasonEn: 'Price', lostAt: '2026-10-04T00:00:00Z' }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark as lost' }));
+    const confirm = await screen.findAllByRole('button', { name: 'Mark as lost' });
+    const submit = confirm[confirm.length - 1];
+    expect(submit).toBeDisabled();
+    fireEvent.change(await screen.findByRole('combobox', { name: /Reason/ }), { target: { value: 'r1' } });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    await waitFor(() => expect(dealService.lose).toHaveBeenCalledWith('acme', 'd1', { reasonId: 'r1', note: null }));
+    expect(await screen.findByRole('heading', { name: 'Lost' })).toBeInTheDocument();
+  });
+
+  it('FR-DEAL-17 only deals.reopen sees Reopen on a closed deal, and Win and Lost are gone', async () => {
+    vi.mocked(dealService.get).mockResolvedValue(detail({ stage: 'LOST' }));
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Reopen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Win deal' })).toBeNull();
+  });
+
+  it('FR-DEAL-17 without deals.reopen there is no Reopen', async () => {
+    setPermissions({ 'deals.view': 'TEAM', 'deals.edit': 'TEAM', 'commercial.view': 'TEAM' });
+    vi.mocked(dealService.get).mockResolvedValue(detail({ stage: 'WON' }));
+    renderPage();
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('button', { name: 'Reopen' })).toBeNull();
   });
 });

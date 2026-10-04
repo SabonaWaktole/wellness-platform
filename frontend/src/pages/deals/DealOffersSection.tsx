@@ -33,7 +33,11 @@ const onDay = (day: string) => `${day}T12:00:00.000Z`;
  * made and changed only on the pricing screen (FR-OFR-03), opened from here
  * on an open deal.
  */
-export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () => void }> = ({ deal, onDealChanged }) => {
+export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () => void; onCanWin?: (offerId: string) => void }> = ({
+  deal,
+  onDealChanged,
+  onCanWin,
+}) => {
   const { t, i18n } = useTranslation('deals');
   const { t: to } = useTranslation('offers');
   const { t: tc } = useTranslation('common');
@@ -77,6 +81,8 @@ export const DealOffersSection: React.FC<{ deal: DealDetail; onDealChanged?: () 
     await load();
     // Marking as sent can move the deal (FR-DEAL-08).
     onDealChanged?.();
+    // FR-OFR-12: an accepted offer offers to win the deal.
+    if (after.canWinDeal) onCanWin?.(after.id);
     // A new version is priced on the pricing screen (FR-OFR-11).
     if (after.id !== before.id && after.version > before.version) openPricing();
   };

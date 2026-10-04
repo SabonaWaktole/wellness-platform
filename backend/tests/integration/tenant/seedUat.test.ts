@@ -10,7 +10,7 @@ import { BcryptPasswordHasher } from '../../../src/auth/infrastructure/BcryptPas
 import { CreateTenantWithOwnerUseCase } from '../../../src/tenant/application/use-cases/CreateTenantWithOwnerUseCase';
 import { PrismaTenantProvisioningTransaction } from '../../../src/tenant/infrastructure/PrismaTenantProvisioningTransaction';
 import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
-import { BULK_DEAL_PREFIX, BULK_PREFIX, seedUat, SeedUatResult, UAT_COMPANIES, UAT_USERS } from '../../../scripts/uat/seedUat';
+import { BULK_DEAL_PREFIX, BULK_PREFIX, UAT2_DEAL_COMPANY, UAT2_DEAL_TITLE, UAT_PLANNED_PREFIX, seedUat, SeedUatResult, UAT_COMPANIES, UAT_USERS } from '../../../scripts/uat/seedUat';
 import { cookieJwt } from '../../support/cookieJwt';
 
 const prisma = new PrismaClient();
@@ -40,6 +40,7 @@ describe('UAT seed (Slice 15)', () => {
       emailDomain: `${slug}.example.com`,
       bulkCompanies: 30,
       bulkDeals: 40,
+      bulkFollowUps: 60,
     });
 
   const signIn = async (email: string) => {
@@ -78,19 +79,57 @@ describe('UAT seed (Slice 15)', () => {
     expect(second.companiesCreated).toBe(0);
     expect(second.bulkCreated).toBe(0);
     expect(second.dealsCreated).toBe(0);
+    expect(second.plannedCreated).toBe(0);
     expect(second.bulkDealsCreated).toBe(0);
+    expect(second.bulkFollowUpsCreated).toBe(0);
     expect(await prisma.client.count({ where: { tenantId } })).toBe(UAT_COMPANIES.length + 30);
     expect(await prisma.client.count({ where: { tenantId, name: { startsWith: BULK_PREFIX } } })).toBe(30);
   });
 
   it('UAT-2 each company of Sales User A or B has one New contract deal, owned by its salesperson', async () => {
     const owned = UAT_COMPANIES.filter((c) => c.owner === 'salesA' || c.owner === 'salesB');
-    expect(first.dealsCreated).toBe(owned.length);
-    for (const spec of owned) {
+    expect(first.dealsCreated).toBe(owned.length + 1); // plus the second deal below
+    for (const spec of owned.filter((c) => c.name !== UAT2_DEAL_COMPANY)) {
       const deals = await prisma.deal.findMany({ where: { tenantId, client: { name: spec.name } } });
       expect(deals).toHaveLength(1);
       expect(deals[0]).toMatchObject({ type: 'NEW_CONTRACT', stageKey: 'NEW_LEAD', ownerUserId: first.users[spec.owner!].id });
     }
+  });
+
+  it('UAT-1 has a company of 2 employees, a Medium-risk business type and Tiranë, with a deal for its salesperson', async () => {
+    const company = await prisma.client.findFirstOrThrow({
+      where: { tenantId, name: 'UAT Restorant Tirana' },
+      include: { businessType: { include: { riskLevel: true } }, city: true, deals: true },
+    });
+    expect(company.employeeCount).toBe(2);
+    expect(company.businessType?.riskLevel.level).toBe(2);
+    expect(company.city?.nameSq).toBe('Tiranë');
+    expect(company.deals).toHaveLength(1);
+    expect(company.deals[0].ownerUserId).toBe(first.users.salesA.id);
+  });
+
+  it('UAT-2 has a second deal, beside the first, on one company', async () => {
+    const deals = await prisma.deal.findMany({ where: { tenantId, client: { name: UAT2_DEAL_COMPANY } } });
+    expect(deals).toHaveLength(2);
+    expect(deals.some((deal) => deal.title === UAT2_DEAL_TITLE)).toBe(true);
+  });
+
+  it('UAT-4 gives Sales User A and B follow-ups and meetings, one follow-up each due yesterday', async () => {
+    expect(first.plannedCreated).toBe(8);
+    for (const key of ['salesA', 'salesB'] as const) {
+      const items = await prisma.appointment.findMany({
+        where: { tenantId, assignedUserId: first.users[key].id, notes: { startsWith: UAT_PLANNED_PREFIX } },
+      });
+      expect(items.map((i) => `${i.kind}/${i.type}`).sort()).toEqual(['FOLLOW_UP/CALL', 'FOLLOW_UP/CALL', 'PLANNED/MEETING', 'PLANNED/ONLINE_MEETING']);
+      const overdue = items.filter((i) => i.kind === 'FOLLOW_UP' && i.scheduledAt.getTime() < Date.now());
+      expect(overdue).toHaveLength(1);
+      expect(items.every((i) => i.dealId)).toBe(true);
+    }
+  });
+
+  it('UAT-1 and UAT-5 find the seeded pricing configuration and a published script', async () => {
+    expect(await prisma.pricingSettings.count({ where: { tenantId } })).toBe(1);
+    expect(await prisma.salesScript.count({ where: { tenantId, status: 'PUBLISHED' } })).toBe(1);
   });
 
   it('NFR-PERF-03 seeds bulk open deals over the bulk companies, each with its first history row', async () => {
@@ -99,6 +138,16 @@ describe('UAT seed (Slice 15)', () => {
     expect(bulk).toHaveLength(40);
     expect(new Set(bulk.map((deal) => deal.stageKey)).size).toBe(7);
     expect(bulk.every((deal) => deal.stageHistory.length === 1)).toBe(true);
+  });
+
+  it('NFR-PERF-03 seeds bulk open follow-ups, due before and after today, on both salespeople', async () => {
+    expect(first.bulkFollowUpsCreated).toBe(60);
+    const bulk = await prisma.appointment.findMany({ where: { tenantId, kind: 'FOLLOW_UP', notes: { startsWith: 'UAT bulk follow-up ' } } });
+    expect(bulk).toHaveLength(60);
+    expect(bulk.every((item) => item.status === 'SCHEDULED')).toBe(true);
+    expect(bulk.some((item) => item.scheduledAt.getTime() < Date.now())).toBe(true);
+    expect(bulk.some((item) => item.scheduledAt.getTime() > Date.now())).toBe(true);
+    expect(new Set(bulk.map((item) => item.assignedUserId)).size).toBe(2);
   });
 
   it('UAT-2 every named company has two contacts, one of them primary', async () => {

@@ -16,6 +16,7 @@ import { useDealText } from '../../hooks/useDealText';
 import { dealService } from '../../services/dealService';
 import { isOpenStage, OPEN_DEAL_STAGES } from '../../types/deal';
 import type { BoardColumn, DealStage, DealSummary } from '../../types/deal';
+import { LoseDealModal, WinDealModal } from './DealClosingModals';
 import { PipelineViewSwitch } from './PipelineViewSwitch';
 import styles from './PipelineBoardContent.module.css';
 
@@ -44,6 +45,7 @@ export const PipelineBoardContent: React.FC = () => {
   const [columns, setColumns] = useState<BoardColumn[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [dragged, setDragged] = useState<DealSummary | null>(null);
+  const [closing, setClosing] = useState<{ deal: DealSummary; kind: 'win' | 'lose' } | null>(null);
   const [dropTarget, setDropTarget] = useState<DealStage | null>(null);
   const latest = useRef(0);
 
@@ -109,7 +111,8 @@ export const PipelineBoardContent: React.FC = () => {
     }
   };
 
-  const accepts = (stage: DealStage) => !!dragged && isOpenStage(stage) && dragged.stage !== stage;
+  // FR-DEAL-07: Won and Lost take a card from an open stage, and open their dialogs.
+  const accepts = (stage: DealStage) => !!dragged && isOpenStage(dragged.stage) && dragged.stage !== stage && (isOpenStage(stage) || canEdit);
 
   return (
     <div className={styles.container}>
@@ -152,7 +155,10 @@ export const PipelineBoardContent: React.FC = () => {
                 onDrop={(event) => {
                   event.preventDefault();
                   setDropTarget(null);
-                  if (dragged && accepts(column.stage)) move(dragged, column.stage);
+                  if (dragged && accepts(column.stage)) {
+                    if (column.stage === 'WON' || column.stage === 'LOST') setClosing({ deal: dragged, kind: column.stage === 'WON' ? 'win' : 'lose' });
+                    else move(dragged, column.stage);
+                  }
                   setDragged(null);
                 }}
               >
@@ -176,6 +182,7 @@ export const PipelineBoardContent: React.FC = () => {
                       movable={canEdit && open}
                       onOpen={() => navigate(`/${tenantSlug}/deals/${deal.id}`)}
                       onMove={(stage) => move(deal, stage)}
+                      onClose={(kind) => setClosing({ deal, kind })}
                       onDragStart={() => setDragged(deal)}
                       onDragEnd={() => {
                         setDragged(null);
@@ -194,6 +201,31 @@ export const PipelineBoardContent: React.FC = () => {
           })}
         </div>
       )}
+
+      {tenantSlug && closing && (
+        <>
+          <WinDealModal
+            tenantSlug={tenantSlug}
+            deal={closing.deal}
+            isOpen={closing.kind === 'win'}
+            onClose={() => setClosing(null)}
+            onDone={() => {
+              setClosing(null);
+              load();
+            }}
+          />
+          <LoseDealModal
+            tenantSlug={tenantSlug}
+            deal={closing.deal}
+            isOpen={closing.kind === 'lose'}
+            onClose={() => setClosing(null)}
+            onDone={() => {
+              setClosing(null);
+              load();
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };
@@ -208,11 +240,12 @@ interface DealCardProps {
   movable: boolean;
   onOpen: () => void;
   onMove: (stage: DealStage) => void;
+  onClose: (kind: 'win' | 'lose') => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }
 
-const DealCard: React.FC<DealCardProps> = ({ deal, movable, onOpen, onMove, onDragStart, onDragEnd }) => {
+const DealCard: React.FC<DealCardProps> = ({ deal, movable, onOpen, onMove, onClose, onDragStart, onDragEnd }) => {
   const { t } = useTranslation('deals');
   const { tenantSlug } = useParams();
   const statusLabel = useStatusLabel();
@@ -252,11 +285,16 @@ const DealCard: React.FC<DealCardProps> = ({ deal, movable, onOpen, onMove, onDr
                 <MoreVertical size={16} />
               </button>
             }
-            items={OPEN_DEAL_STAGES.filter((stage) => stage !== deal.stage).map((stage) => ({
-              id: stage,
-              label: statusLabel.deal(stage),
-              onClick: () => onMove(stage),
-            }))}
+            items={[
+              ...OPEN_DEAL_STAGES.filter((stage) => stage !== deal.stage).map((stage) => ({
+                id: stage,
+                label: statusLabel.deal(stage),
+                onClick: () => onMove(stage),
+              })),
+              // FR-DEAL-07, 13: Won and Lost open their dialogs, here as on a drag.
+              { id: 'WON', label: statusLabel.deal('WON'), onClick: () => onClose('win') },
+              { id: 'LOST', label: statusLabel.deal('LOST'), onClick: () => onClose('lose') },
+            ]}
           />
         )}
       </div>

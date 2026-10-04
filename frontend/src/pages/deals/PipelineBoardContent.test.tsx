@@ -9,7 +9,11 @@ import type { BoardColumn, DealStage, DealSummary, PipelineBoard } from '../../t
 import { DEAL_STAGES } from '../../types/deal';
 
 vi.mock('../../services/dealService', () => ({
-  dealService: { board: vi.fn(), column: vi.fn(), changeStage: vi.fn() },
+  dealService: { board: vi.fn(), column: vi.fn(), changeStage: vi.fn(), offers: vi.fn(), win: vi.fn(), lose: vi.fn() },
+}));
+vi.mock('../../services/followUpService', () => ({ followUpService: { list: vi.fn().mockResolvedValue([]) } }));
+vi.mock('../../services/lookupService', () => ({
+  lookupService: { list: vi.fn().mockResolvedValue([{ id: 'r1', nameSq: 'Çmimi', nameEn: 'Price', order: 0, active: true }]) },
 }));
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
 
@@ -105,14 +109,16 @@ describe('Pipeline board (FR-DEAL-10, FR-DEAL-13)', () => {
     expect(within(column(/^Contacted/)).getByText('1')).toBeInTheDocument();
   });
 
-  it('FR-DEAL-07 Won and Lost are not drop targets: they have their own actions', async () => {
+  it('FR-DEAL-07 dropping on Won or Lost opens their dialog instead of moving the card', async () => {
+    vi.mocked(dealService.offers).mockResolvedValue([]);
     renderBoard();
     const source = await waitFor(() => within(column(/^Contacted/)).getByRole('article', { name: /Company a/ }));
     const transfer = dataTransfer();
     fireEvent.dragStart(source, { dataTransfer: transfer });
-    fireEvent.drop(column(/^Won/), { dataTransfer: transfer });
     fireEvent.drop(column(/^Lost/), { dataTransfer: transfer });
+    expect(await screen.findByText('Mark this deal as lost')).toBeInTheDocument();
     expect(dealService.changeStage).not.toHaveBeenCalled();
+    expect(within(column(/^Contacted/)).getByText('Company a')).toBeInTheDocument();
   });
 
   it('FR-DEAL-13 the card menu moves a deal to another open stage without dragging', async () => {
@@ -120,7 +126,8 @@ describe('Pipeline board (FR-DEAL-10, FR-DEAL-13)', () => {
     const deal = await waitFor(() => within(column(/^Contacted/)).getByRole('article', { name: /Company a/ }));
     fireEvent.click(within(deal).getByRole('button', { name: /Move to stage/ }));
     const menu = await screen.findByRole('menu');
-    expect(within(menu).queryByRole('menuitem', { name: /Won/ })).toBeNull();
+    // Won and Lost are in the menu too, and open their dialogs (FR-DEAL-07).
+    expect(within(menu).getByRole('menuitem', { name: /Won/ })).toBeInTheDocument();
     expect(within(menu).queryByRole('menuitem', { name: /^Contacted/ })).toBeNull();
     fireEvent.click(within(menu).getByRole('menuitem', { name: /Negotiation/ }));
 

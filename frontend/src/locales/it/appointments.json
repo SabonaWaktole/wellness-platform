@@ -13,46 +13,10 @@
     "day": "Giorno",
     "week": "Settimana",
     "month": "Mese",
-    "newAppointment": "Nuovo appuntamento",
-    "queue": "Coda",
-    "queueCount": "{{count}} in programma per oggi",
-    "legendScheduled": "In programma",
-    "legendConfirmed": "Confermato",
-    "legendCompleted": "Completato",
-    "legendCancelled": "Annullato",
-    "legendRescheduled": "Riprogrammato",
-    "syncCalendar": "Sincronizza calendario esterno",
-    "scheduleWaitlist": "Programma lista d'attesa"
-  },
-  "form": {
-    "createTitle": "Nuovo appuntamento",
-    "editTitle": "Modifica appuntamento",
-    "back": "Indietro",
-    "clientInformation": "Dati del cliente",
-    "searchClient": "Cerca cliente",
-    "searchClientPlaceholder": "Inizia a digitare il nome del cliente...",
-    "clientRequired": "Seleziona un cliente per questo appuntamento",
-    "scheduleAndStaff": "Programma e personale",
-    "date": "Data",
-    "dateRequired": "Scegli una data",
-    "time": "Ora",
-    "timeRequired": "Scegli un orario",
-    "assignedStaff": "Personale assegnato",
-    "myself": "Me stesso",
-    "purpose": "Scopo dell'appuntamento",
-    "purposePlaceholder": "Descrivi brevemente l'obiettivo di questo incontro...",
-    "backToCalendar": "Torna al calendario",
-    "clientIdentity": "Identità del cliente",
-    "unknownClient": "Cliente sconosciuto",
-    "cancel": "Annulla",
-    "confirming": "Conferma in corso...",
-    "confirmAppointment": "Conferma appuntamento"
+    "newAppointment": "Nuovo appuntamento"
   },
   "detail": {
     "title": "Dettaglio appuntamento",
-    "reference": "Rif.: #{{reference}}",
-    "client": "Cliente",
-    "noEmail": "Nessuna email fornita",
     "staffMember": "Membro del personale",
     "unassigned": "Non assegnato",
     "date": "Data",
@@ -70,14 +34,6 @@
   },
   "reschedule": {
     "title": "Riprogramma appuntamento",
-    "newDate": "Nuova data",
-    "dateRequired": "La data è obbligatoria",
-    "newTime": "Nuovo orario",
-    "timeRequired": "L'orario è obbligatorio",
-    "reason": "Motivo della riprogrammazione",
-    "reasonPlaceholder": "Es. il cliente ha chiesto un altro orario",
-    "reasonRequired": "È richiesto un motivo",
-    "rescheduling": "Riprogrammazione...",
-    "confirm": "Conferma riprogrammazione"
+    "reason": "Motivo della riprogrammazione"
   }
 }

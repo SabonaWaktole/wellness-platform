@@ -13,46 +13,10 @@
     "day": "Ημέρα",
     "week": "Εβδομάδα",
     "month": "Μήνας",
-    "newAppointment": "Νέο ραντεβού",
-    "queue": "Ουρά",
-    "queueCount": "{{count}} επερχόμενα για σήμερα",
-    "legendScheduled": "Προγραμματισμένο",
-    "legendConfirmed": "Επιβεβαιωμένο",
-    "legendCompleted": "Ολοκληρωμένο",
-    "legendCancelled": "Ακυρωμένο",
-    "legendRescheduled": "Επαναπρογραμματισμένο",
-    "syncCalendar": "Συγχρονισμός εξωτερικού ημερολογίου",
-    "scheduleWaitlist": "Προγραμματισμός λίστας αναμονής"
-  },
-  "form": {
-    "createTitle": "Νέο ραντεβού",
-    "editTitle": "Επεξεργασία ραντεβού",
-    "back": "Πίσω",
-    "clientInformation": "Στοιχεία πελάτη",
-    "searchClient": "Αναζήτηση πελάτη",
-    "searchClientPlaceholder": "Αρχίστε να πληκτρολογείτε το όνομα του πελάτη...",
-    "clientRequired": "Επιλέξτε πελάτη για αυτό το ραντεβού",
-    "scheduleAndStaff": "Πρόγραμμα και προσωπικό",
-    "date": "Ημερομηνία",
-    "dateRequired": "Επιλέξτε ημερομηνία",
-    "time": "Ώρα",
-    "timeRequired": "Επιλέξτε ώρα",
-    "assignedStaff": "Ανατεθειμένο προσωπικό",
-    "myself": "Ο εαυτός μου",
-    "purpose": "Σκοπός ραντεβού",
-    "purposePlaceholder": "Περιγράψτε σύντομα τον στόχο αυτής της συνάντησης...",
-    "backToCalendar": "Επιστροφή στο ημερολόγιο",
-    "clientIdentity": "Ταυτότητα πελάτη",
-    "unknownClient": "Άγνωστος πελάτης",
-    "cancel": "Ακύρωση",
-    "confirming": "Επιβεβαίωση...",
-    "confirmAppointment": "Επιβεβαίωση ραντεβού"
+    "newAppointment": "Νέο ραντεβού"
   },
   "detail": {
     "title": "Λεπτομέρειες ραντεβού",
-    "reference": "Κωδ.: #{{reference}}",
-    "client": "Πελάτης",
-    "noEmail": "Δεν δόθηκε email",
     "staffMember": "Μέλος προσωπικού",
     "unassigned": "Χωρίς ανάθεση",
     "date": "Ημερομηνία",
@@ -70,14 +34,6 @@
   },
   "reschedule": {
     "title": "Επαναπρογραμματισμός ραντεβού",
-    "newDate": "Νέα ημερομηνία",
-    "dateRequired": "Η ημερομηνία είναι υποχρεωτική",
-    "newTime": "Νέα ώρα",
-    "timeRequired": "Η ώρα είναι υποχρεωτική",
-    "reason": "Λόγος επαναπρογραμματισμού",
-    "reasonPlaceholder": "Π.χ. ο πελάτης ζήτησε διαφορετική ώρα",
-    "reasonRequired": "Απαιτείται λόγος",
-    "rescheduling": "Επαναπρογραμματισμός...",
-    "confirm": "Επιβεβαίωση επαναπρογραμματισμού"
+    "reason": "Λόγος επαναπρογραμματισμού"
   }
 }
