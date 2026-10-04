@@ -286,7 +286,7 @@ export const DealDetailContent: React.FC = () => {
             </ol>
           </Card>
 
-          <DealOffersSection deal={deal} />
+          <DealOffersSection deal={deal} onDealChanged={load} />
           <DealActivitiesSection deal={deal} onDealChanged={load} />
           <Placeholder icon={<CalendarClock size={18} />} title={t('detail.followUps')} text={t('detail.followUpsSoon')} />
         </div>

@@ -16,6 +16,7 @@ describe('BulkUpdateTenantSettingsUseCase', () => {
       updateSettings: jest.fn(),
       updateSettingsForMany: jest.fn().mockResolvedValue(2),
       setSubscriptionStatus: jest.fn(),
+      setSalesWorkflow: jest.fn(),
     };
     useCase = new BulkUpdateTenantSettingsUseCase(tenantRepository);
   });

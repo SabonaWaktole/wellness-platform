@@ -22,7 +22,7 @@ describe('QuotationDetailContent load effect', () => {
   const fetchQuotationDetail = vi.fn();
 
   const detail = {
-    quotation: { id: 'q-abcdef12-0000', clientName: 'Acme', status: 'DRAFT', grandTotal: 100, createdAt: '2026-07-01T10:00:00Z', createdByUserId: 'u1' },
+    quotation: { id: 'q-abcdef12-0000', reference: 'OF-2026-0042', clientName: 'Acme', status: 'DRAFT', grandTotal: 100, createdAt: '2026-07-01T10:00:00Z', createdByUserId: 'u1' },
     lineItems: [],
     history: [],
     permittedActions: [],
@@ -49,6 +49,13 @@ describe('QuotationDetailContent load effect', () => {
         </Routes>
       </MemoryRouter>
     );
+
+  it('FR-OFR-08 shows the reference the server gives, not one built from the id', async () => {
+    renderAt('q-abcdef12-0000');
+
+    expect(await screen.findByRole('heading', { name: /OF-2026-0042/ })).toBeInTheDocument();
+    expect(screen.queryByText(/ABCDEF12/)).not.toBeInTheDocument();
+  });
 
   it('fetches exactly once for a given quotation', async () => {
     renderAt('q-abcdef12-0000');

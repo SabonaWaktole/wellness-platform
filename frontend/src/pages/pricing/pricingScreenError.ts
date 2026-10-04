@@ -4,7 +4,7 @@ interface ApiError {
   response?: { status?: number; data?: { code?: string; field?: string } };
 }
 
-const CODES = ['DISCOUNT_ABOVE_CAP', 'COMPANY_INCOMPLETE', 'OFFER_NOT_EDITABLE', 'INVALID_PERCENT'];
+const CODES = ['DISCOUNT_ABOVE_CAP', 'COMPANY_INCOMPLETE', 'OFFER_NOT_EDITABLE', 'OFFER_REVISE_FIRST', 'INVALID_PERCENT', 'INVALID_FEE'];
 
 /** A translated message for a failed calculation or save on the pricing screen. */
 export function pricingScreenError(error: unknown, t: TFunction): string {

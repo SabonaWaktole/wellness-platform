@@ -21,6 +21,8 @@ export interface IDealWrites {
    * from the deal (FR-DEAL-10, 11).
    */
   setOfferValue(tenantId: string, dealId: string, value: { netMonthlyPrice: string | null; annualValue: string | null }): Promise<void>;
+  /** Whether any of the deal's offers, of any version, was marked as sent (FR-DEAL-19). */
+  hasSentOffer(tenantId: string, dealId: string): Promise<boolean>;
 }
 
 export interface DealWriteRepos {

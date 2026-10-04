@@ -16,8 +16,10 @@ import { useDealText } from '../../hooks/useDealText';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { usePermission } from '../../hooks/usePermission';
+import { clientService } from '../../services/clientService';
 import { dealService } from '../../services/dealService';
 import { pricingService } from '../../services/pricingService';
+import type { ContactPerson } from '../../types/client';
 import { OPEN_DEAL_STAGES, type DealSummary } from '../../types/deal';
 import type { OfferView, PricingChoices, PricingScreenView, PricingTarget } from '../../types/offer';
 import { lookupLabel } from '../../utils/lookupLabel';
@@ -32,8 +34,14 @@ interface FormState {
   frequencyId: string;
   packageId: string;
   discount: string;
+  /** FR-DSC-03, FR-PRC-09: why the discount is above the cap, or why the price is set by hand. */
+  reason: string;
+  /** FR-PRC-09: a manual monthly price on "Price on request", as typed. */
+  manualPrice: string;
   note: string;
   alsoUpdateCompany: boolean;
+  /** FR-OFR-02: '' is the company's primary contact. */
+  contactPersonId: string;
 }
 
 const WHOLE_NUMBER = /^\d+$/;
@@ -42,6 +50,14 @@ const PERCENT = /^\d+(\.\d{1,2})?$/;
 
 const validEmployees = (value: string) => WHOLE_NUMBER.test(value.trim()) && Number(value) >= 1;
 const validDiscount = (value: string) => PERCENT.test(value.trim()) && Number(value) <= 100;
+const validPrice = (value: string) => PERCENT.test(value.trim()) && Number(value) > 0;
+
+/** What the deal's editable offer was approved for, so a save it still covers asks for nothing (FR-DSC-08, FR-PRC-09). */
+interface Approved {
+  discount: { listPriceAtRequest: string; approvedPercent: string } | null;
+  manualPrice: string | null;
+}
+const NOTHING_APPROVED: Approved = { discount: null, manualPrice: null };
 
 /** The choices the server prices; an input left empty or not valid yet is left to the server's default. */
 function choicesFrom(form: FormState): PricingChoices {
@@ -88,7 +104,15 @@ export const PricingContent: React.FC = () => {
   const canEditCompany = usePermission('companies.edit');
   const businessTypes = useActiveLookups('business-types');
 
-  const [prefill, setPrefill] = useState<{ choices: PricingChoices; note: string } | null>(null);
+  const canApprove = usePermission('discounts.approve');
+  const [prefill, setPrefill] = useState<{
+    choices: PricingChoices;
+    note: string;
+    contactPersonId: string;
+    manualPrice: string;
+    approved: Approved;
+  } | null>(null);
+  const [contacts, setContacts] = useState<ContactPerson[]>([]);
   const [form, setForm] = useState<FormState | null>(null);
   const [view, setView] = useState<PricingScreenView | null>(null);
   const [calcError, setCalcError] = useState<string | null>(null);
@@ -100,17 +124,34 @@ export const PricingContent: React.FC = () => {
   // Start from the deal's draft offer, if it has one; otherwise from the company.
   useEffect(() => {
     if (!tenantSlug) return;
+    const empty = { choices: {}, note: '', contactPersonId: '', manualPrice: '', approved: NOTHING_APPROVED };
     if (!dealId || !canSeeOffers) {
-      setPrefill({ choices: {}, note: '' });
+      setPrefill(empty);
       return;
     }
     dealService
       .offers(tenantSlug, dealId)
       .then((offers) => {
-        const draft = offers.find((offer) => offer.status === 'DRAFT');
-        setPrefill(draft ? { choices: choicesOf(draft), note: draft.note ?? '' } : { choices: {}, note: '' });
+        // The offer the pricing screen changes: the latest one still a draft or ready (Slice 9).
+        // A pending offer is read-only here: it is decided inline on the deal page (Slice 10).
+        const draft = offers.find((offer) => !offer.superseded && (offer.status === 'DRAFT' || offer.status === 'READY'));
+        setPrefill(
+          draft
+            ? {
+                choices: choicesOf(draft),
+                note: draft.note ?? '',
+                contactPersonId: draft.contactPersonId ?? '',
+                manualPrice: draft.manualMonthlyPrice ?? '',
+                // FR-DSC-08, FR-PRC-09: what an earlier approval still covers.
+                approved: {
+                  discount: draft.approvedDiscount ?? null,
+                  manualPrice: draft.manualMonthlyPrice && !draft.pendingApproval ? draft.manualMonthlyPrice : null,
+                },
+              }
+            : empty
+        );
       })
-      .catch(() => setPrefill({ choices: {}, note: '' }));
+      .catch(() => setPrefill(empty));
   }, [tenantSlug, dealId, canSeeOffers]);
 
   // From a company, the offer is saved on one of its open deals.
@@ -152,8 +193,11 @@ export const PricingContent: React.FC = () => {
               frequencyId: result.inputs.frequencyId ?? '',
               packageId: result.inputs.packageId ?? '',
               discount: result.inputs.discountPercent ?? chosen.discountPercent ?? '0',
+              reason: '',
+              manualPrice: prefill?.manualPrice ?? '',
               note: prefill?.note ?? '',
               alsoUpdateCompany: false,
+              contactPersonId: prefill?.contactPersonId ?? '',
             }
         );
       })
@@ -166,12 +210,46 @@ export const PricingContent: React.FC = () => {
     value === undefined ? '' : new Intl.NumberFormat(money.locale || undefined, { maximumFractionDigits: 2 }).format(Number(value));
 
   const companyId = view?.subject.clientId ?? clientId;
+
+  // FR-OFR-02: the offer is addressed to the primary contact unless another is chosen.
+  useEffect(() => {
+    if (!tenantSlug || !companyId) return;
+    clientService
+      .getClient(tenantSlug, companyId)
+      .then((company) => setContacts(company.contacts ?? []))
+      .catch(() => setContacts([]));
+  }, [tenantSlug, companyId]);
+  const primaryContact = contacts.find((contact) => contact.isPrimary) ?? null;
   const backTo = dealId ? `/${tenantSlug}/deals/${dealId}` : `/${tenantSlug}/clients/${clientId}`;
   const editCompany = `/${tenantSlug}/clients/${companyId}/edit`;
   const result = view?.result;
   const employeesDiffer =
     !!form && !!view && validEmployees(form.employees) && Number(form.employees) !== view.subject.employeeCount;
   const offerUpdateCompany = !!saveDealId && canEditCompany && employeesDiffer;
+  // FR-DSC-03: above the cap the save becomes a request with a reason. It
+  // needs a price (no approval on "Price on request") and a reason. FR-DSC-08:
+  // an earlier approval still covers the same list price at a discount no
+  // higher than approved, so lowering the discount asks for nothing. The
+  // server checks the same; this only shapes the screen.
+  const approved = prefill?.approved ?? NOTHING_APPROVED;
+  const aboveCap = !!view?.discountAboveCap;
+  const discountCovered =
+    aboveCap &&
+    result?.kind === 'PRICED' &&
+    approved.discount !== null &&
+    result.listPrice === approved.discount.listPriceAtRequest &&
+    !!form &&
+    Number(form.discount) <= Number(approved.discount.approvedPercent);
+  // FR-PRC-09: on "Price on request", a manual monthly price with a reason. Whoever may
+  // approve discounts sets it directly; a Sales User's proposal waits for approval.
+  const priceOnRequest = result?.kind === 'PRICE_ON_REQUEST';
+  const manual = priceOnRequest && !!form && form.manualPrice.trim() !== '';
+  const invalidManualPrice = manual && !validPrice(form!.manualPrice);
+  const manualWithDiscount = manual && Number(form!.discount || 0) !== 0;
+  const manualCovered = manual && approved.manualPrice !== null && Number(form!.manualPrice) === Number(approved.manualPrice);
+  const needsReason = (aboveCap && !discountCovered) || (manual && !manualCovered);
+  const needsRequest = (aboveCap && !discountCovered) || (manual && !manualCovered && !canApprove);
+  const reasonMissing = needsReason && form?.reason.trim() === '';
   const canSave =
     !!saveDealId &&
     !!form &&
@@ -179,9 +257,11 @@ export const PricingContent: React.FC = () => {
     !isSaving &&
     !invalidEmployees &&
     !invalidDiscount &&
-    !view.discountAboveCap &&
+    !reasonMissing &&
+    !invalidManualPrice &&
+    !manualWithDiscount &&
     view.subject.dealOpen !== false &&
-    (result?.kind === 'PRICED' || result?.kind === 'PRICE_ON_REQUEST') &&
+    (result?.kind === 'PRICED' || (result?.kind === 'PRICE_ON_REQUEST' && !aboveCap)) &&
     !!form.businessTypeId &&
     !!form.frequencyId &&
     !!form.packageId;
@@ -190,7 +270,7 @@ export const PricingContent: React.FC = () => {
     if (!tenantSlug || !saveDealId || !form || !canSave) return;
     setIsSaving(true);
     try {
-      await dealService.saveOffer(tenantSlug, saveDealId, {
+      const offer = await dealService.saveOffer(tenantSlug, saveDealId, {
         employees: Number(form.employees),
         businessTypeId: form.businessTypeId,
         zoneId: form.zoneId || null,
@@ -199,8 +279,11 @@ export const PricingContent: React.FC = () => {
         discountPercent: form.discount.trim() || '0',
         note: form.note.trim() || null,
         alsoUpdateCompany: offerUpdateCompany && form.alsoUpdateCompany,
+        contactPersonId: form.contactPersonId || null,
+        reason: needsReason ? form.reason.trim() || null : null,
+        manualMonthlyPrice: manual ? form.manualPrice.trim() : null,
       });
-      toast.success(t('saved'));
+      toast.success(t(offer.status === 'PENDING_APPROVAL' ? 'approvalRequested' : 'saved'));
       navigate(`/${tenantSlug}/deals/${saveDealId}`);
     } catch (error) {
       toast.error(pricingScreenError(error, t));
@@ -364,6 +447,46 @@ export const PricingContent: React.FC = () => {
                 onChange={(e) => set('discount')(e.target.value)}
               />
 
+              {priceOnRequest && saveDealId && (
+                <TextInput
+                  label={t('manualPrice')}
+                  inputMode="decimal"
+                  value={form.manualPrice}
+                  helperText={t(canApprove ? 'manualPriceHintApprover' : 'manualPriceHint')}
+                  error={
+                    invalidManualPrice ? t('manualPriceInvalid') : manualWithDiscount ? t('manualPriceNoDiscount') : undefined
+                  }
+                  onChange={(e) => set('manualPrice')(e.target.value)}
+                />
+              )}
+
+              {needsReason && (
+                <TextareaInput
+                  label={t(aboveCap ? 'reason' : 'manualPriceReason')}
+                  placeholder={aboveCap ? t('reasonPlaceholder', { cap }) : t('manualPriceReasonPlaceholder')}
+                  rows={3}
+                  maxLength={2000}
+                  value={form.reason}
+                  error={reasonMissing ? t('reasonRequired') : undefined}
+                  onChange={(e) => set('reason')(e.target.value)}
+                />
+              )}
+
+              {saveDealId && contacts.length > 0 && (
+                <SelectInput label={t('contact')} value={form.contactPersonId} onChange={(e) => set('contactPersonId')(e.target.value)}>
+                  <option value="">
+                    {primaryContact ? t('contactPrimary', { name: primaryContact.name }) : t('contactNone')}
+                  </option>
+                  {contacts
+                    .filter((contact) => !contact.isPrimary)
+                    .map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.position ? `${contact.name} · ${contact.position}` : contact.name}
+                      </option>
+                    ))}
+                </SelectInput>
+              )}
+
               {saveDealId && (
                 <TextareaInput
                   label={t('note')}
@@ -431,10 +554,13 @@ export const PricingContent: React.FC = () => {
               </ul>
             )}
 
-            {view?.discountAboveCap && (
+            {view?.discountAboveCap && !discountCovered && (
               <p className={styles.warning} role="alert">
                 {t('aboveCap', { cap })}
               </p>
+            )}
+            {discountCovered && approved.discount && (
+              <p className={styles.notice}>{t('approvalCovers', { percent: percent(approved.discount.approvedPercent) })}</p>
             )}
             {view?.subject.dealOpen === false && <p className={styles.notice}>{t('dealClosed')}</p>}
             {clientId && openDeals && openDeals.length > 0 && !chosenDealId && <p className={styles.notice}>{t('chooseDealToSave')}</p>}
@@ -443,7 +569,7 @@ export const PricingContent: React.FC = () => {
           {(dealId || (openDeals && openDeals.length > 0)) && (
             <div className={styles.actions}>
               <Button variant="primary" onClick={save} disabled={!canSave} isLoading={isSaving}>
-                {t('save')}
+                {t(needsRequest ? 'requestApproval' : 'save')}
               </Button>
             </div>
           )}

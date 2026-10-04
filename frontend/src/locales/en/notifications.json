@@ -24,12 +24,19 @@
     "APPOINTMENT_RESCHEDULED": "{{actor}} moved your appointment to {{scheduledAt}} — {{reason}}",
     "APPOINTMENT_CANCELLED": "{{actor}} cancelled your appointment — {{reason}}",
     "CLIENT_ASSIGNED": "{{actor}} assigned {{client}} to you",
-    "FORM_SUBMITTED": "New submission for \"{{form}}\"",
+    "FORM_SUBMITTED": "A new response was submitted for {{form}}",
     "INVITATION_ACCEPTED": "{{email}} accepted your invitation and joined the team",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "FORM_SUBMITTED": "A new response was submitted for {{form}}",
     "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract expires in {{daysRemaining}} days",
-    "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired"
+    "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired",
+    "DISCOUNT_APPROVAL_REQUESTED": "{{actor}} requested a {{requestedPercent}}% discount on {{reference}} ({{clientName}}), list price {{listPrice}}. Reason: {{reason}}",
+    "DISCOUNT_APPROVED": "{{actor}} approved the {{approvedPercent}}% discount on {{reference}}",
+    "DISCOUNT_REJECTED": "{{actor}} rejected the discount above the cap on {{reference}}",
+    "DISCOUNT_APPROVAL_REMINDER": "Reminder: {{salespersonName}}'s {{requestedPercent}}% discount on {{reference}} ({{clientName}}) still waits for approval",
+    "DISCOUNT_APPROVAL_REQUESTED_manual": "{{actor}} proposed a manual price of {{requestedMonthlyPrice}} on {{reference}} ({{clientName}}). Reason: {{reason}}",
+    "DISCOUNT_APPROVED_manual": "{{actor}} approved the manual price of {{approvedMonthlyPrice}} on {{reference}}",
+    "DISCOUNT_REJECTED_manual": "{{actor}} rejected the manual price on {{reference}}",
+    "DISCOUNT_APPROVAL_REMINDER_manual": "Reminder: {{salespersonName}}'s manual price of {{requestedMonthlyPrice}} on {{reference}} ({{clientName}}) still waits for approval"
   }
 }

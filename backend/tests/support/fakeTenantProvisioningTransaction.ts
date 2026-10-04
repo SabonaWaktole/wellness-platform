@@ -43,6 +43,7 @@ export function makeTenantProvisioningHarness(): TenantProvisioningHarness {
     updateSettings: jest.fn(),
     updateSettingsForMany: jest.fn(),
     setSubscriptionStatus: jest.fn(),
+    setSalesWorkflow: jest.fn(),
   } as unknown as jest.Mocked<ITenantRepository>;
 
   const userRepo = {

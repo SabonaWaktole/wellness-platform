@@ -35,6 +35,10 @@ export class QuotationDeliveryService implements IQuotationDeliveryService {
       const view = await this.reader.findByShareToken(shareToken);
       if (!view) return;
 
+      // FR-OFR-07: a sales-process workspace never emails a quotation; the
+      // salesperson sends the PDF and marks the offer as sent.
+      if (view.salesProcess) return;
+
       /*
        * A client with no email address is an ordinary state, not an error: the
        * SRS makes contact details optional. In that case the quotation is

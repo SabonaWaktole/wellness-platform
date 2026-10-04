@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 import type { NotificationItem } from './useNotifications';
 import { findPersonById, getStaffDisplayName, type DisplayablePerson } from '../utils/userUtils';
 import { useDateFormat } from './useDateFormat';
+import { useMoneyFormat } from './useMoneyFormat';
+
+/** Params that are amounts (M2 Slice 10, FR-DSC-05, FR-PRC-09): stored as "49.40", shown in the workspace's currency. */
+const MONEY_PARAMS = ['listPrice', 'requestedMonthlyPrice', 'approvedMonthlyPrice'] as const;
 
 /**
  * Renders a stored notification into a sentence.
@@ -30,6 +34,7 @@ const CLIENT_ORIGINATED_TYPES = new Set(['QUOTATION_ACCEPTED', 'QUOTATION_REJECT
 export const useNotificationText = (staff: DisplayablePerson[] | undefined) => {
   const { t } = useTranslation('notifications');
   const dates = useDateFormat();
+  const money = useMoneyFormat();
 
   return useCallback(
     (notification: NotificationItem): string => {
@@ -49,15 +54,21 @@ export const useNotificationText = (staff: DisplayablePerson[] | undefined) => {
         params.scheduledAt = dates.dateTime(params.scheduledAt);
       }
 
+      for (const key of MONEY_PARAMS) {
+        if (typeof params[key] === 'string') params[key] = money.format(Number(params[key]));
+      }
+
       // An unknown type renders its key rather than throwing or showing an
       // empty row — a notification that arrived is evidence of something, and
       // silently dropping it would hide the fact that a catalogue entry is
-      // missing.
+      // missing. A manual-price approval reads its own sentence (`…_manual`,
+      // FR-PRC-09) through i18next's context.
       return t(`type.${notification.type}`, {
         ...params,
+        context: params.kind === 'MANUAL_PRICE' ? 'manual' : undefined,
         defaultValue: notification.type,
       });
     },
-    [t, dates, staff]
+    [t, dates, money, staff]
   );
 };

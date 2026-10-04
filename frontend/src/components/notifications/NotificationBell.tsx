@@ -16,6 +16,12 @@ const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
     case 'CLIENT': return `/${tenantSlug}/clients/${n.entityId}`;
     case 'APPOINTMENT': return `/${tenantSlug}/appointments`;
     case 'FORM': return `/${tenantSlug}/settings/client-management/forms/${n.entityId}/submissions`;
+    // FR-DSC-05: an approval request opens the deal on that offer, where the
+    // inline approve / reject steps live. The offer id travels in params.
+    case 'OFFER': {
+      const offerId = typeof n.params?.offerId === 'string' ? n.params.offerId : null;
+      return offerId ? `/${tenantSlug}/deals/${n.entityId}?offer=${offerId}` : `/${tenantSlug}/deals/${n.entityId}`;
+    }
     default: return null;
   }
 };

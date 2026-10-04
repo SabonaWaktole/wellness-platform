@@ -26,6 +26,9 @@
   "discount": "Zbritja %",
   "discountHint": "Deri në {{cap}}% pa miratim.",
   "discountInvalid": "Shkruaj një përqindje nga 0 deri në 100, me deri në dy shifra dhjetore.",
+  "contact": "Drejtuar",
+  "contactPrimary": "{{name}} (kontakti kryesor)",
+  "contactNone": "Kontakti kryesor",
   "note": "Shënim për ofertën",
   "notePlaceholder": "Për shembull, kushte të veçanta",
   "choose": "Zgjidh…",
@@ -60,10 +63,15 @@
     "zoneId": "Zgjidh zonën e çmimit.",
     "frequencyId": "Zgjidh shpeshtësinë e vizitave."
   },
-  "aboveCap": "Një zbritje mbi {{cap}}% kërkon miratim, prandaj kjo ofertë nuk mund të ruhet.",
+  "aboveCap": "Një zbritje mbi {{cap}}% kërkon miratim. Jepni një arsye për ta kërkuar.",
+  "reason": "Arsyeja për zbritjen më të lartë",
+  "reasonPlaceholder": "Pse kjo kompani merr më shumë se {{cap}}%",
+  "reasonRequired": "Arsyeja është e detyrueshme për të kërkuar miratim.",
   "dealClosed": "Kjo marrëveshje është mbyllur: nuk merr ofertë të re.",
   "save": "Ruaj ofertën",
+  "requestApproval": "Kërko miratim",
   "saved": "Oferta u ruajt si draft.",
+  "approvalRequested": "Kërkesa për miratim u dërgua. Menaxheri njoftohet.",
   "errors": {
     "generic": "Çmimi nuk u llogarit ose nuk u ruajt. Provo përsëri.",
     "notFound": "Kjo kompani ose marrëveshje nuk ekziston ose nuk është e jotja.",
@@ -71,6 +79,7 @@
     "DISCOUNT_ABOVE_CAP": "Zbritja është mbi kufirin dhe kërkon miratim.",
     "COMPANY_INCOMPLETE": "Plotëso më parë të dhënat e kompanisë.",
     "OFFER_NOT_EDITABLE": "Kjo ofertë nuk mund të ndryshohet më.",
+    "OFFER_REVISE_FIRST": "Kjo ofertë është dërguar. Rishikojeni nga faqja e marrëveshjes për të krijuar një version të ri.",
     "INVALID_PERCENT": "Shkruaj një përqindje nga 0 deri në 100, me deri në dy shifra dhjetore.",
     "INVALID_PRICING_INPUT": "Kontrollo të dhënat.",
     "fields": {
@@ -78,7 +87,20 @@
       "businessTypeId": "Zgjidh një lloj biznesi aktiv.",
       "zoneId": "Zgjidh një nga zonat e qytetit të kompanisë.",
       "frequencyId": "Zgjidh një shpeshtësi vizitash aktive.",
-      "packageId": "Zgjidh një paketë aktive."
-    }
-  }
+      "packageId": "Zgjidh një paketë aktive.",
+      "contactPersonId": "Zgjidhni një person kontakti të kësaj kompanie.",
+      "reason": "Jepni një arsye për zbritjen mbi kufirin ose për çmimin manual.",
+      "manualMonthlyPrice": "Çmimi manual është vetëm për një ofertë me \"Çmimi sipas kërkesës\".",
+      "discountPercent": "Kontrolloni zbritjen: çmimi manual nuk merr zbritje, dhe një zbritje mbi kufirin kërkon një çmim."
+    },
+    "INVALID_FEE": "Vendosni një çmim 0 ose më shumë, me deri në dy shifra dhjetore."
+  },
+  "manualPrice": "Çmimi mujor manual",
+  "manualPriceHint": "Opsionale. Çmimi juaj i dërgohet Menaxherit të Shitjeve për miratim.",
+  "manualPriceHintApprover": "Opsionale. Mund ta vendosni çmimin mujor drejtpërdrejt, me një arsye.",
+  "manualPriceInvalid": "Vendosni një çmim mbi 0, me deri në dy shifra dhjetore.",
+  "manualPriceNoDiscount": "Çmimi manual nuk merr zbritje. Vendosni zbritjen 0.",
+  "manualPriceReason": "Arsyeja për çmimin manual",
+  "manualPriceReasonPlaceholder": "Si u ra dakord për çmimin",
+  "approvalCovers": "Mbulohet nga zbritja e miratuar {{percent}}%. Ulja e zbritjes e ruan miratimin."
 }

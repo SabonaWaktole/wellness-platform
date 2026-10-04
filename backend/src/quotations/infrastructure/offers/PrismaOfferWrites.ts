@@ -1,37 +1,46 @@
 import { randomUUID } from 'crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Offer, OfferLanguage, OfferProps } from '../../domain/Offer';
-import { IOfferWrites } from '../../application/offers/ports/IOfferWriteTransaction';
-import { amountColumns, OFFER_INCLUDE, toOffer } from './prismaOfferRows';
+import { IOfferWrites, OfferStatusChange } from '../../application/offers/ports/IOfferWriteTransaction';
+import { amountColumns, manualPriceColumns, OFFER_INCLUDE, statusColumns, toOffer } from './prismaOfferRows';
 
 /** The columns a draft's content writes; the identity columns are written once, on insert. */
 function contentColumns(props: OfferProps) {
   return {
-    status: props.status,
     language: props.language,
     note: props.note,
     employeesPriced: props.employeesPriced,
     packageId: props.packageId,
     frequencyId: props.frequencyId,
     zoneId: props.zoneId,
+    contactPersonId: props.contactPersonId,
     pricingInputs: props.pricingInputs as Prisma.InputJsonObject,
     ruleSnapshot: props.ruleSnapshot as Prisma.InputJsonObject,
     ...amountColumns(props.amounts),
-    updatedAt: props.updatedAt,
+    ...manualPriceColumns(props.manualPrice),
+    ...statusColumns(props),
   };
 }
 
 const serviceRows = (props: OfferProps) =>
   props.services.map((service, order) => ({ id: randomUUID(), tenantId: props.tenantId, quotationId: props.id, order, ...service }));
 
+/** Offers only: a quotation with a deal (FR-OFR-01). */
+const OFFER = { dealId: { not: null } } as const;
+
 export class PrismaOfferWrites implements IOfferWrites {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async currentDraft(tenantId: string, dealId: string): Promise<Offer | null> {
+  async find(tenantId: string, id: string): Promise<Offer | null> {
+    const row = await this.prisma.quotation.findFirst({ where: { id, tenantId, ...OFFER }, include: OFFER_INCLUDE });
+    return row ? toOffer(row) : null;
+  }
+
+  async latest(tenantId: string, dealId: string): Promise<Offer | null> {
     const row = await this.prisma.quotation.findFirst({
-      where: { tenantId, dealId, status: 'DRAFT' },
+      where: { tenantId, dealId, supersededAt: null },
       include: OFFER_INCLUDE,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
     return row ? toOffer(row) : null;
   }
@@ -50,13 +59,21 @@ export class PrismaOfferWrites implements IOfferWrites {
         clientId: props.clientId,
         dealId: props.dealId,
         createdByUserId: props.createdByUserId,
+        number: props.number,
+        version: props.version,
+        previousVersionId: props.previousVersionId,
         createdAt: props.createdAt,
       },
     });
     await this.prisma.quotationService.createMany({ data: serviceRows(props) });
     // As the legacy create does: the first history row has no previous status.
-    await this.prisma.quotationStatusHistory.create({
-      data: { tenantId: props.tenantId, quotationId: props.id, fromStatus: 'NONE', toStatus: props.status, changedByUserId: props.createdByUserId },
+    await this.recordStatusChange({
+      tenantId: props.tenantId,
+      offerId: props.id,
+      fromStatus: 'NONE',
+      toStatus: props.status,
+      userId: props.createdByUserId,
+      note: null,
     });
   }
 
@@ -65,6 +82,38 @@ export class PrismaOfferWrites implements IOfferWrites {
     await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: contentColumns(props) });
     await this.prisma.quotationService.deleteMany({ where: { tenantId: props.tenantId, quotationId: props.id } });
     await this.prisma.quotationService.createMany({ data: serviceRows(props) });
+  }
+
+  async saveStatus(offer: Offer): Promise<void> {
+    const props = offer.toProps();
+    await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: statusColumns(props) });
+  }
+
+  async saveAmounts(offer: Offer): Promise<void> {
+    const props = offer.toProps();
+    await this.prisma.quotation.updateMany({ where: { id: props.id, tenantId: props.tenantId }, data: { ...amountColumns(props.amounts), ...manualPriceColumns(props.manualPrice) } });
+  }
+
+  async recordStatusChange(change: OfferStatusChange): Promise<void> {
+    await this.prisma.quotationStatusHistory.create({
+      data: {
+        tenantId: change.tenantId,
+        quotationId: change.offerId,
+        fromStatus: change.fromStatus,
+        toStatus: change.toStatus,
+        changedByUserId: change.userId,
+        note: change.note,
+      },
+    });
+  }
+
+  async timeZone(tenantId: string): Promise<string> {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
+    return tenant?.timezone ?? 'UTC';
+  }
+
+  async isContactOf(tenantId: string, clientId: string, contactPersonId: string): Promise<boolean> {
+    return (await this.prisma.contactPerson.count({ where: { id: contactPersonId, tenantId, clientId, deletedAt: null } })) > 0;
   }
 
   async workspaceLanguage(tenantId: string): Promise<OfferLanguage> {

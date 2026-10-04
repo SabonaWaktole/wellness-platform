@@ -57,6 +57,7 @@ const stubTenantRepo: ITenantRepository = {
   findAll: async () => ({ items: [], total: 0 }),
   updateSettings: async () => {},
   setSubscriptionStatus: async () => {},
+  setSalesWorkflow: async () => {},
 };
 
 // We removed the authenticate mock so we can test the real JWT extraction and validation.

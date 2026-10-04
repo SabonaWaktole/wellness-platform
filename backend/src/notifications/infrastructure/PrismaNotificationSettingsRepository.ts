@@ -23,6 +23,7 @@ export class PrismaNotificationSettingsRepository implements INotificationSettin
     quotationFollowUpDays: number;
     quotationAutoExpireEnabled: boolean;
     quotationExpiryDays: number;
+    discountApprovalReminderHours: number;
   }) {
     return {
       ...row,
@@ -42,6 +43,7 @@ export class PrismaNotificationSettingsRepository implements INotificationSettin
       quotationFollowUpDays: settings.quotationFollowUpDays,
       quotationAutoExpireEnabled: settings.quotationAutoExpireEnabled,
       quotationExpiryDays: settings.quotationExpiryDays,
+      discountApprovalReminderHours: settings.discountApprovalReminderHours,
     };
 
     await this.prisma.notificationSettings.upsert({

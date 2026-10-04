@@ -17,6 +17,7 @@ describe('GetTenantsUseCase', () => {
       updateSettings: jest.fn(),
       updateSettingsForMany: jest.fn(),
       setSubscriptionStatus: jest.fn(),
+      setSalesWorkflow: jest.fn(),
     };
     useCase = new GetTenantsUseCase(mockTenantRepo);
   });

@@ -19,12 +19,14 @@ const settings = {
   quotationFollowUpDays: 3,
   quotationAutoExpireEnabled: false,
   quotationExpiryDays: 30,
+  discountApprovalReminderHours: 24,
   availableEventTypes: ['QUOTATION_ACCEPTED', 'QUOTATION_REJECTED', 'APPOINTMENT_REMINDER'],
   availableRecipientRoles: ['BUSINESS_OWNER' as const, 'STAFF' as const],
   limits: {
     reminderLeadMinutes: { min: 15, max: 20160 },
     followUpDays: { min: 1, max: 90 },
     expiryDays: { min: 1, max: 365 },
+    discountApprovalReminderHours: { min: 1, max: 168 },
   },
 };
 
@@ -119,6 +121,24 @@ describe('NotificationSettingsPage', () => {
     await user.click(await screen.findByLabelText(/remind staff about unanswered/i));
 
     expect(screen.getByLabelText(/days to wait before reminding/i)).toBeDisabled();
+  });
+
+  it('FR-DSC-12 the approver reminder wait is editable and saved', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const input = await screen.findByLabelText(/hours before reminding the approver/i);
+    expect(input).toHaveValue(24);
+    await user.clear(input);
+    await user.type(input, '48');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(notificationSettingsService.update).toHaveBeenCalledWith(
+        'acme',
+        expect.objectContaining({ discountApprovalReminderHours: 48 })
+      )
+    );
   });
 
   it('discards edits back to the last saved state', async () => {

@@ -7,6 +7,7 @@ export interface NotificationSettingsLimits {
   reminderLeadMinutes: { min: number; max: number };
   followUpDays: { min: number; max: number };
   expiryDays: { min: number; max: number };
+  discountApprovalReminderHours: { min: number; max: number };
 }
 
 export interface NotificationSettings {
@@ -19,6 +20,8 @@ export interface NotificationSettings {
   quotationFollowUpDays: number;
   quotationAutoExpireEnabled: boolean;
   quotationExpiryDays: number;
+  /** M2 Slice 10: a pending discount approval older than this many hours reminds its approvers once. */
+  discountApprovalReminderHours: number;
 
   /*
    * Served with the settings rather than hard-coded here. The catalogue of

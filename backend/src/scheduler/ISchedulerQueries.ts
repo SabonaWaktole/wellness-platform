@@ -10,6 +10,9 @@ export interface DueAppointment {
 /** A sent quotation nobody has answered. */
 export interface StaleQuotation {
   id: string;
+  /** For its reference (FR-OFR-08). */
+  number: string | null;
+  version: number;
   tenantId: string;
   createdByUserId: string;
   sentAt: Date;
@@ -67,6 +70,20 @@ export interface ISchedulerQueries {
    * query. The state change is the idempotency.
    */
   findQuotationsDueExpiry(tenantId: string, now: Date, days: number): Promise<StaleQuotation[]>;
+
+  /**
+   * The workspaces that run the sales process (D6), with their time zone.
+   * Their offers expire on their own validity date (FR-OFR-13), and the
+   * legacy quotation sweeps leave them alone.
+   */
+  listSalesProcessTenants(): Promise<{ id: string; timeZone: string }[]>;
+
+  /**
+   * Sent offers of the workspace whose validity date is before `today`
+   * (YYYY-MM-DD in the workspace's time zone), not replaced by a later
+   * version (FR-OFR-11, 13). The status change is the idempotency.
+   */
+  findOffersPastValidity(tenantId: string, today: string): Promise<{ id: string; tenantId: string }[]>;
 
   /**
    * Every Sent invoice whose due date has passed, across all tenants.

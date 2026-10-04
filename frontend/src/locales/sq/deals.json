@@ -171,6 +171,7 @@
     "status": {
       "DRAFT": "Draft",
       "PENDING_APPROVAL": "Në pritje të miratimit",
+      "READY": "Gati",
       "SENT": "Dërguar",
       "ACCEPTED": "Pranuar",
       "REJECTED": "Refuzuar",

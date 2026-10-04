@@ -56,6 +56,7 @@ async function main() {
     .map(([key, value]) => `${key}=${value}`)
     .join(', ');
 
+  console.log(`${WELLNESS_WORKSPACE.name} runs the sales process: offers are made from deals, with no quotation email or public link.`);
   switch (result.outcome) {
     case 'created':
       console.log(`Created ${WELLNESS_WORKSPACE.name} (/${WELLNESS_WORKSPACE.urlSlug}, id ${result.tenantId}) with ${defaults}.`);
@@ -65,7 +66,7 @@ async function main() {
       console.log(`Moved ${WELLNESS_WORKSPACE.name} (id ${result.tenantId}) onto ${defaults}.`);
       break;
     case 'unchanged':
-      console.log(`${WELLNESS_WORKSPACE.name} already exists (id ${result.tenantId}); nothing changed.`);
+      console.log(`${WELLNESS_WORKSPACE.name} already exists (id ${result.tenantId}); its settings are unchanged.`);
       console.log('Pass --update-existing to move it onto the Albanian defaults.');
       break;
   }

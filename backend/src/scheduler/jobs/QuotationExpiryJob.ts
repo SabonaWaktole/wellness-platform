@@ -2,6 +2,8 @@ import { ScheduledJob } from '../Scheduler';
 import { ISchedulerQueries } from '../ISchedulerQueries';
 import { INotificationSettingsRepository } from '../../notifications/domain/INotificationSettingsRepository';
 import { ExpireQuotationUseCase } from '../../quotations/application/use-cases/ExpireQuotationUseCase';
+import { ExpireOfferUseCase } from '../../quotations/application/offers/ExpireOfferUseCase';
+import { dayKeyInZone } from '../../shared/domain/time/tenantDay';
 
 /**
  * Automatic quotation expiry (§6.5).
@@ -19,6 +21,11 @@ import { ExpireQuotationUseCase } from '../../quotations/application/use-cases/E
  * the notification; a direct write would produce an EXPIRED quotation whose own
  * history could not explain how it got there — the exact defect
  * IQuotationWriteTransaction was introduced to fix.
+ *
+ * A workspace on the sales process (D6) is swept differently (FR-OFR-13): its
+ * sent offers expire once their own validity date has passed in the
+ * workspace's time zone, whatever the legacy switch says, since the validity
+ * is part of the offer's terms (Q9). Its legacy quotations are left alone.
  */
 export class QuotationExpiryJob implements ScheduledJob {
   readonly name = 'quotation-expiry';
@@ -27,15 +34,28 @@ export class QuotationExpiryJob implements ScheduledJob {
   constructor(
     private readonly queries: ISchedulerQueries,
     private readonly settingsRepo: INotificationSettingsRepository,
-    private readonly expireQuotation: ExpireQuotationUseCase
+    private readonly expireQuotation: ExpireQuotationUseCase,
+    private readonly expireOffer: ExpireOfferUseCase
   ) {}
 
   async run(now: Date): Promise<string> {
-    const allSettings = await this.settingsRepo.listAll();
     let expired = 0;
+    const salesProcess = await this.queries.listSalesProcessTenants();
+    for (const tenant of salesProcess) {
+      const due = await this.queries.findOffersPastValidity(tenant.id, dayKeyInZone(now, tenant.timeZone));
+      for (const offer of due) {
+        try {
+          if (await this.expireOffer.execute({ tenantId: offer.tenantId, offerId: offer.id, now })) expired += 1;
+        } catch (error) {
+          console.error(`Scheduler: could not expire offer ${offer.id}`, error);
+        }
+      }
+    }
 
+    const skip = new Set(salesProcess.map((tenant) => tenant.id));
+    const allSettings = await this.settingsRepo.listAll();
     for (const settings of allSettings) {
-      if (!settings.quotationAutoExpireEnabled) continue;
+      if (!settings.quotationAutoExpireEnabled || skip.has(settings.tenantId)) continue;
 
       const due = await this.queries.findQuotationsDueExpiry(
         settings.tenantId,

@@ -9,6 +9,7 @@ import { Quotation } from '../../domain/Quotation';
 import { QuotationLineItem } from '../../domain/QuotationLineItem';
 import { QuotationStatusHistory } from '../../domain/QuotationStatusHistory';
 import { UseDealOffersError } from '../../domain/offerErrors';
+import { IOfferNumbers } from '../offers/ports/IOfferNumbers';
 
 export class CreateQuotationUseCase {
   constructor(
@@ -20,7 +21,13 @@ export class CreateQuotationUseCase {
     private warehouseRepo: IWarehouseRepository,
     private scopes: RecordScopeResolver,
     /** D6: read to refuse the legacy create where offers come from deals. */
-    private tenants?: { findById(id: string): Promise<{ runsSalesProcess(): boolean } | null> }
+    private tenants?: { findById(id: string): Promise<{ runsSalesProcess(): boolean } | null> },
+    /**
+     * FR-OFR-08: a quotation takes the next number of the workspace's
+     * sequence. A number taken by a create that then fails is skipped, never
+     * reused.
+     */
+    private numbers?: IOfferNumbers
   ) {}
 
   async execute(input: {
@@ -85,7 +92,8 @@ export class CreateQuotationUseCase {
       tenantId: input.tenantId,
       clientId: input.clientId,
       createdByUserId: input.createdByUserId,
-      lineItems
+      lineItems,
+      number: this.numbers ? await this.numbers.next(input.tenantId, new Date()) : null,
     });
 
     await this.quotationRepo.save(quotation);

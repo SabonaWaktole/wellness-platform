@@ -29,6 +29,7 @@ describe('DeleteTenantUseCase', () => {
       updateSettings: jest.fn(),
       updateSettingsForMany: jest.fn(),
       setSubscriptionStatus: jest.fn(),
+      setSalesWorkflow: jest.fn(),
     };
     mockDeletionTx = { run: jest.fn() };
     mockMediaCleaner = { removeAll: jest.fn() };

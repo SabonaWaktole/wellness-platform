@@ -333,6 +333,11 @@
       "requirement": "Each component shall be rounded to the cent (half up) and the monthly list price is the sum of the rounded components, so the breakdown always adds up to the total."
     },
     {
+      "id": "FR-PRC-09",
+      "priority": "Should",
+      "requirement": "For \"Price on request\" cases, a user with \"Discounts: approve\" (Sales Manager) may enter a manual monthly price with a reason. A Sales User may propose one, and it then needs Sales Manager approval like a discount above the cap (section 5)."
+    },
+    {
       "id": "FR-PRC-10",
       "priority": "Should",
       "requirement": "The pricing screen shall show the price per employee and the annual value (monthly net price × contract months, default 12, FR-PCF-08) for information."
@@ -661,6 +666,121 @@
       "id": "NFR-PERF-02",
       "priority": "Should",
       "requirement": "A price calculation shall return in under 300 ms and an offer PDF shall be generated in under 3 seconds on the staging server."
+    },
+    {
+      "id": "FR-OFR-02",
+      "priority": "Must",
+      "requirement": "The offer shall be filled automatically with: offer number and date, validity date, Wellness Albania details (FR-PCF-08), company name, NIPT (if recorded), address with predefined Area and City, primary contact person with position (or the contact chosen), number of employees, business type, risk level, visit frequency, service package and its services, price breakdown, list price, discount % and amount, net monthly price, annual value, \"VAT not included\" note (Q5), standard texts, and the salesperson's name, phone and email."
+    },
+    {
+      "id": "FR-OFR-05",
+      "priority": "Must",
+      "requirement": "The salesperson shall preview the offer in the browser as it will appear in the PDF."
+    },
+    {
+      "id": "FR-OFR-06",
+      "priority": "Must",
+      "requirement": "The salesperson shall download the offer as a PDF named \"Oferta_<company>_<number>.pdf\" in Albanian or English (chosen when downloading; default = Albanian)."
+    },
+    {
+      "id": "FR-OFR-07",
+      "priority": "Must",
+      "requirement": "Offers shall not be sent by email from the platform in this milestone. The existing quotation email and public share link shall be disabled for the Wellness Albania workspace."
+    },
+    {
+      "id": "FR-OFR-08",
+      "priority": "Must",
+      "requirement": "Offers shall be numbered sequentially per year with the configured prefix, e.g. OF-2026-0001. Numbers are never reused, including for deleted drafts."
+    },
+    {
+      "id": "FR-OFR-09",
+      "priority": "Must",
+      "requirement": "Offer statuses: Draft, Pending approval, Ready, Sent, Accepted, Rejected, Expired. Only Ready offers can be downloaded as final; drafts download with a \"DRAFT\" watermark."
+    },
+    {
+      "id": "FR-OFR-10",
+      "priority": "Must",
+      "requirement": "After emailing the PDF, the salesperson clicks \"Mark as sent\" and enters the date sent (default today). The validity date is counted from that date."
+    },
+    {
+      "id": "FR-OFR-11",
+      "priority": "Must",
+      "requirement": "Changing a Sent offer shall create a new version (OF-2026-0001 v2) and keep the previous version read-only. Only the latest version can be accepted."
+    },
+    {
+      "id": "FR-OFR-12",
+      "priority": "Must",
+      "requirement": "The salesperson shall mark an offer Accepted or Rejected (with an optional note). Accepting an offer is the normal way to win the deal (FR-DEAL-07)."
+    },
+    {
+      "id": "FR-OFR-13",
+      "priority": "Should",
+      "requirement": "A Sent offer past its validity date shall become Expired automatically (existing expiry job)."
+    },
+    {
+      "id": "FR-OFR-14",
+      "priority": "Must",
+      "requirement": "Users shall list offers with filters by status, salesperson, company and date, within their data scope."
+    },
+    {
+      "id": "FR-OFR-15",
+      "priority": "Must",
+      "requirement": "Offer status changes and final prices shall be recorded in the offer history and the audit log."
+    },
+    {
+      "id": "FR-RBAC-18",
+      "priority": "Must",
+      "requirement": "The existing workspace-wide quotation approval switch and quotations.approve shall be replaced for the Wellness Albania workspace by the discount approval of section 5."
+    },
+    {
+      "id": "NFR-I18N-02",
+      "priority": "Must",
+      "requirement": "All new screens, messages, notifications, the offer PDF and the seeded lists shall be translated in sq and en."
+    },
+    {
+      "id": "FR-DSC-03",
+      "priority": "Must",
+      "requirement": "A discount above the cap shall require approval. The salesperson must give a reason; the offer moves to \"Pending approval\" and cannot be downloaded as final, marked as sent or used to win the deal until approved."
+    },
+    {
+      "id": "FR-DSC-05",
+      "priority": "Must",
+      "requirement": "When approval is requested, every user with \"Discounts: approve\" in scope shall receive an in-app notification, and an email if enabled in notification settings. The notification opens the request."
+    },
+    {
+      "id": "FR-DSC-06",
+      "priority": "Must",
+      "requirement": "The approver shall see a list of pending approval requests and approve or reject each one with an optional comment (required when rejecting). The approver may approve a lower % than requested."
+    },
+    {
+      "id": "FR-DSC-07",
+      "priority": "Must",
+      "requirement": "The salesperson shall be notified of the decision. Approved: the offer becomes ready to download. Rejected: the offer returns to draft with the discount set back to the cap, and the comment is shown."
+    },
+    {
+      "id": "FR-DSC-08",
+      "priority": "Must",
+      "requirement": "An approval shall apply to that offer version, list price and discount only. If the inputs change so that the list price changes, or the discount is raised, a new approval is needed. Lowering the discount keeps the approval."
+    },
+    {
+      "id": "FR-DSC-09",
+      "priority": "Must",
+      "requirement": "A user cannot approve their own request. A Sales Manager's own discount above the cap goes to the other users with \"Discounts: approve\" (by default the CEO, Q8)."
+    },
+    {
+      "id": "FR-DSC-10",
+      "priority": "Should",
+      "requirement": "The salesperson can withdraw a pending request."
+    },
+    {
+      "id": "FR-DSC-11",
+      "priority": "Must",
+      "requirement": "Requests, approvals, rejections and withdrawals shall be written to the audit log with the requested %, approved %, list price and comment."
+    },
+    {
+      "id": "FR-DSC-12",
+      "priority": "Could",
+      "requirement": "A pending request older than a configurable number of hours (default 24) shall remind the approver once."
     }
   ]
 }

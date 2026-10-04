@@ -40,7 +40,13 @@ export class QuotationsController {
     private searchQuotationsUseCase: SearchQuotationsUseCase,
     private getQuotationDetailUseCase: GetQuotationDetailUseCase,
     private getPendingApprovalsUseCase: GetPendingApprovalsUseCase,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    /**
+     * D6, FR-RBAC-18: under the sales process a quotation is never submitted
+     * or approved here, so it can never be emailed to the customer or get a
+     * public link (FR-OFR-07). Offers are made ready and sent on the deal.
+     */
+    private tenants?: { findById(id: string): Promise<{ runsSalesProcess(): boolean } | null> }
   ) {
     this.initializeRoutes();
   }
@@ -104,11 +110,20 @@ export class QuotationsController {
     }
   }
 
+  /** Answers 409 USE_DEAL_OFFERS and returns true when the workspace runs the sales process. */
+  private async refusedUnderSalesProcess(tenantId: string, res: Response): Promise<boolean> {
+    if (!(await this.tenants?.findById(tenantId))?.runsSalesProcess()) return false;
+    const error = new UseDealOffersError();
+    res.status(409).json({ error: error.message, code: error.code });
+    return true;
+  }
+
   private async submitQuotation(req: Request, res: Response) {
     try {
       const tenantId = requireTenantId(req);
       const id = req.params.id as string;
-      
+      if (await this.refusedUnderSalesProcess(tenantId, res)) return;
+
       const requiresApproval = await this.settingsService.getRequiresQuotationApproval(tenantId);
 
       const result = await this.submitQuotationUseCase.execute({
@@ -130,6 +145,7 @@ export class QuotationsController {
     try {
       const tenantId = requireTenantId(req);
       const id = req.params.id as string;
+      if (await this.refusedUnderSalesProcess(tenantId, res)) return;
       const result = await this.approveQuotationUseCase.execute({
         tenantId,
         quotationId: id,
@@ -148,6 +164,8 @@ export class QuotationsController {
     try {
       const tenantId = requireTenantId(req);
       const id = req.params.id as string;
+      // FR-RBAC-18: returning a quotation from approval is the old approval step.
+      if (await this.refusedUnderSalesProcess(tenantId, res)) return;
       const { reason } = req.body;
       const result = await this.returnQuotationToDraftUseCase.execute({
         tenantId,
@@ -250,6 +268,8 @@ export class QuotationsController {
   private async getPendingApprovals(req: Request, res: Response) {
     try {
       const tenantId = requireTenantId(req);
+      // FR-RBAC-18: the sales process approves discounts, listed under /discount-approvals.
+      if (await this.refusedUnderSalesProcess(tenantId, res)) return;
       const result = await this.getPendingApprovalsUseCase.execute({
         tenantId,
         access: req.access!

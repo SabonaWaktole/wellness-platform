@@ -1,4 +1,4 @@
-import { Tenant } from '../entities/Tenant';
+import { Tenant, SalesWorkflow } from '../entities/Tenant';
 import { SubscriptionStatus } from '../enums/SubscriptionStatus';
 
 /**
@@ -69,4 +69,11 @@ export interface ITenantRepository {
    * reactivate endpoints idempotent for free.
    */
   setSubscriptionStatus(id: string, status: SubscriptionStatus): Promise<void>;
+
+  /**
+   * Platform-level: which quotation workflow the workspace runs (D6). Not a
+   * tenant-editable setting: it is set when the Wellness Albania workspace is
+   * provisioned, and by migration for the one that already exists.
+   */
+  setSalesWorkflow(id: string, workflow: SalesWorkflow): Promise<void>;
 }

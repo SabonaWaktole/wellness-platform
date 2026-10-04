@@ -52,6 +52,12 @@ export const NOTIFICATION_TYPES = [
 
   // Team.
   'INVITATION_ACCEPTED',
+
+  // Offers — a discount above the cap (M2 Slice 10, FR-DSC-05, 07, 12).
+  'DISCOUNT_APPROVAL_REQUESTED',
+  'DISCOUNT_APPROVED',
+  'DISCOUNT_REJECTED',
+  'DISCOUNT_APPROVAL_REMINDER',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -66,6 +72,9 @@ export const NOTIFICATION_ENTITY_TYPES = [
   'CLIENT',
   'FORM',
   'CONTRACT',
+  // M2 Slice 10: a discount approval points at its offer; the deal id travels
+  // in params so the UI opens the deal page on that offer.
+  'OFFER',
 ] as const;
 export type NotificationEntityType = (typeof NOTIFICATION_ENTITY_TYPES)[number];
 

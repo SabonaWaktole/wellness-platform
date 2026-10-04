@@ -12,7 +12,14 @@ import type { NavItem } from '../components/layout/Sidebar/Sidebar';
  * the hook re-runs on each render, so the sidebar follows the language like
  * the rest of the interface does.
  */
-type NavItemSpec = Omit<NavItem, 'label'> & { labelKey: string; permission?: string };
+type NavItemSpec = Omit<NavItem, 'label'> & {
+  labelKey: string;
+  permission?: string;
+  /** Only in a workspace on this quotation workflow (D6); the default is LEGACY_QUOTATIONS. */
+  workflow?: SalesWorkflow;
+};
+
+type SalesWorkflow = 'LEGACY_QUOTATIONS' | 'SALES_PROCESS';
 
 /**
  * The one tenant sidebar, filtered by permission (FR-RBAC-07) instead of
@@ -26,9 +33,13 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'clients', labelKey: 'nav.clients', icon: 'group', permission: 'companies.view' },
   // The sales pipeline (M2 Slice 6): the board, with the list one click away.
   { id: 'pipeline', labelKey: 'nav.pipeline', icon: 'pipeline', permission: 'deals.view' },
+  // The offers list (M2 Slice 9, FR-OFR-14), in place of the legacy quotations.
+  { id: 'offers', labelKey: 'nav.offers', icon: 'description', permission: 'commercial.view', workflow: 'SALES_PROCESS' },
+  // Pending discount approvals (M2 Slice 10, FR-DSC-06): whoever may approve sees the queue.
+  { id: 'approvals', labelKey: 'nav.approvals', icon: 'task_alt', permission: 'discounts.approve', workflow: 'SALES_PROCESS' },
   { id: 'appointments', labelKey: 'nav.appointments', icon: 'event', permission: 'calendar.view' },
   { id: 'inventory', labelKey: 'nav.inventory', icon: 'inventory_2', permission: 'inventory.manage' },
-  { id: 'quotations', labelKey: 'nav.quotations', icon: 'description', permission: 'quotations.manage' },
+  { id: 'quotations', labelKey: 'nav.quotations', icon: 'description', permission: 'quotations.manage', workflow: 'LEGACY_QUOTATIONS' },
   // Same icon family as quotations — an invoice is a quotation's next state,
   // so `receipt_long` reads as "description, but final" without inventing a
   // third visual language for billing documents.
@@ -78,13 +89,17 @@ export const useNavigation = (user?: any | null, currentPath?: string): NavItem[
   const { t } = useTranslation('common');
   const role = user?.role;
   const permissions: Record<string, unknown> = user?.permissions ?? {};
+  const workflow: SalesWorkflow = user?.tenantSalesWorkflow === 'SALES_PROCESS' ? 'SALES_PROCESS' : 'LEGACY_QUOTATIONS';
 
   // SUPER_ADMIN is matched explicitly rather than left to a permission check:
   // it sits outside the permission system (D2) and gets its own fixed list.
   const baseItems: NavItemSpec[] =
     role === 'SUPER_ADMIN'
       ? [...superAdminNavItems]
-      : tenantNavItems.filter((item) => !item.permission || permissions[item.permission] !== undefined);
+      : tenantNavItems.filter(
+          (item) =>
+            (!item.permission || permissions[item.permission] !== undefined) && (!item.workflow || item.workflow === workflow)
+        );
 
   /*
    * Dashboard doubles as the fallback highlight when the path matches nothing
@@ -99,7 +114,7 @@ export const useNavigation = (user?: any | null, currentPath?: string): NavItem[
   const matchesPath = (id: string) => currentPath?.includes(`/${id}`) ?? false;
   const anotherItemMatches = baseItems.some(item => item.id !== 'dashboard' && matchesPath(item.id));
 
-  return baseItems.map(({ labelKey, permission: _permission, ...item }) => ({
+  return baseItems.map(({ labelKey, permission: _permission, workflow: _workflow, ...item }) => ({
     ...item,
     label: t(labelKey),
     isActive:

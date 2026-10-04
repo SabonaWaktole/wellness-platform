@@ -39,7 +39,8 @@ export class RespondToPublicQuotationUseCase {
     if (!input.token || input.token.trim() === '') return { outcome: 'not_found' };
 
     const view = await this.reader.findByShareToken(input.token);
-    if (!view) return { outcome: 'not_found' };
+    // FR-OFR-07: a sales-process workspace has no public quotation link.
+    if (!view || view.salesProcess) return { outcome: 'not_found' };
 
     try {
       if (input.decision === 'accept') {

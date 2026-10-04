@@ -12,6 +12,8 @@ export interface NotificationSettingsProps {
   quotationFollowUpDays: number;
   quotationAutoExpireEnabled: boolean;
   quotationExpiryDays: number;
+  /** M2 Slice 10: a pending discount approval older than this many hours reminds its approvers once (FR-DSC-12). */
+  discountApprovalReminderHours: number;
 }
 
 /** The subset a caller may change. Every field optional — this is a PATCH. */
@@ -40,6 +42,9 @@ export const LIMITS = {
   reminderLeadMinutes: { min: 15, max: 60 * 24 * 14 }, // 15 minutes … 14 days
   followUpDays: { min: 1, max: 90 },
   expiryDays: { min: 1, max: 365 },
+  // 1 hour … 7 days: below an hour the reminder races the approver, above a
+  // week it stops being a reminder (FR-DSC-12).
+  discountApprovalReminderHours: { min: 1, max: 168 },
 } as const;
 
 export class InvalidNotificationSettingsError extends Error {
@@ -68,6 +73,7 @@ export class NotificationSettings {
   readonly quotationFollowUpDays: number;
   readonly quotationAutoExpireEnabled: boolean;
   readonly quotationExpiryDays: number;
+  readonly discountApprovalReminderHours: number;
 
   private constructor(props: NotificationSettingsProps) {
     this.tenantId = props.tenantId;
@@ -80,6 +86,7 @@ export class NotificationSettings {
     this.quotationFollowUpDays = props.quotationFollowUpDays;
     this.quotationAutoExpireEnabled = props.quotationAutoExpireEnabled;
     this.quotationExpiryDays = props.quotationExpiryDays;
+    this.discountApprovalReminderHours = props.discountApprovalReminderHours;
   }
 
   /**
@@ -114,6 +121,7 @@ export class NotificationSettings {
       quotationFollowUpDays: 3,
       quotationAutoExpireEnabled: false,
       quotationExpiryDays: 30,
+      discountApprovalReminderHours: 24,
     });
   }
 
@@ -129,9 +137,11 @@ export class NotificationSettings {
     quotationFollowUpDays: number;
     quotationAutoExpireEnabled: boolean;
     quotationExpiryDays: number;
+    discountApprovalReminderHours?: number;
   }): NotificationSettings {
     return new NotificationSettings({
       ...props,
+      discountApprovalReminderHours: props.discountApprovalReminderHours ?? 24,
       // A stored type that has since been removed from the catalogue is
       // filtered out rather than throwing. A settings row must never be able to
       // make a workspace unreadable.
@@ -163,6 +173,8 @@ export class NotificationSettings {
       quotationAutoExpireEnabled:
         patch.quotationAutoExpireEnabled ?? this.quotationAutoExpireEnabled,
       quotationExpiryDays: patch.quotationExpiryDays ?? this.quotationExpiryDays,
+      discountApprovalReminderHours:
+        patch.discountApprovalReminderHours ?? this.discountApprovalReminderHours,
     });
     next.assertValid();
     return next;
@@ -186,6 +198,11 @@ export class NotificationSettings {
     );
     assertInRange('quotationFollowUpDays', this.quotationFollowUpDays, LIMITS.followUpDays);
     assertInRange('quotationExpiryDays', this.quotationExpiryDays, LIMITS.expiryDays);
+    assertInRange(
+      'discountApprovalReminderHours',
+      this.discountApprovalReminderHours,
+      LIMITS.discountApprovalReminderHours
+    );
 
     /*
      * A follow-up that fires after expiry would chase a customer about a
@@ -223,6 +240,7 @@ export class NotificationSettings {
       quotationFollowUpDays: this.quotationFollowUpDays,
       quotationAutoExpireEnabled: this.quotationAutoExpireEnabled,
       quotationExpiryDays: this.quotationExpiryDays,
+      discountApprovalReminderHours: this.discountApprovalReminderHours,
       // The catalogue travels with the settings so the UI never hard-codes a
       // list that can fall behind the server's.
       availableEventTypes: NOTIFICATION_TYPES,

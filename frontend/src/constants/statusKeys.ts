@@ -26,6 +26,8 @@ import type { DealStage, DealType } from '../types/deal';
 export const QUOTATION_STATUSES = [
   'DRAFT',
   'PENDING_APPROVAL',
+  // M2 Slice 9: an offer that may be downloaded as final and marked as sent.
+  'READY',
   'SENT',
   'ACCEPTED',
   'REJECTED',
@@ -37,6 +39,7 @@ export type QuotationStatus = (typeof QUOTATION_STATUSES)[number];
 export const QUOTATION_STATUS_KEYS: Record<QuotationStatus, string> = {
   DRAFT: 'quotations:status.draft',
   PENDING_APPROVAL: 'quotations:status.pendingApproval',
+  READY: 'quotations:status.ready',
   SENT: 'quotations:status.sent',
   ACCEPTED: 'quotations:status.accepted',
   REJECTED: 'quotations:status.rejected',

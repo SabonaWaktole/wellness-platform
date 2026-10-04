@@ -2,6 +2,7 @@ import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { dealLabel } from '../../domain/dealLabel';
+import { DealHasSentOfferError } from '../../domain/errors';
 import { DELETE_DEALS } from '../dealAccess';
 import { dealInScope } from '../dealRules';
 import { IDealWriteTransaction } from '../ports/IDealWriteTransaction';
@@ -9,7 +10,8 @@ import { IDealWriteTransaction } from '../ports/IDealWriteTransaction';
 /**
  * Soft-deletes a deal (FR-DEAL-19), audited in the same transaction. The
  * deal leaves every list, the board and the company timeline; its row and
- * stage history stay. Slice 9 adds the refusal for a deal with a sent offer.
+ * stage history stay. A deal with an offer marked as sent is refused: what
+ * the company was offered stays on record (Slice 9).
  */
 export class DeleteDealUseCase {
   constructor(
@@ -22,6 +24,7 @@ export class DeleteDealUseCase {
     access.ensure(DELETE_DEALS);
     await this.writeTx.run(async ({ deals, auditTrail }) => {
       const deal = await dealInScope(deals, this.scopes, access, DELETE_DEALS, tenantId, id);
+      if (await deals.hasSentOffer(tenantId, deal.id)) throw new DealHasSentOfferError();
       deal.softDelete(new Date());
       await deals.update(deal);
       await auditTrail.record({

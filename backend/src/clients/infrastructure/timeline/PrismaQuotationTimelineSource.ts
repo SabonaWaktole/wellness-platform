@@ -5,12 +5,13 @@ import { quotationReference } from '../../../quotations/domain/quotationReferenc
 
 /**
  * Offers: each quotation's creation and every status change, legacy
- * quotations and deal offers alike. `total` is redacted for viewers without
- * `commercial.view`.
+ * quotations and deal offers alike, under their reference (OF-2026-0001 v2,
+ * FR-OFR-08). Offers are commercial, so the source is `commercial.view`'s
+ * and Reception never sees it in the company history (FR-RBAC-17).
  */
 export class PrismaQuotationTimelineSource implements TimelineSource {
   readonly category = 'QUOTATION' as const;
-  readonly permission = 'quotations.manage';
+  readonly permission = 'commercial.view';
 
   constructor(private prisma: PrismaClient) {}
 
@@ -24,7 +25,7 @@ export class PrismaQuotationTimelineSource implements TimelineSource {
     });
 
     return quotations.flatMap((quotation) => {
-      const reference = quotationReference(quotation.id);
+      const reference = quotationReference(quotation);
       const created: TimelineEntry = {
         id: `quotation:${quotation.id}`,
         category: this.category,
@@ -36,8 +37,7 @@ export class PrismaQuotationTimelineSource implements TimelineSource {
           reference,
           status: quotation.status,
           // An offer (M2 Slice 8) has no product lines: its total is its net
-          // monthly price, absent on a "Price on request" draft. Slice 9
-          // gives offers their own reference and permission here.
+          // monthly price, absent on a "Price on request" draft.
           total: quotation.dealId
             ? quotation.netMonthlyPrice?.toNumber()
             : quotation.lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),

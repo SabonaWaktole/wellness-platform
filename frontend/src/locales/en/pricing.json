@@ -26,6 +26,9 @@
   "discount": "Discount %",
   "discountHint": "Up to {{cap}}% without approval.",
   "discountInvalid": "Enter a percentage from 0 to 100, with up to two decimals.",
+  "contact": "Addressed to",
+  "contactPrimary": "{{name}} (primary contact)",
+  "contactNone": "The primary contact",
   "note": "Note on the offer",
   "notePlaceholder": "Special conditions, for example",
   "choose": "Choose…",
@@ -60,10 +63,15 @@
     "zoneId": "Choose the price zone.",
     "frequencyId": "Choose the visit frequency."
   },
-  "aboveCap": "A discount above {{cap}}% needs approval, so this offer cannot be saved.",
+  "aboveCap": "A discount above {{cap}}% needs approval. Give a reason to request it.",
+  "reason": "Reason for the higher discount",
+  "reasonPlaceholder": "Why this company gets more than {{cap}}%",
+  "reasonRequired": "A reason is required to request approval.",
   "dealClosed": "This deal is closed: it takes no new offer.",
   "save": "Save the offer",
+  "requestApproval": "Request approval",
   "saved": "The offer was saved as a draft.",
+  "approvalRequested": "The approval is requested. The manager is notified.",
   "errors": {
     "generic": "The price could not be calculated or saved. Try again.",
     "notFound": "This company or deal does not exist or is not one of yours.",
@@ -71,6 +79,7 @@
     "DISCOUNT_ABOVE_CAP": "The discount is above the cap and needs approval.",
     "COMPANY_INCOMPLETE": "Complete the company record first.",
     "OFFER_NOT_EDITABLE": "This offer can no longer be changed.",
+    "OFFER_REVISE_FIRST": "This offer has been sent. Revise it from the deal page to make a new version.",
     "INVALID_PERCENT": "Enter a percentage from 0 to 100, with up to two decimals.",
     "INVALID_PRICING_INPUT": "Check the inputs.",
     "fields": {
@@ -78,7 +87,20 @@
       "businessTypeId": "Choose an active business type.",
       "zoneId": "Choose one of the zones of the company's city.",
       "frequencyId": "Choose an active visit frequency.",
-      "packageId": "Choose an active package."
-    }
-  }
+      "packageId": "Choose an active package.",
+      "contactPersonId": "Choose a contact person of this company.",
+      "reason": "Give a reason for the discount above the cap or for the manual price.",
+      "manualMonthlyPrice": "A manual price is only for an offer with \"Price on request\".",
+      "discountPercent": "Check the discount: a manual price takes none, and a discount above the cap needs a price."
+    },
+    "INVALID_FEE": "Enter a price of 0 or more, with up to two decimals."
+  },
+  "manualPrice": "Manual monthly price",
+  "manualPriceHint": "Optional. Your price is sent to the Sales Manager for approval.",
+  "manualPriceHintApprover": "Optional. You may set the monthly price directly, with a reason.",
+  "manualPriceInvalid": "Enter a price above 0, with up to two decimals.",
+  "manualPriceNoDiscount": "A manual price takes no discount. Set the discount to 0.",
+  "manualPriceReason": "Reason for the manual price",
+  "manualPriceReasonPlaceholder": "How the price was agreed",
+  "approvalCovers": "Covered by the approved {{percent}}% discount. Lowering the discount keeps the approval."
 }

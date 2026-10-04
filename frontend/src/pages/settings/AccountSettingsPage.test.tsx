@@ -130,4 +130,16 @@ describe('AccountSettingsPage write-back to the auth store', () => {
       expect(user?.tenantDefaultLanguage).toBe('it');
     });
   });
+
+  it('FR-RBAC-18 the quotation approval switch shows for a legacy workspace and is hidden under the sales process', async () => {
+    const { unmount } = renderPage();
+    await screen.findByDisplayValue('Acme');
+    expect(screen.getByText('Require Approval for Quotations')).toBeInTheDocument();
+    unmount();
+
+    useAuthStore.setState((state) => ({ user: { ...state.user!, tenantSalesWorkflow: 'SALES_PROCESS' } }));
+    renderPage();
+    await screen.findByDisplayValue('Acme');
+    expect(screen.queryByText('Require Approval for Quotations')).not.toBeInTheDocument();
+  });
 });

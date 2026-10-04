@@ -148,6 +148,24 @@ import { SaveDraftOfferUseCase } from '../quotations/application/offers/SaveDraf
 import { PrismaOfferStore } from '../quotations/infrastructure/offers/PrismaOfferStore';
 import { PrismaOfferWriteTransaction } from '../quotations/infrastructure/offers/PrismaOfferWriteTransaction';
 import { GetDealOffersUseCase } from '../deals/application/use-cases/GetDealOffersUseCase';
+import { ListOffersUseCase } from '../quotations/application/offers/ListOffersUseCase';
+import { GetOfferDocumentUseCase } from '../quotations/application/offers/GetOfferDocumentUseCase';
+import { MarkOfferReadyUseCase } from '../quotations/application/offers/MarkOfferReadyUseCase';
+import { MarkOfferSentUseCase } from '../quotations/application/offers/MarkOfferSentUseCase';
+import { RecordOfferResponseUseCase } from '../quotations/application/offers/RecordOfferResponseUseCase';
+import { ReviseOfferUseCase } from '../quotations/application/offers/ReviseOfferUseCase';
+import { PrismaOfferDocumentSource } from '../quotations/infrastructure/offers/PrismaOfferDocumentSource';
+import { OfferPdfRenderer } from '../quotations/infrastructure/offers/OfferPdfRenderer';
+import { StandaloneOfferNumbers } from '../quotations/infrastructure/offers/PrismaOfferNumbers';
+import { OffersController } from '../quotations/interfaces/http/offers/OffersController';
+import { createOfferRouter } from '../quotations/interfaces/http/offers/offerRoutes';
+import { DecideDiscountApprovalUseCase } from '../quotations/application/offers/DecideDiscountApprovalUseCase';
+import { ListPendingApprovalsUseCase } from '../quotations/application/offers/ListPendingApprovalsUseCase';
+import { WithdrawDiscountApprovalUseCase } from '../quotations/application/offers/WithdrawDiscountApprovalUseCase';
+import { DiscountApprovalsController } from '../quotations/interfaces/http/offers/DiscountApprovalsController';
+import { createDiscountApprovalRouter } from '../quotations/interfaces/http/offers/discountApprovalRoutes';
+import { PrismaDiscountApprovalStore } from '../discounts/infrastructure/PrismaDiscountApprovalStore';
+import { PrismaPermissionHolderDirectory } from '../notifications/infrastructure/PrismaPermissionHolderDirectory';
 import { PricingScreen } from '../pricing/application/PricingScreen';
 import { PrismaPricingSubjectReader } from '../pricing/infrastructure/PrismaPricingSubjectReader';
 import { PricingController } from '../pricing/interfaces/http/PricingController';
@@ -251,6 +269,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
       }
     },
     credentials: true,
+    // The offer PDF's file name (FR-OFR-06) must be readable by the frontend
+    // when it is served from another origin.
+    exposedHeaders: ['Content-Disposition'],
   }));
   // Default 100kb is too small for the Reports PDF export, whose body carries
   // several client-captured chart PNGs as base64 alongside the table data.
@@ -482,6 +503,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const pricingScreen = new PricingScreen(pricingStore, lookupStore, new LoadPricingConfigUseCase(pricingStore));
   const pricingSubjects = new PrismaPricingSubjectReader();
   const offerStore = new PrismaOfferStore();
+  const offerWriteTransaction = new PrismaOfferWriteTransaction();
   const pricingController = new PricingController(
     new GetPricingConfigurationUseCase(pricingStore),
     new CreatePricingItemUseCase(pricingStore, pricingWriteTransaction),
@@ -524,6 +546,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Deals and the pipeline board (M2 Slice 6: FR-DEAL-01..11, 13, 19).
   const dealStore = new PrismaDealStore();
   const getDeal = new GetDealUseCase(dealStore, recordScopes);
+  // Who holds a scoped permission at a scope admitting a record's owner (M2
+  // Slice 10, D9: discount approval fan-out, FR-DSC-05, 09).
+  const permissionDirectory = new PrismaPermissionHolderDirectory(undefined, new PrismaTeamRoster());
   const dealController = new DealController(
     new CreateDealUseCase(dealStore, dealWriteTransaction, recordScopes, getDeal),
     getDeal,
@@ -535,10 +560,53 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new GetPipelineBoardUseCase(dealStore, recordScopes),
     new GetDealActivitiesUseCase(getDeal, new PrismaDealActivityStore()),
     // The deal's offers (M2 Slice 8): read on the deal page, saved from the pricing screen.
-    new GetDealOffersUseCase(getDeal, offerStore),
-    new SaveDraftOfferUseCase(pricingSubjects, pricingScreen, recordScopes, new PrismaOfferWriteTransaction(), offerStore)
+    new GetDealOffersUseCase(getDeal, offerStore, recordScopes),
+    new SaveDraftOfferUseCase(
+      pricingSubjects,
+      pricingScreen,
+      recordScopes,
+      offerWriteTransaction,
+      offerStore,
+      userRepository,
+      permissionDirectory,
+      notificationEmailDispatcher
+    )
   );
   app.use('/api/:tenantSlug/deals', createDealRouter(dealController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Offers (M2 Slice 9): the list, the PDF and its preview, and the status
+  // steps Ready → Sent → Accepted / Rejected, with versions (FR-OFR-05..15).
+  const offerDocuments = new PrismaOfferDocumentSource();
+  const offersController = new OffersController(
+    new ListOffersUseCase(offerStore, recordScopes),
+    new GetOfferDocumentUseCase(offerStore, recordScopes, offerDocuments, new OfferPdfRenderer()),
+    new MarkOfferReadyUseCase(offerWriteTransaction, recordScopes, offerDocuments, offerStore),
+    new MarkOfferSentUseCase(offerWriteTransaction, recordScopes, offerStore),
+    new RecordOfferResponseUseCase(offerWriteTransaction, recordScopes, offerStore),
+    new ReviseOfferUseCase(offerWriteTransaction, recordScopes, offerStore)
+  );
+  app.use('/api/:tenantSlug/offers', createOfferRouter(offersController, tokenService, tenantRepository, resolveAccessContext));
+
+  // Discount approvals above the cap (M2 Slice 10, FR-DSC-03..12): the
+  // approver's pending list and the inline approve / reject / withdraw steps.
+  const discountApprovalStore = new PrismaDiscountApprovalStore();
+  const discountApprovalsController = new DiscountApprovalsController(
+    new ListPendingApprovalsUseCase(discountApprovalStore, recordScopes),
+    new DecideDiscountApprovalUseCase(
+      offerWriteTransaction,
+      recordScopes,
+      offerDocuments,
+      offerStore,
+      userRepository,
+      permissionDirectory,
+      notificationEmailDispatcher
+    ),
+    new WithdrawDiscountApprovalUseCase(offerWriteTransaction, recordScopes, offerStore)
+  );
+  app.use(
+    '/api/:tenantSlug/discount-approvals',
+    createDiscountApprovalRouter(discountApprovalsController, tokenService, tenantRepository, resolveAccessContext)
+  );
 
   // Settings → Statuses: contract and payment status labels, and the deal
   // stages (Slice 10: FR-SET-07, 08; M2 Slice 6: FR-DEAL-06).
@@ -843,7 +911,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const markQuotationRejectedUseCase = new MarkQuotationRejectedUseCase(quotationWriteTx, userRepository, recordScopes, notificationEmailDispatcher);
 
   const quotationsController = new QuotationsController(
-    new CreateQuotationUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, prismaClientRepository, productRepo, warehouseRepo, recordScopes, tenantRepository),
+    new CreateQuotationUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, prismaClientRepository, productRepo, warehouseRepo, recordScopes, tenantRepository, new StandaloneOfferNumbers(prisma)),
     new UpdateQuotationUseCase(quotationRepo, quotationLineItemRepo, productRepo, warehouseRepo, stockLevelRepo, quotationWriteTx, recordScopes, quotationDelivery),
     // Each transition takes the email dispatcher so it can send AFTER its
     // transaction commits — see runWithPostCommitEmail.
@@ -858,7 +926,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new SearchQuotationsUseCase(quotationRepo, recordScopes),
     new GetQuotationDetailUseCase(quotationRepo, quotationLineItemRepo, quotationHistoryRepo, recordScopes, invoiceRepoForQuotationDetail),
     new GetPendingApprovalsUseCase(quotationRepo),
-    settingsService
+    settingsService,
+    tenantRepository
   );
 
   /*

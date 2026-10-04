@@ -1,0 +1,143 @@
+{
+  "superseded": "Zëvendësuar nga një version i mëvonshëm",
+  "sentOn": "Dërguar më {{sent}}",
+  "sentValid": "Dërguar më {{sent}} · e vlefshme deri më {{until}}",
+  "statusNote": "Shënim: {{note}}",
+  "preview": {
+    "title": "Oferta {{reference}}"
+  },
+  "actions": {
+    "preview": "Shiko",
+    "language": "Gjuha e PDF-së",
+    "download": "Shkarko PDF",
+    "edit": "Ndrysho ofertën",
+    "markReady": "Shëno si gati",
+    "markSent": "Shëno si të dërguar",
+    "markAccepted": "Shëno si të pranuar",
+    "markRejected": "Shëno si të refuzuar",
+    "revise": "Rishiko",
+    "approve": "Mirato zbritjen",
+    "reject": "Refuzo zbritjen",
+    "withdraw": "Tërhiq kërkesën"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "Anglisht"
+  },
+  "done": {
+    "ready": "Oferta është gati për t’u shkarkuar dhe dërguar.",
+    "sent": "Oferta u shënua si e dërguar.",
+    "accepted": "Oferta u shënua si e pranuar.",
+    "rejected": "Oferta u shënua si e refuzuar.",
+    "revised": "U krijua një version i ri. Ndryshoni çmimin te ekrani i çmimit.",
+    "approved": "Zbritja u miratua. Oferta është gati për t’u shkarkuar.",
+    "discountRejected": "Zbritja u refuzua. Oferta u kthye në draft me zbritjen kufi.",
+    "withdrawn": "Kërkesa për miratim u tërhoq."
+  },
+  "sent": {
+    "title": "Shëno {{reference}} si të dërguar",
+    "message": "Dërgojeni vetë PDF-në me email te kompania, pastaj shënoni datën kur e dërguat. Vlefshmëria e ofertës fillon nga kjo datë.",
+    "date": "Data e dërgimit"
+  },
+  "accepted": {
+    "title": "Shëno {{reference}} si të pranuar",
+    "message": "Shënoni që kompania e pranoi këtë ofertë. Fitimi i marrëveshjes është hap më vete."
+  },
+  "rejected": {
+    "title": "Shëno {{reference}} si të refuzuar",
+    "message": "Shënoni që kompania e refuzoi këtë ofertë. Mund të shtoni arsyen."
+  },
+  "response": {
+    "note": "Shënim (opsional)"
+  },
+  "revise": {
+    "title": "Rishiko {{reference}}",
+    "message": "Kjo krijon versionin {{version}} të {{number}} si draft. Versioni i dërguar mbetet siç është dhe mund të shkarkohet përsëri."
+  },
+  "approval": {
+    "waiting": "Në pritje të miratimit për zbritjen {{percent}}%. Shkarkimi final dhe dërgimi janë të çaktivizuara derisa të vendoset.",
+    "requestedBy": "Kërkuar nga {{name}}",
+    "reason": "Arsyeja: {{reason}}",
+    "approveTitle": "Mirato zbritjen {{percent}}% për {{reference}}",
+    "approveMessage": "Oferta bëhet gati për t’u shkarkuar me përqindjen e miratuar. Mund të miratoni një përqindje më të ulët se e kërkuara.",
+    "approvedPercent": "Përqindja e miratuar",
+    "approveInvalid": "Vendosni një përqindje deri në {{requested}}.",
+    "rejectTitle": "Refuzo zbritjen {{percent}}% për {{reference}}",
+    "rejectMessage": "Oferta kthehet në draft me zbritjen kufi. Komenti i shfaqet shitësit.",
+    "comment": "Koment",
+    "commentRequired": "Komenti është i detyrueshëm për refuzimin.",
+    "withdrawTitle": "Tërhiq kërkesën për miratim",
+    "withdrawMessage": "Oferta kthehet në draft. Ajo del nga lista e miratuesit.",
+    "requestedToast": "Kërkesa për miratim u dërgua. Menaxheri njoftohet.",
+    "waitingManual": "Në pritje të miratimit për çmimin manual {{price}}. Shkarkimi final dhe dërgimi janë të çaktivizuara derisa të vendoset.",
+    "approveManualTitle": "Mirato çmimin manual {{price}} për {{reference}}",
+    "approveManualMessage": "Oferta bëhet gati për t’u shkarkuar me çmimin e miratuar. Mund të miratoni një çmim tjetër nga ai i propozuar.",
+    "approvedPrice": "Çmimi mujor i miratuar",
+    "approvePriceInvalid": "Vendosni një çmim mbi 0, me deri në dy shifra dhjetore.",
+    "rejectManualTitle": "Refuzo çmimin manual {{price}} për {{reference}}",
+    "rejectManualMessage": "Oferta kthehet në draft me \"Çmimi sipas kërkesës\". Komenti i shfaqet shitësit."
+  },
+  "errors": {
+    "notFound": "Kjo ofertë nuk u gjet.",
+    "forbidden": "Nuk keni leje për këtë veprim.",
+    "generic": "Diçka shkoi keq. Ju lutemi provoni përsëri.",
+    "OFFER_NOT_READY": "Kjo ofertë nuk mund të shënohet ende si gati.",
+    "notReady": {
+      "NO_PRICE": "Një ofertë pa çmim nuk mund të shënohet si gati.",
+      "DISCOUNT_ABOVE_CAP": "Zbritja është mbi maksimumin. Fillimisht duhet miratuar.",
+      "MANUAL_PRICE_NOT_APPROVED": "Çmimi manual duhet të miratohet para se oferta të bëhet gati."
+    },
+    "OFFER_INVALID_TRANSITION": "Statusi i ofertës ka ndryshuar. Rifreskoni faqen dhe provoni përsëri.",
+    "OFFER_NOT_LATEST": "Një version i mëvonshëm e zëvendëson këtë ofertë. Përdorni versionin e fundit.",
+    "OFFER_NOT_EDITABLE": "Kjo ofertë nuk mund të ndryshohet më.",
+    "OFFER_REVISE_FIRST": "Kjo ofertë është dërguar. Rishikojeni për të krijuar një version të ri.",
+    "INVALID_SENT_DATE": "Zgjidhni një datë dërgimi që nuk është në të ardhmen dhe as para krijimit të ofertës.",
+    "SELF_APPROVAL": "Nuk mund të miratoni kërkesën tuaj.",
+    "DISCOUNT_APPROVAL_NOT_FOUND": "Kjo kërkesë për miratim nuk u gjet.",
+    "DISCOUNT_APPROVAL_TRANSITION": "Kjo kërkesë nuk mund të vendoset më. Rifreskoni faqen dhe provoni përsëri."
+  },
+  "approvalsList": {
+    "breadcrumb": "Shitjet",
+    "title": "Miratimet e zbritjeve",
+    "loadFailed": "Kërkesat për miratim nuk u ngarkuan.",
+    "empty": "Nuk ka kërkesa në pritje",
+    "emptyMessage": "Zbritjet mbi kufirin shfaqen këtu për miratim.",
+    "itemLabel": "kërkesa",
+    "columns": {
+      "reference": "Oferta",
+      "salesperson": "Kërkuar nga",
+      "requested": "Kërkuar",
+      "requestedAt": "Kërkuar më",
+      "reason": "Arsyeja"
+    },
+    "discount": "{{percent}}% mbi {{listPrice}}",
+    "manualPrice": "Çmim manual {{price}}"
+  },
+  "list": {
+    "breadcrumb": "Shitjet",
+    "title": "Ofertat",
+    "searchLabel": "Kërko oferta",
+    "searchPlaceholder": "Kompania ose numri i ofertës",
+    "statuses": "Statusi",
+    "salesperson": "Shitësi",
+    "allSalespeople": "Të gjithë shitësit",
+    "createdFrom": "Krijuar nga",
+    "createdTo": "Krijuar deri",
+    "clear": "Pastro filtrat",
+    "loadFailed": "Ofertat nuk u ngarkuan.",
+    "empty": "Ende nuk ka oferta",
+    "emptyMessage": "Ofertat krijohen nga ekrani i çmimit i një marrëveshjeje.",
+    "emptyFiltered": "Asnjë ofertë nuk përputhet me këta filtra",
+    "emptyFilteredMessage": "Provoni më pak filtra.",
+    "itemLabel": "oferta",
+    "columns": {
+      "reference": "Oferta",
+      "status": "Statusi",
+      "salesperson": "Shitësi",
+      "price": "Çmimi neto",
+      "validUntil": "E vlefshme deri",
+      "created": "Krijuar"
+    }
+  },
+  "manualPrice": "Çmim manual. Arsyeja: {{reason}}"
+}

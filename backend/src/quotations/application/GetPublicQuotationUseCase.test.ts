@@ -35,6 +35,12 @@ describe('GetPublicQuotationUseCase', () => {
 
   const build = () => new GetPublicQuotationUseCase(reader);
 
+  it('FR-OFR-07 a workspace on the sales process has no public link: not found', async () => {
+    reader.findByShareToken.mockResolvedValue({ ...view('SENT'), salesProcess: true });
+
+    expect(await build().execute('token-1')).toBeNull();
+  });
+
   it('returns a sent quotation', async () => {
     reader.findByShareToken.mockResolvedValue(view('SENT'));
 

@@ -39,6 +39,7 @@ class InMemoryTenantRepository implements ITenantRepository {
   async updateSettings() {}
   async updateSettingsForMany() { return 0; }
   async setSubscriptionStatus() {}
+  async setSalesWorkflow() {}
 }
 
 /**

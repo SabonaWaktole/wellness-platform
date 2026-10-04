@@ -24,12 +24,19 @@
     "APPOINTMENT_RESCHEDULED": "{{actor}} e zhvendosi takimin tuaj në {{scheduledAt}} — {{reason}}",
     "APPOINTMENT_CANCELLED": "{{actor}} anuloi takimin tuaj — {{reason}}",
     "CLIENT_ASSIGNED": "{{actor}} ju caktoi klientin {{client}}",
-    "FORM_SUBMITTED": "Dërgim i ri për \"{{form}}\"",
+    "FORM_SUBMITTED": "Një përgjigje e re u dërgua për {{form}}",
     "INVITATION_ACCEPTED": "{{email}} pranoi ftesën tuaj dhe iu bashkua ekipit",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "FORM_SUBMITTED": "Një përgjigje e re u dërgua për {{form}}",
     "CONTRACT_EXPIRING": "Kontrata {{planName}} e {{clientName}} skadon për {{daysRemaining}} ditë",
-    "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar"
+    "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar",
+    "DISCOUNT_APPROVAL_REQUESTED": "{{actor}} kërkoi zbritje {{requestedPercent}}% për {{reference}} ({{clientName}}), çmimi i listës {{listPrice}}. Arsyeja: {{reason}}",
+    "DISCOUNT_APPROVED": "{{actor}} miratoi zbritjen {{approvedPercent}}% për {{reference}}",
+    "DISCOUNT_REJECTED": "{{actor}} refuzoi zbritjen mbi kufirin për {{reference}}",
+    "DISCOUNT_APPROVAL_REMINDER": "Kujtesë: zbritja {{requestedPercent}}% e kërkuar nga {{salespersonName}} për {{reference}} ({{clientName}}) ende pret miratim",
+    "DISCOUNT_APPROVAL_REQUESTED_manual": "{{actor}} propozoi çmimin manual {{requestedMonthlyPrice}} për {{reference}} ({{clientName}}). Arsyeja: {{reason}}",
+    "DISCOUNT_APPROVED_manual": "{{actor}} miratoi çmimin manual {{approvedMonthlyPrice}} për {{reference}}",
+    "DISCOUNT_REJECTED_manual": "{{actor}} refuzoi çmimin manual për {{reference}}",
+    "DISCOUNT_APPROVAL_REMINDER_manual": "Kujtesë: çmimi manual {{requestedMonthlyPrice}} i propozuar nga {{salespersonName}} për {{reference}} ({{clientName}}) ende pret miratim"
   }
 }

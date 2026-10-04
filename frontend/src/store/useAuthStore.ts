@@ -37,6 +37,11 @@ export interface User {
   tenantTimezone?: string | null;
   tenantDateFormat?: string | null;
   /**
+   * D6 (M2 Slice 9): SALES_PROCESS shows the Offers list and hides the legacy
+   * quotation screens. Null for SUPER_ADMIN.
+   */
+  tenantSalesWorkflow?: 'LEGACY_QUOTATIONS' | 'SALES_PROCESS' | null;
+  /**
    * Interface language, kept strictly separate from the formatting fields
    * above. `userLanguage` is null when the user has expressed no preference,
    * which means "follow the workspace default" — distinct from having chosen
