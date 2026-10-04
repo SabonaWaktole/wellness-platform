@@ -51,10 +51,29 @@ export interface DealStageChangeView {
   changedByUserId: string | null;
   changedByName: string | null;
   at: string;
+  /** Reopening keeps the previous result here (FR-DEAL-17). */
+  note: string | null;
+}
+
+/** What a won or lost deal records (FR-DEAL-14, 16). Amounts are guarded by `commercial.view`. */
+export interface DealResultView {
+  wonAt: string | null;
+  lostAt: string | null;
+  lostReasonId: string | null;
+  lostReasonSq: string | null;
+  lostReasonEn: string | null;
+  lostNote: string | null;
+  agreedMonthlyPrice: string | null;
+  agreedAnnualValue: string | null;
+  packageId: string | null;
+  packageNameSq: string | null;
+  packageNameEn: string | null;
+  wonQuotationId: string | null;
+  wonQuotationReference: string | null;
 }
 
 /** The deal page (FR-DEAL-03). Offers, activities and follow-ups join it in Slices 7–11. */
-export interface DealDetail extends DealSummary {
+export interface DealDetail extends DealSummary, DealResultView {
   notes: string | null;
   createdByUserId: string;
   contacts: DealContactView[];

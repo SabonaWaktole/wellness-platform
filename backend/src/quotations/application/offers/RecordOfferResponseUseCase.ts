@@ -1,5 +1,6 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
+import { EDIT_DEALS } from '../../../deals/application/dealAccess';
 import { EDIT_OFFERS, withActions } from './offerAccess';
 import { actorOf, ensureDealOpen, offerInScope, recordOfferChange } from './offerChanges';
 import { OfferView } from './offerViews';
@@ -11,8 +12,8 @@ export const OFFER_RESPONSE_NOTE_MAX = 2000;
 /**
  * The company's answer, recorded by the salesperson (FR-OFR-12): a sent
  * offer is marked accepted or rejected, with an optional note kept in its
- * history. Only the latest version can be accepted (FR-OFR-11). Winning the
- * deal from an accepted offer comes with Slice 13.
+ * history. Only the latest version can be accepted (FR-OFR-11). Accepting
+ * returns `canWinDeal`, so the screen can offer to win the deal (Slice 13).
  */
 export class RecordOfferResponseUseCase {
   constructor(
@@ -43,6 +44,8 @@ export class RecordOfferResponseUseCase {
       await recordOfferChange(repos, offer, from, actorOf(access), note);
     });
     const [view] = await withActions([(await this.store.find(tenantId, offerId))!], access, this.scopes);
-    return view;
+    // FR-OFR-12: an accepted latest offer on an open deal can win it, for whoever may edit the deal.
+    const canWinDeal = input.response === 'ACCEPTED' && view.dealOpen && !view.superseded && access.can(EDIT_DEALS);
+    return input.response === 'ACCEPTED' ? { ...view, canWinDeal } : view;
   }
 }

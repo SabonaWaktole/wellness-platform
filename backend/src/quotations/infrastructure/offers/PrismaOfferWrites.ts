@@ -45,6 +45,14 @@ export class PrismaOfferWrites implements IOfferWrites {
     return row ? toOffer(row) : null;
   }
 
+  async openForDeal(tenantId: string, dealId: string): Promise<Offer[]> {
+    const rows = await this.prisma.quotation.findMany({
+      where: { tenantId, dealId, supersededAt: null, status: { in: ['DRAFT', 'PENDING_APPROVAL', 'READY', 'SENT'] } },
+      include: OFFER_INCLUDE,
+    });
+    return rows.map(toOffer);
+  }
+
   countForDeal(tenantId: string, dealId: string): Promise<number> {
     return this.prisma.quotation.count({ where: { tenantId, dealId } });
   }

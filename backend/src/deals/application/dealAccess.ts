@@ -15,3 +15,6 @@ export const VIEW_COMPANIES = 'companies.view';
 
 /** A deal's value and its offers' figures (FR-RBAC-17). Not scoped. */
 export const VIEW_COMMERCIAL = 'commercial.view';
+
+/** Reopening a won or lost deal (FR-DEAL-17). Scoped. */
+export const REOPEN_DEALS = 'deals.reopen';
