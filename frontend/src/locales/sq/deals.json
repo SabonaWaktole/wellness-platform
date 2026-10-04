@@ -113,7 +113,8 @@
     "reassignConfirm": "Ndrysho shitësin",
     "reassigned": "Marrëveshja tani i përket {{name}}.",
     "loadFailed": "Marrëveshja nuk u ngarkua.",
-    "notFound": "Kjo marrëveshje nuk ekziston ose nuk është e juaja."
+    "notFound": "Kjo marrëveshje nuk ekziston ose nuk është e juaja.",
+    "historyNote": "Shënim: {{note}}"
   },
   "form": {
     "createTitle": "Marrëveshje e re",
@@ -153,8 +154,14 @@
       "type": "Zgjidhni Kontratë e re, Rinovim ose Shërbime shtesë.",
       "title": "Titulli është shumë i gjatë.",
       "notes": "Shënimet janë shumë të gjata.",
-      "expectedCloseDate": "Vendosni një datë të vlefshme."
-    }
+      "expectedCloseDate": "Vendosni një datë të vlefshme.",
+      "lostReasonId": "Zgjidh pse u humb marrëveshja.",
+      "lostNote": "Shënimi është shumë i gjatë.",
+      "comment": "Thuaj pse rihapet marrëveshja.",
+      "closingDate": "Data e mbylljes nuk mund të jetë në të ardhmen.",
+      "stage": "Zgjidh një fazë të hapur."
+    },
+    "DEAL_NOT_WINNABLE": "Kjo ofertë nuk mund ta fitojë marrëveshjen."
   },
   "offers": {
     "calculate": "Llogarit çmimin",
@@ -180,5 +187,49 @@
     "overdueFollowUp": "Ndjekje e vonuar",
     "stale_one": "Pa aktivitet prej {{count}} dite",
     "stale_other": "Pa aktivitet prej {{count}} ditësh"
+  },
+  "win": {
+    "action": "Fito marrëveshjen",
+    "title": "Fito këtë marrëveshje",
+    "noOffer": "Kjo marrëveshje nuk ka ofertë gati, të dërguar ose të pranuar për ta fituar. Bëje fillimisht gati një ofertë.",
+    "fromOffer": "Vlerat nga oferta {{reference}}",
+    "offer": "Oferta",
+    "monthly": "Çmimi mujor i rënë dakord",
+    "annual": "Vlera vjetore e rënë dakord",
+    "salesperson": "Shitësi",
+    "figuresHidden": "Vlerat e rëna dakord merren nga oferta e fundit e marrëveshjes.",
+    "closingDate": "Data e mbylljes",
+    "closeFollowUps": "Mbyll {{count}} ndjekje të hapura të kësaj marrëveshjeje",
+    "confirm": "Fito marrëveshjen",
+    "done": "Marrëveshja u fitua. Kompania tani është Klient."
+  },
+  "lose": {
+    "action": "Shëno si të humbur",
+    "title": "Shëno këtë marrëveshje si të humbur",
+    "hint": "Ofertat e hapura bëhen të refuzuara dhe ndjekjet e hapura mbyllen.",
+    "reason": "Arsyeja",
+    "note": "Shënim",
+    "confirm": "Shëno si të humbur",
+    "done": "Marrëveshja u shënua si e humbur.",
+    "reasonsFailed": "Arsyet e humbjes nuk u ngarkuan."
+  },
+  "reopen": {
+    "action": "Rihap",
+    "title": "Rihap këtë marrëveshje",
+    "stage": "Rihap në fazën",
+    "comment": "Pse rihapet?",
+    "confirm": "Rihap marrëveshjen",
+    "done": "Marrëveshja u rihap."
+  },
+  "result": {
+    "wonTitle": "E fituar",
+    "lostTitle": "E humbur",
+    "closingDate": "Data e mbylljes",
+    "agreedMonthly": "Çmimi mujor i rënë dakord",
+    "agreedAnnual": "Vlera vjetore e rënë dakord",
+    "package": "Paketa",
+    "offer": "Oferta",
+    "reason": "Arsyeja",
+    "note": "Shënim"
   }
 }

@@ -316,3 +316,15 @@
   justify-content: flex-end;
   gap: var(--spacing-sm);
 }
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.resultNote {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+}

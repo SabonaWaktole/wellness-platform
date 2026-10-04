@@ -179,6 +179,8 @@ export interface PendingApprovalSummary {
 /** An offer as the deal page and the offers list show it (M2 Slices 8, 9). */
 export interface OfferView {
   id: string;
+  /** Only on the response to "mark accepted": the deal can now be won with this offer (FR-OFR-12). */
+  canWinDeal?: boolean;
   dealId: string;
   clientId: string;
   status: OfferStatus;
