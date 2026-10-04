@@ -1,0 +1,526 @@
+/* ============================================================================
+ * The sales calendar (M2 Slice 12). One toolbar, one of four views (day, week,
+ * month, agenda), the Overdue section and the item chip.
+ *
+ * Type colour and icon say WHAT an item is (FR-CAL-01). In the team view a
+ * 4px bar on the item's left edge says WHOSE it is (FR-CAL-05), from the
+ * validated chart palette, so the two never compete for the same channel.
+ * Overdue is red, and says "Overdue" in words, so colour is never the only cue.
+ * ========================================================================== */
+
+.type-CALL { --item-colour: var(--color-primary); }
+.type-EMAIL { --item-colour: var(--color-warning); }
+.type-VISIT { --item-colour: var(--color-success); }
+.type-MEETING { --item-colour: var(--color-secondary); }
+.type-ONLINE_MEETING { --item-colour: var(--chart-4); }
+
+/* ---------- Toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-title-md, 18px);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-default);
+  background: var(--color-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.iconButton:hover { background: var(--color-surface-container-low); }
+
+.todayButton {
+  height: 32px;
+  padding: 0 var(--spacing-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-default);
+  background: var(--color-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-label-md);
+  cursor: pointer;
+}
+
+.todayButton:hover { background: var(--color-surface-container-low); }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-default);
+  background: var(--color-surface-container);
+}
+
+.segment {
+  min-height: 28px;
+  padding: 0 var(--spacing-base);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-size-label-md);
+  cursor: pointer;
+}
+
+.segmentActive {
+  background: var(--color-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- Team filter and legend ---------- */
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs) var(--spacing-sm);
+}
+
+.filterLabel {
+  font-size: var(--font-size-label-md);
+  color: var(--text-secondary);
+}
+
+.personChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: 28px;
+  padding: 0 var(--spacing-sm);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-size-label-md);
+  cursor: pointer;
+}
+
+.personChip[aria-pressed='true'] {
+  border-color: var(--person-colour);
+  background: color-mix(in srgb, var(--person-colour) 12%, var(--color-surface));
+  color: var(--text-primary);
+}
+
+.personDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--person-colour);
+  flex: none;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs) var(--spacing-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-secondary);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--item-colour);
+}
+
+.legendItem span { color: var(--text-secondary); }
+
+/* ---------- The item chip ---------- */
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  width: 100%;
+  min-width: 0;
+  min-height: 24px;
+  padding: 2px var(--spacing-xs) 2px var(--spacing-sm);
+  border: 0;
+  border-left: 4px solid var(--bar-colour, var(--item-colour));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--item-colour) 14%, var(--color-surface));
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-label-sm);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.chip:hover { background: color-mix(in srgb, var(--item-colour) 22%, var(--color-surface)); }
+.chip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+
+.chipIcon { flex: none; color: var(--item-colour); }
+.chipTime { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chipText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.chipFollowUp { border-style: solid; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--item-colour) 45%, transparent); }
+
+.chipDone { opacity: 0.6; }
+.chipDone .chipText { text-decoration: line-through; }
+
+.chipOverdue {
+  background: var(--color-error-container);
+  color: var(--color-on-error-container);
+  box-shadow: inset 0 0 0 1px var(--color-error);
+}
+
+.chipOverdue .chipIcon { color: var(--color-error); }
+.chipOverdue:hover { background: var(--color-error-container); filter: brightness(0.97); }
+
+.chipDragging { opacity: 0.4; }
+
+.overdueTag {
+  flex: none;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-error);
+  color: var(--color-on-error);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- The Overdue section (FR-CAL-04) ---------- */
+
+.overdue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-base);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-lg);
+  background: var(--color-error-container);
+}
+
+.overdueTitle {
+  margin: 0;
+  font-size: var(--font-size-label-md);
+  font-weight: 600;
+  color: var(--color-on-error-container);
+}
+
+.overdueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- Month ---------- */
+
+.month {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.monthHeader,
+.monthWeek {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.monthHeader {
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--color-surface-container-low);
+}
+
+.weekdayName {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.monthCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 104px;
+  padding: var(--spacing-xs);
+  border-right: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--border-hairline);
+  min-width: 0;
+}
+
+.monthCell:nth-child(7n) { border-right: 0; }
+.monthCellOutside { background: var(--color-surface-container-low); }
+.monthCellOutside .dayNumber { color: var(--text-tertiary); }
+
+.dayNumber {
+  align-self: flex-start;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-label-md);
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dayNumber:hover { background: var(--color-surface-container); }
+
+/* Today is a filled disc on the number, not a wash over the cell. */
+.dayNumberToday,
+.dayNumberToday:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.moreButton {
+  align-self: flex-start;
+  padding: 0 var(--spacing-xs);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-size-label-sm);
+  cursor: pointer;
+}
+
+.moreButton:hover { color: var(--text-primary); text-decoration: underline; }
+
+/* ---------- Day and week: the time grid ---------- */
+
+.timeGridScroll {
+  max-height: 640px;
+  overflow: auto;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.timeGrid {
+  display: grid;
+  grid-template-columns: 52px repeat(var(--day-count), minmax(112px, 1fr));
+  min-width: min-content;
+}
+
+.gridCorner,
+.dayHead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--color-surface-container-low);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.dayHeadToday { color: var(--color-primary); }
+
+.dayHeadButton {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.hourGutter { position: relative; height: calc(24 * var(--hour-height)); }
+
+.hourLabel {
+  position: absolute;
+  right: var(--spacing-xs);
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.dayColumn {
+  position: relative;
+  height: calc(24 * var(--hour-height));
+  border-left: 1px solid var(--border-hairline);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--hour-height) - 1px),
+    var(--border-hairline) calc(var(--hour-height) - 1px),
+    var(--border-hairline) var(--hour-height)
+  );
+}
+
+.dayColumnDropTarget { background-color: color-mix(in srgb, var(--color-primary) 6%, transparent); }
+
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 2px;
+  background: var(--color-error);
+  pointer-events: none;
+}
+
+.placed { position: absolute; z-index: 1; padding: 0 1px; }
+.placed > .chip { height: 100%; align-items: flex-start; padding-top: 3px; flex-wrap: wrap; align-content: flex-start; }
+
+.dropHint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 0 var(--spacing-xs);
+  border-top: 2px dashed var(--color-primary);
+  font-size: 10px;
+  color: var(--color-primary);
+  pointer-events: none;
+}
+
+/* ---------- Agenda ---------- */
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+}
+
+.agendaDay { display: flex; flex-direction: column; gap: var(--spacing-xs); }
+
+.agendaDayTitle {
+  margin: 0;
+  font-size: var(--font-size-label-md);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.agendaDayToday { color: var(--color-primary); }
+
+.agendaList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agendaRow {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: stretch;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-base);
+  border: 1px solid var(--border-hairline);
+  border-left: 4px solid var(--bar-colour, var(--item-colour));
+  border-radius: var(--radius-default);
+  background: var(--color-surface);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agendaRow:hover { background: var(--color-surface-container-low); }
+.agendaRow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.agendaRowOverdue { border-color: var(--color-error); background: var(--color-error-container); }
+.agendaRowDone { opacity: 0.6; }
+.agendaRowDone .agendaMain { text-decoration: line-through; }
+
+.agendaTime {
+  flex: none;
+  min-width: 52px;
+  font-size: var(--font-size-label-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.agendaMain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.agendaTitle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-xs); font-weight: 600; }
+.agendaTitle svg { color: var(--item-colour); flex: none; }
+.agendaMeta { font-size: var(--font-size-label-sm); color: var(--text-secondary); overflow-wrap: anywhere; }
+
+.empty,
+.notice {
+  margin: 0;
+  padding: var(--spacing-base);
+  font-size: var(--font-size-label-md);
+  color: var(--text-secondary);
+}
+
+.notice { border-radius: var(--radius-default); background: var(--color-warning-container); color: var(--color-on-warning-container); }
+
+/* ---------- Page ---------- */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+  padding: var(--spacing-md);
+  min-width: 0;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .page { padding: var(--spacing-sm); }
+  .monthCell { min-height: 72px; padding: 2px; }
+  /* Chips become dots-with-time at this width: the text would not fit. */
+  .monthCell .chipText { display: none; }
+  .agendaRow { padding: var(--spacing-sm); }
+}

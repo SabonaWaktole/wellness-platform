@@ -42,7 +42,16 @@ export class SearchAppointmentsUseCase {
       assignedUserId: appt.assignedUserId,
       staffName: appt.staffName,
       scheduledAt: appt.scheduledAt,
+      endAt: appt.endAt,
       status: appt.status,
+      kind: appt.kind,
+      type: appt.type,
+      place: appt.place,
+      dealId: appt.dealId,
+      dealTitle: appt.dealTitle,
+      dealType: appt.dealType,
+      contactPersonId: appt.contactPersonId,
+      contactName: appt.contactName,
       notes: appt.notes,
     }));
   }

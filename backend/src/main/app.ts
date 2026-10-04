@@ -221,6 +221,10 @@ import {
   ListMyFollowUpsUseCase,
 } from '../appointments/application/followUps/ListFollowUpsUseCases';
 import { FollowUpController } from '../appointments/interfaces/http/followUps/FollowUpController';
+import { PrismaCalendarStore } from '../appointments/infrastructure/calendar/PrismaCalendarStore';
+import { GetCalendarUseCase } from '../appointments/application/calendar/GetCalendarUseCase';
+import { CalendarController } from '../appointments/interfaces/http/calendar/CalendarController';
+import { createCalendarRouter } from '../appointments/interfaces/http/calendar/calendarRoutes';
 import { createFollowUpRouter } from '../appointments/interfaces/http/followUps/followUpRoutes';
 import { AddInteractionUseCase } from '../clients/application/use-cases/AddInteractionUseCase';
 import { PrismaClientRepository as FollowUpClientRepository } from '../clients/infrastructure/repositories/PrismaClientRepository';
@@ -655,6 +659,18 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new GetFollowUpUseCase(followUpStore, recordScopes)
   );
   app.use('/api/:tenantSlug/follow-ups', createFollowUpRouter(followUpController, tokenService, tenantRepository, resolveAccessContext));
+
+  // The sales calendar (M2 Slice 12: FR-CAL-01..08): follow-ups and planned
+  // items in a range, with the overdue ones, within the caller's scope.
+  app.use(
+    '/api/:tenantSlug/calendar',
+    createCalendarRouter(
+      new CalendarController(new GetCalendarUseCase(new PrismaCalendarStore(), recordScopes)),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
 
   // Workspace sales settings (M2 Slice 11): the days without activity after
   // which a deal is highlighted (FR-DEAL-12).

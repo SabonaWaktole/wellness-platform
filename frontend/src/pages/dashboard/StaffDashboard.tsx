@@ -89,7 +89,7 @@ export const StaffDashboard = () => {
         <button
           type="button"
           className={styles.quickActionButtonSecondary}
-          onClick={() => navigate(`/${tenantSlug}/appointments/new`)}
+          onClick={() => navigate(`/${tenantSlug}/appointments?plan=1`)}
         >
           <CalendarPlus size={24} />
           <span>{t('newAppointment')}</span>
@@ -245,7 +245,7 @@ export const StaffDashboard = () => {
              <button
                type="button"
                className={styles.glassButton}
-               onClick={() => navigate(`/${tenantSlug}/appointments/new`)}
+               onClick={() => navigate(`/${tenantSlug}/appointments?plan=1`)}
              >
                 <CalendarPlus size={32} color="var(--color-primary)" />
                 <div className={styles.glassButtonContent}>

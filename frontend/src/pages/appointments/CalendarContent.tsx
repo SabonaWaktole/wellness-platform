@@ -1,410 +1,231 @@
-import { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
-import { RescheduleModal } from './RescheduleModal';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  Calendar as CalendarIcon, 
-  Bell, 
-  MoreVertical, 
-  User,
-  CheckCircle2 
-} from 'lucide-react';
-import { Button } from '../../components/ui/Button/Button';
-import { Badge } from '../../components/ui/Badge/Badge';
-import { Avatar } from '../../components/ui/Avatar/Avatar';
-import styles from './CalendarContent.module.css';
-
-import { useAppointmentsByDateRange, useRescheduleAppointment } from '../../hooks/useAppointments';
-import { isSameDayInZone } from '../../utils/tenantDay';
-import type { Appointment } from '../../types/appointment';
+import { CalendarAgenda } from '../../components/calendar/CalendarAgenda';
+import { CalendarMonthView } from '../../components/calendar/CalendarMonthView';
+import { CalendarTimeGrid } from '../../components/calendar/CalendarTimeGrid';
+import { CalendarToolbar } from '../../components/calendar/CalendarToolbar';
+import { OverdueSection } from '../../components/calendar/OverdueSection';
+import { PlanActivityDialog } from '../../components/calendar/PlanActivityDialog';
+import { TeamFilter } from '../../components/calendar/TeamFilter';
+import { personColours, typeIcon } from '../../components/calendar/calendarStyle';
+import { useToast } from '../../components/ui/Toast/toastContext';
+import { useCalendarFeed } from '../../hooks/useCalendarFeed';
 import { useDateFormat } from '../../hooks/useDateFormat';
-import { PRODUCT_NAME } from '../../constants/brand';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useRangeTitle } from '../../hooks/useRangeTitle';
+import { usePermission, usePermissionScope } from '../../hooks/usePermission';
+import { followUpsChanged } from '../../hooks/useOverdueFollowUpCount';
+import { useTeam } from '../../hooks/useTeam';
+import { appointmentService } from '../../services/appointmentService';
+import { followUpService } from '../../services/followUpService';
+import {
+  CALENDAR_VIEWS,
+  instantAtMinutes,
+  isDayKey,
+  showsToday,
+  step,
+  todayKey,
+  visibleRange,
+  type CalendarView,
+} from '../../utils/calendarDays';
+import { CALENDAR_TYPES, type CalendarItem } from '../../types/calendar';
+import styles from '../../components/calendar/Calendar.module.css';
 
-// Helper to map backend status to UI color tokens
-const getStatusToken = (status: string) => {
-  switch (status) {
-    case 'SCHEDULED': return 'primary';
-    case 'CONFIRMED': return 'success';
-    case 'COMPLETED': return 'secondary';
-    case 'CANCELLED': return 'error';
-    default: return 'warning';
-  }
-};
+const clock = (minutes: number): string => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
-const CalendarDesktopView = ({ 
-  appointments = [], 
-  onAppointmentClick 
-}: { 
-  appointments: Appointment[],
-  onAppointmentClick: (app: Appointment) => void 
-}) => {
-  const { timeZone, custom, time: formatTime } = useDateFormat();
+/**
+ * The sales calendar (M2 Slice 12, FR-CAL-01..08): the salesperson's follow-ups,
+ * planned calls, meetings, visits and online meetings in day, week, month and
+ * agenda views, with the overdue ones listed on today's date. With
+ * `calendar.view` at Team or All a filter picks whose items to show, each
+ * salesperson in their own colour; the CEO sees everything and can change
+ * nothing. The range asked of the server follows the visible view, and the
+ * view, day and filter live in the address, so a link or a reload lands on
+ * the same screen.
+ */
+export const CalendarContent: React.FC = () => {
   const { t } = useTranslation('appointments');
   const { tenantSlug } = useParams();
-  const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('month');
+  const toast = useToast();
+  const dates = useDateFormat();
+  const rangeTitle = useRangeTitle();
+  const [params, setParams] = useSearchParams();
+  const calendarScope = usePermissionScope('calendar.view');
+  const canPlan = usePermission('activities.add');
+  const canManageFollowUps = usePermission('followups.manage');
+  const seesTeam = calendarScope === 'TEAM' || calendarScope === 'ALL';
+  // The CEO's calendar: everything visible, nothing to create or change (FR-CAL-06).
+  const readOnly = !canPlan && !canManageFollowUps;
+  const defaultView: CalendarView = useMediaQuery('(max-width: 640px)') ? 'agenda' : 'month';
+  const { staff, fetchStaff } = useTeam();
 
-  const handlePrevMonth = () => {
-    if (viewMode === 'month') {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-    } else if (viewMode === 'week') {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7));
-    } else {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1));
-    }
-  };
+  const today = todayKey(dates.timeZone);
+  const requestedView = params.get('view') as CalendarView | null;
+  const view: CalendarView = requestedView && CALENDAR_VIEWS.includes(requestedView) ? requestedView : defaultView;
+  const requestedDate = params.get('date');
+  const anchor = isDayKey(requestedDate) ? requestedDate : today;
+  const userIds = useMemo(() => (seesTeam ? (params.get('users') ?? '').split(',').filter(Boolean) : []), [seesTeam, params]);
 
-  const handleNextMonth = () => {
-    if (viewMode === 'month') {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-    } else if (viewMode === 'week') {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7));
-    } else {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1));
-    }
-  };
-
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
-
-  // Derive today's queue from the month's appointments (real logic: today relative to user's real today)
-  const realToday = new Date();
-  const queueAppointments = (appointments || []).filter(app =>
-    isSameDayInZone(app.scheduledAt, realToday, timeZone)
+  const range = useMemo(() => visibleRange(view, anchor, dates.timeZone), [view, anchor, dates.timeZone]);
+  const feedParams = useMemo(
+    () => ({ from: range.from.toISOString(), to: range.to.toISOString(), userIds }),
+    [range.from, range.to, userIds]
   );
-  
-  const monthYearString = custom(currentDate, { month: 'long', year: 'numeric' });
-  
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const dateObj = currentDate.getDate();
-  const firstDayOfMonth = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startingDayOfWeek = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
-  const previousMonthDays = new Date(year, month, 0).getDate();
-  
-  // Week calculation
-  const currentDayOfWeek = currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1;
-  const startOfWeek = new Date(year, month, dateObj - currentDayOfWeek);
+  const { feed, isLoading, error, reload } = useCalendarFeed(feedParams);
 
-  // Formatting header string based on view
-  let viewTitleString = monthYearString;
-  if (viewMode === 'day') {
-    viewTitleString = custom(currentDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  } else if (viewMode === 'week') {
-    const endOfWeek = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + 6);
-    viewTitleString = `${custom(startOfWeek, { month: 'short', day: 'numeric' })} - ${custom(endOfWeek, { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  }
+  const [selected, setSelected] = useState<CalendarItem | null>(null);
+  const [planning, setPlanning] = useState<{ day: string } | null>(null);
+  const [editing, setEditing] = useState<CalendarItem | null>(null);
 
-  return (
-    <div className={styles.desktopView}>
-      {/* Main Content Split (Header removed) */}
-      <div className={styles.splitContent}>
-        {/* Left: Calendar Canvas */}
-        <section className={styles.calendarCanvas}>
-          <div className={styles.calendarToolbar}>
-            <div className={styles.monthSelector}>
-              <h2>{viewTitleString}</h2>
-              <div className={styles.monthControls}>
-                <button onClick={handlePrevMonth}><ChevronLeft size={16} /></button>
-                <span onClick={handleToday} style={{ cursor: 'pointer' }}>{t('calendar.today')}</span>
-                <button onClick={handleNextMonth}><ChevronRight size={16} /></button>
-              </div>
-            </div>
-            <div className={styles.calendarActions}>
-              <div className={styles.segmentedControl}>
-                <button className={viewMode === 'day' ? styles.activeSegment : ''} onClick={() => setViewMode('day')}>{t('calendar.day')}</button>
-                <button className={viewMode === 'week' ? styles.activeSegment : ''} onClick={() => setViewMode('week')}>{t('calendar.week')}</button>
-                <button className={viewMode === 'month' ? styles.activeSegment : ''} onClick={() => setViewMode('month')}>{t('calendar.month')}</button>
-              </div>
-              <Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate(`/${tenantSlug}/appointments/new`)}>
-                {t('calendar.newAppointment')}
-              </Button>
-            </div>
-          </div>
+  // After a reload the open item shows what the server now has (a status change keeps the panel open).
+  useEffect(() => {
+    if (!feed) return;
+    setSelected((current) => (current ? [...feed.items, ...feed.overdue].find((entry) => entry.id === current.id) ?? current : current));
+  }, [feed]);
 
-          <div className={styles.gridContainer}>
-            <div className={styles.gridHeader} style={viewMode === 'day' ? { gridTemplateColumns: '1fr' } : {}}>
-              {viewMode === 'day' ? (
-                <div>{custom(currentDate, { weekday: 'short' }).toUpperCase()}</div>
-              ) : (
-                <><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div><div>SUN</div></>
-              )}
-            </div>
-            <div className={styles.gridCells} style={viewMode === 'day' ? { gridTemplateColumns: '1fr' } : {}}>
-              {viewMode === 'month' && Array.from({ length: startingDayOfWeek }).map((_, i) => (
-                <div key={`empty-${i}`} className={styles.emptyCell}>
-                  {previousMonthDays - startingDayOfWeek + i + 1}
-                </div>
-              ))}
-              
-              {Array.from({ length: viewMode === 'month' ? daysInMonth : viewMode === 'week' ? 7 : 1 }).map((_, i) => {
-                let cellDate: Date;
-                if (viewMode === 'month') {
-                  cellDate = new Date(year, month, i + 1);
-                } else if (viewMode === 'week') {
-                  cellDate = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + i);
-                } else {
-                  cellDate = currentDate;
-                }
-                
-                const dayNumber = cellDate.getDate();
-                // Was a hand-copied re-implementation of isSameDayLocal
-                // comparing browser-local date parts. Both it and the queue
-                // above now go through the one tenant-zone definition.
-                const dayAppointments = appointments.filter(app =>
-                  isSameDayInZone(app.scheduledAt, cellDate, timeZone)
-                );
-                
-                return (
-                  <div key={cellDate.toISOString()} className={styles.cell}>
-                    <span className={styles.dayNumber}>{viewMode !== 'month' ? custom(cellDate, { month: 'short', day: 'numeric' }) : dayNumber}</span>
-                    <div className={styles.eventList}>
-                      {dayAppointments.map(app => {
-                        const token = getStatusToken(app.status);
-                        const time = formatTime(app.scheduledAt);
-                        const title = app.clientName || 'Appointment';
-                        const capToken = token.charAt(0).toUpperCase() + token.slice(1);
-                        return (
-                          <div key={app.id} className={`${styles.eventChip} ${styles[`event${capToken}`]}`}>
-                            {time} - {title}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+  useEffect(() => {
+    if (seesTeam) fetchStaff();
+  }, [seesTeam, fetchStaff]);
 
-        {/* Right: Queue */}
-        <aside className={styles.queueSidebar}>
-          <div className={styles.queueHeader}>
-            <h3>{t('calendar.queue')}</h3>
-            <p>{t('calendar.queueCount', { count: queueAppointments.length })}</p>
-          </div>
-          <div className={styles.queueContent}>
-            <div className={styles.statusLegend}>
-              <div className={styles.legendItem}><span className={`${styles.dot} ${styles.dotPrimary}`}></span> {t('calendar.legendScheduled')}</div>
-              <div className={styles.legendItem}><span className={`${styles.dot} ${styles.dotEmerald}`}></span> {t('calendar.legendConfirmed')}</div>
-              <div className={styles.legendItem}><span className={`${styles.dot} ${styles.dotSlate}`}></span> {t('calendar.legendCompleted')}</div>
-              <div className={styles.legendItem}><span className={`${styles.dot} ${styles.dotError}`}></span> {t('calendar.legendCancelled')}</div>
-              <div className={styles.legendItem}><span className={`${styles.dot} ${styles.dotAmber}`}></span> {t('calendar.legendRescheduled')}</div>
-            </div>
+  // `?plan=1` opens the planning dialog on arrival: the dashboard's "new appointment" buttons.
+  const planOnArrival = params.get('plan');
+  useEffect(() => {
+    if (!planOnArrival) return;
+    if (canPlan) setPlanning({ day: today });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('plan');
+        return next;
+      },
+      { replace: true }
+    );
+    // Once per arrival: `today` is only the day it opens on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planOnArrival, canPlan]);
 
-            <div className={styles.queueList}>
-              {queueAppointments.map(app => {
-                const isCompleted = app.status === 'COMPLETED';
-                const statusToken = getStatusToken(app.status);
-                const time = formatTime(app.scheduledAt);
-                
-                return (
-                  <div key={app.id} className={`${styles.queueCard} ${isCompleted ? styles.completedQueueCard : ''}`} onClick={() => onAppointmentClick(app)} style={{ cursor: 'pointer' }}>
-                    <div className={styles.queueCardHeader}>
-                      <span className={`${styles.queueTime} ${isCompleted ? styles.completedTime : styles[`text${statusToken}`]}`}>
-                        {time}
-                      </span>
-                      {isCompleted ? <CheckCircle2 size={16} /> : <MoreVertical size={16} className={styles.moreIcon} />}
-                    </div>
-                    <h4 className={`${styles.queueClient} ${isCompleted ? styles.completedText : ''}`}>
-                      {app.clientName || 'Unknown Client'}
-                    </h4>
-                    <p className={styles.queuePurpose}>{app.notes || 'No purpose provided'}</p>
-                    <div className={styles.queueFooter}>
-                      {!isCompleted && (
-                        <div className={styles.avatarGroup}>
-                          <Avatar fallback={app.staffName?.charAt(0) || 'U'} size="sm" className={styles.overlapAvatar} />
-                        </div>
-                      )}
-                      <Badge variant={statusToken as any}>{app.status}</Badge>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className={styles.queueFooterAction}>
-            <Button variant="outline" icon={<CalendarIcon size={18} />} fullWidth>
-              {t('calendar.scheduleWaitlist')}
-            </Button>
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
-};
-
-// Sub-component: Mobile Agenda View
-const CalendarMobileAgenda = ({
-  appointments,
-  onAppointmentClick
-}: {
-  appointments: Appointment[],
-  onAppointmentClick: (app: Appointment) => void
-}) => {
-  const { timeZone, custom, time: formatTime } = useDateFormat();
-  const { t } = useTranslation('appointments');
-  const today = new Date();
-  const [selectedDate, setSelectedDate] = useState(today);
-  const agendaAppointments = appointments.filter(app =>
-    isSameDayInZone(app.scheduledAt, selectedDate, timeZone)
+  const update = useCallback(
+    (changes: Record<string, string | null>) => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          for (const [key, value] of Object.entries(changes)) {
+            if (value) next.set(key, value);
+            else next.delete(key);
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setParams]
   );
 
-  // Show a 7-day window centered on "today" so the strip always reflects real dates
-  const weekDays = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - 3 + i);
-    return d;
-  });
+  const colourOf = useMemo(() => personColours(staff.map((member) => member.id)), [staff]);
+  const personColour = seesTeam ? colourOf : undefined;
+  const items = feed?.items ?? [];
+  const showOverdue = !!feed && showsToday(range.days, today) && (view === 'day' || view === 'agenda');
 
-  const monthYearString = custom(selectedDate, { month: 'long', year: 'numeric' });
+  const pickDay = (day: string) => update({ view: 'day', date: day });
+  const goTo = (next: string) => update({ date: next === today ? null : next });
 
-  return (
-    <div className={styles.mobileView}>
-      {/* Top App Bar */}
-      <header className={styles.mobileHeader}>
-        <div className={styles.mobileHeaderTop}>
-          <h1 className={styles.mobileTitle}>{PRODUCT_NAME}</h1>
-          <div className={styles.mobileActions}>
-            <button><Bell size={20} /></button>
-            <Avatar fallback="AR" size="sm" />
-          </div>
-        </div>
-        <div className={styles.mobileViewSwitcher}>
-          <button className={styles.activePill}>{t('calendar.day')}</button>
-          <button>{t('calendar.week')}</button>
-          <button>{t('calendar.month')}</button>
-        </div>
-      </header>
-
-      {/* Main Agenda Content */}
-      <main className={styles.mobileMain}>
-        <section className={styles.horizontalDateScroller}>
-          <div className={styles.dateScrollerHeader}>
-            <h2>{monthYearString}</h2>
-            <CalendarIcon size={20} />
-          </div>
-          <div className={styles.dateCards}>
-            {weekDays.map((d) => {
-              // Swept during TD-029 and deliberately left as browser-local:
-              // both sides derive from the same `today`, so this only decides
-              // which pill is highlighted. Which appointments belong to the
-              // selected day is answered by isSameDayInZone above, in the
-              // tenant's zone. Do not "fix" this into a tenant-day comparison.
-              const isActive = d.toDateString() === selectedDate.toDateString();
-              return (
-                <button
-                  key={d.toISOString()}
-                  className={`${styles.dateCard} ${isActive ? styles.activeDateCard : ''}`}
-                  onClick={() => setSelectedDate(d)}
-                >
-                  <span>{custom(d, { weekday: 'short' }).toUpperCase()}</span>
-                  <strong>{d.getDate()}</strong>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className={styles.agendaList}>
-          {agendaAppointments.map(app => {
-            const timeStr = formatTime(app.scheduledAt);
-            const [time, ampm] = timeStr.split(' ');
-            const isCompleted = app.status === 'COMPLETED';
-            
-            return (
-              <div key={app.id} className={styles.agendaRow}>
-                <div className={styles.agendaTimeBlock}>
-                  <span className={styles.agendaTime}>{time}</span>
-                  <span className={styles.agendaAmPm}>{ampm}</span>
-                </div>
-                <div className={`${styles.agendaCard} ${isCompleted ? styles.completedAgendaCard : ''}`} onClick={() => onAppointmentClick(app)} style={{ cursor: 'pointer' }}>
-                  <div className={styles.agendaCardHeader}>
-                    <h3 className={isCompleted ? styles.completedText : ''}>{app.notes || 'Appointment'}</h3>
-                    {isCompleted ? <CheckCircle2 size={16} /> : <MoreVertical size={16} />}
-                  </div>
-                  <p>{app.status}</p>
-                  <div className={styles.agendaCardFooter}>
-                    <User size={14} />
-                    <span>{app.clientName || 'Unknown Client'}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-      </main>
-    </div>
-  );
-};
-
-export const CalendarContent = () => {
-  const { t } = useTranslation('appointments');
-  // In a real implementation, startDate and endDate would be dynamically updated via state when navigating months
-  const [currentDate] = useState(new Date());
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  
-  // Create static strings for the current month boundary so the hook has referentially stable dependencies
-  const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-  const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
-
-  const { appointments, isLoading, error, updateAppointmentLocally } = useAppointmentsByDateRange(startOfMonth, endOfMonth);
-  const { rescheduleAppointment, isLoading: isRescheduling } = useRescheduleAppointment();
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
-  
-  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
-
-  const handleAppointmentUpdated = (updated: Appointment) => {
-    updateAppointmentLocally(updated);
-    setSelectedAppointment(updated);
-  };
-
-  const handleReschedule = async (appointmentId: string, newDate: string, reason: string) => {
+  /** FR-CAL-07: a follow-up keeps its own rules (due notice, history); a planned item reschedules as an item. */
+  const move = async (item: CalendarItem, day: string, minutes: number) => {
+    if (!tenantSlug) return;
     try {
-      const updated = await rescheduleAppointment(appointmentId, { newDate, reason });
-      handleAppointmentUpdated(updated);
-    } catch (e) {
-      throw e;
+      if (item.kind === 'FOLLOW_UP') {
+        await followUpService.reschedule(tenantSlug, item.id, { dueDate: day, time: clock(minutes), reason: null });
+        followUpsChanged();
+      } else {
+        await appointmentService.rescheduleAppointment(tenantSlug, item.id, { newDate: instantAtMinutes(day, minutes, dates.timeZone).toISOString() });
+      }
+      toast.success(t('reschedule.done'));
+    } catch (failure: any) {
+      toast.error(failure?.response?.data?.error ?? t('plan.errors.failed'));
     }
+    reload();
   };
 
-  const handleEdit = (appointment: Appointment) => {
-    navigate(`/${tenantSlug}/appointments/${appointment.id}/edit`);
-  };
-
-  if (isLoading) return <div>{t('calendar.loading')}</div>;
-  if (error) return <div>{t('calendar.error', { message: error })}</div>;
+  const canMove = (item: CalendarItem) => (item.kind === 'FOLLOW_UP' ? canManageFollowUps : canPlan);
+  const grid = view === 'day' || view === 'week';
 
   return (
-    <>
-      <CalendarDesktopView appointments={appointments} onAppointmentClick={setSelectedAppointment} />
-      <CalendarMobileAgenda appointments={appointments} onAppointmentClick={setSelectedAppointment} />
-      
-      <AppointmentDetailPanel 
-        isOpen={!!selectedAppointment}
-        onClose={() => setSelectedAppointment(null)}
-        appointment={selectedAppointment}
-        onAppointmentUpdated={handleAppointmentUpdated}
-        onEdit={() => selectedAppointment && handleEdit(selectedAppointment)}
-        onReschedule={() => setIsRescheduleModalOpen(true)}
+    <div className={styles.page} aria-busy={isLoading}>
+      <CalendarToolbar
+        view={view}
+        title={rangeTitle(view, anchor, range.days)}
+        onView={(next) => update({ view: next === defaultView ? null : next })}
+        onPrevious={() => goTo(step(view, anchor, -1))}
+        onNext={() => goTo(step(view, anchor, 1))}
+        onToday={() => goTo(today)}
+        onPlan={canPlan ? () => setPlanning({ day: anchor }) : undefined}
       />
-      
-      <RescheduleModal
-        isOpen={isRescheduleModalOpen}
-        onClose={() => setIsRescheduleModalOpen(false)}
-        appointment={selectedAppointment}
-        onConfirm={handleReschedule}
-        isLoading={isRescheduling}
+
+      {seesTeam && <TeamFilter staff={staff} selected={userIds} onChange={(ids) => update({ users: ids.length ? ids.join(',') : null })} colourOf={colourOf} />}
+
+      <ul className={styles.legend} aria-label={t('calendar.legend')}>
+        {CALENDAR_TYPES.map((type) => {
+          const Icon = typeIcon(type);
+          return (
+            <li key={type} className={`${styles.legendItem} ${styles[`type-${type}`]}`}>
+              <Icon size={13} aria-hidden="true" />
+              <span>{t(`calendar.type.${type}`)}</span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {readOnly && <p className={styles.notice}>{t('calendar.readOnly')}</p>}
+      {error && (
+        <p className={styles.notice} role="alert">
+          {t('calendar.error', { message: error })}
+        </p>
+      )}
+      {isLoading && (
+        <p className={styles.empty} role="status">
+          {t('calendar.loading')}
+        </p>
+      )}
+      {feed?.itemsTruncated && <p className={styles.notice}>{t('calendar.truncated')}</p>}
+
+      {feed && showOverdue && <OverdueSection items={feed.overdue} truncated={feed.overdueTruncated} onOpen={setSelected} personColour={personColour} />}
+
+      {feed && grid && (
+        <CalendarTimeGrid days={range.days} items={items} today={today} onOpen={setSelected} onPickDay={pickDay} personColour={personColour} onMove={move} canMove={canMove} />
+      )}
+      {feed && view === 'month' && (
+        <CalendarMonthView days={range.days} items={items} today={today} anchor={anchor} onOpen={setSelected} onPickDay={pickDay} personColour={personColour} />
+      )}
+      {feed && view === 'agenda' && <CalendarAgenda days={range.days} items={items} today={today} onOpen={setSelected} personColour={personColour} />}
+
+      <AppointmentDetailPanel
+        isOpen={!!selected}
+        onClose={() => setSelected(null)}
+        item={selected}
+        readOnly={readOnly}
+        onChanged={reload}
+        onEdit={(item) => {
+          setSelected(null);
+          setEditing(item);
+        }}
       />
-    </>
+
+      <PlanActivityDialog
+        isOpen={!!planning || !!editing}
+        onClose={() => {
+          setPlanning(null);
+          setEditing(null);
+        }}
+        day={planning?.day}
+        item={editing}
+        onSaved={() => {
+          setPlanning(null);
+          setEditing(null);
+          reload();
+        }}
+      />
+    </div>
   );
 };

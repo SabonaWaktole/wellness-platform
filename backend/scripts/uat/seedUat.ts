@@ -69,6 +69,7 @@ export const UAT_COMPANIES: UatCompanySpec[] = [
 
 export const BULK_PREFIX = 'UAT Bulk Company ';
 export const BULK_DEAL_PREFIX = 'UAT Bulk Deal ';
+const BULK_FOLLOW_UP_PREFIX = 'UAT bulk follow-up ';
 
 /** The salespeople whose named companies get a seeded deal; the leaver's are left to UAT-5. */
 const DEAL_OWNERS: ReadonlyArray<Owner> = ['salesA', 'salesB'];
@@ -85,6 +86,8 @@ export interface SeedUatOptions {
   bulkCompanies: number;
   /** Total bulk deals wanted for the NFR-PERF-03 board measurement, spread over the bulk companies; 0 for none. */
   bulkDeals?: number;
+  /** Total bulk follow-ups wanted for the NFR-PERF-03 calendar measurement (5000), spread over the bulk companies; 0 for none. */
+  bulkFollowUps?: number;
   log?: (line: string) => void;
 }
 
@@ -94,6 +97,7 @@ export interface SeedUatResult {
   bulkCreated: number;
   dealsCreated: number;
   bulkDealsCreated: number;
+  bulkFollowUpsCreated: number;
 }
 
 class Api {
@@ -361,5 +365,50 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     }
   }
 
-  return { users, companiesCreated, bulkCreated, dealsCreated, bulkDealsCreated };
+  // --- Bulk follow-ups for the NFR-PERF-03 calendar ----------------------
+  let bulkFollowUpsCreated = 0;
+  const wantedFollowUps = options.bulkFollowUps ?? 0;
+  if (wantedFollowUps > 0) {
+    const have = await prisma.appointment.count({ where: { tenantId, notes: { startsWith: BULK_FOLLOW_UP_PREFIX } } });
+    const missing = wantedFollowUps - have;
+    const bulkCompanies = await prisma.client.findMany({
+      where: { tenantId, name: { startsWith: BULK_PREFIX } },
+      select: { id: true },
+      orderBy: { name: 'asc' },
+    });
+    if (missing > 0 && bulkCompanies.length === 0) {
+      throw new Error('Bulk follow-ups need bulk companies: pass --companies as well.');
+    }
+    if (missing > 0) {
+      // Straight to the database, like the bulk deals: open follow-ups due
+      // from six weeks ago to six weeks ahead, so the current month holds
+      // many and "overdue" holds thousands, on both salespeople.
+      const owners = [users.salesA.id, users.salesB.id];
+      const types = ['CALL', 'EMAIL', 'VISIT', 'MEETING', 'ONLINE_MEETING'];
+      const now = Date.now();
+      const rows = Array.from({ length: missing }, (_, i) => {
+        const n = have + i;
+        return {
+          id: randomUUID(),
+          tenantId,
+          clientId: bulkCompanies[n % bulkCompanies.length].id,
+          assignedUserId: owners[n % owners.length],
+          scheduledAt: new Date(now + ((n % 84) - 42) * 24 * 60 * 60 * 1000 + (8 + (n % 9)) * 60 * 60 * 1000),
+          status: 'SCHEDULED',
+          kind: 'FOLLOW_UP',
+          type: types[n % types.length],
+          notes: `${BULK_FOLLOW_UP_PREFIX}${n}`,
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+        };
+      });
+      for (let i = 0; i < rows.length; i += 2_000) {
+        await prisma.appointment.createMany({ data: rows.slice(i, i + 2_000) });
+      }
+      bulkFollowUpsCreated = missing;
+      log(`bulk + ${missing} follow-ups (now ${wantedFollowUps})`);
+    }
+  }
+
+  return { users, companiesCreated, bulkCreated, dealsCreated, bulkDealsCreated, bulkFollowUpsCreated };
 }

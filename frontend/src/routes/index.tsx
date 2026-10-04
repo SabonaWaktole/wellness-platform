@@ -12,8 +12,6 @@ import { ClientListPage } from '../pages/clients/ClientListPage';
 import { ClientDetailPage } from '../pages/clients/ClientDetailPage';
 import { ClientFormPage } from '../pages/clients/ClientFormPage';
 import { AppointmentsPage } from '../pages/appointments/AppointmentsPage';
-import { EditAppointmentPage } from '../pages/appointments/EditAppointmentPage';
-import { CreateAppointmentPage } from '../pages/appointments/CreateAppointmentPage';
 import { ClientSettingsPage } from '../pages/settings/ClientSettingsPage';
 import { FormBuilderPage } from '../pages/settings/FormBuilderPage';
 import { TeamSettingsPage } from '../pages/settings/team/TeamSettingsPage';
@@ -303,22 +301,6 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <AppointmentsPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'appointments/new',
-        element: (
-          <ProtectedRoute>
-            <CreateAppointmentPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'appointments/:appointmentId/edit',
-        element: (
-          <ProtectedRoute>
-            <EditAppointmentPage />
           </ProtectedRoute>
         ),
       },

@@ -7,6 +7,8 @@ import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRe
 import { IClientRepository } from '../../../clients/domain/repositories/IClientRepository';
 import { IUserRepository } from '../../../auth/domain/repositories/IUserRepository';
 import { Appointment } from '../../domain/entities/Appointment';
+import { IPlanningLinks } from '../../domain/repositories/IPlanningLinks';
+import { assertLinks } from './CreateAppointmentUseCase';
 
 export interface UpdateAppointmentDTO {
   id: string;
@@ -16,6 +18,12 @@ export interface UpdateAppointmentDTO {
   assignedUserId?: string;
   scheduledAt?: Date;
   notes?: string;
+  /** FR-CAL-02. `null` clears a deal, contact, end or place. */
+  type?: string;
+  dealId?: string | null;
+  contactPersonId?: string | null;
+  endAt?: Date | null;
+  place?: string | null;
 }
 
 export class UpdateAppointmentUseCase {
@@ -23,7 +31,8 @@ export class UpdateAppointmentUseCase {
     private readonly appointmentRepository: IAppointmentRepository,
     private readonly scopes: RecordScopeResolver,
     private readonly clientRepository: IClientRepository,
-    private readonly userRepository: IUserRepository
+    private readonly userRepository: IUserRepository,
+    private readonly links: IPlanningLinks
   ) {}
 
   async execute(dto: UpdateAppointmentDTO): Promise<Appointment> {
@@ -56,11 +65,20 @@ export class UpdateAppointmentUseCase {
       }
     }
 
+    // A deal or contact is checked against the company the item ends up with.
+    const clientId = dto.clientId ?? appointment.clientId;
+    await assertLinks(this.links, dto.tenantId, clientId, dto.dealId, dto.contactPersonId);
+
     appointment.updateDetails({
       clientId: dto.clientId,
       assignedUserId: dto.assignedUserId,
       scheduledAt: dto.scheduledAt,
       notes: dto.notes,
+      type: dto.type,
+      dealId: dto.dealId,
+      contactPersonId: dto.contactPersonId,
+      endAt: dto.endAt,
+      place: dto.place,
     });
 
     await this.appointmentRepository.update(appointment);

@@ -37,8 +37,18 @@ describe('RescheduleAppointmentUseCase', () => {
     });
 
     expect(mockAppointmentRepository.findById).toHaveBeenCalledWith(id, tenantId);
-    expect(mockAppointment.reschedule).toHaveBeenCalledWith(newDate, reason, changedByUserId);
+    expect(mockAppointment.reschedule).toHaveBeenCalledWith(newDate, reason, changedByUserId, undefined);
     expect(mockAppointmentRepository.update).toHaveBeenCalledWith(mockAppointment);
+  });
+
+  it('FR-CAL-07 passes a new end along with the new start', async () => {
+    mockAppointmentRepository.findById.mockResolvedValue(mockAppointment);
+    const newDate = new Date('2026-08-01T14:00:00Z');
+    const newEnd = new Date('2026-08-01T15:30:00Z');
+
+    await useCase.execute({ access: administrator(), id: 'apt-123', tenantId: 'tenant-1', newDate, newEnd, reason: '', changedByUserId: 'user-1' });
+
+    expect(mockAppointment.reschedule).toHaveBeenCalledWith(newDate, '', 'user-1', newEnd);
   });
 
   it('cross-tenant isolation: repo lookup scoped to tenantId — Tenant B cannot reschedule Tenant A appointment', async () => {

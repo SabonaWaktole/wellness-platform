@@ -163,4 +163,61 @@ describe('Appointment Entity', () => {
       expect(appointment.status).toBe(AppointmentStatus.CONFIRMED); // Proves CONFIRMED remains CONFIRMED
     });
   });
+
+  describe('Planned items (M2 Slice 12, FR-CAL-02, 07)', () => {
+    const start = new Date('2026-09-04T10:00:00Z');
+    const end = new Date('2026-09-04T11:00:00Z');
+    const plan = (overrides = {}) => Appointment.plan({ ...validProps, scheduledAt: start, ...overrides });
+
+    it('is a planned meeting unless a type is given', () => {
+      expect(plan()).toMatchObject({ kind: 'PLANNED', type: 'MEETING', endAt: null, place: null });
+    });
+
+    it('keeps the type, deal, contact, end and place of a visit', () => {
+      const visit = plan({ type: 'VISIT', endAt: end, place: 'Kafe Blloku', dealId: 'deal-1', contactPersonId: 'contact-1' });
+      expect(visit).toMatchObject({ type: 'VISIT', endAt: end, place: 'Kafe Blloku', dealId: 'deal-1', contactPersonId: 'contact-1' });
+    });
+
+    it('refuses an unknown type, an end that is not after the start, and a place on anything but a visit', () => {
+      expect(() => plan({ type: 'EMAIL' })).toThrow(DomainError);
+      expect(() => plan({ endAt: start })).toThrow('The end must be after the start.');
+      expect(() => plan({ endAt: new Date(start.getTime() - 1) })).toThrow(DomainError);
+      expect(() => plan({ type: 'CALL', place: 'Somewhere' })).toThrow('A place applies to visits only.');
+      expect(() => plan({ type: 'VISIT', place: 'x'.repeat(201) })).toThrow(DomainError);
+    });
+
+    it('FR-CAL-07 rescheduling moves the end with the start, so the item keeps its length', () => {
+      const meeting = plan({ endAt: end });
+      meeting.reschedule(new Date('2026-09-04T14:00:00Z'), '', 'user-1');
+      expect(meeting.scheduledAt).toEqual(new Date('2026-09-04T14:00:00Z'));
+      expect(meeting.endAt).toEqual(new Date('2026-09-04T15:00:00Z'));
+    });
+
+    it('FR-CAL-07 rescheduling takes a new end, which has to be after the new start', () => {
+      const meeting = plan({ endAt: end });
+      meeting.reschedule(new Date('2026-09-04T14:00:00Z'), '', 'user-1', new Date('2026-09-04T16:30:00Z'));
+      expect(meeting.endAt).toEqual(new Date('2026-09-04T16:30:00Z'));
+      expect(() => meeting.reschedule(new Date('2026-09-05T14:00:00Z'), '', 'user-1', new Date('2026-09-05T13:00:00Z'))).toThrow(DomainError);
+    });
+
+    it('an item with no end stays without one when rescheduled', () => {
+      const call = plan({ type: 'CALL' });
+      call.reschedule(new Date('2026-09-05T09:00:00Z'), '', 'user-1');
+      expect(call.endAt).toBeNull();
+    });
+
+    it('a new company clears the deal and contact of the old one', () => {
+      const meeting = plan({ dealId: 'deal-1', contactPersonId: 'contact-1' });
+      meeting.updateDetails({ clientId: 'client-2' });
+      expect(meeting).toMatchObject({ clientId: 'client-2', dealId: null, contactPersonId: null });
+    });
+
+    it('updating the start alone moves the end with it; null clears an end or a place', () => {
+      const visit = plan({ type: 'VISIT', endAt: end, place: 'Kafe Blloku' });
+      visit.updateDetails({ scheduledAt: new Date('2026-09-04T12:00:00Z') });
+      expect(visit.endAt).toEqual(new Date('2026-09-04T13:00:00Z'));
+      visit.updateDetails({ endAt: null, place: null });
+      expect(visit).toMatchObject({ endAt: null, place: null });
+    });
+  });
 });

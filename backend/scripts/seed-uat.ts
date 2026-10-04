@@ -10,12 +10,15 @@
  *
  * Usage:
  *   npm run seed:uat -- --password '<pw for every UAT user>' \
- *     [--email-domain wellness-albania.al] [--companies 10000] [--deals 2000] [--tenant wellness-albania]
+ *     [--email-domain wellness-albania.al] [--companies 10000] [--deals 2000] [--follow-ups 5000] [--tenant wellness-albania]
  *
  *   --companies N  also creates bulk companies up to N in total, for the
  *                  NFR-PERF-01 measurement (npm run perf:staging).
  *   --deals N      also creates bulk open deals up to N in total over those
  *                  companies, for the NFR-PERF-03 board measurement (2000).
+ *   --follow-ups N also creates bulk open follow-ups up to N in total over
+ *                  those companies, for the NFR-PERF-03 calendar measurement
+ *                  (5000).
  *
  * There is deliberately no default password.
  */
@@ -49,6 +52,7 @@ async function main(): Promise<void> {
       emailDomain,
       bulkCompanies: Number(argOf('companies') ?? 0),
       bulkDeals: Number(argOf('deals') ?? 0),
+      bulkFollowUps: Number(argOf('follow-ups') ?? 0),
       log: (line) => console.log(line),
     });
 
@@ -60,6 +64,7 @@ async function main(): Promise<void> {
     console.log(`  ADMINISTRATOR  ${result.users.admin.email}  (the workspace owner)`);
     console.log(`\n${result.companiesCreated} UAT companies and ${result.bulkCreated} bulk companies created.`);
     console.log(`${result.dealsCreated} UAT deals and ${result.bulkDealsCreated} bulk deals created.`);
+    console.log(`${result.bulkFollowUpsCreated} bulk follow-ups created.`);
   } finally {
     server.close();
   }

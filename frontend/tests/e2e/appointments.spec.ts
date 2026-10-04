@@ -66,22 +66,23 @@ test.describe('Appointment Scheduling Flow', () => {
     const hours = String(future.getHours()).padStart(2, '0');
     const mins = String(future.getMinutes()).padStart(2, '0');
 
-    await page.fill('input[type="date"]', `${year}-${month}-${day}`);
-    await page.fill('input[type="time"]', `${hours}:${mins}`);
-    await page.fill('textarea[placeholder="Briefly describe the objective of this meeting..."]', appointmentNote);
+    await page.getByLabel('Date').fill(`${year}-${month}-${day}`);
+    await page.getByLabel('Start').fill(`${hours}:${mins}`);
+    await page.getByLabel('Note').fill(appointmentNote);
     await Promise.all([
       page.waitForResponse(resp => resp.url().includes('/appointments') && (resp.status() === 201 || resp.status() >= 400)),
-      page.click('button:has-text("Confirm Appointment")')
+      page.getByRole('button', { name: 'Plan it' }).click()
     ]);
 
-    // Slide-over should close
-    await expect(page.locator('text="Schedule Appointment"').first()).not.toBeVisible();
+    // The planning dialog should close
+    await expect(page.getByRole('heading', { name: 'Plan an activity' })).not.toBeVisible();
 
     // 4. Confirm it appears on the Calendar
     await page.goto(`/${tenantSlug}/appointments`);
     
-    // Look for the appointment in the Queue or Agenda
-    const appointmentLocator = page.locator(`text=${appointmentNote}`).first();
+    // The agenda lists it (the month shows only the company; the note is in the panel)
+    await page.getByRole('button', { name: 'Agenda' }).click();
+    const appointmentLocator = page.getByRole('button', { name: new RegExp(clientFullName) }).first();
     await expect(appointmentLocator).toBeVisible();
 
     // The status should initially be SCHEDULED (represented by the token/badge)
@@ -94,7 +95,7 @@ test.describe('Appointment Scheduling Flow', () => {
 
     // Assert initial status is SCHEDULED
     // We use getByText since Badges are spans
-    const statusBadge = page.locator('span').filter({ hasText: 'SCHEDULED' }).first();
+    const statusBadge = page.locator('span').filter({ hasText: 'Scheduled' }).first();
     await expect(statusBadge).toBeVisible();
 
     // 5. Confirm it
@@ -104,7 +105,7 @@ test.describe('Appointment Scheduling Flow', () => {
     ]);
     
     // Assert status changes to CONFIRMED
-    const confirmedBadge = page.locator('span').filter({ hasText: 'CONFIRMED' }).first();
+    const confirmedBadge = page.locator('span').filter({ hasText: 'Confirmed' }).first();
     await expect(confirmedBadge).toBeVisible({ timeout: 10000 });
 
     // 6. Mark it completed
@@ -114,7 +115,7 @@ test.describe('Appointment Scheduling Flow', () => {
     ]);
 
     // Assert status changes to COMPLETED
-    const completedBadge = page.locator('span').filter({ hasText: 'COMPLETED' }).first();
+    const completedBadge = page.locator('span').filter({ hasText: 'Completed' }).first();
     await expect(completedBadge).toBeVisible({ timeout: 10000 });
 
     // 7. Confirm the Client Detail timeline shows the appointment with the correct final status
@@ -133,7 +134,7 @@ test.describe('Appointment Scheduling Flow', () => {
     await expect(appointmentEntry).toBeVisible({ timeout: 10000 });
     
     // Assert it shows COMPLETED status on the appointments list
-    const appointmentCompleted = page.locator('span').filter({ hasText: 'COMPLETED' }).first();
+    const appointmentCompleted = page.locator('span').filter({ hasText: 'Completed' }).first();
     await expect(appointmentCompleted).toBeVisible({ timeout: 10000 });
   });
 });
