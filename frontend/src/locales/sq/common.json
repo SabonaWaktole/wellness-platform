@@ -106,7 +106,8 @@
     "reports": "Raportet",
     "settings": "Cilësimet",
     "tenants": "Klientë biznesi",
-    "people": "Përdoruesit"
+    "people": "Përdoruesit",
+    "payments": "Pagesat"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

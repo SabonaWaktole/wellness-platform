@@ -106,7 +106,8 @@
     "reports": "Reports",
     "settings": "Settings",
     "tenants": "Business Clients",
-    "people": "Users"
+    "people": "Users",
+    "payments": "Payments"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

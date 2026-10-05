@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ContractPaymentsCard } from './ContractPaymentsCard';
 import { useContractActions } from '../../hooks/useContracts';
 import { useStatusLabels } from '../../hooks/useStatusLabels';
 import type { ContractPayment } from '../../types/contract';
+import { paymentService } from '../../services/paymentService';
+import { downloadBlob } from '../../utils/downloadBlob';
+import { useAuthStore } from '../../store/useAuthStore';
 
 vi.mock('../../hooks/useContracts', async () => {
   const actual = await vi.importActual<typeof import('../../hooks/useContracts')>('../../hooks/useContracts');
@@ -16,6 +20,9 @@ vi.mock('../../hooks/useStatusLabels', async () => {
   const actual = await vi.importActual<typeof import('../../hooks/useStatusLabels')>('../../hooks/useStatusLabels');
   return { ...actual, useStatusLabels: vi.fn() };
 });
+
+vi.mock('../../services/paymentService', () => ({ paymentService: { downloadCsv: vi.fn() } }));
+vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: vi.fn() }));
 
 const payment = (over: Partial<ContractPayment> = {}): ContractPayment => ({
   id: 'p1', tenantId: 't', contractId: 'c1', periodIndex: 1, dueDate: '2027-03-01T00:00:00.000Z',
@@ -132,5 +139,25 @@ describe('ContractPaymentsCard (FR-PAY-03, 05, 06, 08, 10, 12)', () => {
     expect(screen.getByText('Receipt $20.00')).toBeInTheDocument();
     expect(screen.getByText(/Fatjon/)).toBeInTheDocument();
     expect(screen.getByText(/System/)).toBeInTheDocument();
+  });
+  it('FR-PAY-14 a user who can view payments exports this contract\'s instalments; one who cannot sees no button', async () => {
+    (paymentService.downloadCsv as any).mockResolvedValue(new Blob(['x']));
+    useAuthStore.setState({ user: { userId: 'u', role: 'STAFF', permissions: { 'payments.view': 'ALL' } } as any, isAuthenticated: true });
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/acme/contracts/c1']}>
+        <Routes>
+          <Route path="/:tenantSlug/contracts/:id" element={<ContractPaymentsCard contractId="c1" contractStatus="ACTIVE" payments={[payment()]} summary={summary} canUpdate={false} onChanged={onChanged} />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
+    await waitFor(() => expect(paymentService.downloadCsv).toHaveBeenCalledWith('acme', { contractId: 'c1' }));
+    expect(downloadBlob).toHaveBeenCalled();
+    unmount();
+
+    useAuthStore.setState({ user: { userId: 'u', role: 'STAFF', permissions: {} } as any, isAuthenticated: true });
+    renderCard({ canUpdate: false });
+    expect(screen.queryByRole('button', { name: /export csv/i })).not.toBeInTheDocument();
   });
 });

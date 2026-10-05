@@ -47,6 +47,7 @@ import { InvoiceDetail } from '../pages/invoices/InvoiceDetail';
 import { ContractList } from '../pages/contracts/ContractList';
 import { ContractDetail } from '../pages/contracts/ContractDetail';
 import { ContractFormPage } from '../pages/contracts/ContractFormPage';
+import { PaymentsOverview } from '../pages/payments/PaymentsOverview';
 import { DealsPage } from '../pages/deals/DealsPage';
 import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
 import { DealListContent } from '../pages/deals/DealListContent';
@@ -528,6 +529,17 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ContractDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The Payments overview (M3 Slice 9, FR-PAY-11).
+        path: 'payments',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="payments.view">
+              <PaymentsOverview />
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

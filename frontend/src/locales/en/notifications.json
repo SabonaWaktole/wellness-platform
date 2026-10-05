@@ -42,7 +42,8 @@
     "DISCOUNT_APPROVAL_REMINDER_manual": "Reminder: {{salespersonName}}'s manual price of {{requestedMonthlyPrice}} on {{reference}} ({{clientName}}) still waits for approval",
     "FOLLOW_UP_ASSIGNED": "{{actor}} gave you a follow-up ({{followUpType}}) with {{clientName}}, due {{scheduledAt}}",
     "FOLLOW_UP_DUE": "Follow-up due now: {{followUpType}} with {{clientName}}",
-    "FOLLOW_UP_DAILY_SUMMARY": "Today: {{today}} follow-up(s), and {{overdue}} overdue from earlier days"
+    "FOLLOW_UP_DAILY_SUMMARY": "Today: {{today}} follow-up(s), and {{overdue}} overdue from earlier days",
+    "PAYMENT_OVERDUE": "{{clientName}}'s instalment {{instalment}} of the {{planName}} contract was due on {{dueDate}} and is overdue"
   },
   "followUpType": {
     "CALL": "call",

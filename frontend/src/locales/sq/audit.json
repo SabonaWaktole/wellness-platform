@@ -27,7 +27,8 @@
     "CREATE": "Krijuar",
     "UPDATE": "Përditësuar",
     "DELETE": "Fshirë",
-    "STATUS_CHANGE": "Statusi ndryshuar"
+    "STATUS_CHANGE": "Statusi ndryshuar",
+    "EXPORT": "Eksportuar"
   },
   "entityTypes": {
     "Contract": "Kontratë",

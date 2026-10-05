@@ -178,7 +178,9 @@
       "CASH": "Cash",
       "CARD": "Card",
       "OTHER": "Other"
-    }
+    },
+    "exportCsv": "Export CSV",
+    "exportFailed": "The export could not be created."
   },
   "form": {
     "createTitle": "New contract",
