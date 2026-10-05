@@ -236,5 +236,9 @@
     "label": "Kontrata",
     "create": "Krijo kontratë",
     "open": "Hap kontratën"
+  },
+  "renewal": {
+    "of": "Rinovim i {{reference}}",
+    "startsOn": "Afati i ri fillon më {{date}}"
   }
 }

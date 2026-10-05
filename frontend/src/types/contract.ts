@@ -228,6 +228,20 @@ export interface ContractDocumentVersion {
  * this rather than re-deriving them from `status`, which would be a second
  * copy of those rules.
  */
+/** A neighbouring term, named by its number (M3 FR-REN-07). */
+export interface RenewalContractRef {
+  id: string;
+  number: string;
+}
+
+/** How a contract is tied to the next and previous term and to an open renewal deal (M3 Slice 10). */
+export interface ContractRenewalLinks {
+  renewedFrom: RenewalContractRef | null;
+  renewedInto: RenewalContractRef | null;
+  /** Absent without `commercial.view`. */
+  openDealId?: string | null;
+}
+
 export interface ContractDetail {
   contract: Contract;
   /** Absent without `payments.view` (FR-RBAC-06). */
@@ -237,6 +251,8 @@ export interface ContractDetail {
   /** Absent without `commercial.view` (FR-RBAC-21). Newest first. */
   documents?: ContractDocumentVersion[];
   permittedActions: string[];
+  /** Absent for a viewer without `contracts.manage`. */
+  renewal?: ContractRenewalLinks;
 }
 
 /** The client-page view: every term for one business, plus the headline facts. */

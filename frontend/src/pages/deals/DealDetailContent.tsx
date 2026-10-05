@@ -166,6 +166,14 @@ export const DealDetailContent: React.FC = () => {
             <span>{statusLabel.dealType(deal.type)}</span>
             <StatusBadge domain="deal" status={deal.stage} />
           </div>
+          {/* M3 FR-REN-06: a Renewal deal says which contract it renews. */}
+          {deal.renewalOfContractId && (
+            <div className={styles.subtitle}>
+              <Link to={`/${tenantSlug}/contracts/${deal.renewalOfContractId}`}>
+                {t('renewal.of', { reference: deal.renewalOfContractNumber ?? '' })}
+              </Link>
+            </div>
+          )}
         </div>
         <div className={styles.headerActions}>
           <SalesScriptButton outline />
@@ -314,9 +322,15 @@ export const DealDetailContent: React.FC = () => {
                           {deal.contractId ? (
                             <Link to={`/${tenantSlug}/contracts/${deal.contractId}`}>{t('contract.open')}</Link>
                           ) : (
-                            <Button variant="primary" onClick={createContract}>
-                              {t('contract.create')}
-                            </Button>
+                            <>
+                              <Button variant="primary" onClick={createContract}>
+                                {t('contract.create')}
+                              </Button>
+                              {/* M3 FR-REN-07: a renewal's next term starts the day after the old one ends. */}
+                              {deal.renewalStartsOn && (
+                                <span className={styles.hint}>{t('renewal.startsOn', { date: dates.date(deal.renewalStartsOn) })}</span>
+                              )}
+                            </>
                           )}
                         </dd>
                       </div>

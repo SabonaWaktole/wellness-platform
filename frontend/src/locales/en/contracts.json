@@ -119,7 +119,14 @@
     "cancelReason": "Cancelled because",
     "lockedHint": "The dates, billing period and agreed values are locked. To change the term, renew the contract.",
     "documentCurrent": "Current",
-    "documentPrevious": "Previous version"
+    "documentPrevious": "Previous version",
+    "startRenewal": "Start renewal",
+    "previousTerm": "Previous term",
+    "renews": "Renews {{reference}}",
+    "nextTerm": "Next term",
+    "renewedBy": "Renewed by {{reference}}",
+    "inNegotiation": "In negotiation",
+    "openRenewalDeal": "Open the renewal deal"
   },
   "payments": {
     "heading": "Payments",

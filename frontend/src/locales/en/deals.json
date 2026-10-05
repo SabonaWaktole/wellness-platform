@@ -236,5 +236,9 @@
     "label": "Contract",
     "create": "Create contract",
     "open": "Open the contract"
+  },
+  "renewal": {
+    "of": "Renewal of {{reference}}",
+    "startsOn": "The new term starts on {{date}}"
   }
 }

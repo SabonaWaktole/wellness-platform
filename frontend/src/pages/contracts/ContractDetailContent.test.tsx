@@ -24,14 +24,16 @@ const contract = {
 
 describe('FR-CON-11..19 ContractDetailContent lifecycle', () => {
   const changeStatus = vi.fn();
+  const startRenewal = vi.fn();
 
   const renderWith = (detail: object) => {
     (useContracts as any).mockReturnValue({ fetchContractDetail: vi.fn().mockResolvedValue(detail), loading: false, error: null });
-    (useContractActions as any).mockReturnValue({ changeStatus, uploadDocument: vi.fn(), downloadDocument: vi.fn(), loading: false, error: null });
+    (useContractActions as any).mockReturnValue({ changeStatus, startRenewal, uploadDocument: vi.fn(), downloadDocument: vi.fn(), loading: false, error: null });
     render(
       <MemoryRouter initialEntries={['/acme/contracts/c1']}>
         <Routes>
           <Route path="/:tenantSlug/contracts/:contractId" element={<ContractDetailContent />} />
+          <Route path="/:tenantSlug/deals/:dealId" element={<p>the renewal deal</p>} />
         </Routes>
       </MemoryRouter>
     );
@@ -90,5 +92,44 @@ describe('FR-CON-11..19 ContractDetailContent lifecycle', () => {
     renderWith({ contract, history: [], permittedActions: [] });
     await screen.findByText(/Contract CTR-2026-0001/);
     expect(screen.queryByText('Signed document')).not.toBeInTheDocument();
+  });
+
+  it('FR-REN-06 "Start renewal" starts the deal and opens it, only when the server permits it', async () => {
+    startRenewal.mockResolvedValue({ dealId: 'd9' });
+    renderWith({ contract: { ...contract, status: 'EXPIRED' }, history: [], payments: [], documents: [], permittedActions: ['START_RENEWAL'], renewal: { renewedFrom: null, renewedInto: null, openDealId: null } });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Start renewal' }));
+    await waitFor(() => expect(startRenewal).toHaveBeenCalledWith('c1'));
+    expect(await screen.findByText('the renewal deal')).toBeInTheDocument();
+  });
+
+  it('FR-REN-06 offers no "Start renewal" when the server does not permit it', async () => {
+    renderWith({ contract, history: [], payments: [], documents: [], permittedActions: ['SUSPEND'] });
+    await screen.findByRole('button', { name: /^Suspend$/ });
+    expect(screen.queryByRole('button', { name: 'Start renewal' })).not.toBeInTheDocument();
+  });
+
+  it('FR-REN-06 an already open renewal deal is opened instead of started twice', async () => {
+    startRenewal.mockRejectedValue({ response: { data: { code: 'RENEWAL_OPEN', dealId: 'd7', error: 'A renewal deal is already open for this contract.' } } });
+    renderWith({ contract, history: [], payments: [], documents: [], permittedActions: ['START_RENEWAL'] });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Start renewal' }));
+    expect(await screen.findByText('the renewal deal')).toBeInTheDocument();
+  });
+
+  it('FR-REN-07 shows In negotiation with a link to the open deal, Renewed by the next term, and Renews the previous one', async () => {
+    renderWith({ contract, history: [], payments: [], documents: [], permittedActions: [], renewal: { renewedFrom: null, renewedInto: null, openDealId: 'd7' } });
+    expect(await screen.findByText('In negotiation')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open the renewal deal' })).toBeInTheDocument();
+  });
+
+  it('FR-REN-07 a renewed contract names the term that renewed it, and a renewal names the one it renews', async () => {
+    renderWith({
+      contract: { ...contract, renewedFromContractId: 'c0' }, history: [], payments: [], documents: [], permittedActions: [],
+      renewal: { renewedFrom: { id: 'c0', number: 'CTR-2025-0007' }, renewedInto: { id: 'c2', number: 'CTR-2027-0001' }, openDealId: null },
+    });
+    expect(await screen.findByRole('button', { name: 'Renews CTR-2025-0007' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Renewed by CTR-2027-0001' })).toBeInTheDocument();
+    expect(screen.queryByText('In negotiation')).not.toBeInTheDocument();
   });
 });

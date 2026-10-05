@@ -119,7 +119,14 @@
     "cancelReason": "Anuluar sepse",
     "lockedHint": "Datat, periudha e faturimit dhe vlerat e dakordësuara janë të kyçura. Për të ndryshuar afatin, rinovoni kontratën.",
     "documentCurrent": "Aktual",
-    "documentPrevious": "Version i mëparshëm"
+    "documentPrevious": "Version i mëparshëm",
+    "startRenewal": "Fillo rinovimin",
+    "previousTerm": "Afati i mëparshëm",
+    "renews": "Rinovon {{reference}}",
+    "nextTerm": "Afati i radhës",
+    "renewedBy": "Rinovuar nga {{reference}}",
+    "inNegotiation": "Në negocim",
+    "openRenewalDeal": "Hap marrëveshjen e rinovimit"
   },
   "payments": {
     "heading": "Pagesat",
