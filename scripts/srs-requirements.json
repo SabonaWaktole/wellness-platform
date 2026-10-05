@@ -926,6 +926,31 @@
       "id": "FR-AUD-12",
       "priority": "Must",
       "requirement": "The audit log viewer shall offer filters for the new entity types: Contract and Payment (instalment)."
+    },
+    {
+      "id": "FR-CON-05",
+      "priority": "Must",
+      "requirement": "Each contract shall get a sequential number, per year, for example CTR-2026-0001, using the same numbering mechanism as offers (Milestone 2 FR-OFR-08). The number prefix is an offer-style setting of the Administrator."
+    },
+    {
+      "id": "FR-REN-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the reminder lead times, in days before the end date, as a list. Default 60, 30 and 7. Changes apply to contracts not yet reminded at that lead time."
+    },
+    {
+      "id": "FR-REN-04",
+      "priority": "Must",
+      "requirement": "The \"expiring soon\" window shall be set by the Administrator (default 30 days). A valid contract ending within it shows the Expiring soon badge and counts in the dashboard figures."
+    },
+    {
+      "id": "FR-PAY-09",
+      "priority": "Must",
+      "requirement": "A daily job shall set an instalment to Overdue when its due date has passed (plus the grace days of the Administrator, default 0) and it is Invoice Issued, Payment Pending or Partially Paid. An instalment past its due date that is still Not Invoiced keeps that status and is flagged \"Due, not invoiced\". The job records the change as done by the system and running it twice changes nothing."
+    },
+    {
+      "id": "FR-AUD-11",
+      "priority": "Must",
+      "requirement": "In Milestone 3 the following shall be audited with old and new values, using the Milestone 1 audit mechanism (FR-AUD-03): creation of a contract from a deal; every change of a contract field, status (with reason), renewal link and \"not renewing\" mark; signed document attached or replaced; every instalment action (generated, added, changed, removed, invoice recorded, receipt recorded, status change with comment); and the reminder, expiring-soon and payment settings."
     }
   ]
 }
