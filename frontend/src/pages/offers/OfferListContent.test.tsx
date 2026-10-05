@@ -63,9 +63,9 @@ const signIn = (permissions: Record<string, string | boolean>) =>
     isAuthenticated: true,
   } as any);
 
-const renderList = () =>
+const renderList = (path = '/acme/offers') =>
   render(
-    <MemoryRouter initialEntries={['/acme/offers']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/:tenantSlug/offers" element={<OfferListContent />} />
         <Route path="/:tenantSlug/deals/:dealId" element={<p>deal page</p>} />
@@ -93,6 +93,13 @@ describe('Offers list (FR-OFR-14, M2 Slice 9)', () => {
     expect(screen.getAllByText('OF-2026-0002 v2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Dritan Test').length).toBeGreaterThan(0);
     expect(screen.getAllByText('€49.40 / month').length).toBeGreaterThan(0);
+  });
+
+  it('FR-DSH-05 opens already filtered by the status a dashboard figure links to, and ignores a status that is not one', async () => {
+    renderList('/acme/offers?status=SENT&status=BOGUS');
+    await screen.findAllByText('OF-2026-0001');
+    expect(lastParams()).toMatchObject({ status: ['SENT'] });
+    expect(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'Sent' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('FR-OFR-14 filters by status, salesperson, company and date', async () => {
