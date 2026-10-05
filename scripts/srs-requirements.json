@@ -1216,6 +1216,66 @@
       "id": "NFR-PERF-04",
       "priority": "Should",
       "requirement": "Each dashboard and the performance screen shall load in under 2 seconds with 2,000 deals, 5,000 activities, 500 contracts and 6,000 instalments on the staging server. The contract and payment lists shall load in under 2 seconds with the same data."
+    },
+    {
+      "id": "FR-PRF-01",
+      "priority": "Must",
+      "requirement": "Users with \"Performance: view\" shall open a Performance screen with one row per salesperson and a total row. Scope: Sales User Own (only their own row, no ranking and no other salesperson's figures), Sales Manager Team (all Sales Users), CEO All. The Administrator has no access by default."
+    },
+    {
+      "id": "FR-PRF-02",
+      "priority": "Must",
+      "requirement": "The screen shall filter by salesperson (one or several, for Sales Manager and CEO) and by date range: presets (This week, This month, Last month, This quarter, This year) and a custom range. Default is This month."
+    },
+    {
+      "id": "FR-PRF-03",
+      "priority": "Must",
+      "requirement": "For each salesperson the screen shall show: number of calls, emails, visits and meetings; companies contacted; offers created; offers sent; deals won; deals lost; total value of won deals; conversion rate; follow-ups completed; overdue follow-ups; and average time to close."
+    },
+    {
+      "id": "FR-PRF-04",
+      "priority": "Must",
+      "requirement": "The total row shall be calculated from the underlying data of the selected salespeople, not by averaging the rows (conversion rate and average time to close in particular)."
+    },
+    {
+      "id": "FR-PRF-05",
+      "priority": "Must",
+      "requirement": "Each indicator shall be attributed to the date of its own event (date of contact, date offer was marked sent, won date, lost date, completion date) in the workspace time zone, and to the salesperson responsible for the record at that time. Salespeople deactivated later keep their history."
+    },
+    {
+      "id": "FR-PRF-06",
+      "priority": "Should",
+      "requirement": "The user shall be able to compare with the previous period of the same length (each indicator shows the change)."
+    },
+    {
+      "id": "FR-PRF-07",
+      "priority": "Should",
+      "requirement": "Clicking an indicator of a row opens the underlying records (activities, offers, deals, follow-ups) with the same filters."
+    },
+    {
+      "id": "FR-PRF-08",
+      "priority": "Could",
+      "requirement": "A salesperson detail view shall show the indicators per week or month as a chart with a table view."
+    },
+    {
+      "id": "FR-PRF-09",
+      "priority": "Should",
+      "requirement": "The screen shall export the filtered table to PDF and CSV, using the existing report output. Exports are recorded in the audit log."
+    },
+    {
+      "id": "FR-PRF-10",
+      "priority": "Must",
+      "requirement": "Value figures (offers value, total value, sales value) shall be hidden for any user without \"Commercial details: view\" and removed from the API response."
+    },
+    {
+      "id": "FR-RBAC-23",
+      "priority": "Must",
+      "requirement": "The dashboard and performance endpoints shall enforce the scope on the server (FR-DSH-02, FR-PRF-01), whatever filters the client sends."
+    },
+    {
+      "id": "NFR-ACC-04",
+      "priority": "Must",
+      "requirement": "Every figure in sections 5.3 and 6.2 shall be reproduced exactly on a fixed set of test data, including the conversion rate and sales value example in 5.3 and the total-row example in FR-PRF-04."
     }
   ]
 }
