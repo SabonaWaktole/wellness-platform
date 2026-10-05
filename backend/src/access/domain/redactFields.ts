@@ -30,6 +30,8 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
   'monthlyPrice',
   // Milestone 3 Slice 12: the value of won deals on the Performance screen (FR-PRF-10, FR-RBAC-21).
   'totalValue',
+  // Milestone 3 Slice 13: a salesperson's sales value on the Sales Manager dashboard (FR-DSH-08).
+  'salesValue',
 ];
 
 /**

@@ -5,6 +5,7 @@ describe('FR-PRF-02: the period presets', () => {
   const today = '2026-10-14';
 
   it.each([
+    ['TODAY', { from: '2026-10-14', to: '2026-10-14' }],
     ['THIS_WEEK', { from: '2026-10-12', to: '2026-10-18' }],
     ['THIS_MONTH', { from: '2026-10-01', to: '2026-10-31' }],
     ['LAST_MONTH', { from: '2026-09-01', to: '2026-09-30' }],
@@ -34,6 +35,7 @@ describe('FR-PRF-02: the period presets', () => {
 
 describe('FR-PRF-06: the previous period', () => {
   it.each([
+    ['TODAY', { from: '2026-10-14', to: '2026-10-14' }, { from: '2026-10-13', to: '2026-10-13' }],
     ['THIS_WEEK', { from: '2026-10-12', to: '2026-10-18' }, { from: '2026-10-05', to: '2026-10-11' }],
     ['THIS_MONTH', { from: '2026-10-01', to: '2026-10-31' }, { from: '2026-09-01', to: '2026-09-30' }],
     ['THIS_MONTH', { from: '2027-01-01', to: '2027-01-31' }, { from: '2026-12-01', to: '2026-12-31' }],
