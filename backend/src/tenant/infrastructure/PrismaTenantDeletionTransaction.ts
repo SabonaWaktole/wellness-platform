@@ -70,7 +70,8 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        * RESTRICT. The deal's link is cleared first, so the quotations can go
        * (below, after Invoice), and the deals go after them.
        */
-      await tx.deal.updateMany({ where: { tenantId }, data: { wonQuotationId: null } });
+      // A Renewal deal names its contract under RESTRICT too (M3 Slice 10), so that link goes with it.
+      await tx.deal.updateMany({ where: { tenantId }, data: { wonQuotationId: null, renewalOfContractId: null } });
       await tx.invoice.deleteMany({ where: { tenantId } });
       /*
        * Before Client and User, like Invoice above and for the same reason:

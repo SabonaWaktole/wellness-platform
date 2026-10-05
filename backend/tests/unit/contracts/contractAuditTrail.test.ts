@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { ITenantRepository } from '../../../src/tenant/domain/repositories/ITenantRepository';
 import { Contract, ContractStatus, BillingPeriod } from '../../../src/contracts/domain/Contract';
 import { ContractPayment, PaymentStatus } from '../../../src/contracts/domain/ContractPayment';
 import { ChangeContractStatusUseCase } from '../../../src/contracts/application/use-cases/ChangeContractStatusUseCase';
@@ -137,7 +138,9 @@ describe('RenewContractUseCase audit trail', () => {
     harness.contractRepo.findById.mockResolvedValueOnce(previous).mockResolvedValueOnce(
       draftContract({ renewedFromContractId: previous.id })
     );
-    const useCase = new RenewContractUseCase(harness.writeTx, scopeResolver());
+    const useCase = new RenewContractUseCase(harness.writeTx, scopeResolver(), {
+      findById: jest.fn().mockResolvedValue({ runsSalesProcess: () => false }),
+    } as unknown as ITenantRepository);
 
     await useCase.execute({
       tenantId: TENANT_ID,

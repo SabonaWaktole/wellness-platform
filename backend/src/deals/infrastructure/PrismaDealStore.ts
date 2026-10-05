@@ -5,12 +5,13 @@ import { insensitiveContains } from '../../shared/infrastructure/prisma/caseInse
 import { RecordScope } from '../../access/domain/RecordScope';
 import { ownerWhere } from '../../access/infrastructure/prismaRecordScope';
 import { CLOSED_DEAL_STAGES, DealStage, isOpenStage, OPEN_DEAL_STAGES } from '../domain/DealStage';
-import { DealDetail, DealSummary } from '../application/dealViews';
+import { calendarDate, DealDetail, DealSummary } from '../application/dealViews';
 import { BoardCursor, DealCompany, DealListFilters, DealSort, IDealStore } from '../application/ports/IDealStore';
 import { DEAL_SUMMARY_INCLUDE, displayName, toSummary } from './prismaDealRows';
 import { dealMarkers } from '../domain/SalesSettings';
 import { ISalesSettingsStore } from '../application/ports/ISalesSettingsStore';
 import { PrismaSalesSettingsStore } from './PrismaSalesSettingsStore';
+import { contractReference } from '../../contracts/domain/contractReference';
 
 /** The column each list sort reads. */
 const SORT_COLUMNS: Record<DealSort['field'], keyof Prisma.DealOrderByWithRelationInput> = {
@@ -51,6 +52,7 @@ export class PrismaDealStore implements IDealStore {
         package: { select: { nameSq: true, nameEn: true } },
         wonQuotation: { select: { id: true, number: true, version: true } },
         contract: { select: { id: true } },
+        renewalOf: { select: { id: true, number: true, endsAt: true } },
         stageHistory: {
           where: { tenantId },
           orderBy: [{ at: 'asc' }, { id: 'asc' }],
@@ -65,6 +67,9 @@ export class PrismaDealStore implements IDealStore {
       notes: row.notes,
       createdByUserId: row.createdByUserId,
       contractId: row.contract?.id ?? null,
+      renewalOfContractId: row.renewalOf?.id ?? null,
+      renewalStartsOn: row.renewalOf ? calendarDate(new Date(row.renewalOf.endsAt.getTime() + 24 * 60 * 60 * 1000)) : null,
+      renewalOfContractNumber: row.renewalOf ? (row.renewalOf.number ?? contractReference(row.renewalOf.id)) : null,
       wonAt: row.wonAt?.toISOString() ?? null,
       lostAt: row.lostAt?.toISOString() ?? null,
       lostReasonId: row.lostReasonId,

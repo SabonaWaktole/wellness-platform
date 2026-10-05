@@ -1106,6 +1106,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { ContractDocumentsUseCases } = require('../contracts/application/use-cases/ContractDocumentsUseCases');
   const { PrismaContractDocumentRepository } = require('../contracts/infrastructure/repositories/PrismaContractDocumentRepository');
   const { RenewContractUseCase } = require('../contracts/application/use-cases/RenewContractUseCase');
+  const { StartRenewalUseCase } = require('../contracts/application/use-cases/StartRenewalUseCase');
+  const { PrismaContractRenewals } = require('../contracts/infrastructure/PrismaContractRenewals');
   const { SearchContractsUseCase } = require('../contracts/application/use-cases/SearchContractsUseCase');
   const { GetContractDetailUseCase } = require('../contracts/application/use-cases/GetContractDetailUseCase');
   const { GetClientContractsUseCase } = require('../contracts/application/use-cases/GetClientContractsUseCase');
@@ -1134,9 +1136,10 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes, tenantRepository),
     new UpdateContractUseCase(contractWriteTx, recordScopes),
     new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications),
-    new RenewContractUseCase(contractWriteTx, recordScopes),
+    new RenewContractUseCase(contractWriteTx, recordScopes, tenantRepository),
+    new StartRenewalUseCase(contractWriteTx, recordScopes, tenantRepository),
     new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
-    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, contractDocumentRepo, recordScopes),
+    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, contractDocumentRepo, recordScopes, new PrismaContractRenewals(prisma), tenantRepository),
     new GetClientContractsUseCase(contractRepo, recordScopes),
     {
       recordInvoice: new instalments.RecordInvoiceUseCase(contractWriteTx, tenantRepository),

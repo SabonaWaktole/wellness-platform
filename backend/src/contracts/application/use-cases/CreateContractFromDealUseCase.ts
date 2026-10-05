@@ -6,6 +6,7 @@ import { AuditAction } from '../../../audit/domain/AuditAction';
 import { diff } from '../../../audit/domain/diff';
 import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRepository';
 import { DealStage } from '../../../deals/domain/DealStage';
+import { DealType } from '../../../deals/domain/DealType';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { startOfDay } from '../../domain/calendarDay';
@@ -13,6 +14,9 @@ import { defaultEndDate, defaultRenewalDate } from '../../domain/contractTerm';
 import { ContractAlreadyExistsError, ContractValidationError } from '../../domain/contractErrors';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
+
+/** One day, for stepping a renewal's term off the end of the previous one (FR-REN-07). */
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isUniqueViolation = (error: unknown): boolean => (error as { code?: string } | null)?.code === 'P2002';
 
@@ -26,6 +30,12 @@ const isUniqueViolation = (error: unknown): boolean => (error as { code?: string
  * date to the start plus the offer's contract months minus a day (D4), the
  * billing period to monthly, the renewal date to the end date minus the largest
  * reminder lead time (FR-CON-07).
+ *
+ * A won Renewal deal makes the next term of the contract it renews (FR-REN-07):
+ * the start date defaults to the day after the previous end date, the new
+ * contract links back to it, and the previous contract keeps its status, dates
+ * and history, gaining only a history row and an audit entry that say it was
+ * renewed. Nothing here is automatic: it runs when a user asks for it.
  *
  * One contract per deal is the database's rule, not only this check: the
  * unique index on the deal makes a parallel second create fail, and that is
@@ -90,9 +100,24 @@ export class CreateContractFromDealUseCase {
     const existing = await repos.contractRepo.findByDealId(input.tenantId, deal.dealId);
     if (existing) throw new ContractAlreadyExistsError(existing.id);
 
+    // A Renewal deal renews one contract, once (FR-REN-06, 07).
+    const previous =
+      deal.type === DealType.Renewal && deal.renewalOfContractId
+        ? await repos.contractRepo.findById(input.tenantId, deal.renewalOfContractId)
+        : null;
+    if (deal.type === DealType.Renewal && deal.renewalOfContractId) {
+      if (!previous) throw new ContractValidationError('dealId', 'The contract this deal renews was not found.');
+      const links = await repos.renewals.links(input.tenantId, previous.id);
+      if (links.renewedInto) {
+        throw new ContractValidationError('dealId', `The contract this deal renews was already renewed by ${links.renewedInto.number}.`);
+      }
+    }
+
     const settings = await repos.settingsStore.get(input.tenantId);
     const now = this.now();
-    const start = new Date(startOfDay(input.startsAt ?? deal.closedAt ?? now));
+    const start = new Date(
+      startOfDay(input.startsAt ?? (previous ? new Date(previous.endsAt.getTime() + DAY_MS) : (deal.closedAt ?? now)))
+    );
     const end = input.endsAt ?? defaultEndDate(start, deal.contractMonths);
     const number = await repos.numbers.next(input.tenantId, now);
 
@@ -115,6 +140,7 @@ export class CreateContractFromDealUseCase {
       agreedAnnualValue: deal.source.agreedAnnualValue,
       discountPercent: deal.source.discountPercent,
       number,
+      renewedFromContractId: previous?.id ?? null,
       renewalDate: defaultRenewalDate(end, settings.reminderLeadDays),
     });
 
@@ -143,6 +169,31 @@ export class CreateContractFromDealUseCase {
       entityLabel: contractLabel(saved),
       changes: diff({} as Record<string, unknown>, contractSnapshot(saved), [...CONTRACT_AUDIT_FIELDS]),
     });
+
+    if (previous) {
+      // Recorded against the old term as well, so opening it shows it was renewed (FR-REN-07, FR-AUD-11).
+      await repos.historyRepo.save(
+        ContractStatusHistory.create({
+          id: randomUUID(),
+          tenantId: input.tenantId,
+          contractId: previous.id,
+          fromStatus: previous.status,
+          toStatus: previous.status,
+          changedByUserId: input.actingUserId,
+          note: `Renewed into contract ${saved.number ?? saved.id}`,
+        })
+      );
+      await repos.auditTrail.record({
+        tenantId: input.tenantId,
+        userId: input.actingUserId,
+        userRole: input.access.auditRole,
+        action: AuditAction.Update,
+        entityType: 'Contract',
+        entityId: previous.id,
+        entityLabel: contractLabel(previous),
+        changes: [{ field: 'renewedIntoContractId', old: null, new: saved.id }],
+      });
+    }
 
     return { contract: saved };
   }

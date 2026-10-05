@@ -69,6 +69,7 @@ export function toDeal(row: DealRow): Deal {
     agreedAnnualValue: row.agreedAnnualValue?.toFixed(2) ?? null,
     packageId: row.packageId,
     wonQuotationId: row.wonQuotationId,
+    renewalOfContractId: row.renewalOfContractId,
   });
 }
 
@@ -93,5 +94,6 @@ export function dealColumns(deal: Deal) {
     agreedAnnualValue: props.agreedAnnualValue,
     packageId: props.packageId,
     wonQuotationId: props.wonQuotationId,
+    renewalOfContractId: props.renewalOfContractId,
   };
 }

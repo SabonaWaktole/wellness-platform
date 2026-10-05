@@ -1,4 +1,6 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
+import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRepository';
+import { ContractValidationError } from '../../domain/contractErrors';
 import { randomUUID } from 'crypto';
 import { BillingPeriod, Contract, ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
@@ -24,11 +26,17 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * The new term is a DRAFT. It inherits the previous plan, price and period as
  * defaults, and every one of them is overridable, because a renewal is exactly
  * the moment a price changes.
+ *
+ * Only for workspaces that do not run the sales process. In one that does, a
+ * renewal is a Renewal deal that is won and then turned into a contract
+ * (`StartRenewalUseCase`, `CreateContractFromDealUseCase`), and this is refused
+ * (FR-REN-10).
  */
 export class RenewContractUseCase {
   constructor(
     private writeTx: IContractWriteTransaction,
-    private scopes: RecordScopeResolver
+    private scopes: RecordScopeResolver,
+    private tenants: ITenantRepository
   ) {}
 
   async execute(input: {
@@ -43,6 +51,10 @@ export class RenewContractUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    const tenant = await this.tenants.findById(input.tenantId);
+    if (tenant?.runsSalesProcess()) {
+      throw new ContractValidationError('contractId', 'In this workspace a renewal is started as a Renewal deal, and the contract is made from it once the deal is won.');
+    }
     const scope = await this.scopes.resolve(input.access, 'contracts.manage');
     return this.writeTx.run(async (repos) => {
       // Out of scope reads as not found (FR-RBAC-05, 11).

@@ -58,6 +58,11 @@ export const renewContractSchema = z.object({
   notes: z.string().max(5000).nullable().optional(),
 });
 
+/** Starting a Renewal deal: the salesperson defaults to the contract's (FR-REN-06). */
+export const startRenewalSchema = z.object({
+  ownerUserId: z.string().min(1).optional(),
+});
+
 export const cancelContractSchema = z.object({
   reason: z.string().max(500).nullable().optional(),
 });

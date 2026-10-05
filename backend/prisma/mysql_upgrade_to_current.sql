@@ -3079,6 +3079,27 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261013100000_m3_payment_paid_at_index'
 );
 
+-- M3 Slice 10: Deal.renewalOfContractId
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND COLUMN_NAME = 'renewalOfContractId');
+SET @sql := IF(@needed, 'ALTER TABLE `Deal` ADD COLUMN `renewalOfContractId` VARCHAR(191) NULL', 'SELECT ''skip: Deal.renewalOfContractId'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND INDEX_NAME = 'Deal_renewalOfContractId_idx');
+SET @sql := IF(@needed, 'CREATE INDEX `Deal_renewalOfContractId_idx` ON `Deal`(`renewalOfContractId`)', 'SELECT ''skip: Deal_renewalOfContractId_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Deal' AND CONSTRAINT_NAME = 'Deal_renewalOfContractId_fkey');
+SET @sql := IF(@needed, 'ALTER TABLE `Deal` ADD CONSTRAINT `Deal_renewalOfContractId_fkey` FOREIGN KEY (`renewalOfContractId`) REFERENCES `Contract`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: Deal_renewalOfContractId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261014100000_m3_renewal_deal', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261014100000_m3_renewal_deal'
+);
+
 -- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
@@ -3227,6 +3248,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
   UNION ALL SELECT 'ContractPayment_tenantId_paidAt_idx', COUNT(*) FROM information_schema.STATISTICS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractPayment' AND INDEX_NAME='ContractPayment_tenantId_paidAt_idx'
+  UNION ALL SELECT 'Deal.renewalOfContractId', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Deal' AND COLUMN_NAME='renewalOfContractId'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

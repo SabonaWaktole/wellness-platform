@@ -28,6 +28,12 @@ const keysOf = (value: unknown): string[] => {
 };
 const MONEY = /amount|price|payment|paid|outstanding|overdue|total/i;
 
+const LINKS = {
+  renewedFrom: { id: 'c0', number: 'CTR-2025-0001' },
+  renewedInto: null,
+  openDealId: 'deal-1',
+};
+
 describe('presentContract (FR-RBAC-06)', () => {
   it('gives the Administrator the whole contract', () => {
     const view = presentContract(contract(), administrator());
@@ -69,13 +75,21 @@ describe('presentContract (FR-RBAC-06)', () => {
 
   it('drops payment rows and history from Reception\'s detail view', () => {
     const detail = presentContractDetail(
-      { contract: contract(), payments: [], history: [{ id: 'h1' } as any], documents: [{ id: 'd1' }], permittedActions: [] },
+      { contract: contract(), payments: [], history: [{ id: 'h1' } as any], documents: [{ id: 'd1' }], permittedActions: [], renewal: LINKS },
       reception()
     );
+    expect(detail).not.toHaveProperty('renewal');
     expect(detail).not.toHaveProperty('payments');
     expect(detail).not.toHaveProperty('documents');
     expect(detail.history).toEqual([]);
     expect(keysOf(detail).filter((key) => MONEY.test(key))).toEqual([]);
+  });
+
+  it('FR-RBAC-21: the open renewal deal needs commercial.view; the term links need contracts.manage', () => {
+    const detail = (access: ReturnType<typeof administrator>) =>
+      presentContractDetail({ contract: contract(), payments: [], history: [], documents: [], permittedActions: [], renewal: LINKS }, access) as any;
+    expect(detail(administrator()).renewal).toEqual(LINKS);
+    expect(detail(administrator({ revoke: ['commercial.view'] })).renewal).toEqual({ renewedFrom: LINKS.renewedFrom, renewedInto: LINKS.renewedInto });
   });
 
   it('drops what a client owes from Reception\'s client summary', () => {
