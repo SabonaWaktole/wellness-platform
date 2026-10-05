@@ -28,6 +28,8 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
   'servicesSnapshot', 'termsText', 'packageId', 'packageName', 'quotationId', 'documents',
   // Milestone 3 Slice 11: the agreed monthly price on the Renewals screen (FR-REN-05).
   'monthlyPrice',
+  // Milestone 3 Slice 12: the value of won deals on the Performance screen (FR-PRF-10, FR-RBAC-21).
+  'totalValue',
 ];
 
 /**

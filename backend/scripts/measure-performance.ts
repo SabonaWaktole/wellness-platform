@@ -89,6 +89,17 @@ async function main(): Promise<void> {
     ['calendar, month', `/${tenant}/calendar?${range(monthStart, monthEnd)}`, PIPELINE_BUDGET_MS],
     ['calendar, day + overdue', `/${tenant}/calendar?${range(startOfDay, new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000))}`, PIPELINE_BUDGET_MS]
   );
+  // The Performance screen (M3 Slice 12, NFR-PERF-04): the table over a year with the comparison, and a
+  // drill-down. Measured only for a user with Performance: view (the Sales Manager or the CEO).
+  if ((await get(`/${tenant}/performance?preset=LAST_MONTH`)).ok) {
+    queries.push(
+      ['performance, this year', `/${tenant}/performance?preset=THIS_YEAR&compare=true`, PIPELINE_BUDGET_MS],
+      ['performance, last month', `/${tenant}/performance?preset=LAST_MONTH`, PIPELINE_BUDGET_MS],
+      ['performance, records', `/${tenant}/performance/records?preset=THIS_YEAR&indicator=CALLS&limit=50`, PIPELINE_BUDGET_MS]
+    );
+  } else {
+    console.log('This user cannot view performance: the Performance screen is not measured. Sign in as the Sales Manager or the CEO.\n');
+  }
   const deals = (await (await get(`/${tenant}/deals?pageSize=1`)).json()) as { data: { items: { id: string }[] } };
   const config = (await (await get(`/${tenant}/pricing/config`)).json()) as { data?: { frequencies?: { id: string }[] } };
   if (deals.data?.items?.[0]) {

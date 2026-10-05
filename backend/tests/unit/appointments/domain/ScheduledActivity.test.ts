@@ -60,6 +60,9 @@ describe('ScheduledActivity (M2 Slice 11)', () => {
     scheduled.complete('activity-1', NOW);
     expect(scheduled.status).toBe(AppointmentStatus.COMPLETED);
     expect(scheduled.completedInteractionId).toBe('activity-1');
+    // FR-PRF-05: the completion date the Performance screen counts it on.
+    expect(scheduled.toProps().completedAt).toEqual(NOW);
+    expect(followUp().toProps().completedAt).toBeNull();
 
     expect(() => scheduled.complete('activity-2', NOW)).toThrow(FollowUpClosedError);
     expect(() => scheduled.reschedule(DUE, null, 'sales-a', NOW)).toThrow(FollowUpClosedError);

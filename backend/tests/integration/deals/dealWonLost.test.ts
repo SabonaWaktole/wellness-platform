@@ -164,6 +164,8 @@ describe('Won and lost (M2 Slice 13)', () => {
     expect(await prisma.appointment.count({ where: { dealId, status: 'SCHEDULED' } })).toBe(0);
     const timeline = (await as('salesA').get(`/clients/${company}/history?type=DEAL`).expect(200)).body.timeline;
     expect(timeline.find((e: any) => e.type === 'DEAL_LOST' && e.details.dealId === dealId).details.lostNote).toBe('Went with a competitor');
+    // FR-PRF-05 (D13): the loss is attributed to who owned the deal then.
+    expect((await prisma.dealStageHistory.findFirstOrThrow({ where: { dealId, toStage: 'LOST' } })).ownerUserId).toBe(users.salesA);
   });
 
   it('FR-DEAL-17 a Sales Manager reopens a lost deal to Negotiation, recording who; a Sales User cannot', async () => {

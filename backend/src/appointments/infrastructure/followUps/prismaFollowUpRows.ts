@@ -76,6 +76,7 @@ export function toScheduledActivity(row: EntityRow): ScheduledActivity {
     completedInteractionId: row.completedInteractionId,
     cancelReason: row.cancelReason,
     dueNotifiedAt: row.dueNotifiedAt,
+    completedAt: row.completedAt,
     history: [...row.auditLogs]
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
       .map((log) => ({ previousDate: log.previousDate, newDate: log.newDate, reason: log.reason, changedBy: log.changedBy, createdAt: log.createdAt })),
@@ -103,6 +104,7 @@ export function followUpColumns(followUp: ScheduledActivity) {
     completedInteractionId: props.completedInteractionId,
     cancelReason: props.cancelReason,
     dueNotifiedAt: props.dueNotifiedAt,
+    completedAt: props.completedAt,
     updatedAt: props.updatedAt,
   };
 }

@@ -43,6 +43,7 @@ describe('Deal (FR-DEAL-01, 07, 08, 09)', () => {
       fromStage: null,
       toStage: DealStage.NewLead,
       changedByUserId: 'sales-a',
+      ownerUserId: 'sales-a',
       at: T0,
     });
   });
@@ -114,9 +115,20 @@ describe('Deal (FR-DEAL-01, 07, 08, 09)', () => {
       fromStage: DealStage.NewLead,
       toStage: DealStage.Contacted,
       changedByUserId: 'manager',
+      ownerUserId: 'sales-a',
       at: T1,
     });
     expect(deal.updatedAt).toEqual(T1);
+  });
+
+  it('FR-PRF-05 (D13) a stage change records the owner at that time, so a reassigned deal keeps its earlier results with the earlier owner', () => {
+    const { deal, change } = openDeal();
+    expect(change.ownerUserId).toBe('sales-a');
+    expect(deal.moveTo(DealStage.Contacted, 'manager', T1, () => 'change-2')!.ownerUserId).toBe('sales-a');
+    deal.reassign('sales-b', T1);
+    expect(deal.moveTo(DealStage.Interested, 'manager', T1, () => 'change-3')!.ownerUserId).toBe('sales-b');
+    // The platform's own moves carry the owner as well, though no user made them.
+    expect(deal.advanceAutomatically(DealStage.OfferSent, T1, () => 'change-4')).toMatchObject({ changedByUserId: null, ownerUserId: 'sales-b' });
   });
 
   it('FR-DEAL-05 reassigning returns the previous salesperson', () => {

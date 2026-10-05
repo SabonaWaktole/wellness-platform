@@ -274,6 +274,8 @@ describe('Follow-ups (M2 Slice 11)', () => {
       });
       expect(res.status).toBe(200);
       expect(res.body.data.followUp).toMatchObject({ status: 'COMPLETED', completedInteractionId: res.body.data.activity.id });
+      // FR-PRF-05: the completion date the Performance screen counts it on.
+      expect((await prisma.appointment.findUniqueOrThrow({ where: { id: followUp.id } })).completedAt).not.toBeNull();
       expect(res.body.data.activity).toMatchObject({ channel: 'VISIT', dealId, clientId: companies.a });
 
       // It leaves "My follow-ups" and cannot be completed twice.
