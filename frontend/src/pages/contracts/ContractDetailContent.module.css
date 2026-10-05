@@ -261,7 +261,22 @@
   flex-wrap: wrap;
 }
 
+.documentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: 0 0 var(--spacing-sm);
+  padding: 0;
+  list-style: none;
+}
+
+/* A button, not an anchor: the file is fetched through the API, which checks the permission. */
 .documentLink {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
