@@ -42,15 +42,17 @@ describe('presentContract (FR-RBAC-06)', () => {
     expect(view).toEqual({
       id: 'c1',
       number: null,
-      clientId: 'client-1',
-      clientName: 'Acme',
-      planName: 'Gold',
       status: 'DRAFT',
       startsAt: new Date('2026-01-01'),
       endsAt: new Date('2026-12-31'),
-      daysUntilExpiry: expect.any(Number),
+      company: { id: 'client-1', name: 'Acme' },
     });
     expect(keysOf(view).filter((key) => MONEY.test(key))).toEqual([]);
+  });
+
+  it('FR-RBAC-21: Reception gets exactly number, status, validity, start, end and company (and the id it opens by)', () => {
+    const view = presentContract(contract(), reception(), { today: new Date('2026-06-01'), expiringSoonDays: 30 });
+    expect(Object.keys(view).sort()).toEqual(['company', 'endsAt', 'id', 'number', 'startsAt', 'status', 'validity']);
   });
 
   it('keeps the money for a reader who holds commercial.view and payments.view (the CEO)', () => {

@@ -381,7 +381,7 @@ describe('Contract from a won deal (M3 Slice 4)', () => {
     const { contract } = await made(company.A, 'salesA');
     const list = await as('reception').get('/contracts?limit=100').expect(200);
     const row = (list.body.data as any[]).find((c) => c.id === contract.id);
-    expect(Object.keys(row).sort()).toEqual(['clientId', 'clientName', 'daysUntilExpiry', 'endsAt', 'id', 'number', 'planName', 'startsAt', 'status']);
+    expect(Object.keys(row).sort()).toEqual(['company', 'endsAt', 'id', 'number', 'startsAt', 'status', 'validity']);
 
     const detail = await as('reception').get(`/contracts/${contract.id}`).expect(200);
     const json = JSON.stringify(detail.body);
