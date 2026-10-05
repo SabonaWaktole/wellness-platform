@@ -1117,7 +1117,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { AttachContractDocumentUseCase } = require('../contracts/application/use-cases/AttachContractDocumentUseCase');
 
   const { ContractsController } = require('../contracts/interfaces/http/ContractsController');
-  const { createContractRouter, createPaymentsRouter } = require('../contracts/interfaces/http/contractRoutes');
+  const { createContractRouter, createPaymentsRouter, createRenewalsRouter } = require('../contracts/interfaces/http/contractRoutes');
+  const { RenewalsController } = require('../contracts/interfaces/http/RenewalsController');
+  const { SearchRenewalsUseCase } = require('../contracts/application/use-cases/SearchRenewalsUseCase');
+  const { MarkNotRenewingUseCase, ClearNotRenewingUseCase } = require('../contracts/application/use-cases/NotRenewingUseCases');
+  const { PrismaRenewalsReader } = require('../contracts/infrastructure/repositories/PrismaRenewalsReader');
   const { PaymentsController } = require('../contracts/interfaces/http/PaymentsController');
   const { SearchPaymentsUseCase, ExportPaymentsUseCase } = require('../contracts/application/use-cases/PaymentsOverviewUseCases');
   const { PrismaPaymentOverviewReader } = require('../contracts/infrastructure/repositories/PrismaPaymentOverviewReader');
@@ -1156,11 +1160,23 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new CreateContractFromDealUseCase(contractWriteTx, recordScopes, tenantRepository),
     new RefreshContractFromDealUseCase(contractWriteTx, recordScopes),
     new ContractDocumentsUseCases(contractRepo, contractDocumentRepo, contractDocumentStore, recordScopes),
-    new ContractValidityBadges(new PrismaContractValidityReader(prisma), new PrismaContractSettingsStore(prisma))
+    new ContractValidityBadges(new PrismaContractValidityReader(prisma), new PrismaContractSettingsStore(prisma)),
+    { mark: new MarkNotRenewingUseCase(contractWriteTx, recordScopes), clear: new ClearNotRenewingUseCase(contractWriteTx, recordScopes) }
   );
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/contracts', contractRoutes);
+
+  // The Renewals screen (M3 Slice 11, FR-REN-05, FR-REN-09).
+  app.use(
+    '/api/:tenantSlug/renewals',
+    createRenewalsRouter(
+      new RenewalsController(new SearchRenewalsUseCase(new PrismaRenewalsReader(prisma), recordScopes, tenantRepository)),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
 
   // Payments overview and CSV export (M3 Slice 9, FR-PAY-11, 14, FR-AUD-13).
   const paymentOverviewReader = new PrismaPaymentOverviewReader(prisma);

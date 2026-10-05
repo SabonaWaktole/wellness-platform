@@ -451,28 +451,36 @@ describe('Contracts API', () => {
       expect(history[0].changedByUserId).toBeNull();
     });
 
-    it('warns once about a contract nearing its end, then not again', async () => {
+    it('reminds once about a contract nearing its end, then not again (FR-REN-03)', async () => {
       const contract = await createContract({
         startsAt: '2026-01-01',
         endsAt: '2026-06-20',
       });
       await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
 
-      const notifications = { emitSafe: jest.fn().mockResolvedValue([]) } as any;
-      const job = new ContractRenewalReminderJob(queries, notifications);
+      // This workspace only: the database is shared with other suites.
+      class ThisTenantQueries extends PrismaSchedulerQueries {
+        async listTenants() {
+          return (await super.listTenants()).filter((tenant) => tenant.id === tenantId);
+        }
+      }
+      const notifications = { emitStrict: jest.fn().mockResolvedValue(undefined) } as any;
+      const job = new ContractRenewalReminderJob(new ThisTenantQueries(prisma), notifications);
 
-      await job.run(new Date('2026-06-01'));
-      expect(notifications.emitSafe).toHaveBeenCalledTimes(1);
-      expect(notifications.emitSafe).toHaveBeenCalledWith(
+      // 19 days left: the 30-day reminder goes out and the 60-day one is passed over.
+      await job.run(new Date('2026-06-01T12:00:00Z'));
+      expect(notifications.emitStrict).toHaveBeenCalledTimes(1);
+      expect(notifications.emitStrict).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'CONTRACT_EXPIRING',
-          params: expect.objectContaining({ clientName: 'Acme Ltd', planName: 'Gold' }),
+          entityId: contract.id,
+          params: expect.objectContaining({ clientName: 'Acme Ltd', planName: 'Gold', daysRemaining: 19, leadDays: 30 }),
         })
       );
 
-      // The marker column is the dedup: a second sweep an hour later is silent.
-      await job.run(new Date('2026-06-01T01:00:00Z'));
-      expect(notifications.emitSafe).toHaveBeenCalledTimes(1);
+      // The reminder rows are the dedup: a second sweep an hour later is silent.
+      await job.run(new Date('2026-06-01T13:00:00Z'));
+      expect(notifications.emitStrict).toHaveBeenCalledTimes(1);
     });
   });
 });

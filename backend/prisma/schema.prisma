@@ -1589,12 +1589,6 @@ model Contract {
   activatedAt DateTime?
   cancelledAt DateTime?
 
-  /// When the "expires soon" warning went out. NULL means not yet warned, and
-  /// that is the entire dedup mechanism — the sweep selects on IS NULL, same
-  /// convention as Appointment.remindedAt and Quotation.followUpSentAt.
-  /// Cleared by a renewal so the next term earns its own warning.
-  expiryNotifiedAt DateTime?
-
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1617,6 +1611,8 @@ model Contract {
   payments      ContractPayment[]
   statusHistory ContractStatusHistory[]
   documents     ContractDocument[]
+  /// M3 Slice 11: the renewal reminders sent or skipped, one per lead time (FR-REN-03).
+  reminders     ContractReminder[]
 
   @@unique([tenantId, number])
   @@index([tenantId, clientId])
@@ -2006,6 +2002,26 @@ model ContractSettings {
   updatedByUserId  String?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// One renewal reminder of a contract at one lead time (M3 Slice 11, D8,
+/// FR-REN-03). `SENT` once the notification was emitted; `SKIPPED` for a lead
+/// time already passed when the contract was first looked at. A failed send
+/// writes no row, so the next run retries. A renewal contract starts with none.
+model ContractReminder {
+  id         String   @id
+  tenantId   String
+  contractId String
+  /// Days before the end date this reminder is for.
+  leadDays   Int
+  /// SENT | SKIPPED
+  state      String
+  sentAt     DateTime
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, leadDays])
+  @@index([tenantId, contractId])
 }
 
 /// An employee band of the pricing model (FR-PCF-01): the base fee for the

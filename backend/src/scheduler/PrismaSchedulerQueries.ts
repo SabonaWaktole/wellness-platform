@@ -1,13 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../shared/infrastructure/prisma/client';
+import { randomUUID } from 'crypto';
 import { addDays } from '../contracts/domain/calendarDay';
+import { ContractSettings } from '../contracts/domain/ContractSettings';
 import { OPEN_DEAL_STAGES } from '../deals/domain/DealStage';
 import {
   ISchedulerQueries,
   DueAppointment,
   StaleQuotation,
   PastDueInvoice,
-  ExpiringContract,
+  ReminderCandidate,
   ExpiredContractNotice,
   OverduePaymentNotice,
 } from './ISchedulerQueries';
@@ -160,31 +162,6 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
     }));
   }
 
-  /** Columns every contract sweep needs. Declared once so the two agree. */
-  private static readonly CONTRACT_SELECT = {
-    id: true,
-    tenantId: true,
-    clientId: true,
-    planName: true,
-    endsAt: true,
-    assignedUserId: true,
-    createdByUserId: true,
-    client: { select: { name: true } },
-  } as const;
-
-  private toExpiringContract(row: any): ExpiringContract {
-    return {
-      id: row.id,
-      tenantId: row.tenantId,
-      clientId: row.clientId,
-      clientName: row.client.name ?? 'Client',
-      planName: row.planName,
-      endsAt: row.endsAt,
-      assignedUserId: row.assignedUserId,
-      createdByUserId: row.createdByUserId,
-    };
-  }
-
   async listTenants(): Promise<{ id: string; timeZone: string }[]> {
     const rows = await this.prisma.tenant.findMany({ select: { id: true, timezone: true } });
     return rows.map((row) => ({ id: row.id, timeZone: row.timezone }));
@@ -320,30 +297,62 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
     await this.prisma.contractPayment.update({ where: { id: paymentId }, data: { overdueNotifiedAt: at } });
   }
 
-  async findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]> {
-    const horizon = new Date(now.getTime() + days * 24 * 60 * 60_000);
+  async getReminderLeadDays(tenantId: string): Promise<number[]> {
+    const row = await this.prisma.contractSettings.findUnique({ where: { tenantId }, select: { reminderLeadDays: true } });
+    return ContractSettings.rebuild({
+      ...ContractSettings.defaults(tenantId).toJSON(),
+      tenantId,
+      ...(row ? { reminderLeadDays: row.reminderLeadDays as number[] } : {}),
+    }).reminderLeadDays.slice();
+  }
 
+  async findContractsForReminder(tenantId: string, today: Date, withinDays: number): Promise<ReminderCandidate[]> {
     const rows = await this.prisma.contract.findMany({
       where: {
+        tenantId,
         status: 'ACTIVE',
-        expiryNotifiedAt: null,
-        // `gte: now` keeps this sweep off contracts that have already lapsed —
-        // those belong to findContractsPastEnd, and warning that something
-        // "expires soon" after it already has would be worse than silence.
-        endsAt: { gte: now, lte: horizon },
+        // Not yet past its end: those belong to the expiry sweep, and a warning that something
+        // "ends soon" after it already has would be worse than silence.
+        endsAt: { gte: today, lt: addDays(today, withinDays + 1) },
+        notRenewingReasonId: null,
+        renewedInto: null,
       },
-      select: PrismaSchedulerQueries.CONTRACT_SELECT,
+      select: {
+        id: true,
+        tenantId: true,
+        planName: true,
+        number: true,
+        endsAt: true,
+        assignedUserId: true,
+        createdByUserId: true,
+        client: { select: { name: true, assignedUserId: true } },
+        reminders: { select: { leadDays: true } },
+      },
       orderBy: { endsAt: 'asc' },
       take: SWEEP_LIMIT,
     });
-
-    return rows.map((row) => this.toExpiringContract(row));
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      clientName: row.client.name ?? 'Client',
+      planName: row.planName,
+      number: row.number ?? null,
+      endsAt: row.endsAt,
+      assignedUserId: row.assignedUserId,
+      clientAssignedUserId: row.client.assignedUserId ?? null,
+      createdByUserId: row.createdByUserId,
+      recordedLeadDays: row.reminders.map((reminder) => reminder.leadDays),
+    }));
   }
 
-  async markContractExpiryNotified(contractId: string, at: Date): Promise<void> {
-    await this.prisma.contract.update({
-      where: { id: contractId },
-      data: { expiryNotifiedAt: at },
+  async recordContractReminders(
+    contract: { id: string; tenantId: string },
+    rows: { leadDays: number; state: 'SENT' | 'SKIPPED' }[],
+    at: Date
+  ): Promise<void> {
+    await this.prisma.contractReminder.createMany({
+      data: rows.map((row) => ({ id: randomUUID(), tenantId: contract.tenantId, contractId: contract.id, leadDays: row.leadDays, state: row.state, sentAt: at })),
+      skipDuplicates: true,
     });
   }
 

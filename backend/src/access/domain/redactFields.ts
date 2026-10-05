@@ -26,6 +26,8 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
   // `renewalDate`) join this list in the slice that gives the contract its
   // response shape (Slices 4 to 6), so no existing response loses them early.
   'servicesSnapshot', 'termsText', 'packageId', 'packageName', 'quotationId', 'documents',
+  // Milestone 3 Slice 11: the agreed monthly price on the Renewals screen (FR-REN-05).
+  'monthlyPrice',
 ];
 
 /**

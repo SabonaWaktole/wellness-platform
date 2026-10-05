@@ -63,6 +63,21 @@ export const startRenewalSchema = z.object({
   ownerUserId: z.string().min(1).optional(),
 });
 
+/** Marking a contract Not renewing: a reason from the lost-deal reasons and a note (FR-REN-08). */
+export const markNotRenewingSchema = z.object({
+  reasonId: z.string().min(1),
+  note: z.string().max(500).nullable().optional(),
+});
+
+/** The Renewals screen: one tab at a time (FR-REN-05, FR-REN-09). */
+export const searchRenewalsSchema = z.object({
+  window: z.enum(['30', '60', '90', 'RECENTLY_EXPIRED']).default('30'),
+  query: z.string().max(100).optional(),
+  assignedUserId: z.string().min(1).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
 export const cancelContractSchema = z.object({
   reason: z.string().max(500).nullable().optional(),
 });

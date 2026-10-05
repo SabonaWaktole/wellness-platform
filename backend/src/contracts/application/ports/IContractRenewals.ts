@@ -28,4 +28,7 @@ export interface IContractRenewals {
 
   /** An active user of the workspace, who can own the deal. */
   isActiveUser(tenantId: string, userId: string): Promise<boolean>;
+
+  /** An active lost-deal reason of the workspace (M1 FR-SET-06), the list "Not renewing" draws its reasons from (FR-REN-08). */
+  activeLostReason(tenantId: string, reasonId: string): Promise<{ id: string } | null>;
 }

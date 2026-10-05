@@ -34,7 +34,7 @@ describe('GetCalendarUseCase (M2 Slice 12)', () => {
   const to = new Date('2026-10-06T00:00:00Z');
 
   beforeEach(() => {
-    store = { inRange: jest.fn().mockResolvedValue([]), openBefore: jest.fn().mockResolvedValue([]) };
+    store = { inRange: jest.fn().mockResolvedValue([]), openBefore: jest.fn().mockResolvedValue([]), contractDates: jest.fn().mockResolvedValue([]) };
     useCase = new GetCalendarUseCase(store, scopeResolver(), () => NOW);
   });
 
@@ -81,5 +81,51 @@ describe('GetCalendarUseCase (M2 Slice 12)', () => {
     const scope = store.inRange.mock.calls[0][1];
     expect(scope).not.toBe('ALL');
     expect(JSON.stringify(scope)).toContain('u1');
+  });
+
+  describe('contract end and renewal dates (M3 Slice 11, FR-REN-11)', () => {
+    it('FR-REN-11 reads the contract dates at the contract scope and for the workspace days the range covers', async () => {
+      await useCase.execute({
+        access: salesUser({ userId: 'u1' }), tenantId: 't1', timezone: 'Europe/Tirane',
+        from: new Date('2026-10-04T22:00:00Z'), to: new Date('2026-10-05T22:00:00Z'),
+      });
+      const [, scope, filters, fromDay, toDay] = store.contractDates.mock.calls[0];
+      expect(JSON.stringify(scope)).toContain('u1');
+      expect(filters.kinds).toEqual(['CONTRACT_END', 'CONTRACT_RENEWAL']);
+      // Midnight in Tirane to midnight: the one day, 5 October, so the range stops before the 6th.
+      expect([fromDay, toDay]).toEqual(['2026-10-05', '2026-10-06']);
+    });
+
+    it('FR-REN-11 returns the items in the feed, apart from the appointments, and none are overdue-marked', async () => {
+      const contractItem = { id: 'k1:END', kind: 'CONTRACT_END' as const, date: '2026-10-05', contractId: 'k1', number: 'CTR-2026-0001', contractStatus: 'ACTIVE', clientId: 'c1', companyName: 'Kafe Blloku', assignedUserId: 'u1', assignedUserName: 'Besa Test' };
+      store.contractDates.mockResolvedValue([contractItem]);
+      const feed = await useCase.execute({ access: administrator(), tenantId: 't1', from, to });
+      expect(feed.contractItems).toEqual([contractItem]);
+      expect(feed.items).toEqual([]);
+    });
+
+    it('a viewer without contracts.validity.view gets no contract items and no read of them', async () => {
+      const access = salesUser({ userId: 'u1', revoke: ['contracts.validity.view'] });
+      expect(access.can('contracts.validity.view')).toBe(false);
+      const feed = await useCase.execute({ access, tenantId: 't1', from, to });
+      expect(store.contractDates).not.toHaveBeenCalled();
+      expect(feed.contractItems).toEqual([]);
+    });
+
+    it('asking for contract kinds alone does not read the appointments, and the reverse', async () => {
+      await useCase.execute({ access: administrator(), tenantId: 't1', from, to, kinds: ['CONTRACT_END'] });
+      expect(store.inRange).not.toHaveBeenCalled();
+      expect(store.contractDates.mock.calls[0][2].kinds).toEqual(['CONTRACT_END']);
+
+      store.contractDates.mockClear();
+      await useCase.execute({ access: administrator(), tenantId: 't1', from, to, kinds: ['FOLLOW_UP'] });
+      expect(store.inRange).toHaveBeenCalledTimes(1);
+      expect(store.contractDates).not.toHaveBeenCalled();
+    });
+
+    it('asking for activity types asks for activities only', async () => {
+      await useCase.execute({ access: administrator(), tenantId: 't1', from, to, types: ['CALL'] });
+      expect(store.contractDates).not.toHaveBeenCalled();
+    });
   });
 });

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { z, ZodError } from 'zod';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { PermissionDeniedError } from '../../../../access/domain/errors';
-import { CALENDAR_KINDS } from '../../../application/calendar/calendarViews';
+import { CALENDAR_KINDS, CONTRACT_CALENDAR_KINDS } from '../../../application/calendar/calendarViews';
 import { GetCalendarUseCase, InvalidCalendarRangeError } from '../../../application/calendar/GetCalendarUseCase';
 
 /** `userIds[]=a&userIds[]=b`, `userIds=a` and `userIds=a,b` all mean the same list. */
@@ -17,7 +17,7 @@ const calendarQuery = z.object({
   from: z.coerce.date(),
   to: z.coerce.date(),
   userIds: list(z.string()),
-  kinds: list(z.enum(CALENDAR_KINDS)),
+  kinds: list(z.enum([...CALENDAR_KINDS, ...CONTRACT_CALENDAR_KINDS])),
   types: list(z.string().max(30)),
 });
 
@@ -33,7 +33,7 @@ export class CalendarController {
         if (raw[`${name}[]`] !== undefined) raw[name] = raw[`${name}[]`];
       }
       const query = calendarQuery.parse(raw);
-      const data = await this.getCalendar.execute({ access: req.access!, tenantId: requireTenantId(req), ...query });
+      const data = await this.getCalendar.execute({ access: req.access!, tenantId: requireTenantId(req), timezone: req.tenant?.timezone, ...query });
       res.status(200).json({ data });
     } catch (error) {
       if (error instanceof ZodError) {

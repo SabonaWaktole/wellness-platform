@@ -108,7 +108,6 @@ export class Contract {
   renewedFromContractId: string | null;
   activatedAt: Date | null;
   cancelledAt: Date | null;
-  expiryNotifiedAt: Date | null;
   createdByUserId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -184,7 +183,6 @@ export class Contract {
     renewedFromContractId: string | null;
     activatedAt: Date | null;
     cancelledAt: Date | null;
-    expiryNotifiedAt: Date | null;
     createdByUserId: string;
     createdAt: Date;
     updatedAt: Date;
@@ -226,7 +224,6 @@ export class Contract {
     this.renewedFromContractId = props.renewedFromContractId;
     this.activatedAt = props.activatedAt;
     this.cancelledAt = props.cancelledAt;
-    this.expiryNotifiedAt = props.expiryNotifiedAt;
     this.createdByUserId = props.createdByUserId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -271,7 +268,6 @@ export class Contract {
     renewedFromContractId?: string | null;
     activatedAt?: Date | null;
     cancelledAt?: Date | null;
-    expiryNotifiedAt?: Date | null;
     createdAt?: Date;
     updatedAt?: Date;
     dealId?: string | null;
@@ -330,7 +326,6 @@ export class Contract {
       renewedFromContractId: props.renewedFromContractId ?? null,
       activatedAt: props.activatedAt ?? null,
       cancelledAt: props.cancelledAt ?? null,
-      expiryNotifiedAt: props.expiryNotifiedAt ?? null,
       createdByUserId: props.createdByUserId,
       createdAt: props.createdAt ?? new Date(),
       updatedAt: props.updatedAt ?? new Date(),
@@ -553,6 +548,27 @@ export class Contract {
       throw new Error(`Invalid state transition from ${this.status} to Expired`);
     }
     this.status = ContractStatus.Expired;
+  }
+
+  /**
+   * Marks the contract "Not renewing" with a reason and a note, so no further
+   * reminders go out for it (FR-REN-08). Only a term a renewal could still be
+   * started from: Active, Suspended or Expired.
+   */
+  markNotRenewing(reasonId: string, note: string | null): void {
+    if (![ContractStatus.Active, ContractStatus.Suspended, ContractStatus.Expired].includes(this.status)) {
+      throw new ContractValidationError('status', `A ${this.status} contract cannot be marked as not renewing.`);
+    }
+    this.notRenewingReasonId = reasonId;
+    this.notRenewingNote = note?.trim() || null;
+    this.updatedAt = new Date();
+  }
+
+  /** Takes the mark back: reminders and the renewal state follow the contract again (FR-REN-08). */
+  clearNotRenewing(): void {
+    this.notRenewingReasonId = null;
+    this.notRenewingNote = null;
+    this.updatedAt = new Date();
   }
 
   /**
