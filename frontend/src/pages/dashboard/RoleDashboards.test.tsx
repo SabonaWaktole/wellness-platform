@@ -260,6 +260,8 @@ describe('DashboardLanding (FR-DSH-01)', () => {
   it.each([
     ['SALES_USER', 'My dashboard'],
     ['SALES_MANAGER', 'Sales team dashboard'],
+    ['ADMINISTRATOR', 'Administrator dashboard'],
+    ['CEO', 'CEO dashboard'],
   ])('%s lands on its own dashboard', async (kind, title) => {
     (roleDashboardService.home as any).mockResolvedValue(kind);
     landing();
@@ -272,8 +274,8 @@ describe('DashboardLanding (FR-DSH-01)', () => {
     expect(await screen.findByText('company search')).toBeInTheDocument();
   });
 
-  it('Administrator and CEO keep the dashboard they have until theirs is built, and so does a user the server cannot place', async () => {
-    (roleDashboardService.home as any).mockResolvedValue('CEO');
+  it('a user the server cannot place keeps the dashboard the workspace had before', async () => {
+    (roleDashboardService.home as any).mockRejectedValue(new Error('offline'));
     landing();
     expect(await screen.findByText('older dashboard')).toBeInTheDocument();
   });

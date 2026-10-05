@@ -2,14 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { roleDashboardService } from '../../services/dashboardService';
 import type { DashboardKind } from '../../types/roleDashboard';
+import { AdministratorDashboard } from './AdministratorDashboard';
+import { CeoDashboard } from './CeoDashboard';
 import { RoleDashboardPage } from './RoleDashboardPage';
 import { SalesManagerDashboard } from './SalesManagerDashboard';
 import { SalesUserDashboard } from './SalesUserDashboard';
 
 /**
  * Where a user lands after login and from the menu (FR-DSH-01): the dashboard of their role. Sales User and
- * Sales Manager have theirs; Reception has none and goes to the company search; the other roles keep the
- * dashboard they have (`fallback`) until theirs is built.
+ * Sales Manager, Administrator and CEO have theirs; Reception has none and goes to the company search. The
+ * dashboard the workspace had before (`fallback`) is only what a user gets when the server cannot say which is theirs.
  */
 export const DashboardLanding: React.FC<{ fallback: React.ReactElement }> = ({ fallback }) => {
   const { tenantSlug } = useParams();
@@ -41,6 +43,20 @@ export const DashboardLanding: React.FC<{ fallback: React.ReactElement }> = ({ f
     return (
       <RoleDashboardPage>
         <SalesManagerDashboard />
+      </RoleDashboardPage>
+    );
+  }
+  if (kind === 'ADMINISTRATOR') {
+    return (
+      <RoleDashboardPage>
+        <AdministratorDashboard />
+      </RoleDashboardPage>
+    );
+  }
+  if (kind === 'CEO') {
+    return (
+      <RoleDashboardPage>
+        <CeoDashboard />
       </RoleDashboardPage>
     );
   }

@@ -39,11 +39,13 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
     await expectNoHorizontalOverflow(page, 'forgot-password');
   });
 
-  // M3 Slice 13: the Sales User and Sales Manager dashboards are the landing page of those roles, so they
-  // are opened by signing in as them (seed:uat creates both). Set the passwords to run them.
+  // M3 Slices 13 and 14: the Sales User, Sales Manager and CEO dashboards are the landing page of those roles, so
+  // they are opened by signing in as them (seed:uat creates them). Set the passwords to run them. The
+  // Administrator's is opened below, with the Administrator session.
   for (const [role, emailVar, passwordVar, fallbackEmail] of [
     ['Sales User', 'E2E_SALES_USER_EMAIL', 'E2E_SALES_USER_PASSWORD', 'uat.sales.a@wellness-albania.al'],
     ['Sales Manager', 'E2E_MANAGER_EMAIL', 'E2E_MANAGER_PASSWORD', 'uat.manager@wellness-albania.al'],
+    ['CEO', 'E2E_CEO_EMAIL', 'E2E_CEO_PASSWORD', 'uat.ceo@wellness-albania.al'],
   ] as const) {
     test(`NFR-USE-02 FR-DSH-01 the ${role} dashboard has no horizontal overflow`, async ({ page }) => {
       const password = process.env[passwordVar];
@@ -51,7 +53,7 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       const login = await page.request.post('/api/auth/login', { data: { email: process.env[emailVar] ?? fallbackEmail, password } });
       expect(login.ok(), `sign-in failed: ${login.status()}`).toBe(true);
       await page.goto(`/${TENANT}/dashboard`);
-      await expect(page.getByRole('heading', { level: 1, name: /My dashboard|Paneli im|Sales team dashboard|Paneli i ekipit/ })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: /My dashboard|Paneli im|Sales team dashboard|Paneli i ekipit|CEO dashboard|Paneli i drejtorit/ })).toBeVisible();
       await expectNoHorizontalOverflow(page, `${role} dashboard`);
     });
   }
@@ -76,6 +78,7 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
     });
 
     const screens: Array<[string, (id: string) => string]> = [
+      // M3 Slice 14: this is the Administrator dashboard, the Administrator's landing page (FR-DSH-11)
       ['dashboard', () => 'dashboard'],
       ['company list', () => 'clients'],
       ['new company form', () => 'clients/new'],

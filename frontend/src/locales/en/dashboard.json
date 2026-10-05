@@ -279,7 +279,18 @@
       "meetings": "Meetings",
       "contractsExpiringSoon": "Contracts expiring soon",
       "overdueInstalments": "Overdue instalments",
-      "pendingDiscountApprovals": "Pending discount approvals"
+      "pendingDiscountApprovals": "Pending discount approvals",
+      "activeUsers": "Active users",
+      "inactiveUsers": "Inactive users",
+      "attentionItems": "Items needing attention",
+      "monthlyRecurringValue": "Monthly recurring value",
+      "revenue": "Revenue (money received)",
+      "contractsActive": "Active contracts",
+      "contractsExpired": "Expired contracts",
+      "paymentsOutstanding": "Outstanding payments",
+      "paymentsOverdue": "Overdue instalments",
+      "paymentsOverdueAmount": "Overdue amount",
+      "offersWaiting": "Offers waiting for an answer"
     },
     "asOfNow": "As of now",
     "openList": "{{label}}: {{value}}. Open the list.",
@@ -309,6 +320,54 @@
     "allSalespeople": "All salespeople",
     "perSalesperson": "Per salesperson",
     "lostReasons": "Lost deals by reason",
-    "noReason": "No reason recorded"
+    "noReason": "No reason recorded",
+    "admin": {
+      "title": "Administrator dashboard",
+      "subtitle": "The pricing configuration, the users and what changed recently. No sales figures.",
+      "pricing": "Pricing configuration",
+      "setting": "Setting",
+      "value": "Now",
+      "lastChange": "Last changed",
+      "neverChanged": "Not changed since the audit log began",
+      "parts": {
+        "DISCOUNT_CAP": "Discount cap",
+        "EMPLOYEE_BANDS": "Active employee bands",
+        "RISK_SURCHARGES": "Risk surcharges",
+        "VISIT_FREQUENCIES": "Active visit frequencies",
+        "PRICE_ZONES": "Active price zones"
+      },
+      "usersPerRole": "Users per role",
+      "role": "Role",
+      "activeUsers": "Active",
+      "inactiveUsers": "Inactive",
+      "attention": "Needs attention",
+      "attentionNone": "Nothing needs attention.",
+      "attentionItems": {
+        "CITY_NO_ZONE": "{{count}} active cities are in no price zone",
+        "ROLE_NO_USERS": "{{count}} roles have no users"
+      },
+      "recentChanges": "Recent changes",
+      "fullLog": "Open the full audit log",
+      "noChanges": "No changes recorded yet."
+    },
+    "ceo": {
+      "title": "CEO dashboard",
+      "subtitle": "Sales, revenue, contracts, payments and the team across the whole workspace. Read only.",
+      "salesPerMonth": "Sales per month (deals won)",
+      "team": "Team performance",
+      "contracts": "Contracts",
+      "contractGroup": "Contracts",
+      "contractGroups": {
+        "active": "Active",
+        "expired": "Expired",
+        "expiringSoon": "Expiring soon"
+      },
+      "payments": "Payments by status",
+      "paymentStatus": "Status",
+      "amount": "Amount",
+      "outstanding": "Outstanding",
+      "companies": "Companies by status",
+      "noStatus": "No status"
+    }
   }
 }

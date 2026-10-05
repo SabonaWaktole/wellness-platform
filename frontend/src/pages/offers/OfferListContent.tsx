@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FileText, Search } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
@@ -30,6 +30,8 @@ export const OfferListContent: React.FC = () => {
   const { t } = useTranslation('offers');
   const { t: td } = useTranslation('deals');
   const { tenantSlug } = useParams();
+  // A dashboard figure opens the list already filtered: `?status=SENT` (M3 Slice 14, FR-DSH-05).
+  const [startFilters] = useSearchParams();
   const navigate = useNavigate();
   const dates = useDateFormat();
   const money = useMoneyFormat();
@@ -37,7 +39,7 @@ export const OfferListContent: React.FC = () => {
   const { staff, fetchStaff } = useTeam();
 
   const [query, setQuery] = useState('');
-  const [statuses, setStatuses] = useState<OfferStatus[]>([]);
+  const [statuses, setStatuses] = useState<OfferStatus[]>(() => startFilters.getAll('status').filter((status): status is OfferStatus => (OFFER_STATUSES as readonly string[]).includes(status)));
   const [ownerUserId, setOwnerUserId] = useState('');
   const [createdFrom, setCreatedFrom] = useState('');
   const [createdTo, setCreatedTo] = useState('');

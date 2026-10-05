@@ -335,3 +335,61 @@
   max-width: 48ch;
   color: var(--text-secondary);
 }
+
+/* ------------------------------------------- Administrator and CEO lists */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-xs) var(--spacing-md);
+  padding: var(--spacing-base) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: var(--font-size-body-md);
+  color: var(--text-primary);
+  min-width: 0;
+}
+
+.listItem:last-child {
+  border-bottom: none;
+}
+
+.listMeta {
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.panelNote {
+  margin: 0;
+  padding: var(--spacing-base) var(--spacing-lg);
+  font-size: var(--font-size-body-md);
+  color: var(--text-secondary);
+}
+
+.panelLink {
+  font-size: var(--font-size-body-md);
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 1024px) {
+  .sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

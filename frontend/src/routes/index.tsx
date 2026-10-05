@@ -80,8 +80,9 @@ const LegacyDashboardSelector = () => {
   return <StaffShell />;
 };
 
-// M3 Slice 13 (FR-DSH-01): each role lands on its own dashboard. The Sales User and Sales Manager have
-// theirs; Reception goes to the company search; the other roles keep the dashboard above until Slice 14.
+// M3 Slices 13 and 14 (FR-DSH-01): each role lands on its own dashboard: Sales User, Sales Manager,
+// Administrator and CEO. Reception goes to the company search. The dashboard above is only the fallback for
+// when the server cannot say which dashboard is the user's.
 const DashboardSelector = () => <DashboardLanding fallback={<LegacyDashboardSelector />} />;
 
 export const routes: RouteObject[] = [

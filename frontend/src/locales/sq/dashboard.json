@@ -279,7 +279,18 @@
       "meetings": "Takime",
       "contractsExpiringSoon": "Kontrata që skadojnë së shpejti",
       "overdueInstalments": "Këste të vonuara",
-      "pendingDiscountApprovals": "Miratime zbritjesh në pritje"
+      "pendingDiscountApprovals": "Miratime zbritjesh në pritje",
+      "activeUsers": "Përdorues aktivë",
+      "inactiveUsers": "Përdorues joaktivë",
+      "attentionItems": "Gjëra që kërkojnë vëmendje",
+      "monthlyRecurringValue": "Vlera mujore e përsëritur",
+      "revenue": "Të ardhura (para të marra)",
+      "contractsActive": "Kontrata aktive",
+      "contractsExpired": "Kontrata të skaduara",
+      "paymentsOutstanding": "Pagesa të papaguara",
+      "paymentsOverdue": "Këste të vonuara",
+      "paymentsOverdueAmount": "Shuma e vonuar",
+      "offersWaiting": "Oferta që presin përgjigje"
     },
     "asOfNow": "Tani",
     "openList": "{{label}}: {{value}}. Hap listën.",
@@ -309,6 +320,54 @@
     "allSalespeople": "Të gjithë shitësit",
     "perSalesperson": "Për secilin shitës",
     "lostReasons": "Marrëveshje të humbura sipas arsyes",
-    "noReason": "Pa arsye të regjistruar"
+    "noReason": "Pa arsye të regjistruar",
+    "admin": {
+      "title": "Paneli i administratorit",
+      "subtitle": "Konfigurimi i çmimeve, përdoruesit dhe ndryshimet e fundit. Pa shifra shitjesh.",
+      "pricing": "Konfigurimi i çmimeve",
+      "setting": "Cilësimi",
+      "value": "Tani",
+      "lastChange": "Ndryshuar së fundmi",
+      "neverChanged": "Pa ndryshim që nga fillimi i regjistrit të auditimit",
+      "parts": {
+        "DISCOUNT_CAP": "Kufiri i zbritjes",
+        "EMPLOYEE_BANDS": "Shkallët aktive të punonjësve",
+        "RISK_SURCHARGES": "Shtesat e rrezikut",
+        "VISIT_FREQUENCIES": "Frekuencat aktive të vizitave",
+        "PRICE_ZONES": "Zonat aktive të çmimit"
+      },
+      "usersPerRole": "Përdorues sipas rolit",
+      "role": "Roli",
+      "activeUsers": "Aktivë",
+      "inactiveUsers": "Joaktivë",
+      "attention": "Kërkon vëmendje",
+      "attentionNone": "Asgjë nuk kërkon vëmendje.",
+      "attentionItems": {
+        "CITY_NO_ZONE": "{{count}} qytete aktive nuk janë në asnjë zonë çmimi",
+        "ROLE_NO_USERS": "{{count}} role nuk kanë përdorues"
+      },
+      "recentChanges": "Ndryshimet e fundit",
+      "fullLog": "Hap regjistrin e plotë të auditimit",
+      "noChanges": "Ende nuk ka ndryshime të regjistruara."
+    },
+    "ceo": {
+      "title": "Paneli i drejtorit",
+      "subtitle": "Shitjet, të ardhurat, kontratat, pagesat dhe ekipi në të gjithë hapësirën e punës. Vetëm për lexim.",
+      "salesPerMonth": "Shitjet për muaj (marrëveshje të fituara)",
+      "team": "Performanca e ekipit",
+      "contracts": "Kontratat",
+      "contractGroup": "Kontratat",
+      "contractGroups": {
+        "active": "Aktive",
+        "expired": "Të skaduara",
+        "expiringSoon": "Skadojnë së shpejti"
+      },
+      "payments": "Pagesat sipas statusit",
+      "paymentStatus": "Statusi",
+      "amount": "Shuma",
+      "outstanding": "E papaguar",
+      "companies": "Kompanitë sipas statusit",
+      "noStatus": "Pa status"
+    }
   }
 }

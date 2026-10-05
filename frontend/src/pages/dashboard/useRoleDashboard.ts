@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { roleDashboardService } from '../../services/dashboardService';
-import type { DashboardData, DashboardFilters, DashboardPreset } from '../../types/roleDashboard';
+import type { DashboardData, DashboardFilters, DashboardPreset, RoleDashboardKind } from '../../types/roleDashboard';
 
 /**
  * Loads one role dashboard for a period and a location, and again on `refresh` (FR-DSH-07). Nothing
  * is kept between visits: the server works the figures out each time. A custom range waits for both
  * of its days.
  */
-export function useRoleDashboard(kind: 'SALES_USER' | 'SALES_MANAGER') {
+export function useRoleDashboard(kind: RoleDashboardKind) {
   const { tenantSlug } = useParams();
   const [preset, setPreset] = useState<DashboardPreset>('THIS_MONTH');
   const [from, setFrom] = useState('');
