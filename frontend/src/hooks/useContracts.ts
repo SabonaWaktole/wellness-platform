@@ -108,6 +108,7 @@ export function useContractActions() {
       call((slug) => contractService.updateContract(slug, id, data)),
     changeStatus: (id: string, status: string, reason?: string) =>
       call((slug) => contractService.changeStatus(slug, id, status, reason)),
+    startRenewal: (id: string, ownerUserId?: string) => call((slug) => contractService.startRenewal(slug, id, ownerUserId)),
     renewContract: (id: string, data?: any) =>
       call((slug) => contractService.performAction(slug, id, 'renew', data)),
     fetchPaymentHistory: (id: string, paymentId: string) =>

@@ -22,6 +22,11 @@ export const contractService = {
     const response = await apiClient.post(`/${tenantSlug}/contracts`, { dealId });
     return response.data;
   },
+  /** FR-REN-06: starts a Renewal deal from the contract and returns the deal's id. */
+  startRenewal: async (tenantSlug: string, id: string, ownerUserId?: string): Promise<{ dealId: string }> => {
+    const response = await apiClient.post(`/${tenantSlug}/contracts/${id}/renewal`, ownerUserId ? { ownerUserId } : {});
+    return response.data;
+  },
   updateContract: async (tenantSlug: string, id: string, data: any) => {
     const response = await apiClient.patch(`/${tenantSlug}/contracts/${id}`, data);
     return response.data;

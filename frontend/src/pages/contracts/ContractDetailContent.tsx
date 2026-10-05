@@ -156,6 +156,24 @@ export const ContractDetailContent: React.FC = () => {
     navigate(`/${tenantSlug}/contracts/${renewal.id}`);
   };
 
+  /** FR-REN-06: starts a Renewal deal and opens it. An open one is opened instead of started twice. */
+  const handleStartRenewal = async () => {
+    if (!contractId || !tenantSlug) return;
+    setActionError(null);
+    try {
+      const { dealId } = await actions.startRenewal(contractId);
+      navigate(`/${tenantSlug}/deals/${dealId}`);
+    } catch (error: any) {
+      const data = error?.response?.data as { error?: string; code?: string; dealId?: string | null } | undefined;
+      if (data?.code === 'RENEWAL_OPEN' && data.dealId) {
+        navigate(`/${tenantSlug}/deals/${data.dealId}`);
+        return;
+      }
+      setActionError(data?.error ?? tc('state.error'));
+      await reload();
+    }
+  };
+
   const handleFilePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // Reset immediately so picking the SAME file again still fires a change
@@ -256,6 +274,11 @@ export const ContractDetailContent: React.FC = () => {
           {can('SUSPEND') && (
             <Button variant="outline" icon={<Pause size={16} />} onClick={() => openReason('SUSPENDED')}>
               {t('detail.suspend')}
+            </Button>
+          )}
+          {can('START_RENEWAL') && (
+            <Button variant="primary" icon={<RotateCcw size={16} />} onClick={handleStartRenewal}>
+              {t('detail.startRenewal')}
             </Button>
           )}
           {can('RENEW') && (
@@ -409,21 +432,50 @@ export const ContractDetailContent: React.FC = () => {
               </div>
               {contract.renewedFromContractId && (
                 <div className={styles.termRow}>
-                  <dt className={styles.termLabel}>{t('detail.plan')}</dt>
+                  <dt className={styles.termLabel}>{t('detail.previousTerm')}</dt>
                   <dd className={styles.termValue}>
                     <button
                       type="button"
                       className={styles.linkValue}
-                      onClick={() =>
-                        navigate(`/${tenantSlug}/contracts/${contract.renewedFromContractId}`)
-                      }
+                      onClick={() => navigate(`/${tenantSlug}/contracts/${contract.renewedFromContractId}`)}
                     >
-                      {t('detail.renewedFrom', {
-                        reference: contractReference(contract.renewedFromContractId),
+                      {t('detail.renews', {
+                        reference: detail?.renewal?.renewedFrom?.number ?? contractReference(contract.renewedFromContractId),
                       })}
                     </button>
                   </dd>
                 </div>
+              )}
+              {/* FR-REN-07, D9: renewed by the next term, else in negotiation with the open deal. */}
+              {detail?.renewal?.renewedInto ? (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.nextTerm')}</dt>
+                  <dd className={styles.termValue}>
+                    <button
+                      type="button"
+                      className={styles.linkValue}
+                      onClick={() => navigate(`/${tenantSlug}/contracts/${detail.renewal!.renewedInto!.id}`)}
+                    >
+                      {t('detail.renewedBy', { reference: detail.renewal.renewedInto.number })}
+                    </button>
+                  </dd>
+                </div>
+              ) : (
+                detail?.renewal?.openDealId && (
+                  <div className={styles.termRow}>
+                    <dt className={styles.termLabel}>{t('detail.nextTerm')}</dt>
+                    <dd className={styles.termValue}>
+                      <Badge variant="warning">{t('detail.inNegotiation')}</Badge>{' '}
+                      <button
+                        type="button"
+                        className={styles.linkValue}
+                        onClick={() => navigate(`/${tenantSlug}/deals/${detail.renewal!.openDealId}`)}
+                      >
+                        {t('detail.openRenewalDeal')}
+                      </button>
+                    </dd>
+                  </div>
+                )
               )}
               {contract.suspensionReason && contract.status === 'SUSPENDED' && (
                 <div className={styles.termRow}>
