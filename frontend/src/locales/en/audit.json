@@ -57,7 +57,8 @@
     "Deal": "Deal",
     "Offer": "Offer",
     "DiscountApproval": "Discount approval",
-    "ContractSettings": "Contract settings"
+    "ContractSettings": "Contract settings",
+    "Performance": "Performance export"
   },
   "entityGroups": {
     "access": "Users, roles & workspace",

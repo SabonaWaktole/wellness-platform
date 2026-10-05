@@ -108,7 +108,8 @@
     "tenants": "Business Clients",
     "people": "Users",
     "payments": "Payments",
-    "renewals": "Renewals"
+    "renewals": "Renewals",
+    "performance": "Performance"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

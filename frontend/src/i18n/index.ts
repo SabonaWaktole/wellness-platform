@@ -21,6 +21,7 @@ import enInvoices from '../locales/en/invoices.json';
 import enContracts from '../locales/en/contracts.json';
 import enPayments from '../locales/en/payments.json';
 import enRenewals from '../locales/en/renewals.json';
+import enPerformance from '../locales/en/performance.json';
 import enSettings from '../locales/en/settings.json';
 import enDashboard from '../locales/en/dashboard.json';
 import enNotifications from '../locales/en/notifications.json';
@@ -41,6 +42,7 @@ import sqInvoices from '../locales/sq/invoices.json';
 import sqContracts from '../locales/sq/contracts.json';
 import sqPayments from '../locales/sq/payments.json';
 import sqRenewals from '../locales/sq/renewals.json';
+import sqPerformance from '../locales/sq/performance.json';
 import sqSettings from '../locales/sq/settings.json';
 import sqDashboard from '../locales/sq/dashboard.json';
 import sqNotifications from '../locales/sq/notifications.json';
@@ -108,6 +110,7 @@ export const resources = {
     contracts: enContracts,
     payments: enPayments,
     renewals: enRenewals,
+    performance: enPerformance,
     settings: enSettings,
     dashboard: enDashboard,
     notifications: enNotifications,
@@ -129,6 +132,7 @@ export const resources = {
     contracts: sqContracts,
     payments: sqPayments,
     renewals: sqRenewals,
+    performance: sqPerformance,
     settings: sqSettings,
     dashboard: sqDashboard,
     notifications: sqNotifications,

@@ -48,6 +48,7 @@ import { ContractList } from '../pages/contracts/ContractList';
 import { ContractDetail } from '../pages/contracts/ContractDetail';
 import { ContractFormPage } from '../pages/contracts/ContractFormPage';
 import { Renewals } from '../pages/renewals/Renewals';
+import { Performance } from '../pages/performance/Performance';
 import { PaymentsOverview } from '../pages/payments/PaymentsOverview';
 import { DealsPage } from '../pages/deals/DealsPage';
 import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
@@ -551,6 +552,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="contracts.validity.view">
               <Renewals />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The Performance screen (M3 Slice 12, FR-PRF-01).
+        path: 'performance',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="performance.view">
+              <Performance />
             </RequirePermission>
           </ProtectedRoute>
         ),

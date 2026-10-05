@@ -69,6 +69,8 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       ['payments overview', () => 'payments'],
       // M3 Slice 11
       ['renewals', () => 'renewals'],
+      // M3 Slice 12
+      ['performance', () => 'performance'],
       ['settings → workspace', () => 'settings'],
       ['settings → team', () => 'settings/team'],
       ['settings → roles & permissions', () => 'settings/roles'],

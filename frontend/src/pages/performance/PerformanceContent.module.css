@@ -1,0 +1,442 @@
+/* ============================================================================
+ * PaymentsOverviewContent
+ * Hand-rolled table in the grammar of the contracts list, so the two lists do
+ * not look like they came from different products. Narrow screens scroll the
+ * table inside its own container, never the page (NFR-USE-03).
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.breadcrumb {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  letter-spacing: var(--font-letter-spacing-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.card {
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 0 0 1px var(--border-hairline);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  background-color: var(--color-surface-container-low);
+}
+
+.filters > * {
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+
+.filterCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  min-height: 40px;
+}
+
+/* ---------------------------------------------------------------- table */
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.table th {
+  text-align: left;
+  padding: 0 var(--spacing-lg);
+  height: 40px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-color: var(--color-surface-container-low);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+  padding: var(--spacing-base) var(--spacing-lg);
+  height: 56px;
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+  font-size: var(--font-size-body-md);
+  color: var(--text-primary);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.numeric {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-tertiary);
+}
+
+.loadingCell {
+  text-align: center;
+  padding: 20px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl, 48px) var(--spacing-md);
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--text-tertiary);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--font-size-title-md, 1.125rem);
+  color: var(--text-primary);
+}
+
+.emptyMessage {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- performance */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 0;
+  border-bottom: 1px solid var(--border-hairline);
+  min-width: 0;
+}
+
+.peopleLegend {
+  float: left;
+  margin-right: var(--spacing-sm);
+  padding: 0;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--color-surface-container-lowest);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary, #fff);
+}
+
+.clear {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.period {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+/* The first column stays in view while the fourteen indicators scroll inside the card (NFR-USE-03). */
+.stickyCol {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 140px;
+  text-align: left;
+  background-color: var(--color-surface-container-lowest);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--font-size-body-md);
+}
+
+.table thead th.stickyCol {
+  z-index: 2;
+  background-color: var(--color-surface-container-low);
+}
+
+.table tbody th {
+  padding: var(--spacing-base) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-hairline);
+  height: 64px;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+}
+
+.table td {
+  height: 64px;
+  white-space: nowrap;
+}
+
+.person {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--border-subtle);
+  text-underline-offset: 3px;
+}
+
+.person:hover {
+  color: var(--color-primary);
+}
+
+.totalRow th,
+.totalRow td {
+  background-color: var(--color-surface-container-low);
+  border-top: 1px solid var(--border-subtle);
+  font-weight: 700;
+}
+
+.figure {
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm, 6px);
+  background: none;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  cursor: pointer;
+}
+
+.figure:hover {
+  background: var(--color-surface-container);
+  color: var(--color-primary);
+}
+
+.sub {
+  display: block;
+  font-size: var(--font-size-label-sm);
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.change {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- detail */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-surface-container-lowest);
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 0 0 1px var(--border-hairline);
+  min-width: 0;
+}
+
+.detailHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: var(--font-size-title-md, 1.125rem);
+  color: var(--text-primary);
+}
+
+.detailControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.detailControls > * {
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+
+.viewToggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.toggle {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary, #fff);
+}
+
+.chart {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- records */
+
+.recordsPeriod {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+}
+
+.recordsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.recordsTable th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.recordsTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: var(--font-size-body-sm);
+}
+
+.recordRow {
+  cursor: pointer;
+}
+
+.recordRow:hover td {
+  background-color: var(--color-surface-container-low);
+}

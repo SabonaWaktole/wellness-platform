@@ -57,7 +57,8 @@
     "Deal": "Marrëveshje",
     "Offer": "Ofertë",
     "DiscountApproval": "Miratim zbritjeje",
-    "ContractSettings": "Cilësimet e kontratave"
+    "ContractSettings": "Cilësimet e kontratave",
+    "Performance": "Eksporti i performancës"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
