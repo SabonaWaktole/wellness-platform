@@ -142,6 +142,8 @@ describe('Permission matrix (SRS §4.2)', () => {
   const ROLE_SPECIFIC: Record<string, readonly RoleKey[]> = {
     'GET /api/:tenantSlug/dashboard/sales-user': [RoleKey.SalesUser],
     'GET /api/:tenantSlug/dashboard/sales-manager': [RoleKey.SalesManager],
+    'GET /api/:tenantSlug/dashboard/administrator': [RoleKey.Administrator],
+    'GET /api/:tenantSlug/dashboard/ceo': [RoleKey.Ceo],
   };
 
   const gatedRoutes = routeTable(createApp()).filter(

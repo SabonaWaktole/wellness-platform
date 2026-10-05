@@ -160,6 +160,11 @@ export class PrismaPerformanceReader implements IPerformanceReader {
     }));
   }
 
+  /** Deals won in the period, counted exactly as `indicators` counts them, for a series over many months. */
+  async wonDeals(query: IndicatorQuery) {
+    return (await this.dealResults(query, 'WON')).map((deal) => ({ ownerId: deal.ownerId, at: deal.at, annualValue: deal.annualValue }));
+  }
+
   private async dealResults(query: IndicatorQuery, result: 'WON' | 'LOST'): Promise<DealResult[]> {
     const { tenantId, days } = query;
     const column = result === 'WON' ? 'wonAt' : 'lostAt';

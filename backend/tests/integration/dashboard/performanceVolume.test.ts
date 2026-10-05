@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 const tokenService = new JwtTokenService();
 
 /**
- * NFR-PERF-04: the Performance screen and the Sales User and Sales Manager dashboards load in under 2 seconds at the volume of the SRS (2,000 deals,
+ * NFR-PERF-04: the Performance screen and the four dashboards load in under 2 seconds at the volume of the SRS (2,000 deals,
  * 5,000 activities, and as many follow-ups) for the whole sales team, with the comparison, the
  * drill-down and the series. This runs on the test database, which is smaller than staging, so it is a
  * guard against a query that stops using its index, not the staging measurement
@@ -27,9 +27,13 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
   const slug = tenantId;
   const manager = `u-pv-manager-${randomUUID()}`;
   const sellers = Array.from({ length: 6 }, (_, i) => `u-pv-sales${i}-${randomUUID()}`);
+  const ceo = `u-pv-ceo-${randomUUID()}`;
+  const admin = `u-pv-admin-${randomUUID()}`;
   let app: express.Express;
   let token: string;
   let sellerToken: string;
+  let ceoToken: string;
+  let adminToken: string;
   const get = (path: string, bearer?: string) => request(app).get(`/api/${slug}${path}`).set('Authorization', `Bearer ${bearer ?? token}`);
 
   beforeAll(async () => {
@@ -39,11 +43,15 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
     await prisma.user.createMany({
       data: [
         { id: manager, roleId: roles[RoleKey.SalesManager] },
+        { id: ceo, roleId: roles[RoleKey.Ceo] },
+        { id: admin, roleId: roles[RoleKey.Administrator] },
         ...sellers.map((id) => ({ id, roleId: roles[RoleKey.SalesUser] })),
       ].map(({ id, roleId }) => ({ id, email: `${id}@example.com`, hashedPassword: 'x', role: 'STAFF', roleId, tenantId, firstName: id.slice(5, 14), lastName: 'Vol' })),
     });
     token = tokenService.sign({ userId: manager, role: 'STAFF', tenantId, tenantSlug: slug } as any);
     sellerToken = tokenService.sign({ userId: sellers[0], role: 'STAFF', tenantId, tenantSlug: slug } as any);
+    ceoToken = tokenService.sign({ userId: ceo, role: 'STAFF', tenantId, tenantSlug: slug } as any);
+    adminToken = tokenService.sign({ userId: admin, role: 'STAFF', tenantId, tenantSlug: slug } as any);
 
     const companyIds = Array.from({ length: 200 }, () => randomUUID());
     await prisma.client.createMany({
@@ -96,6 +104,34 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
       })),
       (data) => prisma.quotation.createMany({ data: data as any })
     );
+
+    // 500 contracts and 6,000 instalments (NFR-PERF-04), a third of the instalments received and some reversed.
+    const midnight = Math.floor(now / day) * day;
+    const contracts = Array.from({ length: 500 }, (_, n) => ({
+      id: randomUUID(), tenantId, clientId: pick(companyIds, n), assignedUserId: pick(sellers, n), planName: 'Gold', billingPeriod: 'MONTHLY', amount: '100.00',
+      agreedAnnualValue: '1200.00', status: n % 5 === 0 ? 'EXPIRED' : 'ACTIVE', createdByUserId: manager,
+      startsAt: new Date(midnight - 200 * day), endsAt: new Date(midnight + (n % 5 === 0 ? -(n % 90) - 1 : (n % 120) + 1) * day),
+    }));
+    await chunks(contracts, (data) => prisma.contract.createMany({ data: data as any }));
+    const statuses = ['NOT_INVOICED', 'INVOICE_ISSUED', 'PAYMENT_PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'];
+    const instalments = Array.from({ length: 6_000 }, (_, n) => {
+      const status = pick(statuses, n);
+      return {
+        id: randomUUID(), tenantId, contractId: pick(contracts, n).id, periodIndex: (n % 12) + 1, dueDate: new Date(midnight + ((n % 200) - 150) * day), status,
+        amount: '100.00', paidAmount: status === 'PAID' ? '100.00' : status === 'PARTIALLY_PAID' ? '40.00' : '0.00',
+      };
+    });
+    await chunks(instalments, (data) => prisma.contractPayment.createMany({ data: data as any }));
+    await chunks(
+      instalments.filter((row) => row.paidAmount !== '0.00'),
+      (data) =>
+        prisma.contractPaymentHistory.createMany({
+          data: data.map((row, n) => ({
+            id: randomUUID(), tenantId, paymentId: row.id, fromStatus: 'PAYMENT_PENDING', toStatus: row.status, amountReceived: n % 10 === 0 ? `-${row.paidAmount}` : row.paidAmount,
+            receivedOn: n % 10 === 0 ? null : new Date(midnight - (n % 250) * day), createdAt: new Date(now - (n % 250) * day),
+          })) as any,
+        })
+    );
   }, 180_000);
 
   afterAll(async () => {
@@ -135,6 +171,22 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
     const { ms, body } = await timed(path, who === 'seller' ? sellerToken : token);
     expect(ms).toBeLessThan(2_000);
     expect(body.figures.length).toBeGreaterThan(5);
+  });
+
+  it.each([
+    ['the CEO dashboard for the year', '/dashboard/ceo?preset=THIS_YEAR'],
+    ['the CEO dashboard over 300 days', `/dashboard/ceo?preset=CUSTOM&from=${new Date(Date.now() - 300 * 86_400_000).toISOString().slice(0, 10)}&to=${new Date().toISOString().slice(0, 10)}`],
+  ])('NFR-PERF-04: %s loads in under 2 seconds at 500 contracts and 6,000 instalments', async (_label, path) => {
+    const { ms, body } = await timed(path, ceoToken);
+    expect(ms).toBeLessThan(2_000);
+    expect(body.figures.length).toBeGreaterThan(10);
+    expect(body.tables.payments.reduce((sum: number, row: any) => sum + row.count, 0)).toBe(6_000);
+  });
+
+  it('NFR-PERF-04: the Administrator dashboard loads in under 2 seconds', async () => {
+    const { ms, body } = await timed('/dashboard/administrator', adminToken);
+    expect(ms).toBeLessThan(2_000);
+    expect(body.tables.usersPerRole.length).toBeGreaterThan(0);
   });
 
   it('NFR-PERF-04: the Manager dashboard at this volume adds up to its rows', async () => {
