@@ -44,6 +44,11 @@ export interface DashboardInput {
   params: DashboardParams;
 }
 
+/** A viewer whose role has another dashboard cannot read this one, whatever permissions it holds (FR-DSH-01, FR-DSH-02). */
+export async function ensureDashboardKind(expected: DashboardKind, reader: IDashboardReader, access: AccessContext, tenantId: string): Promise<void> {
+  if ((await dashboardKindOf(reader, access, tenantId)) !== expected) throw new PermissionDeniedError(VIEW_DASHBOARD, 'This is not your dashboard.');
+}
+
 /**
  * Whose figures this dashboard reads (FR-DSH-02, FR-RBAC-23): a Sales User their own, a Sales Manager
  * the sales team, taken from the access context and the role, never from the request. A salesperson
@@ -57,13 +62,19 @@ export async function dashboardAudience(
   roster: ITeamRoster
 ): Promise<{ allowed: string[]; selected: string[] }> {
   const { access, tenantId, params } = input;
-  const kind = await dashboardKindOf(reader, access, tenantId);
-  if (kind !== expected) throw new PermissionDeniedError(VIEW_DASHBOARD, 'This is not your dashboard.');
+  await ensureDashboardKind(expected, reader, access, tenantId);
   const allowed = expected === 'SALES_USER' ? [access.userId] : await roster.salesUserIds(tenantId);
   if (params.salespersonId && !allowed.includes(params.salespersonId)) {
     throw new PermissionDeniedError(VIEW_DASHBOARD, 'You cannot view the dashboard of that salesperson.');
   }
   return { allowed, selected: params.salespersonId ? [params.salespersonId] : allowed };
+}
+
+/** The Administrator and CEO dashboards cover the whole workspace and have no salesperson or location filter: asking for one is refused, not ignored (FR-DSH-02). */
+export function refuseNarrowing(params: DashboardParams): void {
+  if (params.salespersonId || params.areaId || params.cityId) {
+    throw new InvalidLocationError('This dashboard covers the whole workspace and cannot be narrowed by salesperson or location.');
+  }
 }
 
 /** A location other than the workspace's predefined Area and City is refused (FR-DSH-04). */

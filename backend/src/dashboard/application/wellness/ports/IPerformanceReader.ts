@@ -1,3 +1,4 @@
+import { Money } from '../../../../pricing/domain/Money';
 import { RawIndicators } from '../../../domain/KpiDefinitions';
 import { DayRange, InstantRange } from '../../../domain/PerformancePeriod';
 
@@ -66,9 +67,19 @@ export interface PerformanceRecord {
   annualValue: string | null;
 }
 
+/** A deal won in the period, by the owner when it was won, with its agreed annual value (`null` when it has none). */
+export interface WonDeal {
+  ownerId: string;
+  /** The won date, a calendar day at UTC midnight. */
+  at: Date;
+  annualValue: Money | null;
+}
+
 export interface IPerformanceReader {
   people(tenantId: string, ids: readonly string[]): Promise<Salesperson[]>;
   indicators(query: IndicatorQuery): Promise<IndicatorResult>;
+  /** The deals counted as Won in the period, one read for a whole range: what a per-month series is cut from. */
+  wonDeals(query: IndicatorQuery): Promise<WonDeal[]>;
   records(
     query: IndicatorQuery & { indicator: PerformanceIndicator; limit: number; offset: number }
   ): Promise<{ rows: PerformanceRecord[]; total: number }>;

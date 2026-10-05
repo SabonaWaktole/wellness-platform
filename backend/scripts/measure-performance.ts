@@ -100,8 +100,8 @@ async function main(): Promise<void> {
   } else {
     console.log('This user cannot view performance: the Performance screen is not measured. Sign in as the Sales Manager or the CEO.\n');
   }
-  // The Sales User and Sales Manager dashboards (M3 Slice 13, NFR-PERF-04): the one that suits the user's role.
-  for (const kind of ['sales-manager', 'sales-user']) {
+  // The role dashboards (M3 Slices 13 and 14, NFR-PERF-04): the one that suits the user's role.
+  for (const kind of ['sales-manager', 'sales-user', 'ceo', 'administrator']) {
     if ((await get(`/${tenant}/dashboard/${kind}?preset=THIS_MONTH`)).ok) {
       queries.push(
         [`dashboard ${kind}, this year`, `/${tenant}/dashboard/${kind}?preset=THIS_YEAR`, PIPELINE_BUDGET_MS],

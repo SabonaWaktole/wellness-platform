@@ -1207,7 +1207,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     );
   }
 
-  // The role dashboards (M3 Slice 13, FR-DSH-01 to 10, FR-RBAC-23). Mounted beside the older metrics
+  // The role dashboards (M3 Slices 13 and 14, FR-DSH-01 to 13, FR-RBAC-23). Mounted beside the older metrics
   // router; its paths are different, so each request reaches exactly one of them.
   {
     const { PrismaDashboardReader } = require('../dashboard/infrastructure/PrismaDashboardReader');
@@ -1215,6 +1215,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     const { GetDashboardHomeUseCase } = require('../dashboard/application/wellness/GetDashboardHomeUseCase');
     const { GetSalesUserDashboardUseCase } = require('../dashboard/application/wellness/GetSalesUserDashboardUseCase');
     const { GetSalesManagerDashboardUseCase } = require('../dashboard/application/wellness/GetSalesManagerDashboardUseCase');
+    const { GetAdministratorDashboardUseCase } = require('../dashboard/application/wellness/GetAdministratorDashboardUseCase');
+    const { GetCeoDashboardUseCase } = require('../dashboard/application/wellness/GetCeoDashboardUseCase');
+    const { GetPerformanceUseCase: GetCeoPerformanceUseCase } = require('../dashboard/application/wellness/GetPerformanceUseCase');
+    const { PrismaAdministratorDashboardReader } = require('../dashboard/infrastructure/PrismaAdministratorDashboardReader');
+    const { PrismaCeoDashboardReader } = require('../dashboard/infrastructure/PrismaCeoDashboardReader');
     const { DashboardController } = require('../dashboard/interfaces/http/DashboardController');
     const { createRoleDashboardRouter } = require('../dashboard/interfaces/http/dashboardHomeRoutes');
     const performanceReader = new PrismaPerformanceReader(prisma);
@@ -1227,7 +1232,17 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         new DashboardController(
           new GetDashboardHomeUseCase(dashboardReader),
           new GetSalesUserDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings),
-          new GetSalesManagerDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings)
+          new GetSalesManagerDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings),
+          new GetAdministratorDashboardUseCase(dashboardReader, new PrismaAdministratorDashboardReader(prisma), auditEntryReader),
+          new GetCeoDashboardUseCase(
+            performanceReader,
+            dashboardReader,
+            new PrismaCeoDashboardReader(prisma),
+            new PrismaPaymentOverviewReader(prisma),
+            new GetCeoPerformanceUseCase(performanceReader, dashboardRoster),
+            dashboardRoster,
+            dashboardSettings
+          )
         ),
         tokenService,
         tenantRepository,
