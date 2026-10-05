@@ -111,6 +111,11 @@ export interface Contract {
   renewedFromContractId?: string | null;
   activatedAt?: string | null;
   cancelledAt?: string | null;
+  /** Set when the contract goes out for signature: the agreed values are locked from then on (FR-CON-12). */
+  lockedAt?: string | null;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
+  cancelReason?: string | null;
   createdByUserId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -146,6 +151,15 @@ export interface ContractStatusHistoryEntry {
   note: string | null;
 }
 
+/** One file of the signed document; the newest is current, the others are previous versions (FR-CON-19). */
+export interface ContractDocumentVersion {
+  id: string;
+  fileName: string;
+  uploadedByUserId: string;
+  uploadedAt: string;
+  isCurrent: boolean;
+}
+
 /**
  * What the detail endpoint returns. `permittedActions` is computed server-side
  * from the entity's own transition rules — the UI must gate its buttons on
@@ -157,6 +171,8 @@ export interface ContractDetail {
   /** Absent without `payments.view` (FR-RBAC-06). */
   payments?: ContractPayment[];
   history: ContractStatusHistoryEntry[];
+  /** Absent without `commercial.view` (FR-RBAC-21). Newest first. */
+  documents?: ContractDocumentVersion[];
   permittedActions: string[];
 }
 

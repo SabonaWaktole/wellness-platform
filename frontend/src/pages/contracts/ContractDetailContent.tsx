@@ -4,9 +4,14 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Check,
+  Download,
+  FileSignature,
   FileText,
+  Lock,
   Paperclip,
+  Pause,
   Pencil,
+  Play,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -76,7 +81,11 @@ export const ContractDetailContent: React.FC = () => {
   );
 
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<null | 'ACTIVATE' | 'CANCEL' | 'DOCUMENT'>(null);
+  const [confirm, setConfirm] = useState<null | 'ACTIVATE' | 'MARK_PENDING_SIGNATURE'>(null);
+  /** The status change that is waiting for its reason (FR-CON-14, 15): suspend, reinstate or cancel. */
+  const [reasonFor, setReasonFor] = useState<null | 'SUSPENDED' | 'ACTIVE' | 'CANCELLED'>(null);
+  const [reason, setReason] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ContractPayment | null>(null);
 
   const [recordFor, setRecordFor] = useState<ContractPayment | null>(null);
@@ -113,6 +122,9 @@ export const ContractDetailContent: React.FC = () => {
   );
 
   const summary = contract?.paymentSummary;
+  /** The signed document is a commercial record: without `commercial.view` the server sends no `documents` (FR-CON-19). */
+  const documents = detail?.documents ?? [];
+  const documentsShown = detail?.documents !== undefined;
 
   const ownerName = useMemo(() => {
     if (!contract?.assignedUserId) return t('detail.unassigned');
@@ -126,11 +138,29 @@ export const ContractDetailContent: React.FC = () => {
     return person ? getStaffDisplayName(person) : t('detail.unknownUser');
   }, [contract, staff, t]);
 
-  const handleActivate = async () => {
+  /**
+   * Every status change is one call; the server decides whether it is allowed and
+   * says why not (FR-CON-11), and that message is shown as it is.
+   */
+  const submitStatus = async (status: string, why?: string) => {
     if (!contractId) return;
-    await actions.activateContract(contractId);
-    setConfirm(null);
-    await reload();
+    setActionError(null);
+    try {
+      await actions.changeStatus(contractId, status, why);
+      setConfirm(null);
+      setReasonFor(null);
+      setReason('');
+      await reload();
+    } catch (error: any) {
+      setConfirm(null);
+      setReasonFor(null);
+      setActionError(error?.response?.data?.error ?? tc('state.error'));
+    }
+  };
+
+  const openReason = (status: 'SUSPENDED' | 'ACTIVE' | 'CANCELLED') => {
+    setReason('');
+    setReasonFor(status);
   };
 
   /** FR-CON-04: re-reads the agreed values from the deal while the contract is a Draft. */
@@ -143,13 +173,6 @@ export const ContractDetailContent: React.FC = () => {
     } catch (error: any) {
       setRefreshError(error?.response?.data?.error ?? tc('state.error'));
     }
-  };
-
-  const handleCancel = async () => {
-    if (!contractId) return;
-    await actions.cancelContract(contractId);
-    setConfirm(null);
-    await reload();
   };
 
   const handleRenew = async () => {
@@ -235,15 +258,30 @@ export const ContractDetailContent: React.FC = () => {
     // different file.
     event.target.value = '';
     if (!file || !contractId) return;
-    await actions.uploadDocument(contractId, file);
-    await reload();
+    setActionError(null);
+    try {
+      await actions.uploadDocument(contractId, file);
+      await reload();
+    } catch (error: any) {
+      setActionError(error?.response?.data?.error ?? tc('state.error'));
+    }
   };
 
-  const removeDocument = async () => {
+  /** The file comes through the API, which checks the permission (FR-CON-19); it is saved from a blob. */
+  const downloadDocument = async (documentId: string, fileName: string) => {
     if (!contractId) return;
-    await actions.removeDocument(contractId);
-    setConfirm(null);
-    await reload();
+    setActionError(null);
+    try {
+      const blob = await actions.downloadDocument(contractId, documentId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setActionError(tc('state.error'));
+    }
   };
 
   if (loading && !detail) {
@@ -290,9 +328,29 @@ export const ContractDetailContent: React.FC = () => {
               {t('detail.refreshFromDeal')}
             </Button>
           )}
+          {can('MARK_PENDING_SIGNATURE') && (
+            <Button variant="outline" icon={<FileSignature size={16} />} onClick={() => setConfirm('MARK_PENDING_SIGNATURE')}>
+              {t('detail.markPendingSignature')}
+            </Button>
+          )}
+          {can('ATTACH_DOCUMENT') && documentsShown && (
+            <Button variant="outline" icon={<Paperclip size={16} />} onClick={() => fileInputRef.current?.click()}>
+              {documents.length > 0 ? t('detail.replaceDocument') : t('detail.uploadDocument')}
+            </Button>
+          )}
           {can('ACTIVATE') && (
             <Button variant="primary" icon={<Check size={16} />} onClick={() => setConfirm('ACTIVATE')}>
               {t('detail.activate')}
+            </Button>
+          )}
+          {can('REINSTATE') && (
+            <Button variant="primary" icon={<Play size={16} />} onClick={() => openReason('ACTIVE')}>
+              {t('detail.reinstate')}
+            </Button>
+          )}
+          {can('SUSPEND') && (
+            <Button variant="outline" icon={<Pause size={16} />} onClick={() => openReason('SUSPENDED')}>
+              {t('detail.suspend')}
             </Button>
           )}
           {can('RENEW') && (
@@ -301,7 +359,7 @@ export const ContractDetailContent: React.FC = () => {
             </Button>
           )}
           {can('CANCEL') && (
-            <Button variant="outline" icon={<X size={16} />} onClick={() => setConfirm('CANCEL')}>
+            <Button variant="outline" icon={<X size={16} />} onClick={() => openReason('CANCELLED')}>
               {t('detail.cancel')}
             </Button>
           )}
@@ -312,6 +370,13 @@ export const ContractDetailContent: React.FC = () => {
         <div className={styles.warningBanner}>
           <AlertTriangle size={18} />
           <span>{refreshError}</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className={styles.warningBanner} role="alert">
+          <AlertTriangle size={18} />
+          <span>{actionError}</span>
         </div>
       )}
 
@@ -445,7 +510,24 @@ export const ContractDetailContent: React.FC = () => {
                   </dd>
                 </div>
               )}
+              {contract.suspensionReason && contract.status === 'SUSPENDED' && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.suspensionReason')}</dt>
+                  <dd className={styles.termValue}>{contract.suspensionReason}</dd>
+                </div>
+              )}
+              {contract.cancelReason && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.cancelReason')}</dt>
+                  <dd className={styles.termValue}>{contract.cancelReason}</dd>
+                </div>
+              )}
             </dl>
+            {contract.lockedAt && !contract.legacy && (
+              <p className={styles.notesEmpty}>
+                <Lock size={14} /> {t('detail.lockedHint')}
+              </p>
+            )}
           </Card>
 
           {terms?.content && terms.content.length > 0 && (
@@ -457,47 +539,52 @@ export const ContractDetailContent: React.FC = () => {
             </Card>
           )}
 
-          <Card padding="lg">
-            <h2 className={styles.cardTitle}>{t('detail.document')}</h2>
-            {contract.documentUrl ? (
-              <div className={styles.documentRow}>
-                <a
-                  className={styles.documentLink}
-                  href={contract.documentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <FileText size={16} />
-                  {contract.documentName}
-                </a>
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  {t('detail.replaceDocument')}
-                </Button>
-                <Button variant="outline" onClick={() => setConfirm('DOCUMENT')}>
-                  {t('detail.removeDocument')}
-                </Button>
-              </div>
-            ) : (
-              <div className={styles.documentRow}>
-                <p className={styles.notesEmpty}>{t('detail.noDocument')}</p>
-                <Button
-                  variant="outline"
-                  icon={<Paperclip size={16} />}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {t('detail.uploadDocument')}
-                </Button>
-              </div>
-            )}
-            <p className={styles.notesEmpty}>{t('detail.documentHint')}</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              className={styles.hiddenFileInput}
-              onChange={handleFilePicked}
-            />
-          </Card>
+          {/* The signed document and its previous versions. Absent without commercial.view (FR-CON-19). */}
+          {documentsShown && (
+            <Card padding="lg">
+              <h2 className={styles.cardTitle}>{t('detail.document')}</h2>
+              {documents.length === 0 ? (
+                <div className={styles.documentRow}>
+                  <p className={styles.notesEmpty}>{t('detail.noDocument')}</p>
+                  {can('ATTACH_DOCUMENT') && (
+                    <Button variant="outline" icon={<Paperclip size={16} />} onClick={() => fileInputRef.current?.click()}>
+                      {t('detail.uploadDocument')}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <ul className={styles.documentList}>
+                  {documents.map((version) => {
+                    const uploader = findPersonById(staff, version.uploadedByUserId);
+                    return (
+                      <li key={version.id} className={styles.documentRow}>
+                        <button
+                          type="button"
+                          className={styles.documentLink}
+                          onClick={() => downloadDocument(version.id, version.fileName)}
+                        >
+                          {version.isCurrent ? <FileText size={16} /> : <Download size={16} />}
+                          {version.fileName}
+                        </button>
+                        <span className={styles.notesEmpty}>
+                          {version.isCurrent ? t('detail.documentCurrent') : t('detail.documentPrevious')} · {dates.dateTime(version.uploadedAt)} ·{' '}
+                          {uploader ? getStaffDisplayName(uploader) : t('detail.unknownUser')}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <p className={styles.notesEmpty}>{t('detail.documentHint')}</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className={styles.hiddenFileInput}
+                onChange={handleFilePicked}
+              />
+            </Card>
+          )}
 
           <Card padding="lg">
             <h2 className={styles.cardTitle}>{t('detail.notes')}</h2>
@@ -690,29 +777,55 @@ export const ContractDetailContent: React.FC = () => {
       </div>
 
       <ConfirmDialog
+        isOpen={confirm === 'MARK_PENDING_SIGNATURE'}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => submitStatus('PENDING_SIGNATURE')}
+        title={t('detail.markPendingSignature')}
+        message={t('detail.confirmPendingSignature')}
+        tone="primary"
+      />
+
+      <ConfirmDialog
         isOpen={confirm === 'ACTIVATE'}
         onClose={() => setConfirm(null)}
-        onConfirm={handleActivate}
+        onConfirm={() => submitStatus('ACTIVE')}
         title={t('detail.activate')}
         message={t('detail.confirmActivate')}
         tone="primary"
       />
 
-      <ConfirmDialog
-        isOpen={confirm === 'CANCEL'}
-        onClose={() => setConfirm(null)}
-        onConfirm={handleCancel}
-        title={t('detail.cancel')}
-        message={t('detail.confirmCancel')}
-      />
-
-      <ConfirmDialog
-        isOpen={confirm === 'DOCUMENT'}
-        onClose={() => setConfirm(null)}
-        onConfirm={removeDocument}
-        title={t('detail.removeDocument')}
-        message={t('detail.confirmRemoveDocument')}
-      />
+      {/* Suspending, reinstating and cancelling each need a reason, which goes on the history (FR-CON-14, 15, 18). */}
+      <Modal
+        isOpen={reasonFor !== null}
+        onClose={() => setReasonFor(null)}
+        title={reasonFor === 'SUSPENDED' ? t('detail.suspend') : reasonFor === 'ACTIVE' ? t('detail.reinstate') : t('detail.cancel')}
+      >
+        <p>
+          {reasonFor === 'SUSPENDED'
+            ? t('detail.confirmSuspend')
+            : reasonFor === 'ACTIVE'
+              ? t('detail.confirmReinstate')
+              : t('detail.confirmCancel')}
+        </p>
+        <TextareaInput
+          label={t('detail.reasonLabel')}
+          value={reason}
+          maxLength={500}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <div className={styles.modalActions}>
+          <Button variant="outline" onClick={() => setReasonFor(null)}>
+            {tc('action.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => reasonFor && submitStatus(reasonFor, reason.trim())}
+            disabled={actions.loading || reason.trim() === ''}
+          >
+            {t('detail.confirmReason')}
+          </Button>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         isOpen={pendingDelete !== null}

@@ -60,8 +60,17 @@ export const contractService = {
     const response = await apiClient.post(`/${tenantSlug}/contracts/${id}/document`, form);
     return response.data;
   },
-  removeDocument: async (tenantSlug: string, id: string) => {
-    const response = await apiClient.delete(`/${tenantSlug}/contracts/${id}/document`);
+  /** FR-CON-11: one call for every status change; the server checks the move, the permission and the reason. */
+  changeStatus: async (tenantSlug: string, id: string, status: string, reason?: string) => {
+    const response = await apiClient.post(`/${tenantSlug}/contracts/${id}/status`, { status, reason });
+    return response.data;
+  },
+  /**
+   * A signed document is read through the API, which checks the permission and the
+   * contract's scope (FR-CON-19); it is not a public file.
+   */
+  downloadDocument: async (tenantSlug: string, id: string, documentId: string): Promise<Blob> => {
+    const response = await apiClient.get(`/${tenantSlug}/contracts/${id}/documents/${documentId}/download`, { responseType: 'blob' });
     return response.data;
   },
 };

@@ -106,9 +106,8 @@ export function useContractActions() {
     refreshFromDeal: (id: string) => call((slug) => contractService.performAction(slug, id, 'refresh-from-deal')),
     updateContract: (id: string, data: any) =>
       call((slug) => contractService.updateContract(slug, id, data)),
-    activateContract: (id: string) => call((slug) => contractService.performAction(slug, id, 'activate')),
-    cancelContract: (id: string, reason?: string) =>
-      call((slug) => contractService.performAction(slug, id, 'cancel', { reason })),
+    changeStatus: (id: string, status: string, reason?: string) =>
+      call((slug) => contractService.changeStatus(slug, id, status, reason)),
     renewContract: (id: string, data?: any) =>
       call((slug) => contractService.performAction(slug, id, 'renew', data)),
     addPayment: (id: string, data: any) => call((slug) => contractService.addPayment(slug, id, data)),
@@ -120,7 +119,8 @@ export function useContractActions() {
       call((slug) => contractService.deletePayment(slug, id, paymentId)),
     uploadDocument: (id: string, file: File) =>
       call((slug) => contractService.uploadDocument(slug, id, file)),
-    removeDocument: (id: string) => call((slug) => contractService.removeDocument(slug, id)),
+    downloadDocument: (id: string, documentId: string) =>
+      call((slug) => contractService.downloadDocument(slug, id, documentId)),
     loading,
     error,
   };
