@@ -1,0 +1,286 @@
+/* ============================================================================
+ * RenewalsContent
+ * Hand-rolled table in the grammar of the contracts and payments lists, so they
+ * do not look like they came from different products. Narrow screens scroll the
+ * table inside its own container, never the page (NFR-USE-03).
+ * ========================================================================= */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.breadcrumb {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  letter-spacing: var(--font-letter-spacing-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.card {
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 0 0 1px var(--border-hairline);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  background-color: var(--color-surface-container-low);
+}
+
+.filters > * {
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+
+.filterCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  min-height: 40px;
+}
+
+/* ---------------------------------------------------------------- tabs */
+
+.tabs {
+  padding: 0 var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-surface-container-high, #e5e7eb);
+  color: var(--text-secondary);
+}
+
+.chipNegotiation {
+  background: var(--color-info-bg, #dbeafe);
+  color: var(--color-info-text, #1e40af);
+}
+
+.chipRenewed {
+  background: var(--color-success-bg, #dcfce7);
+  color: var(--color-success-text, #166534);
+}
+
+.chipNotRenewing {
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning-text, #92400e);
+}
+
+.stateCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.stateNote {
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  max-width: 220px;
+}
+
+.inlineLink {
+  font-size: var(--font-size-label-sm);
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.days {
+  display: block;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+}
+
+.daysSoon {
+  color: var(--color-warning-text, #92400e);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+/* ---------------------------------------------------------------- table */
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.table th {
+  text-align: left;
+  padding: 0 var(--spacing-lg);
+  height: 40px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-color: var(--color-surface-container-low);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+  padding: var(--spacing-base) var(--spacing-lg);
+  height: 56px;
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+  font-size: var(--font-size-body-md);
+  color: var(--text-primary);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover td {
+  background-color: var(--color-surface-container-low);
+}
+
+.numeric {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-tertiary);
+}
+
+.contractLink {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.contractLink:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.loadingCell {
+  text-align: center;
+  padding: 20px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl, 48px) var(--spacing-md);
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--text-tertiary);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--font-size-title-md, 1.125rem);
+  color: var(--text-primary);
+}
+
+.emptyMessage {
+  margin: 0;
+  color: var(--text-secondary);
+}

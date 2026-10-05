@@ -49,6 +49,11 @@
     "team": {
       "label": "Shitësit",
       "everyone": "Të gjithë"
+    },
+    "contract": {
+      "CONTRACT_END": "Kontrata mbaron",
+      "CONTRACT_RENEWAL": "Rinovo deri",
+      "itemLabel": "{{kind}}: kontrata {{number}}, {{company}}"
     }
   },
   "detail": {

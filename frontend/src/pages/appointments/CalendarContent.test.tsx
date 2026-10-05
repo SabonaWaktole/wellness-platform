@@ -7,7 +7,7 @@ import { appointmentService } from '../../services/appointmentService';
 import { followUpService } from '../../services/followUpService';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ToastProvider } from '../../components/ui/Toast';
-import type { CalendarFeed, CalendarItem } from '../../types/calendar';
+import type { CalendarFeed, CalendarItem, ContractCalendarItem } from '../../types/calendar';
 
 vi.mock('../../services/calendarService', () => ({ calendarService: { feed: vi.fn() } }));
 vi.mock('../../services/appointmentService', () => ({
@@ -50,13 +50,29 @@ const item = (id: string, overrides: Partial<CalendarItem> = {}): CalendarItem =
   ...overrides,
 });
 
-const feedOf = (items: CalendarItem[] = [], overdue: CalendarItem[] = []): CalendarFeed => ({
+const feedOf = (items: CalendarItem[] = [], overdue: CalendarItem[] = [], contractItems: ContractCalendarItem[] = []): CalendarFeed => ({
   from: '',
   to: '',
   items,
   itemsTruncated: false,
   overdue,
   overdueTruncated: false,
+  contractItems,
+  contractItemsTruncated: false,
+});
+
+const contractDate = (kind: 'CONTRACT_END' | 'CONTRACT_RENEWAL', date: string, overrides: Partial<ContractCalendarItem> = {}): ContractCalendarItem => ({
+  id: `k1:${kind === 'CONTRACT_END' ? 'END' : 'RENEWAL'}`,
+  kind,
+  date,
+  contractId: 'k1',
+  number: 'CTR-2026-0042',
+  contractStatus: 'ACTIVE',
+  clientId: 'c1',
+  companyName: 'Kafe Blloku',
+  assignedUserId: 'u-a',
+  assignedUserName: 'Besa Test',
+  ...overrides,
 });
 
 const signIn = (permissions: Record<string, string | boolean>, locale = 'en-US') =>
@@ -72,6 +88,7 @@ const renderCalendar = (search = '') =>
     <ToastProvider>
       <MemoryRouter initialEntries={[`/acme/appointments${search}`]}>
         <Routes>
+          <Route path="/:tenantSlug/contracts/:id" element={<div>contract page</div>} />
           <Route
             path="/:tenantSlug/appointments"
             element={
@@ -401,6 +418,50 @@ describe('Sales calendar (M2 Slice 12)', () => {
     expect(await screen.findByText('Loading calendar...')).toBeInTheDocument();
     finish(feedOf());
     await waitFor(() => expect(screen.queryByText('Loading calendar...')).not.toBeInTheDocument());
+  });
+
+  describe('contract end and renewal dates (M3 Slice 11, FR-REN-11)', () => {
+    it('FR-REN-11 a contract ending on 28 February shows on that day in the month, as a read-only item that opens the contract', async () => {
+      vi.mocked(calendarService.feed).mockResolvedValue(feedOf([], [], [contractDate('CONTRACT_END', '2027-02-28')]));
+      renderCalendar('?view=month&date=2027-02-10');
+
+      const chip = await screen.findByRole('button', { name: 'Contract ends: contract CTR-2026-0042, Kafe Blloku' });
+      expect(chip.closest('[data-day]')).toHaveAttribute('data-day', '2027-02-28');
+      // Not an appointment: there is nothing to drag, complete or cancel.
+      expect(chip.closest('[draggable="true"]')).toBeNull();
+      fireEvent.click(chip);
+      expect(await screen.findByText('contract page')).toBeInTheDocument();
+    });
+
+    it('FR-REN-11 the week view puts the dates with the day heading, and the agenda lists them on their day', async () => {
+      vi.mocked(calendarService.feed).mockResolvedValue(
+        feedOf([], [], [contractDate('CONTRACT_END', '2026-10-14'), contractDate('CONTRACT_RENEWAL', '2026-10-14', { id: 'k2:RENEWAL', contractId: 'k2', number: 'CTR-2026-0043', companyName: 'Hotel Vila' })])
+      );
+      const { unmount } = renderCalendar('?view=week&date=2026-10-14');
+      expect(await screen.findByRole('button', { name: /Contract ends: contract CTR-2026-0042/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Renew by: contract CTR-2026-0043, Hotel Vila/ })).toBeInTheDocument();
+      // A week with only contract dates is not an empty week.
+      expect(screen.queryByText(/Nothing planned/)).not.toBeInTheDocument();
+      unmount();
+
+      renderCalendar('?view=agenda&date=2026-10-14');
+      const day = await screen.findByRole('region', { name: /October 14/ });
+      expect(within(day).getAllByRole('button')).toHaveLength(2);
+    });
+
+    it('FR-REN-11 a day with only a contract date is listed in the agenda, and the item opens its contract', async () => {
+      vi.mocked(calendarService.feed).mockResolvedValue(feedOf([], [], [contractDate('CONTRACT_RENEWAL', '2026-10-08')]));
+      renderCalendar('?view=agenda&date=2026-10-07');
+      fireEvent.click(await screen.findByRole('button', { name: /Renew by: contract CTR-2026-0042/ }));
+      expect(await screen.findByText('contract page')).toBeInTheDocument();
+    });
+
+    it('a feed without contract items (an older server) still draws', async () => {
+      const { contractItems: _omitted, ...withoutContracts } = feedOf([item('a')]);
+      vi.mocked(calendarService.feed).mockResolvedValue(withoutContracts as CalendarFeed);
+      renderCalendar('?view=agenda&date=2026-10-07');
+      expect(await screen.findByText(/Meeting · Company a/)).toBeInTheDocument();
+    });
   });
 
   it('says when a long range was cut', async () => {

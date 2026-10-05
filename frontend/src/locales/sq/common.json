@@ -107,7 +107,8 @@
     "settings": "Cilësimet",
     "tenants": "Klientë biznesi",
     "people": "Përdoruesit",
-    "payments": "Pagesat"
+    "payments": "Pagesat",
+    "renewals": "Rinovimet"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

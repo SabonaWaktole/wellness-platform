@@ -49,6 +49,11 @@
     "team": {
       "label": "Salespeople",
       "everyone": "Everyone"
+    },
+    "contract": {
+      "CONTRACT_END": "Contract ends",
+      "CONTRACT_RENEWAL": "Renew by",
+      "itemLabel": "{{kind}}: contract {{number}}, {{company}}"
     }
   },
   "detail": {

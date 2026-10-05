@@ -94,6 +94,8 @@
     "notes": "Shënime",
     "note": "Shënim",
     "renewedFromContractId": "Rinovuar nga",
+    "notRenewingReasonId": "Arsyeja e mos-rinovimit",
+    "notRenewingNote": "Shënimi i mos-rinovimit",
     "renewalDealId": "Marrëveshja e rinovimit",
     "renewedIntoContractId": "Rinovuar në",
     "renewalOfContractId": "Rinovon kontratën",

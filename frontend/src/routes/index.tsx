@@ -47,6 +47,7 @@ import { InvoiceDetail } from '../pages/invoices/InvoiceDetail';
 import { ContractList } from '../pages/contracts/ContractList';
 import { ContractDetail } from '../pages/contracts/ContractDetail';
 import { ContractFormPage } from '../pages/contracts/ContractFormPage';
+import { Renewals } from '../pages/renewals/Renewals';
 import { PaymentsOverview } from '../pages/payments/PaymentsOverview';
 import { DealsPage } from '../pages/deals/DealsPage';
 import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
@@ -539,6 +540,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="payments.view">
               <PaymentsOverview />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The Renewals screen (M3 Slice 11, FR-REN-05).
+        path: 'renewals',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="contracts.validity.view">
+              <Renewals />
             </RequirePermission>
           </ProtectedRoute>
         ),

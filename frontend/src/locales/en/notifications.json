@@ -28,7 +28,7 @@
     "INVITATION_ACCEPTED": "{{email}} accepted your invitation and joined the team",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract expires in {{daysRemaining}} days",
+    "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract {{number}} ends on {{endsAt}}, in {{daysRemaining}} days. Open it to start the renewal.",
     "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired",
     "CONTRACT_SUSPENDED": "{{actor}} suspended {{clientName}}'s {{planName}} contract. Reason: {{reason}}",
     "CONTRACT_CANCELLED": "{{actor}} cancelled {{clientName}}'s {{planName}} contract. Reason: {{reason}}",
