@@ -1046,6 +1046,46 @@
       "id": "FR-PAY-10",
       "priority": "Must",
       "requirement": "The contract shall show a payment summary: total of instalments, received, outstanding, next due date and the number and amount overdue, calculated from its instalments."
+    },
+    {
+      "id": "FR-CON-12",
+      "priority": "Must",
+      "requirement": "Marking a contract Pending Signature shall require start date, end date, billing period and price, and shall lock the commercial values (FR-CON-04)."
+    },
+    {
+      "id": "FR-CON-13",
+      "priority": "Must",
+      "requirement": "Activating a contract shall require the signed document (FR-CON-19). Activation generates the payment schedule (FR-PAY-02) and sets the company status to Client (Milestone 1 Q9) if it is not already."
+    },
+    {
+      "id": "FR-CON-14",
+      "priority": "Must",
+      "requirement": "Suspending and reinstating a contract shall require a reason, which is stored on the status history and shown on the contract. A suspended contract is not valid (FR-CON-20)."
+    },
+    {
+      "id": "FR-CON-15",
+      "priority": "Must",
+      "requirement": "Cancelling a contract shall require a reason. Future instalments that are still Not Invoiced are removed. Instalments already invoiced, partly paid or paid stay and must be settled or corrected by an authorized user."
+    },
+    {
+      "id": "FR-CON-18",
+      "priority": "Must",
+      "requirement": "Every status change shall be written to the contract status history with who (or \"system\"), when, the old and new status and the reason, and shown on the contract."
+    },
+    {
+      "id": "FR-CON-19",
+      "priority": "Must",
+      "requirement": "The signed contract document shall be attached to the contract as a PDF (maximum 15 MB, checked by content, not by file name). Replacing it keeps the earlier file as a previous version with date and user. Viewing and downloading requires \"Commercial details: view\" and access to the contract."
+    },
+    {
+      "id": "FR-PAY-01",
+      "priority": "Must",
+      "requirement": "Winning a deal, creating a contract and activating a contract shall be separate from confirming payment: winning a deal never creates or changes an instalment, and no user can mark an instalment Paid because of a deal or contract status."
+    },
+    {
+      "id": "NFR-SEC-06",
+      "priority": "Must",
+      "requirement": "Contract status transitions, payment permissions, payment status rules, data scope, field removal and document access shall be enforced on the server for every request. The signed document is validated by content, size and type."
     }
   ]
 }
