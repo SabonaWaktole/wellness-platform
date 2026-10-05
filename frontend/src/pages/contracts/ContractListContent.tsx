@@ -19,6 +19,7 @@ import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useDateFormat } from '../../hooks/useDateFormat';
 import type { Contract } from '../../types/contract';
+import { ValidityBadge } from '../../components/contracts/ValidityBadge';
 import { contractReference } from '../../utils/contractReference';
 
 /**
@@ -126,7 +127,8 @@ export const ContractListContent: React.FC = () => {
    */
   const renderExpiryHint = useCallback(
     (contract: Contract) => {
-      if (contract.status !== 'ACTIVE') return null;
+      // Reception's view has no countdown; its badge says what matters.
+      if (contract.status !== 'ACTIVE' || contract.daysUntilExpiry === undefined) return null;
 
       const days = contract.daysUntilExpiry;
       if (days < 0) {
@@ -247,8 +249,9 @@ export const ContractListContent: React.FC = () => {
                 <tr>
                   <th>{t('list.columnId')}</th>
                   <th>{t('list.columnClient')}</th>
-                  <th>{t('list.columnPlan')}</th>
+                  {seesValue && <th>{t('list.columnPlan')}</th>}
                   <th>{t('list.columnTerm')}</th>
+                  <th>{t('list.columnValidity')}</th>
                   {seesValue && <th>{t('list.columnValue')}</th>}
                   {seesPayments && <th>{t('list.columnOwed')}</th>}
                   <th>{t('list.columnStatus')}</th>
@@ -258,7 +261,7 @@ export const ContractListContent: React.FC = () => {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>
+                    <td colSpan={9} style={{ textAlign: 'center', padding: '20px' }}>
                       {tc('state.loading')}
                     </td>
                   </tr>
@@ -277,12 +280,14 @@ export const ContractListContent: React.FC = () => {
                       </td>
                       <td>
                         <span className={styles.clientName}>
-                          {contract.clientName || t('list.unknownClient')}
+                          {contract.clientName || contract.company?.name || t('list.unknownClient')}
                         </span>
                       </td>
-                      <td>
-                        <span className={styles.planName}>{contract.planName}</span>
-                      </td>
+                      {seesValue && (
+                        <td>
+                          <span className={styles.planName}>{contract.planName}</span>
+                        </td>
+                      )}
                       <td>
                         <div className={styles.termCell}>
                           <span className={styles.mutedText}>
@@ -291,6 +296,7 @@ export const ContractListContent: React.FC = () => {
                           {renderExpiryHint(contract)}
                         </div>
                       </td>
+                      <td>{contract.validity ? <ValidityBadge validity={contract.validity} /> : '—'}</td>
                       {seesValue && (
                         <td>
                           <span className={styles.amountText}>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ValidityBadge } from '../../components/contracts/ValidityBadge';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -398,16 +399,26 @@ export const ContractDetailContent: React.FC = () => {
                   <button
                     type="button"
                     className={styles.linkValue}
-                    onClick={() => navigate(`/${tenantSlug}/clients/${contract.clientId}`)}
+                    onClick={() => navigate(`/${tenantSlug}/clients/${contract.clientId ?? contract.company?.id}`)}
                   >
-                    {contract.clientName}
+                    {contract.clientName ?? contract.company?.name}
                   </button>
                 </dd>
               </div>
-              <div className={styles.termRow}>
-                <dt className={styles.termLabel}>{t('detail.plan')}</dt>
-                <dd className={styles.termValue}>{contract.planName}</dd>
-              </div>
+              {contract.validity && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('list.columnValidity')}</dt>
+                  <dd className={styles.termValue}>
+                    <ValidityBadge validity={contract.validity} />
+                  </dd>
+                </div>
+              )}
+              {contract.planName !== undefined && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.plan')}</dt>
+                  <dd className={styles.termValue}>{contract.planName}</dd>
+                </div>
+              )}
               {/* The deal and offer it came from, the package and its services (FR-CON-06). Absent without commercial.view. */}
               {contract.dealId && (
                 <div className={styles.termRow}>

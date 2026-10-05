@@ -31,7 +31,7 @@ const signIn = (permissions: Record<string, string>) =>
     user: { userId: 'u1', email: 'r@example.com', role: 'STAFF', tenantId: 't1', permissions },
   } as any);
 
-const renderTab = async (response: unknown) => {
+const renderTab = async (response: unknown, waitFor: RegExp = /Gold/) => {
   vi.mocked(useContractsModule.useContracts).mockReturnValue({
     fetchClientContracts: vi.fn().mockResolvedValue(response),
     loading: false,
@@ -41,7 +41,7 @@ const renderTab = async (response: unknown) => {
       <ClientContractsTab clientId="client-1" />
     </MemoryRouter>
   );
-  await screen.findAllByText(/Gold/);
+  await screen.findAllByText(waitFor);
 };
 
 describe('ClientContractsTab (FR-RBAC-06, 07)', () => {
@@ -56,6 +56,18 @@ describe('ClientContractsTab (FR-RBAC-06, 07)', () => {
     // Not even "all settled": whether a client has paid is payment data.
     expect(screen.queryByText(/All payments settled|pagesat janë mbyllur|papaguar/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /new contract|kontratë e re/i })).toBeNull();
+  });
+
+  it('FR-CON-21: shows Reception the server\'s badge, with no plan name', async () => {
+    signIn(RECEPTION);
+    const { activePlanName: _plan, ...summary } = receptionResponse.summary;
+    await renderTab({
+      contracts: [{ id: 'c1', number: 'CTR-2026-0001', status: 'ACTIVE', startsAt: '2026-01-01', endsAt: '2026-12-31' }],
+      summary: { ...summary, validity: { status: 'VALID', reason: null, startsOn: '2026-01-01', endsOn: '2026-12-31', daysLeft: 90 } },
+    }, /CTR-2026-0001/);
+
+    expect((await screen.findByTestId('validity-badge')).textContent).toMatch(/^Valid until/);
+    expect(screen.queryByText(/Gold|undefined/)).toBeNull();
   });
 
   it('offers the Administrator the new-contract action', async () => {

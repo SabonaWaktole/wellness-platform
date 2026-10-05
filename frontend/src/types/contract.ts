@@ -67,6 +67,19 @@ export interface ContractTerms {
 }
 
 /**
+ * The validity badge of a contract or a company (FR-CON-21, FR-CON-22), decided
+ * by the server. `reason` is a contract status, `NOT_STARTED` or `NO_CONTRACT`.
+ */
+export interface ValidityBadgeData {
+  status: 'VALID' | 'EXPIRING_SOON' | 'NOT_VALID';
+  reason: string | null;
+  /** `YYYY-MM-DD`; null when the company has no contract. */
+  startsOn: string | null;
+  endsOn: string | null;
+  daysLeft: number | null;
+}
+
+/**
  * A contract as the API returns it to this viewer (FR-RBAC-06). Without
  * `contracts.manage` only the validity fields are present (Reception's view);
  * `amount` needs `commercial.view` and `paymentSummary` needs `payments.view`.
@@ -76,10 +89,16 @@ export interface ContractTerms {
 export interface Contract {
   id: string;
   tenantId?: string;
-  clientId: string;
+  /** Absent for Reception, who gets `company` instead (FR-RBAC-21). */
+  clientId?: string;
   clientName?: string;
+  /** Reception's view names the company this way. */
+  company?: { id: string; name: string };
+  /** The server's verdict for today; sent on every read. */
+  validity?: ValidityBadgeData;
   assignedUserId?: string | null;
-  planName: string;
+  /** A commercial field: absent for Reception. */
+  planName?: string;
   status: ContractStatus;
   /**
    * Price for ONE billing period, not for the whole term. A two-decimal
@@ -120,8 +139,8 @@ export interface Contract {
   createdAt?: string;
   updatedAt?: string;
   paymentSummary?: ContractPaymentSummary;
-  /** Negative once the term has lapsed. */
-  daysUntilExpiry: number;
+  /** Negative once the term has lapsed. Absent for Reception, who gets `validity.daysLeft`. */
+  daysUntilExpiry?: number;
 }
 
 export interface ContractPayment {
@@ -182,7 +201,10 @@ export interface ClientContracts {
   summary: {
     hasActiveContract: boolean;
     activeContractId: string | null;
-    activePlanName: string | null;
+    /** A commercial field: absent without `commercial.view`. */
+    activePlanName?: string | null;
+    /** The company's one badge (FR-CON-22). */
+    validity?: ValidityBadgeData;
     activeEndsAt: string | null;
     daysUntilExpiry: number | null;
     totalContracts: number;
