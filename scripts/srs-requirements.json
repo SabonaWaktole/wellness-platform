@@ -1166,6 +1166,21 @@
       "id": "FR-AUD-13",
       "priority": "Should",
       "requirement": "Exports of payments and performance (FR-PAY-14, FR-PRF-09) shall be recorded in the audit log with who, when and the filters used. Viewing a dashboard is not audited."
+    },
+    {
+      "id": "FR-REN-06",
+      "priority": "Must",
+      "requirement": "\"Start renewal\" shall create a deal of type Renewal for the company, linked to the contract, owned by the responsible salesperson, in the stage Interested (editable), with the company data filled in. The salesperson then prices and offers it with the Milestone 2 flow."
+    },
+    {
+      "id": "FR-REN-07",
+      "priority": "Must",
+      "requirement": "When a Renewal deal is won, \"Create contract\" (FR-CON-01) shall pre-fill the start date as the day after the previous end date and link the new contract to the previous one (previous term and renewed into). The previous contract stays unchanged in its own status and history."
+    },
+    {
+      "id": "FR-REN-10",
+      "priority": "Must",
+      "requirement": "Contracts shall never renew automatically. A renewal always goes through a deal and an offer."
     }
   ]
 }
