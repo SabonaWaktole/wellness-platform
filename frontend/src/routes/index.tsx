@@ -69,8 +69,9 @@ import { TenantGuard } from './TenantGuard';
 // of the whole tenant, anything narrower (OWN/TEAM) or absent is the staff
 // dashboard. We will refine this as we build out the AppShell properly.
 import { usePermissionScope } from '../hooks/usePermission';
+import { DashboardLanding } from '../pages/dashboard/DashboardLanding';
 
-const DashboardSelector = () => {
+const LegacyDashboardSelector = () => {
   const scope = usePermissionScope('companies.view');
 
   if (scope === 'ALL') {
@@ -78,6 +79,10 @@ const DashboardSelector = () => {
   }
   return <StaffShell />;
 };
+
+// M3 Slice 13 (FR-DSH-01): each role lands on its own dashboard. The Sales User and Sales Manager have
+// theirs; Reception goes to the company search; the other roles keep the dashboard above until Slice 14.
+const DashboardSelector = () => <DashboardLanding fallback={<LegacyDashboardSelector />} />;
 
 export const routes: RouteObject[] = [
   /*

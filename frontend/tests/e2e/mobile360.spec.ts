@@ -39,6 +39,23 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
     await expectNoHorizontalOverflow(page, 'forgot-password');
   });
 
+  // M3 Slice 13: the Sales User and Sales Manager dashboards are the landing page of those roles, so they
+  // are opened by signing in as them (seed:uat creates both). Set the passwords to run them.
+  for (const [role, emailVar, passwordVar, fallbackEmail] of [
+    ['Sales User', 'E2E_SALES_USER_EMAIL', 'E2E_SALES_USER_PASSWORD', 'uat.sales.a@wellness-albania.al'],
+    ['Sales Manager', 'E2E_MANAGER_EMAIL', 'E2E_MANAGER_PASSWORD', 'uat.manager@wellness-albania.al'],
+  ] as const) {
+    test(`NFR-USE-02 FR-DSH-01 the ${role} dashboard has no horizontal overflow`, async ({ page }) => {
+      const password = process.env[passwordVar];
+      test.skip(!password, `Set ${passwordVar} to the seeded ${role} password.`);
+      const login = await page.request.post('/api/auth/login', { data: { email: process.env[emailVar] ?? fallbackEmail, password } });
+      expect(login.ok(), `sign-in failed: ${login.status()}`).toBe(true);
+      await page.goto(`/${TENANT}/dashboard`);
+      await expect(page.getByRole('heading', { level: 1, name: /My dashboard|Paneli im|Sales team dashboard|Paneli i ekipit/ })).toBeVisible();
+      await expectNoHorizontalOverflow(page, `${role} dashboard`);
+    });
+  }
+
   test.describe('signed in as the Administrator', () => {
     test.use({ storageState: ADMIN_STATE });
     let companyId: string;

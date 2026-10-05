@@ -34,10 +34,10 @@ const signIn = () =>
     isAuthenticated: true,
   });
 
-const renderPage = () =>
+const renderPage = (path = '/acme/renewals') =>
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/acme/renewals']}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/:tenantSlug/renewals" element={<RenewalsContent />} />
           <Route path="/:tenantSlug/contracts/:id" element={<div>contract page</div>} />
@@ -53,6 +53,19 @@ describe('RenewalsContent (FR-REN-05, FR-REN-08, FR-REN-09)', () => {
     signIn();
     (renewalService.fetchRenewals as any).mockResolvedValue(page([row()]));
     (lookupService.list as any).mockResolvedValue([{ id: 'r1', nameSq: 'Çmimi', nameEn: 'Price' }]);
+  });
+
+  it.each([
+    ['30', '30'],
+    ['45', '60'],
+    ['90', '90'],
+    ['120', '90'],
+    ['RECENTLY_EXPIRED', 'RECENTLY_EXPIRED'],
+  ])('FR-DSH-05 opened from a dashboard figure with %s days, it starts on the tab %s that covers it, for that salesperson', async (requested, tab) => {
+    renderPage(`/acme/renewals?window=${requested}&salespersonId=u-b`);
+    await waitFor(() =>
+      expect(renewalService.fetchRenewals).toHaveBeenCalledWith('acme', expect.objectContaining({ window: tab, assignedUserId: 'u-b' }), 1, 25)
+    );
   });
 
   it('FR-REN-05 lists the contracts with end date, days remaining, salesperson, monthly price and renewal state', async () => {

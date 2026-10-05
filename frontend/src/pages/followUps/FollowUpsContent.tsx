@@ -33,11 +33,13 @@ export const FollowUpsContent: React.FC = () => {
   const seesTeam = calendarScope === 'TEAM' || calendarScope === 'ALL';
   const { staff, fetchStaff } = useTeam();
 
-  const [tab, setTab] = useState<Tab>('mine');
+  // A dashboard figure opens the team's overdue follow-ups, or a salesperson's (M3 Slice 13, FR-DSH-05).
+  const asksForTeam = seesTeam && (searchParams.get('overdueOnly') === 'true' || searchParams.get('assignedUserId') !== null);
+  const [tab, setTab] = useState<Tab>(asksForTeam ? 'team' : 'mine');
   const [mine, setMine] = useState<FollowUpGroups | null>(null);
   const [team, setTeam] = useState<FollowUp[] | null>(null);
-  const [salesperson, setSalesperson] = useState('');
-  const [overdueOnly, setOverdueOnly] = useState(false);
+  const [salesperson, setSalesperson] = useState(searchParams.get('assignedUserId') ?? '');
+  const [overdueOnly, setOverdueOnly] = useState(searchParams.get('overdueOnly') === 'true');
   const [loadFailed, setLoadFailed] = useState(false);
 
   const loadMine = useCallback(async () => {

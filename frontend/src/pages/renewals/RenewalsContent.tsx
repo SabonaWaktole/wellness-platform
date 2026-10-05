@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { RefreshCw, Search } from 'lucide-react';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
@@ -27,6 +27,17 @@ import styles from './RenewalsContent.module.css';
 
 const PAGE_SIZE = 25;
 
+/**
+ * The tab a link asks for. The workspace's "expiring soon" window can be any number of days, the tabs
+ * are 30, 60 and 90: the smallest tab that covers it, so nothing expiring soon is missing from the list.
+ */
+const windowFor = (requested: string | null): RenewalWindow => {
+  if (requested === 'RECENTLY_EXPIRED') return requested;
+  const days = Number(requested);
+  if (!requested || !Number.isFinite(days)) return '30';
+  return days <= 30 ? '30' : days <= 60 ? '60' : '90';
+};
+
 /** A contract this close to its end is picked out in the list. */
 const SOON_DAYS = 14;
 
@@ -51,12 +62,14 @@ export const RenewalsContent: React.FC = () => {
   const { format: formatMoney } = useMoneyFormat();
   const toast = useToast();
   const { tenantSlug } = useParams();
+  // A dashboard figure opens the tab for its window and salesperson (M3 Slice 13, FR-DSH-05).
+  const [startFilters] = useSearchParams();
   const navigate = useNavigate();
   const { staff, fetchStaff } = useTeam();
 
-  const [window, setWindow] = useState<RenewalWindow>('30');
+  const [window, setWindow] = useState<RenewalWindow>(() => windowFor(startFilters.get('window')));
   const [query, setQuery] = useState('');
-  const [salespersonId, setSalespersonId] = useState('');
+  const [salespersonId, setSalespersonId] = useState(startFilters.get('salespersonId') ?? '');
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<RenewalsPage | null>(null);
   const [loading, setLoading] = useState(false);

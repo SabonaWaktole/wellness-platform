@@ -50,9 +50,9 @@ const setPermissions = (permissions: Record<string, string | boolean>) =>
     isAuthenticated: true,
   } as any);
 
-const renderList = () =>
+const renderList = (path = '/acme/pipeline/list') =>
   render(
-    <MemoryRouter initialEntries={['/acme/pipeline/list']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/:tenantSlug/pipeline/list" element={<DealListContent />} />
       </Routes>
@@ -80,6 +80,13 @@ describe('Deal list (FR-DEAL-11)', () => {
     await screen.findAllByText('Deal 1');
     fireEvent.change(screen.getByRole('combobox', { name: 'Salesperson' }), { target: { value: 'u-b' } });
     await waitFor(() => expect(lastParams()).toMatchObject({ ownerUserId: 'u-b', page: 1 }));
+  });
+
+  it('FR-DSH-05 opened from a dashboard figure, the list starts with that stage and salesperson', async () => {
+    renderList('/acme/pipeline/list?stage=NEW_LEAD&stage=CONTACTED&stage=nonsense&ownerUserId=u-b');
+    await screen.findAllByText('Deal 1');
+    expect(lastParams()).toMatchObject({ stage: ['NEW_LEAD', 'CONTACTED'], ownerUserId: 'u-b' });
+    expect(screen.getByRole('combobox', { name: 'Salesperson' })).toHaveValue('u-b');
   });
 
   it('FR-DEAL-12 a deal with a follow-up due yesterday shows the overdue marker; a quiet deal the stale one', async () => {

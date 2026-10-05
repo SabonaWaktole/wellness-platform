@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Briefcase, Plus, Search } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
@@ -44,6 +44,8 @@ const amountOrUndefined = (value: string) => (AMOUNT.test(value.trim()) ? value.
 export const DealListContent: React.FC = () => {
   const { t, i18n } = useTranslation('deals');
   const { tenantSlug } = useParams();
+  // A dashboard figure opens the list already filtered: `?stage=NEW_LEAD&stage=CONTACTED&ownerUserId=…` (M3 Slice 13, FR-DSH-05).
+  const [startFilters] = useSearchParams();
   const navigate = useNavigate();
   const statusLabel = useStatusLabel();
   const text = useDealText();
@@ -54,9 +56,9 @@ export const DealListContent: React.FC = () => {
   const { staff, fetchStaff } = useTeam();
 
   const [query, setQuery] = useState('');
-  const [stages, setStages] = useState<DealStage[]>([]);
+  const [stages, setStages] = useState<DealStage[]>(() => startFilters.getAll('stage').filter((stage): stage is DealStage => (DEAL_STAGES as readonly string[]).includes(stage)));
   const [types, setTypes] = useState<DealType[]>([]);
-  const [ownerUserId, setOwnerUserId] = useState('');
+  const [ownerUserId, setOwnerUserId] = useState(startFilters.get('ownerUserId') ?? '');
   const [businessTypeId, setBusinessTypeId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [cityId, setCityId] = useState('');
