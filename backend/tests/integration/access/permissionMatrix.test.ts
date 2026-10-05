@@ -273,6 +273,12 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).patch(`/api/${tenantSlug}/lookups/risk-levels/nonexistent`).set('Authorization', `Bearer ${t}`).send({}),
     },
     {
+      label: 'settings.manage — PATCH /settings/contracts',
+      permissionKey: 'settings.manage',
+      request: (t) =>
+        request(app).patch(`/api/${tenantSlug}/settings/contracts`).set('Authorization', `Bearer ${t}`).send({ expiringSoonDays: 30 }),
+    },
+    {
       label: 'settings.manage — PATCH /status-labels/contract/:key',
       permissionKey: 'settings.manage',
       request: (t) =>

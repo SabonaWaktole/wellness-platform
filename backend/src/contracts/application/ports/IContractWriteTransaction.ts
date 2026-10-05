@@ -1,6 +1,7 @@
 import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
+import { IContractSettingsStore } from './IContractSettingsStore';
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 
 /** The repositories a contract write goes through, all on one connection. */
@@ -8,6 +9,8 @@ export interface ContractWriteRepos {
   contractRepo: IContractRepository;
   paymentRepo: IContractPaymentRepository;
   historyRepo: IContractStatusHistoryRepository;
+  /** The workspace's contract settings, written with their audit entry (M3 Slice 3). */
+  settingsStore: IContractSettingsStore;
   /** Same connection as the other three — see IAuditTrail for the pattern. */
   auditTrail: IAuditTrail;
 }

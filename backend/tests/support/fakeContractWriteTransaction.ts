@@ -5,6 +5,7 @@ import {
 import { IContractRepository } from '../../src/contracts/domain/IContractRepository';
 import { IContractPaymentRepository } from '../../src/contracts/domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../src/contracts/domain/IContractStatusHistoryRepository';
+import { IContractSettingsStore } from '../../src/contracts/application/ports/IContractSettingsStore';
 import { IAuditTrail } from '../../src/audit/application/ports/IAuditTrail';
 import { AuditEntry } from '../../src/audit/domain/AuditEntry';
 
@@ -13,6 +14,7 @@ export interface ContractWriteHarness {
   contractRepo: jest.Mocked<IContractRepository>;
   paymentRepo: jest.Mocked<IContractPaymentRepository>;
   historyRepo: jest.Mocked<IContractStatusHistoryRepository>;
+  settingsStore: jest.Mocked<IContractSettingsStore>;
   auditTrail: jest.Mocked<IAuditTrail>;
   /** Every entry handed to auditTrail.record, in call order. */
   recordedAuditEntries: () => AuditEntry[];
@@ -45,17 +47,22 @@ export function makeContractWriteHarness(): ContractWriteHarness {
     save: jest.fn(),
   } as unknown as jest.Mocked<IContractStatusHistoryRepository>;
 
+  const settingsStore = {
+    get: jest.fn(),
+    save: jest.fn(),
+  } as unknown as jest.Mocked<IContractSettingsStore>;
+
   const auditTrail = {
     record: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<IAuditTrail>;
 
   const writeTx: IContractWriteTransaction = {
     run: <T>(work: (repos: ContractWriteRepos) => Promise<T>): Promise<T> =>
-      work({ contractRepo, paymentRepo, historyRepo, auditTrail }),
+      work({ contractRepo, paymentRepo, historyRepo, settingsStore, auditTrail }),
   };
 
   const recordedAuditEntries = () =>
     (auditTrail.record as jest.Mock).mock.calls.map(([entry]: [AuditEntry]) => entry);
 
-  return { writeTx, contractRepo, paymentRepo, historyRepo, auditTrail, recordedAuditEntries };
+  return { writeTx, contractRepo, paymentRepo, historyRepo, settingsStore, auditTrail, recordedAuditEntries };
 }

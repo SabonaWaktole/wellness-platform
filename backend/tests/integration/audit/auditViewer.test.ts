@@ -127,7 +127,7 @@ describe('Audit log viewer (FR-AUD-06, 08)', () => {
 
   it('FR-AUD-12 offers Contract and Payment (instalment) as filter types, and filtering by Payment shows only instalment changes', async () => {
     const res = await as('admin').get('/audit/entity-types').expect(200);
-    expect(res.body.groups.find((group: any) => group.group === 'contracts').types).toEqual(['Contract', 'ContractPayment']);
+    expect(res.body.groups.find((group: any) => group.group === 'contracts').types).toEqual(['Contract', 'ContractPayment', 'ContractSettings']);
     const payments = await as('admin').get('/audit?entityType=ContractPayment').expect(200);
     for (const entry of payments.body.data) expect(entry.entityType).toBe('ContractPayment');
   });

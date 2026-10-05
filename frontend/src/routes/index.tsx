@@ -21,6 +21,7 @@ import { ListsSettingsPage } from '../pages/settings/lists/ListsSettingsPage';
 import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPage';
 import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
+import { ContractSettingsPage } from '../pages/settings/contracts/ContractSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
 import { InventoryList } from '../pages/inventory/InventoryList';
@@ -222,6 +223,16 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="settings.manage">
               <StatusesSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/contracts',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="settings.manage">
+              <ContractSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

@@ -40,6 +40,8 @@ export const AUDITED_ENTITY_TYPES = [
   'Offer',
   // Milestone 2 Slice 10: discount requests and decisions (FR-DSC-11).
   'DiscountApproval',
+  // Milestone 3 Slice 3: the reminder, expiring-soon and payment settings (FR-AUD-11).
+  'ContractSettings',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -57,7 +59,7 @@ export type AuditEntityGroup = (typeof AUDIT_ENTITY_GROUP_KEYS)[number];
 export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types: readonly AuditedEntityType[] }> = [
   { group: 'access', types: ['User', 'Invitation', 'Role', 'Workspace'] },
   { group: 'clients', types: ['Client'] },
-  { group: 'contracts', types: ['Contract', 'ContractPayment'] },
+  { group: 'contracts', types: ['Contract', 'ContractPayment', 'ContractSettings'] },
   {
     group: 'lists',
     types: ['RiskLevel', 'BusinessType', 'Area', 'City', 'FollowUpInterval', 'LostReason', 'ActivityResult', 'StatusLabel'],

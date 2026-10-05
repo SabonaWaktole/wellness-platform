@@ -7,6 +7,7 @@ import {
 import { PrismaContractRepository } from './repositories/PrismaContractRepository';
 import { PrismaContractPaymentRepository } from './repositories/PrismaContractPaymentRepository';
 import { PrismaContractStatusHistoryRepository } from './repositories/PrismaContractStatusHistoryRepository';
+import { PrismaContractSettingsStore } from './PrismaContractSettingsStore';
 import { IAuditTrail } from '../../audit/application/ports/IAuditTrail';
 import { PrismaAuditTrail } from '../../audit/infrastructure/PrismaAuditTrail';
 
@@ -31,6 +32,7 @@ export class PrismaContractWriteTransaction implements IContractWriteTransaction
         contractRepo: new PrismaContractRepository(client),
         paymentRepo: new PrismaContractPaymentRepository(client),
         historyRepo: new PrismaContractStatusHistoryRepository(client),
+        settingsStore: new PrismaContractSettingsStore(client),
         auditTrail: this.auditTrailFor(client),
       });
     });

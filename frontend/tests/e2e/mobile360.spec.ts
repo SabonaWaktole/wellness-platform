@@ -70,6 +70,8 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       ['settings → roles & permissions', () => 'settings/roles'],
       ['settings → audit log', () => 'settings/audit'],
       ['settings → statuses', () => 'settings/statuses'],
+      // M3 Slice 3
+      ['settings → contracts and payments', () => 'settings/contracts'],
       ...LISTS.map((list): [string, () => string] => [`settings → lists → ${list}`, () => `settings/lists/${list}`]),
       ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
       // M2 Slice 5

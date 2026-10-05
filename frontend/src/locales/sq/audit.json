@@ -55,7 +55,8 @@
     "SalesScript": "Skripti i shitjes",
     "Deal": "Marrëveshje",
     "Offer": "Ofertë",
-    "DiscountApproval": "Miratim zbritjeje"
+    "DiscountApproval": "Miratim zbritjeje",
+    "ContractSettings": "Cilësimet e kontratave"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",

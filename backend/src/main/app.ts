@@ -236,6 +236,9 @@ import { PrismaInteractionWriteTransaction } from '../clients/infrastructure/rep
 import { PrismaSalesSettingsStore } from '../deals/infrastructure/PrismaSalesSettingsStore';
 import { GetSalesSettingsUseCase, UpdateSalesSettingsUseCase } from '../deals/application/use-cases/SalesSettingsUseCases';
 import { createSalesSettingsRouter } from '../deals/interfaces/http/salesSettingsRoutes';
+import { PrismaContractSettingsStore } from '../contracts/infrastructure/PrismaContractSettingsStore';
+import { GetContractSettingsUseCase, UpdateContractSettingsUseCase } from '../contracts/application/use-cases/ContractSettingsUseCases';
+import { createContractSettingsRouter } from '../contracts/interfaces/http/contractSettingsRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -1134,6 +1137,20 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/contracts', contractRoutes);
+
+  // Contract settings (M3 Slice 3): reminder lead times, expiring-soon window,
+  // payment grace days and number prefix, under settings.manage.
+  const contractSettingsStore = new PrismaContractSettingsStore(prisma);
+  app.use(
+    '/api/:tenantSlug/settings/contracts',
+    createContractSettingsRouter(
+      new GetContractSettingsUseCase(contractSettingsStore),
+      new UpdateContractSettingsUseCase(contractSettingsStore, contractWriteTx),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
 
   // Media Routes (profile photos + workspace branding)
   const { MediaController } = require('../media/interfaces/http/MediaController');

@@ -2829,6 +2829,36 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+--  29. Contract settings (M3 Slice 3: FR-REN-01, FR-REN-04, FR-PAY-09, FR-CON-05)
+-- ---------------------------------------------------------------
+
+SELECT 'm3 contract settings' AS step, DATABASE() AS db, NOW() AS at;
+
+CREATE TABLE IF NOT EXISTS `ContractSettings` (
+    `tenantId` VARCHAR(191) NOT NULL,
+    `reminderLeadDays` JSON NOT NULL DEFAULT (JSON_ARRAY(60, 30, 7)),
+    `expiringSoonDays` INTEGER NOT NULL DEFAULT 30,
+    `paymentGraceDays` INTEGER NOT NULL DEFAULT 0,
+    `numberPrefix` VARCHAR(191) NOT NULL DEFAULT 'CTR',
+    `updatedAt` DATETIME(3) NOT NULL,
+    `updatedByUserId` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`tenantId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContractSettings' AND CONSTRAINT_NAME = 'ContractSettings_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ContractSettings` ADD CONSTRAINT `ContractSettings_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: ContractSettings.ContractSettings_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261009100000_m3_contract_settings', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261009100000_m3_contract_settings'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -2970,6 +3000,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='NotificationSettings' AND COLUMN_NAME='followUpDailySummaryEnabled'
   UNION ALL SELECT 'SalesSettings table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SalesSettings'
+  UNION ALL SELECT 'ContractSettings table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractSettings'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

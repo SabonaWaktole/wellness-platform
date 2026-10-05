@@ -182,7 +182,8 @@ model Tenant {
   discountApprovals DiscountApproval[]
 
   // M2 Slice 11: workspace sales settings (FR-DEAL-12)
-  salesSettings SalesSettings?
+  salesSettings    SalesSettings?
+  contractSettings ContractSettings?
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -1880,6 +1881,23 @@ model SalesSettings {
   /// board and the list (FR-DEAL-12).
   staleDealDays Int      @default(14)
   updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// Workspace contract settings (M3 Slice 3), one row per workspace, created
+/// lazily: a workspace with no row is on the defaults below. Reminder lead
+/// times (FR-REN-01), the expiring-soon window (FR-REN-04), payment grace days
+/// (FR-PAY-09) and the contract number prefix (FR-CON-05).
+model ContractSettings {
+  tenantId         String   @id
+  /// Days before the end date, sorted descending, at most five (FR-REN-01).
+  reminderLeadDays Json     @default("[60,30,7]")
+  expiringSoonDays Int      @default(30)
+  paymentGraceDays Int      @default(0)
+  numberPrefix     String   @default("CTR")
+  updatedAt        DateTime @updatedAt
+  updatedByUserId  String?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
