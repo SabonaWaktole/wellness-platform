@@ -1181,6 +1181,41 @@
       "id": "FR-REN-10",
       "priority": "Must",
       "requirement": "Contracts shall never renew automatically. A renewal always goes through a deal and an offer."
+    },
+    {
+      "id": "FR-REN-02",
+      "priority": "Must",
+      "requirement": "At each lead time a reminder shall go to the responsible salesperson and to every user with \"Contracts: manage\" at Team or All scope for that contract (by default the Sales Manager), in the app and by email if enabled in notification settings. The reminder opens the contract and offers \"Start renewal\"."
+    },
+    {
+      "id": "FR-REN-03",
+      "priority": "Must",
+      "requirement": "A reminder for a contract and a lead time shall be sent once. The sent reminders shall be recorded per contract and lead time, and a failure to send is retried on the next run. A renewal contract starts with no reminders sent."
+    },
+    {
+      "id": "FR-REN-05",
+      "priority": "Must",
+      "requirement": "A Renewals screen shall list valid contracts ending in the next 30, 60 or 90 days, and contracts expired in the last 90 days, with end date, days remaining, responsible salesperson, monthly price and renewal state: Not started, In negotiation (an open renewal deal), Renewed, Not renewing. Scope follows the user (Own, Team, All)."
+    },
+    {
+      "id": "FR-REN-08",
+      "priority": "Should",
+      "requirement": "The salesperson can mark a contract \"Not renewing\" with a reason from the predefined lost-deal reasons (Milestone 1 FR-SET-06) and a note. No further reminders are sent for it."
+    },
+    {
+      "id": "FR-REN-09",
+      "priority": "Should",
+      "requirement": "A contract that ended without a renewal shall stay visible in \"Recently expired\" for 90 days so the team can win the client back, and the company status follows FR-CON-17."
+    },
+    {
+      "id": "FR-REN-11",
+      "priority": "Should",
+      "requirement": "Contract end dates and renewal dates of the user's scope shall appear in the sales calendar as read-only items that open the contract."
+    },
+    {
+      "id": "NFR-PERF-04",
+      "priority": "Should",
+      "requirement": "Each dashboard and the performance screen shall load in under 2 seconds with 2,000 deals, 5,000 activities, 500 contracts and 6,000 instalments on the staging server. The contract and payment lists shall load in under 2 seconds with the same data."
     }
   ]
 }
