@@ -1003,6 +1003,11 @@
       "requirement": "Own, Team and All shall mean for contracts and payments what they mean for companies (Milestone 1 section 4.3): Own is the contracts and instalments of companies where the user is the responsible salesperson; Team is those of all Sales Users; All is everything. The Sales Manager never sees data of other roles or of companies outside the sales team (Dimitris)."
     },
     {
+      "id": "FR-RBAC-24",
+      "priority": "Must",
+      "requirement": "The CEO shall be read only for contracts and payments. Only \"Payments: update\" changes payments, and a Sales User or Sales Manager never does, even for their own contracts."
+    },
+    {
       "id": "NFR-ACC-03",
       "priority": "Must",
       "requirement": "Contract amounts, instalments, receipts, outstanding amounts and all money figures on dashboards and the performance screen shall be calculated as Decimal (two decimals, half-up), never Float. The existing Float columns of Contract and ContractPayment shall be converted (Milestone 2 D4)."
@@ -1058,6 +1063,21 @@
       "requirement": "When a contract is activated, the platform shall generate one instalment per billing period of the term, as the existing schedule does: the first instalment due on the start date and the next ones on the same day of each following period (clamped to the last day of a shorter month), none starting after the end date, at most 120. Each instalment gets the contract price for one period, as Decimal, status Not Invoiced and nothing received."
     },
     {
+      "id": "FR-PAY-03",
+      "priority": "Must",
+      "requirement": "Each instalment shall record: due date, amount, status, amount received, date received, payment method (Bank transfer, Cash, Card, Other), invoice number, invoice date and a note."
+    },
+    {
+      "id": "FR-PAY-04",
+      "priority": "Must",
+      "requirement": "An authorized user shall be able to add an extra instalment, change the due date or amount of an instalment that has nothing received, and remove an instalment that has nothing received, each with a reason. An instalment with any amount received cannot be removed. Changing the contract price later never changes instalments already issued (the existing rule)."
+    },
+    {
+      "id": "FR-PAY-05",
+      "priority": "Must",
+      "requirement": "Only users with \"Payments: update\" shall create, change or remove instalments, record invoices and record receipts. Sales User, Sales Manager, Reception and CEO cannot, even for their own contracts. The rule is enforced on the server."
+    },
+    {
       "id": "FR-PAY-06",
       "priority": "Must",
       "requirement": "The status of an instalment shall follow the table above: moving to Invoice Issued requires an invoice number and date; Payment Pending needs an invoice; Partially Paid and Paid are set by recording a receipt, never by choosing the status; Overdue is set by the system. An authorized user can correct an instalment back to an earlier status with a comment."
@@ -1068,9 +1088,19 @@
       "requirement": "Recording a receipt shall require the amount, the date received (not in the future) and the method, and shall add the amount to the amount already received. A receipt that would exceed the instalment amount is refused. The status becomes Partially Paid or Paid automatically."
     },
     {
+      "id": "FR-PAY-08",
+      "priority": "Must",
+      "requirement": "Every change to an instalment shall be written to its history with who (or \"system\"), when, old and new status, the amount received and a comment, and shown on the instalment."
+    },
+    {
       "id": "FR-PAY-10",
       "priority": "Must",
       "requirement": "The contract shall show a payment summary: total of instalments, received, outstanding, next due date and the number and amount overdue, calculated from its instalments."
+    },
+    {
+      "id": "FR-PAY-12",
+      "priority": "Must",
+      "requirement": "Users with \"Payments: view\" shall see instalments read only, and users without \"Commercial details: view\" shall see no amounts (Reception sees no payment data at all). Payment fields are removed from API responses for users without the permission."
     },
     {
       "id": "FR-CON-12",
