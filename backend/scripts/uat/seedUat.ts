@@ -5,8 +5,8 @@ import { FieldRole } from '../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../src/clients/domain/enums/ClientStatus';
 import { ITokenService } from '../../src/auth/application/ports/ITokenService';
 import { UserRole } from '../../src/auth/domain/enums/UserRole';
-import { PrismaContractNumbers } from '../../src/contracts/infrastructure/PrismaContractNumbers';
 import { OPEN_DEAL_STAGES } from '../../src/deals/domain/DealStage';
+import { seedActiveContract, seedM3, SeedM3Result } from './seedM3';
 
 /**
  * The staging data Milestone 1 UAT runs on (deploy/uat-milestone-1.md): one
@@ -24,7 +24,7 @@ import { OPEN_DEAL_STAGES } from '../../src/deals/domain/DealStage';
  */
 
 export interface UatUserSpec {
-  key: 'salesA' | 'salesB' | 'manager' | 'reception' | 'ceo' | 'roleChange' | 'leaver';
+  key: 'salesA' | 'salesB' | 'salesC' | 'manager' | 'reception' | 'ceo' | 'roleChange' | 'leaver';
   local: string;
   firstName: string;
   lastName: string;
@@ -34,6 +34,8 @@ export interface UatUserSpec {
 export const UAT_USERS: UatUserSpec[] = [
   { key: 'salesA', local: 'uat.sales.a', firstName: 'Arta', lastName: 'Shitjet', roleKey: RoleKey.SalesUser },
   { key: 'salesB', local: 'uat.sales.b', firstName: 'Besnik', lastName: 'Shitjet', roleKey: RoleKey.SalesUser },
+  // M3 Slice 15: the SRS §5.3 conversion example (4 won, 6 lost) is this user's last month and nothing else.
+  { key: 'salesC', local: 'uat.sales.c', firstName: 'Dorina', lastName: 'Shitjet', roleKey: RoleKey.SalesUser },
   { key: 'manager', local: 'uat.manager', firstName: 'Mira', lastName: 'Menaxhere', roleKey: RoleKey.SalesManager },
   { key: 'reception', local: 'uat.reception', firstName: 'Rea', lastName: 'Recepsioni', roleKey: RoleKey.Reception },
   { key: 'ceo', local: 'uat.ceo', firstName: 'Cela', lastName: 'Drejtore', roleKey: RoleKey.Ceo },
@@ -98,6 +100,10 @@ export interface SeedUatOptions {
   bulkDeals?: number;
   /** Total bulk follow-ups wanted for the NFR-PERF-03 calendar measurement (5000), spread over the bulk companies; 0 for none. */
   bulkFollowUps?: number;
+  /** Total bulk contracts, instalments and activities wanted for the NFR-PERF-04 measurement (500, 6000, 5000); 0 for none. */
+  bulkContracts?: number;
+  bulkInstalments?: number;
+  bulkActivities?: number;
   log?: (line: string) => void;
 }
 
@@ -112,6 +118,8 @@ export interface SeedUatResult {
   bulkFollowUpsCreated: number;
   /** The three months of activity behind the Performance screen (UAT-6). */
   performanceCreated: number;
+  /** The Milestone 3 contracts, instalments and won deals, and the bulk volumes (SRS §9.1, NFR-PERF-04). */
+  m3: SeedM3Result;
 }
 
 class Api {
@@ -248,25 +256,7 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     });
 
     if (spec.contract) {
-      const year = new Date().getFullYear();
-      // Written to the database: the workspace runs the sales process, where POST /contracts
-      // refuses a contract that is not made from a won deal (M3 Slice 4). This one has no deal.
-      const contractId = randomUUID();
-      const startsAt = new Date(Date.UTC(year, 0, 1));
-      await prisma.contract.create({
-        data: {
-          id: contractId, tenantId, clientId: company.id, assignedUserId: ownerId, planName: 'Paketa Wellness UAT', status: 'ACTIVE', amount: '2400.00',
-          billingPeriod: 'ANNUAL', startsAt, endsAt: new Date(Date.UTC(year, 11, 31)), number: await new PrismaContractNumbers(prisma).next(tenantId, new Date()),
-          activatedAt: startsAt, lockedAt: startsAt, createdByUserId: admin.id,
-        } as any,
-      });
-      const added = await api.call('POST', `/contracts/${contractId}/payments`, { dueDate: `${year}-01-15`, amount: '2400.00', reason: 'UAT seed' });
-      // A receipt dated today: the date cannot be in the future (FR-PAY-07).
-      await api.call('POST', `/contracts/${contractId}/payments/${added.payment.id}/receipts`, {
-        amount: '2400.00',
-        receivedOn: new Date().toISOString().slice(0, 10),
-        method: 'BANK_TRANSFER',
-      });
+      await seedActiveContract({ prisma, tenantId, adminId: admin.id, clientId: company.id, ownerId, today: new Date() });
     }
   }
 
@@ -573,5 +563,23 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     log(`performance + ${performanceCreated} activities, deals, offers and follow-ups over 13 weeks`);
   }
 
-  return { users, companiesCreated, bulkCreated, dealsCreated, plannedCreated, bulkDealsCreated, bulkFollowUpsCreated, performanceCreated };
+  // --- Milestone 3: contracts in every status, instalments, the example month and the volumes ---
+  const bulkCompanyIds = (
+    await prisma.client.findMany({ where: { tenantId, name: { startsWith: BULK_PREFIX } }, select: { id: true }, orderBy: { name: 'asc' } })
+  ).map((c) => c.id);
+  const m3 = await seedM3({
+    prisma,
+    tenantId,
+    adminId: admin.id,
+    salesA: users.salesA.id,
+    salesB: users.salesB.id,
+    salesC: users.salesC.id,
+    bulkContracts: options.bulkContracts ?? 0,
+    bulkInstalments: options.bulkInstalments ?? 0,
+    bulkActivities: options.bulkActivities ?? 0,
+    bulkCompanyIds,
+    log,
+  });
+
+  return { users, companiesCreated, bulkCreated, dealsCreated, plannedCreated, bulkDealsCreated, bulkFollowUpsCreated, performanceCreated, m3 };
 }

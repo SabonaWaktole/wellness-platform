@@ -1294,8 +1294,16 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Signed contracts are not public files: they are read through the contract's
   // document endpoint, which checks commercial.view and the contract's scope
   // (FR-CON-19, NFR-SEC-06). The store names every one `contract-<uuid>.pdf`.
+  // The name is tested after the percent-decoding express.static applies, or `%63ontract-<uuid>.pdf`
+  // would slip past the check and be served (found in the M3 security review).
   app.use('/uploads', (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (/(^|\/)contract-[^/]*\.pdf$/i.test(req.path)) return res.status(404).end();
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(req.path);
+    } catch {
+      return res.status(404).end();
+    }
+    if (/(^|[/\\])contract-[^/\\]*\.pdf$/i.test(decoded)) return res.status(404).end();
     next();
   });
   app.use(

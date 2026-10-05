@@ -20,6 +20,7 @@
     "seed:wellness": "ts-node -r tsconfig-paths/register scripts/seed-wellness-workspace.ts",
     "seed:uat": "ts-node -r tsconfig-paths/register scripts/seed-uat.ts",
     "migrate:legacy-clients": "ts-node -r tsconfig-paths/register scripts/migrate-legacy-clients.ts",
+    "jobs:run": "ts-node -r tsconfig-paths/register scripts/run-jobs.ts",
     "perf:staging": "ts-node -r tsconfig-paths/register scripts/measure-performance.ts",
     "typecheck": "tsc -p tsconfig.test.json"
   },

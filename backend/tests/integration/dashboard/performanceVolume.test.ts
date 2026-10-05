@@ -183,6 +183,17 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
     expect(body.tables.payments.reduce((sum: number, row: any) => sum + row.count, 0)).toBe(6_000);
   });
 
+  it.each([
+    ['the contract list, first page', '/contracts'],
+    ['the contract list, Active', '/contracts?status=ACTIVE'],
+    ['the Payments overview', '/payments'],
+    ['the Payments overview, Overdue', '/payments?status=OVERDUE'],
+    ['Renewals', '/renewals'],
+  ])('NFR-PERF-04: %s loads in under 2 seconds at 500 contracts and 6,000 instalments', async (_label, path) => {
+    const { ms } = await timed(path, ceoToken);
+    expect(ms).toBeLessThan(2_000);
+  });
+
   it('NFR-PERF-04: the Administrator dashboard loads in under 2 seconds', async () => {
     const { ms, body } = await timed('/dashboard/administrator', adminToken);
     expect(ms).toBeLessThan(2_000);
