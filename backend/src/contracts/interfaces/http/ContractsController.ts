@@ -4,6 +4,10 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import multer from 'multer';
 import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
+import { CreateContractFromDealUseCase } from '../../application/use-cases/CreateContractFromDealUseCase';
+import { RefreshContractFromDealUseCase } from '../../application/use-cases/RefreshContractFromDealUseCase';
+import { ContractAlreadyExistsError, ContractValidationError } from '../../domain/contractErrors';
+import { ContractEditRefusedError } from '../../domain/Contract';
 import { CreateContractUseCase } from '../../application/use-cases/CreateContractUseCase';
 import { UpdateContractUseCase } from '../../application/use-cases/UpdateContractUseCase';
 import { ActivateContractUseCase } from '../../application/use-cases/ActivateContractUseCase';
@@ -24,6 +28,7 @@ import {
 import { requirePermission } from '@main/interfaces/http/middlewares/requirePermission';
 import {
   createContractSchema,
+  createContractFromDealSchema,
   updateContractSchema,
   renewContractSchema,
   cancelContractSchema,
@@ -65,7 +70,9 @@ export class ContractsController {
     private addContractPaymentUseCase: AddContractPaymentUseCase,
     private updateContractPaymentUseCase: UpdateContractPaymentUseCase,
     private deleteContractPaymentUseCase: DeleteContractPaymentUseCase,
-    private attachContractDocumentUseCase: AttachContractDocumentUseCase
+    private attachContractDocumentUseCase: AttachContractDocumentUseCase,
+    private createContractFromDealUseCase: CreateContractFromDealUseCase,
+    private refreshContractFromDealUseCase: RefreshContractFromDealUseCase
   ) {
     this.initializeRoutes();
   }
@@ -83,6 +90,7 @@ export class ContractsController {
     this.router.post('/', requirePermission('contracts.manage'), this.createContract.bind(this));
     this.router.get('/:id', requirePermission('contracts.validity.view'), this.getContractDetail.bind(this));
     this.router.patch('/:id', requirePermission('contracts.manage'), this.updateContract.bind(this));
+    this.router.post('/:id/refresh-from-deal', requirePermission('contracts.manage'), this.refreshFromDeal.bind(this));
     this.router.post('/:id/activate', requirePermission('contracts.manage'), this.activateContract.bind(this));
     this.router.post('/:id/cancel', requirePermission('contracts.manage'), this.cancelContract.bind(this));
     this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
@@ -136,6 +144,11 @@ export class ContractsController {
    */
   private fail(res: Response, error: any) {
     if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
+    if (error instanceof ContractValidationError) return res.status(400).json({ error: error.message, field: error.field });
+    if (error instanceof ContractEditRefusedError) return res.status(400).json({ error: error.message, field: error.field });
+    if (error instanceof ContractAlreadyExistsError) {
+      return res.status(409).json({ error: error.message, code: error.code, contractId: error.contractId });
+    }
     const message = String(error?.message ?? 'Unexpected error');
     if (message.includes('not found')) return res.status(404).json({ error: message });
     if (error instanceof PermissionDeniedError) return res.status(403).json({ error: message });
@@ -144,6 +157,21 @@ export class ContractsController {
 
   private async createContract(req: Request, res: Response) {
     try {
+      // With a deal: made from the deal (FR-CON-01). Without one it is the manual
+      // create of the other workspaces, which a sales-process workspace refuses (FR-CON-02).
+      if (req.body && typeof req.body === 'object' && 'dealId' in req.body) {
+        const fromDeal = createContractFromDealSchema.parse(req.body);
+        const made = await this.createContractFromDealUseCase.execute({
+          tenantId: requireTenantId(req),
+          dealId: fromDeal.dealId,
+          startsAt: fromDeal.startsAt ? new Date(fromDeal.startsAt) : undefined,
+          endsAt: fromDeal.endsAt ? new Date(fromDeal.endsAt) : undefined,
+          billingPeriod: fromDeal.billingPeriod,
+          actingUserId: req.user!.userId,
+          access: req.access!,
+        });
+        return res.status(201).json(presentContract(made.contract, req.access!));
+      }
       const data = createContractSchema.parse(req.body);
       const result = await this.createContractUseCase.execute({
         tenantId: requireTenantId(req),
@@ -177,10 +205,26 @@ export class ContractsController {
         endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
         assignedUserId: data.assignedUserId,
         notes: data.notes,
+        renewalDate: data.renewalDate === undefined ? undefined : data.renewalDate === null ? null : new Date(data.renewalDate),
+        termsText: data.termsText as any,
         actingUserId: req.user!.userId,
         access: req.access!,
       });
       res.json({ contract: presentContract(result.contract, req.access!), scheduleNeedsReview: result.scheduleNeedsReview });
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async refreshFromDeal(req: Request, res: Response) {
+    try {
+      const result = await this.refreshContractFromDealUseCase.execute({
+        tenantId: requireTenantId(req),
+        contractId: req.params.id as string,
+        actingUserId: req.user!.userId,
+        access: req.access!,
+      });
+      res.json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -247,7 +291,13 @@ export class ContractsController {
         tenantId: requireTenantId(req),
         actingUserId: req.user!.userId,
         access: req.access!,
-        params,
+        timezone: req.tenant!.timezone,
+        params: {
+          ...params,
+          endsFrom: params.endsFrom ? new Date(params.endsFrom) : undefined,
+          endsTo: params.endsTo ? new Date(params.endsTo) : undefined,
+          hasOverdue: params.hasOverdue === undefined ? undefined : params.hasOverdue === 'true',
+        },
       });
       res.json({ ...result, data: presentContracts(result.data, req.access!) });
     } catch (error: any) {

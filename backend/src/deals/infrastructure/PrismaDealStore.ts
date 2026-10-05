@@ -50,6 +50,7 @@ export class PrismaDealStore implements IDealStore {
         lostReason: { select: { nameSq: true, nameEn: true } },
         package: { select: { nameSq: true, nameEn: true } },
         wonQuotation: { select: { id: true, number: true, version: true } },
+        contract: { select: { id: true } },
         stageHistory: {
           where: { tenantId },
           orderBy: [{ at: 'asc' }, { id: 'asc' }],
@@ -63,6 +64,7 @@ export class PrismaDealStore implements IDealStore {
       ...summary,
       notes: row.notes,
       createdByUserId: row.createdByUserId,
+      contractId: row.contract?.id ?? null,
       wonAt: row.wonAt?.toISOString() ?? null,
       lostAt: row.lostAt?.toISOString() ?? null,
       lostReasonId: row.lostReasonId,

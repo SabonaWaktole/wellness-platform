@@ -172,7 +172,7 @@ describe('Company timeline (Slice 13)', () => {
     expect(res.body.nextCursor).toBeNull();
 
     const contract = res.body.timeline.find((e: any) => e.type === 'CONTRACT_CREATED');
-    expect(contract.details).toMatchObject({ contractId, planName: 'Gold', amount: 120 });
+    expect(contract.details).toMatchObject({ contractId, planName: 'Gold', amount: '120.00' });
     expect(contract.actor).toEqual({ id: users.salesA, name: 'Arben' });
     const quotation = res.body.timeline.find((e: any) => e.type === 'QUOTATION_STATUS_CHANGED');
     expect(quotation.details).toMatchObject({ quotationId, fromStatus: 'DRAFT', toStatus: 'SENT' });

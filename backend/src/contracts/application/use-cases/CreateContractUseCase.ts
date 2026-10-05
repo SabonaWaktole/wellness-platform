@@ -7,6 +7,8 @@ import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
 import { IClientRepository } from '../../../clients/domain/repositories/IClientRepository';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { diff } from '../../../audit/domain/diff';
+import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRepository';
+import { ContractValidationError } from '../../domain/contractErrors';
 import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
 /**
@@ -22,7 +24,8 @@ export class CreateContractUseCase {
   constructor(
     private writeTx: IContractWriteTransaction,
     private clientRepo: IClientRepository,
-    private scopes: RecordScopeResolver
+    private scopes: RecordScopeResolver,
+    private tenants: ITenantRepository
   ) {}
 
   async execute(input: {
@@ -38,6 +41,13 @@ export class CreateContractUseCase {
     actingUserId: string;
     access: AccessContext;
   }) {
+    // A contract cannot exist without a won deal (FR-CON-02) in a workspace that
+    // runs the sales process; the other workspaces keep the manual create (D1).
+    const tenant = await this.tenants.findById(input.tenantId);
+    if (tenant?.runsSalesProcess()) {
+      throw new ContractValidationError('dealId', 'A contract is made from a won deal.');
+    }
+
     // The client is checked through its own repository, which already filters
     // soft-deleted rows — a raw FK insert would happily attach a contract to a
     // deleted client and it would then be invisible everywhere it mattered.

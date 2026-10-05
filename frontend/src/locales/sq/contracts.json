@@ -36,7 +36,7 @@
     "emptySearchMessage": "Provoni të ndryshoni filtrat e kërkimit për të gjetur atë që kërkoni.",
     "emptyExpiring": "Asgjë nuk skadon së shpejti",
     "emptyExpiringMessage": "Asnjë kontratë aktive nuk përfundon brenda 30 ditëve të ardhshme.",
-    "columnId": "Kontrata",
+    "columnId": "Numri",
     "columnClient": "Klienti",
     "columnPlan": "Plani",
     "columnTerm": "Afati",
@@ -49,7 +49,17 @@
     "expiresIn": "Skadon për {{days}} ditë",
     "expiresToday": "Skadon sot",
     "expiredAgo": "Skaduar {{days}} ditë më parë",
-    "overdueBadge": "{{count}} të vonuara"
+    "overdueBadge": "{{count}} të vonuara",
+    "filterValidity": "Vlefshmëria",
+    "validityAll": "Të gjitha",
+    "validityValid": "Të vlefshme",
+    "validityExpiring": "Skadojnë së shpejti",
+    "validityNotValid": "Të pavlefshme",
+    "filterSalesperson": "Shitësi",
+    "filterEndsFrom": "Mbaron nga",
+    "filterEndsTo": "Mbaron deri",
+    "filterOverdue": "Me këste të vonuara",
+    "legacy": "Trashëgimi: pa marrëveshje"
   },
   "detail": {
     "loading": "Duke ngarkuar...",
@@ -86,7 +96,19 @@
     "confirmRemoveDocument": "Të hiqet dokumenti i bashkëngjitur?",
     "history": "Historiku",
     "byUser": "Nga {{user}}",
-    "bySystem": "Automatik"
+    "bySystem": "Automatik",
+    "legacy": "Trashëgimi: pa marrëveshje",
+    "deal": "Marrëveshja",
+    "openDeal": "Hap marrëveshjen",
+    "offer": "Oferta",
+    "package": "Paketa",
+    "services": "Shërbimet",
+    "annualValue": "Vlera vjetore",
+    "discount": "Zbritja",
+    "discountValue": "{{percent}} %",
+    "renewalDate": "Rinovohet deri",
+    "terms": "Kushtet",
+    "refreshFromDeal": "Rifresko nga marrëveshja"
   },
   "payments": {
     "heading": "Pagesat",
@@ -146,7 +168,11 @@
     "cancel": "Anulo",
     "required": "Kjo fushë është e detyrueshme",
     "endBeforeStart": "Data e përfundimit nuk duhet të jetë para datës së fillimit",
-    "termPreview": "Do të planifikohen {{count}} pagesa prej {{amount}} pas aktivizimit."
+    "termPreview": "Do të planifikohen {{count}} pagesa prej {{amount}} pas aktivizimit.",
+    "agreedHeading": "Të dakorduara me klientin",
+    "readOnlyHint": "Këto vlera vijnë nga marrëveshja dhe nuk mund të ndryshohen këtu.",
+    "renewalDate": "Data e rinovimit",
+    "createFromDealOnly": "Kontrata krijohet nga një marrëveshje e fituar. Hapni marrëveshjen dhe zgjidhni \"Krijo kontratë\"."
   },
   "clientTab": {
     "title": "Kontratat",

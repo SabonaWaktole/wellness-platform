@@ -19,7 +19,7 @@ export function useMoneyFormat() {
     return {
       currency,
       locale,
-      format: (value: number | null | undefined) => formatMoney(value, settings),
+      format: (value: number | string | null | undefined) => formatMoney(value, settings),
       formatWhole: (value: number | null | undefined) => formatMoneyWhole(value, settings),
       formatCompact: (value: number) => formatMoneyCompact(value, settings),
     };

@@ -52,6 +52,20 @@ export interface ContractPaymentSummary {
   overdueCount: number;
 }
 
+/** A service of the contract's package, copied from the offer (FR-CON-03). */
+export interface ContractServiceLine {
+  nameSq: string;
+  nameEn: string | null;
+  descriptionSq: string | null;
+  descriptionEn: string | null;
+}
+
+/** The offer's terms, one rich-text document per language. */
+export interface ContractTerms {
+  sq: Record<string, unknown> | null;
+  en: Record<string, unknown> | null;
+}
+
 /**
  * A contract as the API returns it to this viewer (FR-RBAC-06). Without
  * `contracts.manage` only the validity fields are present (Reception's view);
@@ -67,8 +81,27 @@ export interface Contract {
   assignedUserId?: string | null;
   planName: string;
   status: ContractStatus;
-  /** Price for ONE billing period, not for the whole term. */
-  amount?: number;
+  /**
+   * Price for ONE billing period, not for the whole term. A two-decimal
+   * string ("49.40"): it is only formatted here, never calculated (NFR-ACC-03).
+   */
+  amount?: string;
+  /** CTR-2026-0001 (FR-CON-05); null on a Legacy contract. */
+  number?: string | null;
+  /** Made before contracts needed a won deal (FR-CON-02). */
+  legacy?: boolean;
+  dealId?: string | null;
+  dealTitle?: string | null;
+  quotationId?: string | null;
+  quotationReference?: string | null;
+  packageId?: string | null;
+  packageName?: string | null;
+  servicesSnapshot?: ContractServiceLine[] | null;
+  termsText?: ContractTerms | null;
+  agreedAnnualValue?: string | null;
+  discountPercent?: string | null;
+  /** `YYYY-MM-DD`: the date by which a renewal should be agreed (FR-CON-07). */
+  renewalDate?: string | null;
   billingPeriod?: BillingPeriod;
   startsAt: string;
   endsAt: string;

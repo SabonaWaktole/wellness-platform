@@ -36,6 +36,11 @@ function draftContract(overrides: Partial<Parameters<typeof Contract.create>[0]>
   });
 }
 
+/** A tenant repository whose one workspace runs the given sales workflow (M3 D1). */
+function tenantsWorkflow(workflow: 'SALES_PROCESS' | 'LEGACY_QUOTATIONS') {
+  return { findById: jest.fn().mockResolvedValue({ runsSalesProcess: () => workflow === 'SALES_PROCESS' }) } as any;
+}
+
 function draftPayment(overrides: Partial<Parameters<typeof ContractPayment.create>[0]> = {}) {
   return ContractPayment.create({
     id: randomUUID(),
@@ -53,7 +58,7 @@ describe('CreateContractUseCase audit trail', () => {
     const harness = makeContractWriteHarness();
     harness.contractRepo.findById.mockResolvedValue(draftContract());
     const clientRepo = { findById: jest.fn().mockResolvedValue({ id: 'client-1' }) } as any;
-    const useCase = new CreateContractUseCase(harness.writeTx, clientRepo, scopeResolver());
+    const useCase = new CreateContractUseCase(harness.writeTx, clientRepo, scopeResolver(), tenantsWorkflow('LEGACY_QUOTATIONS'));
 
     await useCase.execute({
       tenantId: TENANT_ID,

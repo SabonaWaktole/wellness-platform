@@ -231,5 +231,10 @@
     "offer": "Oferta",
     "reason": "Arsyeja",
     "note": "Shënim"
+  },
+  "contract": {
+    "label": "Kontrata",
+    "create": "Krijo kontratë",
+    "open": "Hap kontratën"
   }
 }

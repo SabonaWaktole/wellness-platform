@@ -1097,6 +1097,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { ContractDocumentStore } = require('../contracts/infrastructure/ContractDocumentStore');
 
   const { CreateContractUseCase } = require('../contracts/application/use-cases/CreateContractUseCase');
+  const { CreateContractFromDealUseCase } = require('../contracts/application/use-cases/CreateContractFromDealUseCase');
+  const { RefreshContractFromDealUseCase } = require('../contracts/application/use-cases/RefreshContractFromDealUseCase');
   const { UpdateContractUseCase } = require('../contracts/application/use-cases/UpdateContractUseCase');
   const { ActivateContractUseCase } = require('../contracts/application/use-cases/ActivateContractUseCase');
   const { CancelContractUseCase } = require('../contracts/application/use-cases/CancelContractUseCase');
@@ -1120,19 +1122,21 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const contractDocumentStore = new ContractDocumentStore();
 
   const contractsController = new ContractsController(
-    new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes),
+    new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes, tenantRepository),
     new UpdateContractUseCase(contractWriteTx, recordScopes),
     new ActivateContractUseCase(contractWriteTx, recordScopes),
     new CancelContractUseCase(contractWriteTx, recordScopes),
     new RenewContractUseCase(contractWriteTx, recordScopes),
-    new SearchContractsUseCase(contractRepo, recordScopes),
+    new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
     new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, recordScopes),
     new GetClientContractsUseCase(contractRepo, recordScopes),
     new RecordContractPaymentUseCase(contractWriteTx, recordScopes),
     new AddContractPaymentUseCase(contractWriteTx, recordScopes),
     new UpdateContractPaymentUseCase(contractWriteTx, recordScopes),
     new DeleteContractPaymentUseCase(contractWriteTx, recordScopes),
-    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes)
+    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes),
+    new CreateContractFromDealUseCase(contractWriteTx, recordScopes, tenantRepository),
+    new RefreshContractFromDealUseCase(contractWriteTx, recordScopes)
   );
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);

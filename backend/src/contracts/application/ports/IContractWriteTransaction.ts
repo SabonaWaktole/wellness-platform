@@ -2,6 +2,8 @@ import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
 import { IContractSettingsStore } from './IContractSettingsStore';
+import { IContractNumbers } from './IContractNumbers';
+import { IContractDealSource } from './IContractDealSource';
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 
 /** The repositories a contract write goes through, all on one connection. */
@@ -11,6 +13,10 @@ export interface ContractWriteRepos {
   historyRepo: IContractStatusHistoryRepository;
   /** The workspace's contract settings, written with their audit entry (M3 Slice 3). */
   settingsStore: IContractSettingsStore;
+  /** The next contract number (M3 Slice 4, FR-CON-05), taken under a row lock in this transaction. */
+  numbers: IContractNumbers;
+  /** Reads the won deal and offer a contract is filled from (M3 Slice 4, FR-CON-03). */
+  deals: IContractDealSource;
   /** Same connection as the other three — see IAuditTrail for the pattern. */
   auditTrail: IAuditTrail;
 }

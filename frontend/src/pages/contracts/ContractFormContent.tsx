@@ -12,6 +12,7 @@ import { useTeam } from '../../hooks/useTeam';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { getStaffDisplayName } from '../../utils/userUtils';
 import { BillingPeriod } from '../../types/contract';
+import type { Contract } from '../../types/contract';
 import { buildPaymentSchedule } from '../../utils/paymentSchedule';
 import styles from './ContractDetailContent.module.css';
 
@@ -33,6 +34,7 @@ interface FormState {
   endsAt: string;
   assignedUserId: string;
   notes: string;
+  renewalDate: string;
 }
 
 const emptyForm: FormState = {
@@ -44,6 +46,7 @@ const emptyForm: FormState = {
   endsAt: '',
   assignedUserId: '',
   notes: '',
+  renewalDate: '',
 };
 
 const toDateInput = (value: string): string => new Date(value).toISOString().slice(0, 10);
@@ -72,6 +75,11 @@ export const ContractFormContent: React.FC = () => {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // A contract made from a deal (FR-CON-04): its price and plan are read only.
+  const [source, setSource] = useState<Contract | null>(null);
+  const fromDeal = Boolean(source?.dealId);
+  // After the Draft only the notes and the renewal date can change (FR-CON-10).
+  const termsLocked = fromDeal && source?.status !== 'DRAFT';
 
   useEffect(() => {
     // A generous page size rather than a search box: a business selling
@@ -91,6 +99,7 @@ export const ContractFormContent: React.FC = () => {
 
     fetchContractDetail(contractId)
       .then(({ contract }) => {
+        setSource(contract);
         setForm({
           clientId: contract.clientId,
           planName: contract.planName,
@@ -100,6 +109,7 @@ export const ContractFormContent: React.FC = () => {
           endsAt: toDateInput(contract.endsAt),
           assignedUserId: contract.assignedUserId ?? '',
           notes: contract.notes ?? '',
+          renewalDate: contract.renewalDate ?? '',
         });
       })
       .catch((error) => console.error('Failed to load contract', error));
@@ -132,8 +142,8 @@ export const ContractFormContent: React.FC = () => {
     const next: Record<string, string> = {};
 
     if (!isEdit && !form.clientId) next.clientId = t('form.required');
-    if (!form.planName.trim()) next.planName = t('form.required');
-    if (form.amount === '') next.amount = t('form.required');
+    if (!fromDeal && !form.planName.trim()) next.planName = t('form.required');
+    if (!fromDeal && form.amount === '') next.amount = t('form.required');
     if (!form.startsAt) next.startsAt = t('form.required');
     if (!form.endsAt) next.endsAt = t('form.required');
 
@@ -150,9 +160,11 @@ export const ContractFormContent: React.FC = () => {
     setSubmitError(null);
     if (!validate()) return;
 
+    // The price and the plan come from the deal and are never sent for such a contract.
+    const dealFields = fromDeal ? {} : { planName: form.planName.trim(), amount: Number(form.amount) };
     const payload = {
-      planName: form.planName.trim(),
-      amount: Number(form.amount),
+      ...dealFields,
+      renewalDate: form.renewalDate || null,
       billingPeriod: form.billingPeriod,
       startsAt: form.startsAt,
       endsAt: form.endsAt,
@@ -174,7 +186,8 @@ export const ContractFormContent: React.FC = () => {
         navigate(`/${tenantSlug}/contracts/${created.id}`);
       }
     } catch (error: any) {
-      setSubmitError(error?.response?.data?.error ?? tc('state.error'));
+      const data = error?.response?.data;
+      setSubmitError(data?.field === 'dealId' && !isEdit ? t('form.createFromDealOnly') : (data?.error ?? tc('state.error')));
     }
   };
 
@@ -209,27 +222,55 @@ export const ContractFormContent: React.FC = () => {
               </SelectInput>
             </div>
 
-            <TextInput
-              label={t('form.planName')}
-              placeholder={t('form.planNamePlaceholder')}
-              value={form.planName}
-              error={errors.planName}
-              onChange={(e) => setForm({ ...form, planName: e.target.value })}
-            />
+            {fromDeal && source ? (
+              <div className={styles.formGridFull}>
+                <h2 className={styles.cardTitle}>{t('form.agreedHeading')}</h2>
+                <dl className={styles.terms}>
+                  <div className={styles.termRow}>
+                    <dt className={styles.termLabel}>{t('detail.amount')}</dt>
+                    <dd className={styles.termValue}>{source.amount !== undefined ? formatMoney(source.amount) : '—'}</dd>
+                  </div>
+                  {source.agreedAnnualValue && (
+                    <div className={styles.termRow}>
+                      <dt className={styles.termLabel}>{t('detail.annualValue')}</dt>
+                      <dd className={styles.termValue}>{formatMoney(source.agreedAnnualValue)}</dd>
+                    </div>
+                  )}
+                  {source.packageName && (
+                    <div className={styles.termRow}>
+                      <dt className={styles.termLabel}>{t('detail.package')}</dt>
+                      <dd className={styles.termValue}>{source.packageName}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className={styles.notesEmpty}>{t('form.readOnlyHint')}</p>
+              </div>
+            ) : (
+              <>
+                <TextInput
+                  label={t('form.planName')}
+                  placeholder={t('form.planNamePlaceholder')}
+                  value={form.planName}
+                  error={errors.planName}
+                  onChange={(e) => setForm({ ...form, planName: e.target.value })}
+                />
 
-            <TextInput
-              label={t('form.amount')}
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.amount}
-              error={errors.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            />
+                <TextInput
+                  label={t('form.amount')}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.amount}
+                  error={errors.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                />
+              </>
+            )}
 
             <SelectInput
               label={t('form.billingPeriod')}
               value={form.billingPeriod}
+              disabled={termsLocked}
               onChange={(e) =>
                 setForm({ ...form, billingPeriod: e.target.value as BillingPeriod })
               }
@@ -244,6 +285,7 @@ export const ContractFormContent: React.FC = () => {
             <SelectInput
               label={t('form.assignedUserId')}
               value={form.assignedUserId}
+              disabled={termsLocked}
               onChange={(e) => setForm({ ...form, assignedUserId: e.target.value })}
             >
               <option value="">{tc('action.select')}</option>
@@ -258,6 +300,7 @@ export const ContractFormContent: React.FC = () => {
               label={t('form.startsAt')}
               type="date"
               value={form.startsAt}
+              disabled={termsLocked}
               error={errors.startsAt}
               onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
             />
@@ -266,9 +309,19 @@ export const ContractFormContent: React.FC = () => {
               label={t('form.endsAt')}
               type="date"
               value={form.endsAt}
+              disabled={termsLocked}
               error={errors.endsAt}
               onChange={(e) => setForm({ ...form, endsAt: e.target.value })}
             />
+
+            {isEdit && (
+              <TextInput
+                label={t('form.renewalDate')}
+                type="date"
+                value={form.renewalDate}
+                onChange={(e) => setForm({ ...form, renewalDate: e.target.value })}
+              />
+            )}
 
             <div className={styles.formGridFull}>
               <TextareaInput

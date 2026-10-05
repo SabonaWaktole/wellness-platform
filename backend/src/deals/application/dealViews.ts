@@ -76,6 +76,8 @@ export interface DealResultView {
 export interface DealDetail extends DealSummary, DealResultView {
   notes: string | null;
   createdByUserId: string;
+  /** The contract made from this deal, so the screen can swap "Create contract" for a link (M3 FR-CON-01). */
+  contractId: string | null;
   contacts: DealContactView[];
   history: DealStageChangeView[];
 }

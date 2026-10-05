@@ -231,5 +231,10 @@
     "offer": "Offer",
     "reason": "Reason",
     "note": "Note"
+  },
+  "contract": {
+    "label": "Contract",
+    "create": "Create contract",
+    "open": "Open the contract"
   }
 }

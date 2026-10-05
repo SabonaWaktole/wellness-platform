@@ -1,4 +1,4 @@
-import { BillingPeriod, Contract, ContractStatus } from './Contract';
+import { BillingPeriod, Contract, ContractEditRefusedError, ContractStatus } from './Contract';
 
 function makeContract(overrides: Partial<Parameters<typeof Contract.create>[0]> = {}) {
   return Contract.create({
@@ -165,5 +165,89 @@ describe('Contract', () => {
 
     expect(json).toHaveProperty('daysUntilExpiry');
     expect(json.planName).toBe('Gold');
+  });
+});
+
+describe('Contract made from a deal (M3 Slice 4)', () => {
+  const fromDeal = (overrides: Partial<Parameters<typeof Contract.create>[0]> = {}) =>
+    makeContract({ dealId: 'deal-1', number: 'CTR-2026-0001', amount: 49.4, agreedAnnualValue: '592.80', ...overrides });
+
+  const source = {
+    dealId: 'deal-1',
+    quotationId: 'offer-2',
+    packageId: 'pkg-2',
+    servicesSnapshot: [{ nameSq: 'Vizitë', nameEn: 'Visit', descriptionSq: null, descriptionEn: null }],
+    termsText: null,
+    amount: '60.00',
+    agreedAnnualValue: '720.00',
+    discountPercent: '5.00',
+  };
+
+  it('FR-CON-02 a contract without a deal is Legacy, one with a deal is not', () => {
+    expect(makeContract().isLegacy).toBe(true);
+    expect(makeContract().toJSON().legacy).toBe(true);
+    expect(fromDeal().isLegacy).toBe(false);
+  });
+
+  it('NFR-ACC-03 serialises the price as a two-decimal string', () => {
+    expect(fromDeal().toJSON().amount).toBe('49.40');
+    expect(makeContract({ amount: 100 }).toJSON().amount).toBe('100.00');
+  });
+
+  it('FR-CON-04 the price and the plan cannot be edited on a contract from a deal', () => {
+    const contract = fromDeal();
+    expect(() => contract.applyEdits({ amount: 1 })).toThrow(ContractEditRefusedError);
+    expect(() => contract.applyEdits({ planName: 'Other' })).toThrow(ContractEditRefusedError);
+    expect(contract.amount).toBe(49.4);
+  });
+
+  it('FR-CON-04 refresh re-reads the agreed values while Draft', () => {
+    const contract = fromDeal();
+    contract.refreshFromDeal(source);
+    expect(contract).toMatchObject({ amount: 60, agreedAnnualValue: '720.00', discountPercent: '5.00', quotationId: 'offer-2', packageId: 'pkg-2' });
+  });
+
+  it.each([ContractStatus.PendingSignature, ContractStatus.Active, ContractStatus.Cancelled])(
+    'FR-CON-04 refresh is refused from %s on',
+    (status) => {
+      const contract = fromDeal({ status });
+      expect(() => contract.refreshFromDeal(source)).toThrow(/locked/);
+      expect(contract.amount).toBe(49.4);
+    }
+  );
+
+  it('FR-CON-04 a Legacy contract cannot be refreshed', () => {
+    expect(() => makeContract().refreshFromDeal(source)).toThrow(ContractEditRefusedError);
+  });
+
+  it('FR-CON-10 a Draft\'s dates, billing period, renewal date, notes and salesperson are editable', () => {
+    const contract = fromDeal();
+    contract.applyEdits({
+      startsAt: new Date('2026-02-01'),
+      endsAt: new Date('2027-01-31'),
+      billingPeriod: BillingPeriod.Quarterly,
+      renewalDate: new Date('2026-12-01'),
+      notes: 'n',
+      assignedUserId: 'user-2',
+    });
+    expect(contract).toMatchObject({ billingPeriod: BillingPeriod.Quarterly, notes: 'n', assignedUserId: 'user-2' });
+    expect(contract.endsAt).toEqual(new Date('2027-01-31'));
+    expect(contract.renewalDate).toEqual(new Date('2026-12-01'));
+  });
+
+  it('FR-CON-10 after activation only notes and the renewal date change; a changed end date says to renew', () => {
+    const contract = fromDeal({ status: ContractStatus.Active });
+    expect(() => contract.applyEdits({ endsAt: new Date('2028-01-01') })).toThrow(/renew/i);
+    expect(() => contract.applyEdits({ billingPeriod: BillingPeriod.Annual })).toThrow(ContractEditRefusedError);
+    // The same values sent back are not a change.
+    contract.applyEdits({ endsAt: new Date('2026-12-31'), startsAt: new Date('2026-01-01'), billingPeriod: BillingPeriod.Monthly, notes: 'ok', renewalDate: new Date('2026-11-01') });
+    expect(contract.notes).toBe('ok');
+    expect(contract.renewalDate).toEqual(new Date('2026-11-01'));
+  });
+
+  it('FR-CON-10 a Legacy contract keeps the old edit rules', () => {
+    const contract = makeContract({ status: ContractStatus.Active });
+    contract.applyEdits({ amount: 120, endsAt: new Date('2027-06-30') });
+    expect(contract.amount).toBe(120);
   });
 });

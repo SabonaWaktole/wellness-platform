@@ -36,7 +36,7 @@
     "emptySearchMessage": "Try adjusting your search filters to find what you are looking for.",
     "emptyExpiring": "Nothing expiring soon",
     "emptyExpiringMessage": "No active contract ends within the next 30 days.",
-    "columnId": "Contract",
+    "columnId": "Number",
     "columnClient": "Client",
     "columnPlan": "Plan",
     "columnTerm": "Term",
@@ -49,7 +49,17 @@
     "expiresIn": "Expires in {{days}} days",
     "expiresToday": "Expires today",
     "expiredAgo": "Expired {{days}} days ago",
-    "overdueBadge": "{{count}} overdue"
+    "overdueBadge": "{{count}} overdue",
+    "filterValidity": "Validity",
+    "validityAll": "All",
+    "validityValid": "Valid",
+    "validityExpiring": "Expiring soon",
+    "validityNotValid": "Not valid",
+    "filterSalesperson": "Salesperson",
+    "filterEndsFrom": "Ends from",
+    "filterEndsTo": "Ends until",
+    "filterOverdue": "With overdue instalments",
+    "legacy": "Legacy: no deal"
   },
   "detail": {
     "loading": "Loading...",
@@ -86,7 +96,19 @@
     "confirmRemoveDocument": "Remove the attached document?",
     "history": "History",
     "byUser": "By {{user}}",
-    "bySystem": "Automatic"
+    "bySystem": "Automatic",
+    "legacy": "Legacy: no deal",
+    "deal": "Deal",
+    "openDeal": "Open the deal",
+    "offer": "Offer",
+    "package": "Package",
+    "services": "Services",
+    "annualValue": "Annual value",
+    "discount": "Discount",
+    "discountValue": "{{percent}} %",
+    "renewalDate": "Renew by",
+    "terms": "Terms",
+    "refreshFromDeal": "Refresh from deal"
   },
   "payments": {
     "heading": "Payments",
@@ -146,7 +168,11 @@
     "cancel": "Cancel",
     "required": "This field is required",
     "endBeforeStart": "The end date must not be before the start date",
-    "termPreview": "{{count}} payment(s) of {{amount}} will be scheduled on activation."
+    "termPreview": "{{count}} payment(s) of {{amount}} will be scheduled on activation.",
+    "agreedHeading": "Agreed with the client",
+    "readOnlyHint": "These values come from the deal and cannot be changed here.",
+    "renewalDate": "Renewal date",
+    "createFromDealOnly": "A contract is made from a won deal. Open the deal and choose \"Create contract\"."
   },
   "clientTab": {
     "title": "Contracts",

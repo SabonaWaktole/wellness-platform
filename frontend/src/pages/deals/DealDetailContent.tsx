@@ -20,6 +20,7 @@ import { usePermission } from '../../hooks/usePermission';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useTeam } from '../../hooks/useTeam';
 import { dealService } from '../../services/dealService';
+import { contractService } from '../../services/contractService';
 import { getStaffDisplayName } from '../../utils/userUtils';
 import { isOpenStage, OPEN_DEAL_STAGES } from '../../types/deal';
 import type { DealDetail, DealStage } from '../../types/deal';
@@ -102,6 +103,22 @@ export const DealDetailContent: React.FC = () => {
       toast.success(t('detail.moved', { stage: statusLabel.deal(stage) }));
     } catch (error) {
       toast.error(dealErrorMessage(error, t));
+    }
+  };
+
+  /** FR-CON-01: makes the contract from this won deal, then opens it. */
+  const createContract = async () => {
+    if (!tenantSlug) return;
+    try {
+      const created = await contractService.createContractFromDeal(tenantSlug, deal.id);
+      navigate(`/${tenantSlug}/contracts/${created.id}`);
+    } catch (error) {
+      const data = (error as { response?: { data?: { error?: string; contractId?: string } } })?.response?.data;
+      if (data?.contractId) {
+        navigate(`/${tenantSlug}/contracts/${data.contractId}`);
+        return;
+      }
+      toast.error(data?.error ?? dealErrorMessage(error, t));
     }
   };
 
@@ -289,6 +306,21 @@ export const DealDetailContent: React.FC = () => {
                       <dt>{t('detail.salesperson')}</dt>
                       <dd>{deal.ownerName}</dd>
                     </div>
+                    {/* M3 FR-CON-01: "Create contract", replaced by a link once it exists. */}
+                    <Can permission="contracts.manage">
+                      <div className={styles.fact}>
+                        <dt>{t('contract.label')}</dt>
+                        <dd>
+                          {deal.contractId ? (
+                            <Link to={`/${tenantSlug}/contracts/${deal.contractId}`}>{t('contract.open')}</Link>
+                          ) : (
+                            <Button variant="primary" onClick={createContract}>
+                              {t('contract.create')}
+                            </Button>
+                          )}
+                        </dd>
+                      </div>
+                    </Can>
                   </>
                 ) : (
                   <>

@@ -42,16 +42,17 @@ export class GetContractDetailUseCase {
     // A viewer who may read this contract but not manage it (Reception's
     // validity-only view) is offered no actions at all.
     const canAct = admits(manageScope, contract.clientAssignedUserId);
-    const permittedActions = canAct ? actionsFor(contract.status) : [];
+    const permittedActions = canAct ? actionsFor(contract.status, contract.isLegacy) : [];
 
     return { contract, payments, history, permittedActions };
   }
 }
 
-function actionsFor(status: ContractStatus): string[] {
+function actionsFor(status: ContractStatus, legacy: boolean): string[] {
   switch (status) {
     case ContractStatus.Draft:
-      return ['EDIT', 'ACTIVATE', 'CANCEL'];
+      // A contract made from a deal can be refreshed from it while it is a Draft (FR-CON-04).
+      return legacy ? ['EDIT', 'ACTIVATE', 'CANCEL'] : ['EDIT', 'REFRESH_FROM_DEAL', 'ACTIVATE', 'CANCEL'];
     case ContractStatus.Active:
       return ['EDIT', 'CANCEL', 'RECORD_PAYMENT', 'ADD_PAYMENT'];
     case ContractStatus.Expired:

@@ -12,9 +12,10 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
       contractId: raw.contractId,
       periodIndex: raw.periodIndex,
       dueDate: raw.dueDate,
-      amount: raw.amount,
+      // Decimal(12,2) in the database (NFR-ACC-03); the entity still carries a number until Slice 8 moves instalments onto Money.
+      amount: Number(String(raw.amount)),
       status: raw.status as PaymentStatus,
-      paidAmount: raw.paidAmount,
+      paidAmount: Number(String(raw.paidAmount)),
       paidAt: raw.paidAt,
       method: raw.method,
       note: raw.note,

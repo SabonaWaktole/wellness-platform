@@ -17,6 +17,11 @@ export const contractService = {
     const response = await apiClient.post(`/${tenantSlug}/contracts`, data);
     return response.data;
   },
+  /** FR-CON-01: the contract is read from the won deal; nothing but the dates and billing period can be sent. */
+  createContractFromDeal: async (tenantSlug: string, dealId: string) => {
+    const response = await apiClient.post(`/${tenantSlug}/contracts`, { dealId });
+    return response.data;
+  },
   updateContract: async (tenantSlug: string, id: string, data: any) => {
     const response = await apiClient.patch(`/${tenantSlug}/contracts/${id}`, data);
     return response.data;

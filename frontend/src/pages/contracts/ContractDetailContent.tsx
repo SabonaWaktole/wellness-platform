@@ -8,12 +8,16 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  RefreshCw,
   RotateCcw,
   Trash2,
   Undo2,
   X,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card/Card';
+import { Badge } from '../../components/ui/Badge/Badge';
+import { RichTextReadOnly } from '../../components/forms/registry/RichTextReadOnly';
+import type { RichTextDoc } from '../../types/form';
 import { StatusBadge } from '../../components/ui/StatusBadge/StatusBadge';
 import { Button } from '../../components/ui/Button/Button';
 import { Can } from '../../components/auth/Can';
@@ -46,7 +50,7 @@ interface PaymentDraft {
 const emptyDraft: PaymentDraft = { dueDate: '', amount: '', method: '', note: '' };
 
 export const ContractDetailContent: React.FC = () => {
-  const { t } = useTranslation('contracts');
+  const { t, i18n } = useTranslation('contracts');
   const { t: tc } = useTranslation('common');
   const dates = useDateFormat();
   const { format: formatMoney } = useMoneyFormat();
@@ -71,6 +75,7 @@ export const ContractDetailContent: React.FC = () => {
     (location.state as { scheduleNeedsReview?: boolean } | null)?.scheduleNeedsReview
   );
 
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | 'ACTIVATE' | 'CANCEL' | 'DOCUMENT'>(null);
   const [pendingDelete, setPendingDelete] = useState<ContractPayment | null>(null);
 
@@ -126,6 +131,18 @@ export const ContractDetailContent: React.FC = () => {
     await actions.activateContract(contractId);
     setConfirm(null);
     await reload();
+  };
+
+  /** FR-CON-04: re-reads the agreed values from the deal while the contract is a Draft. */
+  const handleRefresh = async () => {
+    if (!contractId) return;
+    setRefreshError(null);
+    try {
+      await actions.refreshFromDeal(contractId);
+      await reload();
+    } catch (error: any) {
+      setRefreshError(error?.response?.data?.error ?? tc('state.error'));
+    }
   };
 
   const handleCancel = async () => {
@@ -237,7 +254,14 @@ export const ContractDetailContent: React.FC = () => {
     return <div className={styles.container}>{t('detail.loading')}</div>;
   }
 
-  const reference = contractReference(contract.id);
+  // The number (FR-CON-05); a Legacy contract keeps its old reference.
+  const reference = contract.number ?? contractReference(contract.id);
+  const language = i18n.language?.startsWith('en') ? 'en' : 'sq';
+  const terms = (language === 'en' ? contract.termsText?.en ?? contract.termsText?.sq : contract.termsText?.sq ?? contract.termsText?.en) as
+    | RichTextDoc
+    | null
+    | undefined;
+  const localised = (sq: string, en: string | null) => (language === 'en' && en ? en : sq);
 
   return (
     <div className={styles.container}>
@@ -247,6 +271,7 @@ export const ContractDetailContent: React.FC = () => {
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{t('detail.title', { reference })}</h1>
             <StatusBadge domain="contract" status={contract.status} />
+            {contract.legacy && <Badge variant="outline">{t('detail.legacy')}</Badge>}
           </div>
         </div>
 
@@ -258,6 +283,11 @@ export const ContractDetailContent: React.FC = () => {
               onClick={() => navigate(`/${tenantSlug}/contracts/${contract.id}/edit`)}
             >
               {t('detail.edit')}
+            </Button>
+          )}
+          {can('REFRESH_FROM_DEAL') && (
+            <Button variant="outline" icon={<RefreshCw size={16} />} onClick={handleRefresh}>
+              {t('detail.refreshFromDeal')}
             </Button>
           )}
           {can('ACTIVATE') && (
@@ -277,6 +307,13 @@ export const ContractDetailContent: React.FC = () => {
           )}
         </div>
       </div>
+
+      {refreshError && (
+        <div className={styles.warningBanner}>
+          <AlertTriangle size={18} />
+          <span>{refreshError}</span>
+        </div>
+      )}
 
       {scheduleWarning && (
         <div className={styles.warningBanner}>
@@ -306,6 +343,41 @@ export const ContractDetailContent: React.FC = () => {
                 <dt className={styles.termLabel}>{t('detail.plan')}</dt>
                 <dd className={styles.termValue}>{contract.planName}</dd>
               </div>
+              {/* The deal and offer it came from, the package and its services (FR-CON-06). Absent without commercial.view. */}
+              {contract.dealId && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.deal')}</dt>
+                  <dd className={styles.termValue}>
+                    <button type="button" className={styles.linkValue} onClick={() => navigate(`/${tenantSlug}/deals/${contract.dealId}`)}>
+                      {contract.dealTitle ?? t('detail.openDeal')}
+                    </button>
+                  </dd>
+                </div>
+              )}
+              {contract.quotationReference && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.offer')}</dt>
+                  <dd className={styles.termValue}>{contract.quotationReference}</dd>
+                </div>
+              )}
+              {contract.packageName && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.package')}</dt>
+                  <dd className={styles.termValue}>{contract.packageName}</dd>
+                </div>
+              )}
+              {contract.servicesSnapshot && contract.servicesSnapshot.length > 0 && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.services')}</dt>
+                  <dd className={styles.termValue}>
+                    <ul className={styles.serviceList}>
+                      {contract.servicesSnapshot.map((service, index) => (
+                        <li key={index}>{localised(service.nameSq, service.nameEn)}</li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              )}
               {/* Absent without commercial.view (FR-RBAC-06). */}
               {contract.billingPeriod && (
                 <div className={styles.termRow}>
@@ -321,6 +393,18 @@ export const ContractDetailContent: React.FC = () => {
                   <dd className={styles.termValue}>{formatMoney(contract.amount)}</dd>
                 </div>
               )}
+              {contract.agreedAnnualValue && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.annualValue')}</dt>
+                  <dd className={styles.termValue}>{formatMoney(contract.agreedAnnualValue)}</dd>
+                </div>
+              )}
+              {contract.discountPercent && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.discount')}</dt>
+                  <dd className={styles.termValue}>{t('detail.discountValue', { percent: contract.discountPercent })}</dd>
+                </div>
+              )}
               <div className={styles.termRow}>
                 <dt className={styles.termLabel}>{t('detail.startsAt')}</dt>
                 <dd className={styles.termValue}>{dates.dateMedium(contract.startsAt)}</dd>
@@ -329,6 +413,12 @@ export const ContractDetailContent: React.FC = () => {
                 <dt className={styles.termLabel}>{t('detail.endsAt')}</dt>
                 <dd className={styles.termValue}>{dates.dateMedium(contract.endsAt)}</dd>
               </div>
+              {contract.renewalDate && (
+                <div className={styles.termRow}>
+                  <dt className={styles.termLabel}>{t('detail.renewalDate')}</dt>
+                  <dd className={styles.termValue}>{dates.dateMedium(contract.renewalDate)}</dd>
+                </div>
+              )}
               <div className={styles.termRow}>
                 <dt className={styles.termLabel}>{t('detail.owner')}</dt>
                 <dd className={styles.termValue}>{ownerName}</dd>
@@ -357,6 +447,15 @@ export const ContractDetailContent: React.FC = () => {
               )}
             </dl>
           </Card>
+
+          {terms?.content && terms.content.length > 0 && (
+            <Card padding="lg">
+              <h2 className={styles.cardTitle}>{t('detail.terms')}</h2>
+              <div className={styles.termsBody}>
+                <RichTextReadOnly content={terms} />
+              </div>
+            </Card>
+          )}
 
           <Card padding="lg">
             <h2 className={styles.cardTitle}>{t('detail.document')}</h2>

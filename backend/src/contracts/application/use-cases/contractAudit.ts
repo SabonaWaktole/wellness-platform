@@ -12,6 +12,14 @@ export const CONTRACT_AUDIT_FIELDS = [
   'assignedUserId',
   'notes',
   'renewedFromContractId',
+  // M3 Slice 4 (FR-AUD-11): the deal's values and the contract's number and renewal date.
+  'number',
+  'dealId',
+  'quotationId',
+  'packageId',
+  'agreedAnnualValue',
+  'discountPercent',
+  'renewalDate',
 ] as const;
 
 /** The payment fields the audit trail cares about (FR-AUD-02). */
@@ -46,7 +54,7 @@ export function paymentSnapshot(payment: ContractPayment): Record<string, unknow
 /** The human-readable label an audit entry carries for a contract. */
 export function contractLabel(contract: Contract): string {
   const client = contract.clientName ?? contract.clientId;
-  return `${client} — ${contract.planName}`;
+  return `${client} — ${contract.number ?? contract.planName}`;
 }
 
 /** The human-readable label an audit entry carries for a payment. */

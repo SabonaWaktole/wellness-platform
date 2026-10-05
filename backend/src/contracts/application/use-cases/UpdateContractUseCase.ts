@@ -1,8 +1,10 @@
 import { AccessContext } from '../../../access/domain/AccessContext';
 import { randomUUID } from 'crypto';
-import { BillingPeriod, ContractStatus } from '../../domain/Contract';
+import { BillingPeriod, ContractStatus, ContractTerms } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
+import { InvalidRichTextError, sanitizeRichText } from '../../../shared/application/richText/sanitizeRichText';
+import { ContractValidationError } from '../../domain/contractErrors';
 import { reachableContract } from './contractAccess';
 import { RecordScopeResolver } from '../../../access/application/RecordScopeResolver';
 import { AuditAction } from '../../../audit/domain/AuditAction';
@@ -40,10 +42,13 @@ export class UpdateContractUseCase {
     endsAt?: Date;
     assignedUserId?: string | null;
     notes?: string | null;
+    renewalDate?: Date | null;
+    termsText?: ContractTerms | null;
     actingUserId: string;
     access: AccessContext;
   }) {
     const scope = await this.scopes.resolve(input.access, 'contracts.manage');
+    const termsText = this.cleanTerms(input.termsText);
     return this.writeTx.run(async (repos) => {
       // Out of scope reads as not found (FR-RBAC-05, 11).
       const contract = reachableContract(await repos.contractRepo.findById(input.tenantId, input.contractId), scope);
@@ -69,6 +74,8 @@ export class UpdateContractUseCase {
         endsAt: input.endsAt,
         assignedUserId: input.assignedUserId,
         notes: input.notes,
+        renewalDate: input.renewalDate,
+        termsText,
       });
 
       await repos.contractRepo.save(contract);
@@ -117,5 +124,16 @@ export class UpdateContractUseCase {
 
       return { contract, scheduleNeedsReview: priceOrDatesMoved && unsettledAtOldPrice > 0 };
     });
+  }
+
+  /** The terms are rich text: only the editor's whitelist is kept (M2 D10, NFR-SEC-05). */
+  private cleanTerms(terms: ContractTerms | null | undefined): ContractTerms | null | undefined {
+    if (!terms) return terms;
+    try {
+      return { sq: sanitizeRichText(terms.sq) as ContractTerms['sq'], en: sanitizeRichText(terms.en) as ContractTerms['en'] };
+    } catch (error) {
+      if (error instanceof InvalidRichTextError) throw new ContractValidationError('termsText', error.message);
+      throw error;
+    }
   }
 }

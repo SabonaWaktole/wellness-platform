@@ -10,6 +10,15 @@ export interface UseContractsOptions {
   assignedUserId?: string;
   /** Active contracts ending within this many days — the renewals worklist. */
   expiringWithinDays?: number;
+  /** Valid today, valid and ending soon, or not valid (FR-CON-08). */
+  validity?: 'VALID' | 'EXPIRING_SOON' | 'NOT_VALID';
+  /** `YYYY-MM-DD`, both ends included. */
+  endsFrom?: string;
+  endsTo?: string;
+  /** Any instalment Overdue. */
+  hasOverdue?: 'true';
+  areaId?: string;
+  cityId?: string;
   page?: number;
   limit?: number;
 }
@@ -93,6 +102,8 @@ export function useContractActions() {
 
   return {
     createContract: (data: any) => call((slug) => contractService.createContract(slug, data)),
+    createContractFromDeal: (dealId: string) => call((slug) => contractService.createContractFromDeal(slug, dealId)),
+    refreshFromDeal: (id: string) => call((slug) => contractService.performAction(slug, id, 'refresh-from-deal')),
     updateContract: (id: string, data: any) =>
       call((slug) => contractService.updateContract(slug, id, data)),
     activateContract: (id: string) => call((slug) => contractService.performAction(slug, id, 'activate')),

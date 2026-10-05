@@ -20,6 +20,22 @@ export const createContractSchema = z.object({
   notes: z.string().max(5000).nullable().optional(),
 });
 
+/**
+ * Creating from a won deal (FR-CON-01..04). Strict: the price, annual value,
+ * package and services are read from the deal and cannot be typed, so a body
+ * that names them is refused rather than ignored.
+ */
+export const createContractFromDealSchema = z
+  .object({
+    dealId: z.string().min(1, 'Choose the deal'),
+    startsAt: dateString.optional(),
+    endsAt: dateString.optional(),
+    billingPeriod: z.nativeEnum(BillingPeriod).optional(),
+  })
+  .strict();
+
+const richTextDocument = z.union([z.string().max(20000), z.record(z.unknown())]).nullable();
+
 export const updateContractSchema = z.object({
   planName: z.string().min(1).max(120).optional(),
   amount: z.coerce.number().min(0).optional(),
@@ -28,6 +44,8 @@ export const updateContractSchema = z.object({
   endsAt: dateString.optional(),
   assignedUserId: z.string().min(1).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
+  renewalDate: dateString.nullable().optional(),
+  termsText: z.object({ sq: richTextDocument.optional(), en: richTextDocument.optional() }).nullable().optional(),
 });
 
 export const renewContractSchema = z.object({
@@ -54,6 +72,15 @@ export const searchContractsSchema = z.object({
    * is already for.
    */
   expiringWithinDays: z.coerce.number().int().min(0).max(730).optional(),
+  /** Valid today, valid and ending within the expiring-soon window, or not valid (FR-CON-08). */
+  validity: z.enum(['VALID', 'EXPIRING_SOON', 'NOT_VALID']).optional(),
+  /** End date range, `YYYY-MM-DD`, both ends included (FR-CON-08). */
+  endsFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endsTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Any instalment Overdue (FR-CON-08). */
+  hasOverdue: z.enum(['true', 'false']).optional(),
+  areaId: z.string().min(1).optional(),
+  cityId: z.string().min(1).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
 });

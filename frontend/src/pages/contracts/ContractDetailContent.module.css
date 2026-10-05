@@ -333,3 +333,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+.serviceList {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.termsBody {
+  font-size: 14px;
+  line-height: 1.5;
+}

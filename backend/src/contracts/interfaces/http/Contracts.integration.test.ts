@@ -355,7 +355,7 @@ describe('Contracts API', () => {
       expect(renewed.status).toBe(201);
       expect(renewed.body.id).not.toBe(contract.id);
       expect(renewed.body.status).toBe(ContractStatus.Draft);
-      expect(renewed.body.amount).toBe(120);
+      expect(renewed.body.amount).toBe('120.00');
       // Inherits the plan it renewed, and starts the day the old term ended.
       expect(renewed.body.planName).toBe('Gold');
       expect(renewed.body.renewedFromContractId).toBe(contract.id);

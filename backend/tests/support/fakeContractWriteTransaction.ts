@@ -6,6 +6,8 @@ import { IContractRepository } from '../../src/contracts/domain/IContractReposit
 import { IContractPaymentRepository } from '../../src/contracts/domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../src/contracts/domain/IContractStatusHistoryRepository';
 import { IContractSettingsStore } from '../../src/contracts/application/ports/IContractSettingsStore';
+import { IContractNumbers } from '../../src/contracts/application/ports/IContractNumbers';
+import { IContractDealSource } from '../../src/contracts/application/ports/IContractDealSource';
 import { IAuditTrail } from '../../src/audit/application/ports/IAuditTrail';
 import { AuditEntry } from '../../src/audit/domain/AuditEntry';
 
@@ -15,6 +17,8 @@ export interface ContractWriteHarness {
   paymentRepo: jest.Mocked<IContractPaymentRepository>;
   historyRepo: jest.Mocked<IContractStatusHistoryRepository>;
   settingsStore: jest.Mocked<IContractSettingsStore>;
+  numbers: jest.Mocked<IContractNumbers>;
+  deals: jest.Mocked<IContractDealSource>;
   auditTrail: jest.Mocked<IAuditTrail>;
   /** Every entry handed to auditTrail.record, in call order. */
   recordedAuditEntries: () => AuditEntry[];
@@ -30,6 +34,7 @@ export function makeContractWriteHarness(): ContractWriteHarness {
   const contractRepo = {
     findById: jest.fn(),
     findByClientId: jest.fn(),
+    findByDealId: jest.fn(),
     search: jest.fn(),
     save: jest.fn(),
   } as unknown as jest.Mocked<IContractRepository>;
@@ -52,17 +57,20 @@ export function makeContractWriteHarness(): ContractWriteHarness {
     save: jest.fn(),
   } as unknown as jest.Mocked<IContractSettingsStore>;
 
+  const numbers = { next: jest.fn().mockResolvedValue('CTR-2026-0001') } as unknown as jest.Mocked<IContractNumbers>;
+  const deals = { find: jest.fn() } as unknown as jest.Mocked<IContractDealSource>;
+
   const auditTrail = {
     record: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<IAuditTrail>;
 
   const writeTx: IContractWriteTransaction = {
     run: <T>(work: (repos: ContractWriteRepos) => Promise<T>): Promise<T> =>
-      work({ contractRepo, paymentRepo, historyRepo, settingsStore, auditTrail }),
+      work({ contractRepo, paymentRepo, historyRepo, settingsStore, numbers, deals, auditTrail }),
   };
 
   const recordedAuditEntries = () =>
     (auditTrail.record as jest.Mock).mock.calls.map(([entry]: [AuditEntry]) => entry);
 
-  return { writeTx, contractRepo, paymentRepo, historyRepo, settingsStore, auditTrail, recordedAuditEntries };
+  return { writeTx, contractRepo, paymentRepo, historyRepo, settingsStore, numbers, deals, auditTrail, recordedAuditEntries };
 }

@@ -93,6 +93,8 @@ export interface DealResult {
 export interface DealDetail extends DealSummary, DealResult {
   notes: string | null;
   createdByUserId: string;
+  /** The contract made from this deal, if any (M3 FR-CON-01). */
+  contractId?: string | null;
   contacts: DealContact[];
   history: DealStageChange[];
 }

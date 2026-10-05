@@ -110,7 +110,7 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
             <div className={styles.rowMain}>
               <span className={styles.rowPlan}>
                 {contract.planName}{' '}
-                <span className={styles.rowReference}>{contractReference(contract.id)}</span>
+                <span className={styles.rowReference}>{contract.number ?? contractReference(contract.id)}</span>
               </span>
               <span className={styles.rowTerm}>
                 {dates.date(contract.startsAt)} – {dates.date(contract.endsAt)}

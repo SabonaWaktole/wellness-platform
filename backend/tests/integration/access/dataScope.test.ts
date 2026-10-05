@@ -337,7 +337,7 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
 
     it('the Administrator gets the same contract with its money', async () => {
       const res = await get('admin', `/contracts/${contractOfB}`);
-      expect(res.body.contract.amount).toBe(250);
+      expect(res.body.contract.amount).toBe('250.00');
       expect(res.body.payments).toHaveLength(1);
     });
   });

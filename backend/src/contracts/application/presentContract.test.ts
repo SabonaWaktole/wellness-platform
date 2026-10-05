@@ -31,7 +31,7 @@ const MONEY = /amount|price|payment|paid|outstanding|overdue|total/i;
 describe('presentContract (FR-RBAC-06)', () => {
   it('gives the Administrator the whole contract', () => {
     const view = presentContract(contract(), administrator());
-    expect(view.amount).toBe(100);
+    expect(view.amount).toBe('100.00');
     expect(view.paymentSummary).toBeDefined();
     expect(view.notes).toBe('Discount agreed at 10%');
   });
@@ -41,6 +41,7 @@ describe('presentContract (FR-RBAC-06)', () => {
 
     expect(view).toEqual({
       id: 'c1',
+      number: null,
       clientId: 'client-1',
       clientName: 'Acme',
       planName: 'Gold',
@@ -54,7 +55,7 @@ describe('presentContract (FR-RBAC-06)', () => {
 
   it('keeps the money for a reader who holds commercial.view and payments.view (the CEO)', () => {
     const view = presentContract(contract(), ceo());
-    expect(view.amount).toBe(100);
+    expect(view.amount).toBe('100.00');
     expect(view.paymentSummary).toBeDefined();
     expect(view.notes).toBeUndefined();
   });
