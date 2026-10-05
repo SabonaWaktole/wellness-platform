@@ -1,8 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Contract, ContractStatus, BillingPeriod } from '../../../src/contracts/domain/Contract';
 import { ContractPayment, PaymentStatus } from '../../../src/contracts/domain/ContractPayment';
-import { ActivateContractUseCase } from '../../../src/contracts/application/use-cases/ActivateContractUseCase';
-import { CancelContractUseCase } from '../../../src/contracts/application/use-cases/CancelContractUseCase';
+import { ChangeContractStatusUseCase } from '../../../src/contracts/application/use-cases/ChangeContractStatusUseCase';
 import { RenewContractUseCase } from '../../../src/contracts/application/use-cases/RenewContractUseCase';
 import { UpdateContractUseCase } from '../../../src/contracts/application/use-cases/UpdateContractUseCase';
 import { ExpireContractUseCase } from '../../../src/contracts/application/use-cases/ExpireContractUseCase';
@@ -81,16 +80,17 @@ describe('CreateContractUseCase audit trail', () => {
   });
 });
 
-describe('ActivateContractUseCase audit trail', () => {
+describe('ChangeContractStatusUseCase audit trail (activate)', () => {
   it('FR-AUD-02 records exactly one STATUS_CHANGE entry for status DRAFT to ACTIVE', async () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract();
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new ActivateContractUseCase(harness.writeTx, scopeResolver());
+    const useCase = new ChangeContractStatusUseCase(harness.writeTx, scopeResolver(), tenantsWorkflow('LEGACY_QUOTATIONS'));
 
     await useCase.execute({
       tenantId: TENANT_ID,
       contractId: contract.id,
+      status: ContractStatus.Active,
       actingUserId: USER_ID,
       access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
     });
@@ -103,16 +103,17 @@ describe('ActivateContractUseCase audit trail', () => {
   });
 });
 
-describe('CancelContractUseCase audit trail', () => {
+describe('ChangeContractStatusUseCase audit trail (cancel)', () => {
   it('FR-AUD-02 records a STATUS_CHANGE entry and carries the reason', async () => {
     const harness = makeContractWriteHarness();
     const contract = draftContract({ status: ContractStatus.Active });
     harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new CancelContractUseCase(harness.writeTx, scopeResolver());
+    const useCase = new ChangeContractStatusUseCase(harness.writeTx, scopeResolver(), tenantsWorkflow('LEGACY_QUOTATIONS'));
 
     await useCase.execute({
       tenantId: TENANT_ID,
       contractId: contract.id,
+      status: ContractStatus.Cancelled,
       reason: 'Client requested',
       actingUserId: USER_ID,
       access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),

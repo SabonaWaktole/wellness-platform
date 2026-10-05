@@ -332,6 +332,7 @@ model User {
   assignedContracts                 Contract[]               @relation("AssignedContracts")
   createdContracts                  Contract[]               @relation("CreatedContracts")
   contractStatusChanges             ContractStatusHistory[]  @relation("ContractStatusChanges")
+  contractDocumentUploads           ContractDocument[]       @relation("ContractDocumentUploads")
   notifications                     Notification[]           @relation("NotificationRecipient")
   causedNotifications               Notification[]           @relation("NotificationActor")
   sentInvitations                   Invitation[]             @relation("InvitationSender")
@@ -1612,6 +1613,7 @@ model Contract {
 
   payments      ContractPayment[]
   statusHistory ContractStatusHistory[]
+  documents     ContractDocument[]
 
   @@unique([tenantId, number])
   @@index([tenantId, clientId])
@@ -1711,6 +1713,30 @@ model ContractStatusHistory {
   /// their past status changes as "done by the scheduler".
   changedBy User?    @relation("ContractStatusChanges", fields: [changedByUserId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId, contractId])
+}
+
+/// The signed contract as a PDF, one row per file ever attached (M3 Slice 5,
+/// FR-CON-19). Replacing the document keeps the earlier file as a previous
+/// version: the new row is current and every other row of the contract is not.
+/// `Contract.documentUrl` / `documentName` mirror the current row so the
+/// older readers keep working. The file itself is read back only through the
+/// contract's document endpoint, which checks `commercial.view` and the
+/// contract's scope.
+model ContractDocument {
+  id               String   @id
+  tenantId         String
+  contractId       String
+  fileName         String
+  url              String
+  uploadedByUserId String
+  uploadedAt       DateTime @default(now())
+  isCurrent        Boolean  @default(true)
+
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation("ContractDocumentUploads", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([contractId, isCurrent])
   @@index([tenantId, contractId])
 }
 

@@ -49,6 +49,9 @@ export const NOTIFICATION_TYPES = [
    */
   'CONTRACT_EXPIRING',
   'CONTRACT_EXPIRED',
+  // M3 Slice 5 (FR-CON-14, 15): someone suspended or cancelled a contract, with a reason. These have an actor.
+  'CONTRACT_SUSPENDED',
+  'CONTRACT_CANCELLED',
 
   // Team.
   'INVITATION_ACCEPTED',

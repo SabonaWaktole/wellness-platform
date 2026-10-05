@@ -52,6 +52,9 @@
 --  26. mysql_migration_m2_discount_approvals.sql
 --  27. mysql_migration_m2_follow_ups.sql
 --  28. mysql_migration_m3_contracts_permissions.sql
+--  29. mysql_migration_m3_contract_settings.sql
+--  30. mysql_migration_m3_contracts.sql
+--  31. mysql_migration_m3_contract_documents.sql
 --
 -- TAKE A BACKUP FIRST. Nothing here is designed to lose data, but a backup is
 -- what makes that a fact rather than an intention:
@@ -2977,6 +2980,52 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- 31. Signed contract document versions (M3 Slice 5: FR-CON-19)
+-- ---------------------------------------------------------------
+
+SELECT 'm3 contract documents' AS step, DATABASE() AS db, NOW() AS at;
+
+CREATE TABLE IF NOT EXISTS `ContractDocument` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `contractId` VARCHAR(191) NOT NULL,
+    `fileName` VARCHAR(191) NOT NULL,
+    `url` VARCHAR(191) NOT NULL,
+    `uploadedByUserId` VARCHAR(191) NOT NULL,
+    `uploadedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `isCurrent` BOOLEAN NOT NULL DEFAULT true,
+
+    INDEX `ContractDocument_contractId_isCurrent_idx`(`contractId`, `isCurrent`),
+    INDEX `ContractDocument_tenantId_contractId_idx`(`tenantId`, `contractId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- ContractDocument.ContractDocument_contractId_fkey
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContractDocument' AND CONSTRAINT_NAME = 'ContractDocument_contractId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ContractDocument` ADD CONSTRAINT `ContractDocument_contractId_fkey` FOREIGN KEY (`contractId`) REFERENCES `Contract`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: ContractDocument.ContractDocument_contractId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ContractDocument.ContractDocument_uploadedByUserId_fkey
+SET @needed := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContractDocument' AND CONSTRAINT_NAME = 'ContractDocument_uploadedByUserId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed = 0, 'ALTER TABLE `ContractDocument` ADD CONSTRAINT `ContractDocument_uploadedByUserId_fkey` FOREIGN KEY (`uploadedByUserId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE', 'SELECT ''skip: ContractDocument.ContractDocument_uploadedByUserId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Copy each existing document into one current row (once).
+INSERT INTO `ContractDocument` (`id`, `tenantId`, `contractId`, `fileName`, `url`, `uploadedByUserId`, `uploadedAt`, `isCurrent`)
+SELECT UUID(), c.`tenantId`, c.`id`, COALESCE(c.`documentName`, 'contract.pdf'), c.`documentUrl`, c.`createdByUserId`, c.`updatedAt`, true
+FROM `Contract` c
+WHERE c.`documentUrl` IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM `ContractDocument` d WHERE d.`contractId` = c.`id`);
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261011100000_m3_contract_documents', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261011100000_m3_contract_documents'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -3120,6 +3169,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SalesSettings'
   UNION ALL SELECT 'ContractSettings table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractSettings'
+  UNION ALL SELECT 'ContractDocument table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

@@ -67,10 +67,11 @@ describe('presentContract (FR-RBAC-06)', () => {
 
   it('drops payment rows and history from Reception\'s detail view', () => {
     const detail = presentContractDetail(
-      { contract: contract(), payments: [{ id: 'p1', amount: 100 } as any], history: [{ id: 'h1' } as any], permittedActions: [] },
+      { contract: contract(), payments: [{ id: 'p1', amount: 100 } as any], history: [{ id: 'h1' } as any], documents: [{ id: 'd1' }], permittedActions: [] },
       reception()
     );
     expect(detail).not.toHaveProperty('payments');
+    expect(detail).not.toHaveProperty('documents');
     expect(detail.history).toEqual([]);
     expect(keysOf(detail).filter((key) => MONEY.test(key))).toEqual([]);
   });

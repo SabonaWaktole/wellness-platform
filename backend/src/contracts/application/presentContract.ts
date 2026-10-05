@@ -80,14 +80,16 @@ export function presentContracts(contracts: Contract[], access: AccessContext): 
  * the viewer. The status history is a manager's record.
  */
 export function presentContractDetail<P, H>(
-  detail: { contract: Contract; payments: P[]; history: H[]; permittedActions: string[] },
+  detail: { contract: Contract; payments: P[]; history: H[]; documents: unknown[]; permittedActions: string[] },
   access: AccessContext
 ) {
-  const { payments, ...rest } = detail;
+  const { payments, documents, ...rest } = detail;
   return {
     ...rest,
     contract: presentContract(detail.contract, access),
     history: access.can('contracts.manage') ? detail.history : [],
+    // The signed document is a commercial record (FR-CON-19, FR-RBAC-21).
+    ...(access.can('commercial.view') ? { documents } : {}),
     ...(access.can('payments.view') ? { payments } : {}),
   };
 }

@@ -61,6 +61,12 @@ export const cancelContractSchema = z.object({
   reason: z.string().max(500).nullable().optional(),
 });
 
+/** Any status change (FR-CON-11): the target, and the reason where the transition table asks for one. */
+export const changeContractStatusSchema = z.object({
+  status: z.nativeEnum(ContractStatus),
+  reason: z.string().max(500).nullable().optional(),
+});
+
 export const searchContractsSchema = z.object({
   query: z.string().optional(),
   status: z.nativeEnum(ContractStatus).optional(),

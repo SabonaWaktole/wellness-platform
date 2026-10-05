@@ -36,6 +36,7 @@ describe('Contract from a won deal (M3 Slice 4)', () => {
       put: (path: string, body: object = {}) => auth(request(app).put(`/api/${slug}${path}`)).send(body),
       patch: (path: string, body: object = {}) => auth(request(app).patch(`/api/${slug}${path}`)).send(body),
       delete: (path: string) => auth(request(app).delete(`/api/${slug}${path}`)),
+      upload: (path: string, file: Buffer) => auth(request(app).post(`/api/${slug}${path}`)).attach('file', file, { filename: 'signed.pdf', contentType: 'application/pdf' }),
     };
   };
   const company = { A: randomUUID(), B: randomUUID(), admin: randomUUID() };
@@ -340,6 +341,8 @@ describe('Contract from a won deal (M3 Slice 4)', () => {
     const edited = await as('salesA').patch(`/contracts/${contract.id}`, { startsAt: '2026-02-01', endsAt: '2027-01-31', billingPeriod: 'QUARTERLY', notes: 'Agreed by phone' }).expect(200);
     expect(edited.body.contract).toMatchObject({ billingPeriod: 'QUARTERLY', startsAt: '2026-02-01T00:00:00.000Z', endsAt: '2027-01-31T00:00:00.000Z', notes: 'Agreed by phone' });
 
+    // Activating needs the signed document (FR-CON-13).
+    await as('salesA').upload(`/contracts/${contract.id}/document`, Buffer.from('%PDF-1.4\n%%EOF')).expect(200);
     await as('salesA').post(`/contracts/${contract.id}/activate`).expect(200);
     const refused = await as('salesA').patch(`/contracts/${contract.id}`, { endsAt: '2028-01-31' }).expect(400);
     expect(refused.body.error).toMatch(/renew/i);
