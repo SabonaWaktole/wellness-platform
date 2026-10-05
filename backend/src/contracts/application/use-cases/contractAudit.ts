@@ -34,6 +34,9 @@ export const PAYMENT_AUDIT_FIELDS = [
   'paidAt',
   'method',
   'note',
+  // M3 Slice 8 (FR-AUD-11): the invoice the instalment was billed on.
+  'invoiceNumber',
+  'invoiceDate',
 ] as const;
 
 /** A plain-object snapshot of the fields `diff()` compares, for a contract. */

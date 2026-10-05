@@ -157,6 +157,16 @@ describe('redactFields (FR-RBAC-06)', () => {
       );
     });
 
+    it('FR-RBAC-21 the Slice 8 instalment fields (method, receipt and flag) need payments.view', () => {
+      const instalment = {
+        id: 'i1', status: 'PARTIALLY_PAID', method: 'CASH', receivedOn: '2027-03-10', amountReceived: '20.00',
+        dueNotInvoiced: false, overdueAmount: '0.00', nextDueDate: '2027-04-01',
+      };
+      const stripped = redactFields(instalment, administrator({ revoke: ['payments.view'] })) as Record<string, unknown>;
+      expect(Object.keys(stripped)).toEqual(['id', 'status']);
+      expect(redactFields(instalment, administrator())).toEqual(instalment);
+    });
+
     it('Reception receives only number, status, validity dates and company', () => {
       const view = redactFields(contract, reception()) as Record<string, unknown>;
       expect(Object.keys(view).sort()).toEqual([...shown].sort());

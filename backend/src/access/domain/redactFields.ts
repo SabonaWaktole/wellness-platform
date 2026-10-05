@@ -35,8 +35,9 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
  */
 export const PAYMENT_FIELDS: readonly string[] = [
   'paidAt', 'paidAmount', 'payments', 'paymentSummary', 'outstanding', 'overdueCount',
-  // Milestone 3 Slice 2: instalment invoice facts. `method` joins in Slice 8, with the receipt shape.
+  // Milestone 3 Slice 2: instalment invoice facts. Slice 8 adds the receipt shape and the flag.
   'invoiceNumber', 'invoiceDate',
+  'method', 'receivedOn', 'amountReceived', 'dueNotInvoiced', 'overdueAmount', 'nextDueDate',
 ];
 
 /**

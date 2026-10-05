@@ -1,3 +1,4 @@
+import { Money } from '../../pricing/domain/Money';
 import { ContractPayment, PaymentStatus } from './ContractPayment';
 
 function makePayment(overrides: Partial<Parameters<typeof ContractPayment.create>[0]> = {}) {
@@ -7,140 +8,58 @@ function makePayment(overrides: Partial<Parameters<typeof ContractPayment.create
     contractId: 'c1',
     periodIndex: 1,
     dueDate: new Date('2026-03-01'),
-    amount: 100,
+    amount: 49.4,
     ...overrides,
   });
 }
 
 describe('ContractPayment', () => {
-  it('starts unpaid and owing the full amount', () => {
+  it('FR-PAY-02 starts Not Invoiced, with nothing received and the full amount outstanding', () => {
     const payment = makePayment();
 
-    expect(payment.status).toBe(PaymentStatus.PaymentPending);
-    expect(payment.outstanding).toBe(100);
-  });
-
-  describe('recordPayment', () => {
-    it('settles in full when no amount is given', () => {
-      const payment = makePayment();
-      payment.recordPayment({});
-
-      expect(payment.status).toBe(PaymentStatus.Paid);
-      expect(payment.paidAmount).toBe(100);
-      expect(payment.outstanding).toBe(0);
-      expect(payment.paidAt).toBeInstanceOf(Date);
-    });
-
-    it('records a smaller amount as PARTIAL', () => {
-      const payment = makePayment();
-      payment.recordPayment({ amount: 40 });
-
-      expect(payment.status).toBe(PaymentStatus.PartiallyPaid);
-      expect(payment.outstanding).toBe(60);
-    });
-
-    it('accumulates instalments rather than overwriting them', () => {
-      const payment = makePayment();
-      payment.recordPayment({ amount: 40 });
-      payment.recordPayment({ amount: 60 });
-
-      expect(payment.paidAmount).toBe(100);
-      expect(payment.status).toBe(PaymentStatus.Paid);
-    });
-
-    it('settles a repayment split into thirds despite floating point', () => {
-      const payment = makePayment();
-      payment.recordPayment({ amount: 33.33 });
-      payment.recordPayment({ amount: 33.33 });
-      payment.recordPayment({ amount: 33.34 });
-
-      expect(payment.status).toBe(PaymentStatus.Paid);
-      expect(payment.outstanding).toBe(0);
-    });
-
-    it('refuses a zero or negative payment', () => {
-      const payment = makePayment();
-
-      expect(() => payment.recordPayment({ amount: 0 })).toThrow(/positive amount/);
-      expect(() => payment.recordPayment({ amount: -5 })).toThrow(/positive amount/);
-    });
-
-    it('keeps the method and note it was given', () => {
-      const payment = makePayment();
-      payment.recordPayment({ method: 'bank transfer', note: 'ref 8891' });
-
-      expect(payment.method).toBe('bank transfer');
-      expect(payment.note).toBe('ref 8891');
-    });
-  });
-
-  it('resets everything on markUnpaid', () => {
-    const payment = makePayment();
-    payment.recordPayment({});
-    payment.markUnpaid();
-
-    expect(payment.status).toBe(PaymentStatus.PaymentPending);
+    expect(payment.status).toBe(PaymentStatus.NotInvoiced);
     expect(payment.paidAmount).toBe(0);
-    expect(payment.paidAt).toBeNull();
-    expect(payment.outstanding).toBe(100);
+    expect(payment.outstanding).toBe(49.4);
+    expect(payment.invoiceNumber).toBeNull();
   });
 
-  it('owes nothing once waived, even with no money recorded', () => {
-    const payment = makePayment();
-    payment.waive('goodwill month');
-
-    expect(payment.status).toBe(PaymentStatus.Waived);
-    expect(payment.outstanding).toBe(0);
-    expect(payment.note).toBe('goodwill month');
+  it('refuses a negative amount', () => {
+    expect(() => makePayment({ amount: -1 })).toThrow('non-negative');
   });
 
-  describe('isOverdue', () => {
-    it('is true when money is still owed after the due date', () => {
-      const payment = makePayment({ dueDate: new Date('2026-03-01') });
+  it('NFR-ACC-03 sends money as two-decimal strings', () => {
+    const json = makePayment({ paidAmount: 20, status: PaymentStatus.PartiallyPaid }).toJSON();
 
-      expect(payment.isOverdue(new Date('2026-04-01'))).toBe(true);
-    });
-
-    it('is false once settled', () => {
-      const payment = makePayment({ dueDate: new Date('2026-03-01') });
-      payment.recordPayment({});
-
-      expect(payment.isOverdue(new Date('2026-04-01'))).toBe(false);
-    });
-
-    it('is false for a waived instalment', () => {
-      const payment = makePayment({ dueDate: new Date('2026-03-01') });
-      payment.waive();
-
-      expect(payment.isOverdue(new Date('2026-04-01'))).toBe(false);
-    });
+    expect(json.amount).toBe('49.40');
+    expect(json.paidAmount).toBe('20.00');
+    expect(json.outstanding).toBe('29.40');
   });
 
-  describe('applyEdits', () => {
-    it('re-derives the status when the amount changes', () => {
-      const payment = makePayment();
-      payment.recordPayment({});
+  it('a waived instalment owes nothing, whatever was received', () => {
+    expect(makePayment({ status: PaymentStatus.Waived }).outstanding).toBe(0);
+  });
+
+  describe('state and apply', () => {
+    it('hands the rules Money and takes their result back', () => {
+      const payment = makePayment({ paidAmount: 20, status: PaymentStatus.PartiallyPaid });
+      expect(payment.state().amount.toString()).toBe('49.40');
+      expect(payment.state().paidAmount.toString()).toBe('20.00');
+
+      payment.apply({ paidAmount: Money.of('49.40'), status: PaymentStatus.Paid, paidAt: new Date('2026-03-10') });
+
       expect(payment.status).toBe(PaymentStatus.Paid);
-
-      // Price corrected upward: what was settled no longer covers it.
-      payment.applyEdits({ amount: 150 });
-      expect(payment.status).toBe(PaymentStatus.PartiallyPaid);
-      expect(payment.outstanding).toBe(50);
-    });
-
-    it('leaves a waived instalment waived', () => {
-      const payment = makePayment();
-      payment.waive();
-      payment.applyEdits({ amount: 500 });
-
-      expect(payment.status).toBe(PaymentStatus.Waived);
+      expect(payment.paidAmount).toBe(49.4);
       expect(payment.outstanding).toBe(0);
+      expect(payment.paidAt).toEqual(new Date('2026-03-10'));
     });
 
-    it('refuses a negative amount', () => {
-      const payment = makePayment();
+    it('changes only what it is given', () => {
+      const payment = makePayment({ note: 'keep', invoiceNumber: 'INV-1' });
+      payment.apply({ dueDate: new Date('2026-04-01') });
 
-      expect(() => payment.applyEdits({ amount: -1 })).toThrow(/non-negative/);
+      expect(payment.dueDate).toEqual(new Date('2026-04-01'));
+      expect(payment.note).toBe('keep');
+      expect(payment.invoiceNumber).toBe('INV-1');
     });
   });
 });

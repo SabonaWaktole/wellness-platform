@@ -122,10 +122,10 @@ describe('Contract audit trail (Slice 2)', () => {
     const payment = detailRes.body.payments[0];
 
     const res = await api()
-      .post(`${base()}/${contract.id}/payments/${payment.id}/record`)
+      .post(`${base()}/${contract.id}/payments/${payment.id}/receipts`)
       .set('Authorization', `Bearer ${tokenOwner}`)
-      .send({ action: 'PAY', amount: payment.amount });
-    expect(res.status).toBe(200);
+      .send({ amount: payment.amount, receivedOn: '2026-01-02', method: 'CASH' });
+    expect(res.status).toBe(201);
 
     const entries = await prisma.auditEntry.findMany({
       where: { tenantId, entityType: 'ContractPayment', entityId: payment.id },
@@ -135,7 +135,7 @@ describe('Contract audit trail (Slice 2)', () => {
     expect(changes).toEqual(
       expect.arrayContaining([
         { field: 'status', old: 'NOT_INVOICED', new: 'PAID' },
-        { field: 'paidAmount', old: 0, new: payment.amount },
+        { field: 'paidAmount', old: 0, new: Number(payment.amount) },
       ])
     );
   });

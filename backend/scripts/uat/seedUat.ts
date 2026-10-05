@@ -255,8 +255,13 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
       });
       const contractId = contract.id;
       await api.call('POST', `/contracts/${contractId}/activate`, {});
-      const added = await api.call('POST', `/contracts/${contractId}/payments`, { dueDate: `${year}-01-15`, amount: 2400 });
-      await api.call('POST', `/contracts/${contractId}/payments/${added.payment.id}/record`, { action: 'PAY' });
+      const added = await api.call('POST', `/contracts/${contractId}/payments`, { dueDate: `${year}-01-15`, amount: '2400.00', reason: 'UAT seed' });
+      // A receipt dated today: the date cannot be in the future (FR-PAY-07).
+      await api.call('POST', `/contracts/${contractId}/payments/${added.payment.id}/receipts`, {
+        amount: '2400.00',
+        receivedOn: new Date().toISOString().slice(0, 10),
+        method: 'BANK_TRANSFER',
+      });
     }
   }
 

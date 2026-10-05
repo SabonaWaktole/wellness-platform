@@ -50,6 +50,10 @@ export class GetContractDetailUseCase {
       ? actionsFor(contract.status, contract.isLegacy, input.access.can('contracts.terminate') && admits(terminateScope, owner))
       : [];
 
+    // Instalments are changed by `payments.update` alone (FR-PAY-05, FR-RBAC-24), which a
+    // role may hold without managing contracts, so this is not part of the lifecycle actions.
+    if (input.access.can('payments.update')) permittedActions.push('UPDATE_PAYMENTS');
+
     const documents = await this.documentRepo.findByContractId(input.tenantId, input.contractId);
 
     return { contract, payments, history, documents, permittedActions };
@@ -76,17 +80,17 @@ function actionsFor(status: ContractStatus, legacy: boolean, canTerminate: boole
       actions.unshift('EDIT', 'ATTACH_DOCUMENT');
       break;
     case ContractStatus.Active:
-      actions.unshift('EDIT', 'ATTACH_DOCUMENT', 'RECORD_PAYMENT', 'ADD_PAYMENT');
+      actions.unshift('EDIT', 'ATTACH_DOCUMENT');
       break;
     case ContractStatus.Suspended:
-      actions.unshift('EDIT', 'ATTACH_DOCUMENT', 'RECORD_PAYMENT');
+      actions.unshift('EDIT', 'ATTACH_DOCUMENT');
       break;
     case ContractStatus.Expired:
     case ContractStatus.Cancelled:
-      // Terminal terms are read-only except for the money: an instalment
-      // settled after a contract ended is a late payment, not an edit to the
+      // Terminal terms are read-only; the money is not (UPDATE_PAYMENTS, below): an
+      // instalment settled after a contract ended is a late payment, not an edit to the
       // deal, and refusing to record it would leave the books wrong.
-      actions.push('RENEW', 'RECORD_PAYMENT');
+      actions.push('RENEW');
       break;
   }
   return actions;

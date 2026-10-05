@@ -163,7 +163,7 @@ describe('Contracts API', () => {
 
     expect(detail.body.payments).toHaveLength(12);
     // FR-PAY-02: activation lays the instalments out as Not Invoiced, nothing received.
-    expect(detail.body.payments.every((p: any) => p.status === PaymentStatus.NotInvoiced && p.paidAmount === 0)).toBe(true);
+    expect(detail.body.payments.every((p: any) => p.status === PaymentStatus.NotInvoiced && p.paidAmount === '0.00')).toBe(true);
     expect(detail.body.contract.paymentSummary.outstanding).toBe(1200);
   });
 
@@ -186,132 +186,86 @@ describe('Contracts API', () => {
   });
 
   describe('recording payments', () => {
-    it('marks an instalment paid and updates the contract rollup', async () => {
+    const activated = async () => {
       const contract = await createContract();
       await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
-
-      const detail = await api()
-        .get(`${base()}/${contract.id}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
-      const first = detail.body.payments[0];
-
-      const res = await api()
-        .post(`${base()}/${contract.id}/payments/${first.id}/record`)
+      const detail = await api().get(`${base()}/${contract.id}`).set('Authorization', `Bearer ${tokenOwner}`);
+      return { contract, payments: detail.body.payments as Array<{ id: string }> };
+    };
+    const receipt = (contractId: string, paymentId: string, body: Record<string, unknown>) =>
+      api()
+        .post(`${base()}/${contractId}/payments/${paymentId}/receipts`)
         .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'PAY', method: 'bank transfer' });
+        .send({ receivedOn: '2026-01-02', method: 'BANK_TRANSFER', ...body });
 
-      expect(res.status).toBe(200);
+    it('a full receipt marks an instalment Paid and updates the contract rollup', async () => {
+      const { contract, payments } = await activated();
+
+      const res = await receipt(contract.id, payments[0].id, { amount: '100.00' });
+
+      expect(res.status).toBe(201);
       expect(res.body.payment.status).toBe(PaymentStatus.Paid);
-      expect(res.body.payment.method).toBe('bank transfer');
+      expect(res.body.payment.method).toBe('BANK_TRANSFER');
       expect(res.body.contract.paymentSummary.paid).toBe(100);
       expect(res.body.contract.paymentSummary.outstanding).toBe(1100);
     });
 
-    it('records a part payment as PARTIAL', async () => {
-      const contract = await createContract();
-      await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
-      const detail = await api()
-        .get(`${base()}/${contract.id}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
+    it('a part receipt is Partially Paid and leaves the rest outstanding', async () => {
+      const { contract, payments } = await activated();
 
-      const res = await api()
-        .post(`${base()}/${contract.id}/payments/${detail.body.payments[0].id}/record`)
-        .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'PAY', amount: 40 });
+      const res = await receipt(contract.id, payments[0].id, { amount: '40.00' });
 
       expect(res.body.payment.status).toBe(PaymentStatus.PartiallyPaid);
-      expect(res.body.payment.outstanding).toBe(60);
+      expect(res.body.payment.outstanding).toBe('60.00');
     });
 
-    it('reverses a payment back to unpaid', async () => {
-      const contract = await createContract();
-      await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
-      const detail = await api()
-        .get(`${base()}/${contract.id}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
-      const paymentId = detail.body.payments[0].id;
-
-      await api()
-        .post(`${base()}/${contract.id}/payments/${paymentId}/record`)
-        .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'PAY' });
+    it('reversing a receipt takes the money back off', async () => {
+      const { contract, payments } = await activated();
+      await receipt(contract.id, payments[0].id, { amount: '100.00' });
 
       const res = await api()
-        .post(`${base()}/${contract.id}/payments/${paymentId}/record`)
+        .post(`${base()}/${contract.id}/payments/${payments[0].id}/receipts/reverse`)
         .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'UNPAY' });
+        .send({ amount: '100.00', comment: 'Transfer bounced' });
 
-      expect(res.body.payment.status).toBe(PaymentStatus.PaymentPending);
-      expect(res.body.contract.paymentSummary.paid).toBe(0);
-    });
-
-    it('excludes a waived instalment from what is owed', async () => {
-      const contract = await createContract();
-      await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
-      const detail = await api()
-        .get(`${base()}/${contract.id}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
-
-      const res = await api()
-        .post(`${base()}/${contract.id}/payments/${detail.body.payments[0].id}/record`)
-        .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'WAIVE', note: 'goodwill' });
-
-      expect(res.body.payment.status).toBe(PaymentStatus.Waived);
-      expect(res.body.contract.paymentSummary.outstanding).toBe(1100);
-      // Waiving is not paying — it must not inflate collected revenue.
+      expect(res.status).toBe(200);
+      expect(res.body.payment.status).toBe(PaymentStatus.NotInvoiced);
+      expect(res.body.payment.paidAmount).toBe('0.00');
       expect(res.body.contract.paymentSummary.paid).toBe(0);
     });
 
     it('refuses a payment id belonging to a different contract', async () => {
-      const a = await createContract();
-      const b = await createContract();
-      await api().post(`${base()}/${a.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
-      await api().post(`${base()}/${b.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
+      const a = await activated();
+      const b = await activated();
 
-      const detailB = await api()
-        .get(`${base()}/${b.id}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
-
-      const res = await api()
-        .post(`${base()}/${a.id}/payments/${detailB.body.payments[0].id}/record`)
-        .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'PAY' });
+      const res = await receipt(a.contract.id, b.payments[0].id, { amount: '10.00' });
 
       expect(res.status).toBe(404);
     });
 
     it('refuses to delete an instalment that has money against it', async () => {
-      const contract = await createContract();
-      await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
-      const detail = await api()
-        .get(`${base()}/${contract.id}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
-      const paymentId = detail.body.payments[0].id;
-
-      await api()
-        .post(`${base()}/${contract.id}/payments/${paymentId}/record`)
-        .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ action: 'PAY' });
+      const { contract, payments } = await activated();
+      await receipt(contract.id, payments[0].id, { amount: '100.00' });
 
       const res = await api()
-        .delete(`${base()}/${contract.id}/payments/${paymentId}`)
-        .set('Authorization', `Bearer ${tokenOwner}`);
+        .delete(`${base()}/${contract.id}/payments/${payments[0].id}`)
+        .set('Authorization', `Bearer ${tokenOwner}`)
+        .send({ reason: 'Entered twice' });
 
       expect(res.status).toBe(400);
     });
 
     it('adds an ad-hoc payment outside the generated schedule', async () => {
-      const contract = await createContract();
-      await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
+      const { contract } = await activated();
 
       const res = await api()
         .post(`${base()}/${contract.id}/payments`)
         .set('Authorization', `Bearer ${tokenOwner}`)
-        .send({ dueDate: '2026-02-15', amount: 250, note: 'Setup fee' });
+        .send({ dueDate: '2026-02-15', amount: '250.00', note: 'Setup fee', reason: 'Set-up fee agreed' });
 
       expect(res.status).toBe(201);
       expect(res.body.payment.periodIndex).toBe(13);
+      expect(res.body.payment.status).toBe(PaymentStatus.NotInvoiced);
       expect(res.body.contract.paymentSummary.outstanding).toBe(1450);
     });
   });
@@ -398,7 +352,7 @@ describe('Contracts API', () => {
       const detail = await api()
         .get(`${base()}/${contract.id}`)
         .set('Authorization', `Bearer ${tokenOwner}`);
-      expect(detail.body.payments[0].amount).toBe(100);
+      expect(detail.body.payments[0].amount).toBe('100.00');
     });
   });
 

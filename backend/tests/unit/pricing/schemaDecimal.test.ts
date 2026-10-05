@@ -57,6 +57,7 @@ const M3_DECIMAL_COLUMNS: Record<string, string[]> = {
   Contract: ['amount', 'agreedAnnualValue', 'discountPercent'],
   ContractPayment: ['amount', 'paidAmount'],
   ContractStatusHistory: [],
+  ContractPaymentHistory: ['amountReceived'],
   ContractSettings: [],
 };
 

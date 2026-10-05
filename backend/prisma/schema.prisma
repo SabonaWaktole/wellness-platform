@@ -332,6 +332,7 @@ model User {
   assignedContracts                 Contract[]               @relation("AssignedContracts")
   createdContracts                  Contract[]               @relation("CreatedContracts")
   contractStatusChanges             ContractStatusHistory[]  @relation("ContractStatusChanges")
+  contractPaymentChanges            ContractPaymentHistory[] @relation("ContractPaymentChanges")
   contractDocumentUploads           ContractDocument[]       @relation("ContractDocumentUploads")
   notifications                     Notification[]           @relation("NotificationRecipient")
   causedNotifications               Notification[]           @relation("NotificationActor")
@@ -1685,7 +1686,8 @@ model ContractPayment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract Contract                 @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  history  ContractPaymentHistory[]
 
   @@index([tenantId, contractId, dueDate])
   /// Drives the unpaid/overdue rollup across all of a tenant's contracts.
@@ -1714,6 +1716,35 @@ model ContractStatusHistory {
   changedBy User?    @relation("ContractStatusChanges", fields: [changedByUserId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, contractId])
+}
+
+/// One row per change to an instalment (M3 Slice 8, FR-PAY-08): who (NULL is
+/// the system), when, the old and new status, the money received in that
+/// change and a comment. Every receipt is one row, so this is also the receipt
+/// list (D6): `amountReceived` is negative when a receipt is reversed. A
+/// change that is not a status move (adding, changing the due date or amount)
+/// repeats the status in both columns; adding an instalment has no old status
+/// and writes NONE. `receivedOn` and `method` are set on receipts only.
+/// `onDelete: Restrict` on the user, as in ContractStatusHistory.
+model ContractPaymentHistory {
+  id         String @id
+  tenantId   String
+  paymentId  String
+  fromStatus String
+  toStatus   String
+
+  amountReceived Decimal   @default(0) @db.Decimal(12, 2)
+  receivedOn     DateTime? @db.Date
+  method         String?
+
+  changedByUserId String?
+  comment         String? @db.Text
+  createdAt       DateTime @default(now())
+
+  payment   ContractPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  changedBy User?           @relation("ContractPaymentChanges", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, createdAt])
 }
 
 /// The signed contract as a PDF, one row per file ever attached (M3 Slice 5,

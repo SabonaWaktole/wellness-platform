@@ -6,13 +6,16 @@ import { RenewContractUseCase } from '../../../src/contracts/application/use-cas
 import { UpdateContractUseCase } from '../../../src/contracts/application/use-cases/UpdateContractUseCase';
 import { ExpireContractUseCase } from '../../../src/contracts/application/use-cases/ExpireContractUseCase';
 import { CreateContractUseCase } from '../../../src/contracts/application/use-cases/CreateContractUseCase';
-import { RecordContractPaymentUseCase } from '../../../src/contracts/application/use-cases/RecordContractPaymentUseCase';
-import { AddContractPaymentUseCase } from '../../../src/contracts/application/use-cases/AddContractPaymentUseCase';
-import { UpdateContractPaymentUseCase } from '../../../src/contracts/application/use-cases/UpdateContractPaymentUseCase';
-import { DeleteContractPaymentUseCase } from '../../../src/contracts/application/use-cases/DeleteContractPaymentUseCase';
+import {
+  AddContractPaymentUseCase,
+  DeleteContractPaymentUseCase,
+  RecordReceiptUseCase,
+  ReverseReceiptUseCase,
+  UpdateContractPaymentUseCase,
+} from '../../../src/contracts/application/use-cases/InstalmentUseCases';
 import { makeContractWriteHarness } from '../../support/fakeContractWriteTransaction';
 import { AuditAction } from '../../../src/audit/domain/AuditAction';
-import { administrator, scopeResolver } from '../../support/access';
+import { administrator, salesUser, scopeResolver } from '../../support/access';
 
 const TENANT_ID = 'tenant-1';
 const USER_ID = 'user-1';
@@ -204,145 +207,94 @@ describe('ExpireContractUseCase audit trail', () => {
   });
 });
 
-describe('RecordContractPaymentUseCase audit trail', () => {
-  it('FR-AUD-02 records a STATUS_CHANGE entry when a payment is marked PAID', async () => {
+const tenants = { findById: jest.fn().mockResolvedValue({ timezone: 'UTC' }) } as any;
+const NOW = new Date('2026-03-10T10:00:00.000Z');
+const admin = () => administrator({ userId: USER_ID, tenantId: TENANT_ID });
+
+describe('Instalment actions audit trail (FR-AUD-11)', () => {
+  const setup = (paymentOverrides: Partial<Parameters<typeof ContractPayment.create>[0]> = {}) => {
     const harness = makeContractWriteHarness();
     const contract = draftContract({ status: ContractStatus.Active });
-    const payment = draftPayment({ contractId: contract.id });
+    const payment = draftPayment({ contractId: contract.id, status: PaymentStatus.PaymentPending, ...paymentOverrides });
     harness.contractRepo.findById.mockResolvedValue(contract);
     harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new RecordContractPaymentUseCase(harness.writeTx, scopeResolver());
+    return { harness, contract, payment };
+  };
 
-    await useCase.execute({
-      tenantId: TENANT_ID,
-      contractId: contract.id,
-      paymentId: payment.id,
-      action: 'PAY',
-      actingUserId: USER_ID,
-      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
+  it('a receipt records one STATUS_CHANGE entry and one history row', async () => {
+    const { harness, contract, payment } = setup();
+    await new RecordReceiptUseCase(harness.writeTx, tenants, () => NOW).execute({
+      tenantId: TENANT_ID, contractId: contract.id, paymentId: payment.id,
+      amount: '100.00', receivedOn: '2026-03-10', method: 'CASH', actingUserId: USER_ID, access: admin(),
     });
 
-    const [entry] = harness.recordedAuditEntries();
-    expect(entry.entityType).toBe('ContractPayment');
-    expect(entry.action).toBe(AuditAction.StatusChange);
-    expect(entry.changes.find((c) => c.field === 'status')).toEqual({
-      field: 'status',
-      old: 'PAYMENT_PENDING',
-      new: 'PAID',
-    });
+    const entries = harness.recordedAuditEntries();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].entityType).toBe('ContractPayment');
+    expect(entries[0].action).toBe(AuditAction.StatusChange);
+    expect(entries[0].changes.find((c) => c.field === 'status')).toEqual({ field: 'status', old: 'PAYMENT_PENDING', new: 'PAID' });
+    expect(harness.paymentHistoryRepo.save).toHaveBeenCalledTimes(1);
+    expect(harness.paymentHistoryRepo.save.mock.calls[0][0]).toMatchObject({ fromStatus: 'PAYMENT_PENDING', toStatus: 'PAID', changedByUserId: USER_ID });
   });
 
-  it('FR-AUD-02 records the reversal when a payment is marked UNPAY', async () => {
-    const harness = makeContractWriteHarness();
-    const contract = draftContract({ status: ContractStatus.Active });
-    const payment = draftPayment({ contractId: contract.id, status: PaymentStatus.Paid, paidAmount: 100, paidAt: new Date() });
-    harness.contractRepo.findById.mockResolvedValue(contract);
-    harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new RecordContractPaymentUseCase(harness.writeTx, scopeResolver());
-
-    await useCase.execute({
-      tenantId: TENANT_ID,
-      contractId: contract.id,
-      paymentId: payment.id,
-      action: 'UNPAY',
-      actingUserId: USER_ID,
-      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
+  it('reversing a receipt records the way back', async () => {
+    const { harness, contract, payment } = setup({ status: PaymentStatus.Paid, paidAmount: 100, invoiceNumber: 'INV-1' });
+    await new ReverseReceiptUseCase(harness.writeTx, tenants, () => NOW).execute({
+      tenantId: TENANT_ID, contractId: contract.id, paymentId: payment.id,
+      amount: '100.00', comment: 'Bounced', actingUserId: USER_ID, access: admin(),
     });
-
     const [entry] = harness.recordedAuditEntries();
-    expect(entry.changes.find((c) => c.field === 'status')).toEqual({
-      field: 'status',
-      old: 'PAID',
-      new: 'PAYMENT_PENDING',
-    });
+    expect(entry.changes.find((c) => c.field === 'status')).toEqual({ field: 'status', old: 'PAID', new: 'PAYMENT_PENDING' });
+    expect(harness.paymentHistoryRepo.save.mock.calls[0][0].amountReceived.toString()).toBe('-100.00');
   });
-});
 
-describe('AddContractPaymentUseCase audit trail', () => {
-  it('FR-AUD-02 records a CREATE entry for the new payment row', async () => {
-    const harness = makeContractWriteHarness();
-    const contract = draftContract({ status: ContractStatus.Active });
-    harness.contractRepo.findById.mockResolvedValue(contract);
-    const useCase = new AddContractPaymentUseCase(harness.writeTx, scopeResolver());
-
-    await useCase.execute({
-      tenantId: TENANT_ID,
-      contractId: contract.id,
-      dueDate: new Date('2026-03-01T00:00:00.000Z'),
-      amount: 50,
-      actingUserId: USER_ID,
-      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
+  it('adding an instalment records a CREATE entry with the reason', async () => {
+    const { harness, contract } = setup();
+    await new AddContractPaymentUseCase(harness.writeTx, tenants, () => NOW).execute({
+      tenantId: TENANT_ID, contractId: contract.id, dueDate: '2026-03-01', amount: '50.00', reason: 'Set-up fee',
+      actingUserId: USER_ID, access: admin(),
     });
-
     const [entry] = harness.recordedAuditEntries();
     expect(entry.action).toBe(AuditAction.Create);
-    expect(entry.entityType).toBe('ContractPayment');
+    expect(entry.changes).toContainEqual({ field: 'reason', old: null, new: 'Set-up fee' });
+    expect(harness.paymentHistoryRepo.save.mock.calls[0][0]).toMatchObject({ fromStatus: 'NONE', toStatus: 'NOT_INVOICED', comment: 'Set-up fee' });
   });
-});
 
-describe('UpdateContractPaymentUseCase audit trail', () => {
-  it('FR-AUD-02 records an UPDATE entry with the changed fields', async () => {
-    const harness = makeContractWriteHarness();
-    const contract = draftContract({ status: ContractStatus.Active });
-    const payment = draftPayment({ contractId: contract.id });
-    harness.contractRepo.findById.mockResolvedValue(contract);
-    harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new UpdateContractPaymentUseCase(harness.writeTx, scopeResolver());
-
-    await useCase.execute({
-      tenantId: TENANT_ID,
-      contractId: contract.id,
-      paymentId: payment.id,
-      amount: 75,
-      actingUserId: USER_ID,
-      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
+  it('changing the amount records an UPDATE entry with the changed fields and the reason', async () => {
+    const { harness, contract, payment } = setup();
+    await new UpdateContractPaymentUseCase(harness.writeTx, tenants, () => NOW).execute({
+      tenantId: TENANT_ID, contractId: contract.id, paymentId: payment.id, amount: '75.00', reason: 'Agreed discount',
+      actingUserId: USER_ID, access: admin(),
     });
-
     const [entry] = harness.recordedAuditEntries();
     expect(entry.action).toBe(AuditAction.Update);
-    expect(entry.changes).toEqual([{ field: 'amount', old: 100, new: 75 }]);
+    expect(entry.changes).toEqual([
+      { field: 'amount', old: 100, new: 75 },
+      { field: 'reason', old: null, new: 'Agreed discount' },
+    ]);
   });
 
-  it('FR-AUD-03 records nothing when nothing changed', async () => {
-    const harness = makeContractWriteHarness();
-    const contract = draftContract({ status: ContractStatus.Active });
-    const payment = draftPayment({ contractId: contract.id });
-    harness.contractRepo.findById.mockResolvedValue(contract);
-    harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new UpdateContractPaymentUseCase(harness.writeTx, scopeResolver());
-
-    await useCase.execute({
-      tenantId: TENANT_ID,
-      contractId: contract.id,
-      paymentId: payment.id,
-      amount: payment.amount,
-      actingUserId: USER_ID,
-      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
+  it('removing an instalment records a DELETE entry with no new value', async () => {
+    const { harness, contract, payment } = setup();
+    await new DeleteContractPaymentUseCase(harness.writeTx, tenants, () => NOW).execute({
+      tenantId: TENANT_ID, contractId: contract.id, paymentId: payment.id, reason: 'Entered twice',
+      actingUserId: USER_ID, access: admin(),
     });
-
-    expect(harness.recordedAuditEntries()).toHaveLength(0);
-  });
-});
-
-describe('DeleteContractPaymentUseCase audit trail', () => {
-  it('FR-AUD-02 records a DELETE entry with no new value', async () => {
-    const harness = makeContractWriteHarness();
-    const contract = draftContract({ status: ContractStatus.Active });
-    const payment = draftPayment({ contractId: contract.id });
-    harness.contractRepo.findById.mockResolvedValue(contract);
-    harness.paymentRepo.findById.mockResolvedValue(payment);
-    const useCase = new DeleteContractPaymentUseCase(harness.writeTx, scopeResolver());
-
-    await useCase.execute({
-      tenantId: TENANT_ID,
-      contractId: contract.id,
-      paymentId: payment.id,
-      actingUserId: USER_ID,
-      access: administrator({ userId: USER_ID, tenantId: TENANT_ID }),
-    });
-
     const [entry] = harness.recordedAuditEntries();
     expect(entry.action).toBe(AuditAction.Delete);
-    expect(entry.changes.every((change) => change.new === null)).toBe(true);
+    expect(entry.changes.filter((change) => change.field !== 'reason').every((change) => change.new === null)).toBe(true);
+    expect(harness.paymentRepo.delete).toHaveBeenCalledWith(TENANT_ID, payment.id);
+  });
+
+  it('FR-PAY-05 a user without payments.update is refused inside the use case, and nothing is written', async () => {
+    const { harness, contract, payment } = setup();
+    await expect(
+      new RecordReceiptUseCase(harness.writeTx, tenants, () => NOW).execute({
+        tenantId: TENANT_ID, contractId: contract.id, paymentId: payment.id,
+        amount: '10.00', receivedOn: '2026-03-10', method: 'CASH', actingUserId: USER_ID, access: salesUser({ userId: USER_ID, tenantId: TENANT_ID }),
+      })
+    ).rejects.toThrow(/permission/i);
+    expect(harness.paymentRepo.save).not.toHaveBeenCalled();
+    expect(harness.recordedAuditEntries()).toHaveLength(0);
   });
 });

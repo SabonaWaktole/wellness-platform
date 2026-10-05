@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
+import { Money } from '../../../pricing/domain/Money';
 import { ContractPayment, PaymentStatus } from '../../domain/ContractPayment';
 
 export class PrismaContractPaymentRepository implements IContractPaymentRepository {
@@ -12,13 +13,15 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
       contractId: raw.contractId,
       periodIndex: raw.periodIndex,
       dueDate: raw.dueDate,
-      // Decimal(12,2) in the database (NFR-ACC-03); the entity still carries a number until Slice 8 moves instalments onto Money.
-      amount: Number(String(raw.amount)),
+      // Decimal(12,2) in the database (NFR-ACC-03); read through Money so the number is exact.
+      amount: Number(Money.of(String(raw.amount)).toString()),
       status: raw.status as PaymentStatus,
-      paidAmount: Number(String(raw.paidAmount)),
+      paidAmount: Number(Money.of(String(raw.paidAmount)).toString()),
       paidAt: raw.paidAt,
       method: raw.method,
       note: raw.note,
+      invoiceNumber: raw.invoiceNumber,
+      invoiceDate: raw.invoiceDate,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     });
@@ -50,6 +53,8 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
       paidAt: payment.paidAt,
       method: payment.method,
       note: payment.note,
+      invoiceNumber: payment.invoiceNumber,
+      invoiceDate: payment.invoiceDate,
     };
 
     await this.prisma.contractPayment.upsert({
@@ -83,6 +88,8 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
         paidAt: payment.paidAt,
         method: payment.method,
         note: payment.note,
+        invoiceNumber: payment.invoiceNumber,
+        invoiceDate: payment.invoiceDate,
       })),
     });
   }

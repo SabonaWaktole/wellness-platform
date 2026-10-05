@@ -91,25 +91,55 @@ export const searchContractsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-export const recordPaymentSchema = z.object({
-  action: z.enum(['PAY', 'UNPAY', 'WAIVE']),
-  /** Omitted on PAY means "in full" — see ContractPayment.recordPayment. */
-  amount: z.coerce.number().positive().optional(),
-  paidAt: dateString.optional(),
-  method: z.string().max(120).nullable().optional(),
-  note: z.string().max(1000).nullable().optional(),
-});
+/**
+ * An amount as the client sends it: a two-decimal string, or a number that
+ * reads as one. Anything with more than two decimals is refused rather than
+ * rounded, so a mistyped figure is not silently changed (NFR-ACC-03).
+ */
+const money = z
+  .union([z.string().trim(), z.number()])
+  .transform((value) => String(value))
+  .refine((value) => /^\d{1,10}(\.\d{1,2})?$/.test(value), { message: 'Enter an amount with at most two decimals' });
+
+const PAYMENT_STATUS_CHOICES = ['NOT_INVOICED', 'INVOICE_ISSUED', 'PAYMENT_PENDING'] as const;
 
 export const addPaymentSchema = z.object({
   dueDate: dateString,
-  amount: z.coerce.number().min(0),
-  method: z.string().max(120).nullable().optional(),
+  amount: money,
+  reason: z.string().max(2000),
   note: z.string().max(1000).nullable().optional(),
 });
 
 export const updatePaymentSchema = z.object({
   dueDate: dateString.optional(),
-  amount: z.coerce.number().min(0).optional(),
-  method: z.string().max(120).nullable().optional(),
+  amount: money.optional(),
   note: z.string().max(1000).nullable().optional(),
+  /** Required by the rule when the due date or amount changes. */
+  reason: z.string().max(2000).nullable().optional(),
+});
+
+export const deletePaymentSchema = z.object({ reason: z.string().max(2000) });
+
+export const recordInvoiceSchema = z.object({
+  invoiceNumber: z.string().max(120),
+  invoiceDate: dateString,
+});
+
+export const markPendingSchema = z.object({ comment: z.string().max(2000).nullable().optional() });
+
+export const recordReceiptSchema = z.object({
+  amount: money,
+  receivedOn: dateString,
+  method: z.string().max(40),
+  comment: z.string().max(2000).nullable().optional(),
+});
+
+export const reverseReceiptSchema = z.object({
+  amount: money,
+  comment: z.string().max(2000),
+});
+
+export const correctPaymentStatusSchema = z.object({
+  status: z.enum(PAYMENT_STATUS_CHOICES),
+  comment: z.string().max(2000),
 });

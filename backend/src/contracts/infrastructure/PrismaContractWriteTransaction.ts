@@ -6,6 +6,7 @@ import {
 } from '../application/ports/IContractWriteTransaction';
 import { PrismaContractRepository } from './repositories/PrismaContractRepository';
 import { PrismaContractPaymentRepository } from './repositories/PrismaContractPaymentRepository';
+import { PrismaContractPaymentHistoryRepository } from './repositories/PrismaContractPaymentHistoryRepository';
 import { PrismaContractStatusHistoryRepository } from './repositories/PrismaContractStatusHistoryRepository';
 import { PrismaContractDocumentRepository } from './repositories/PrismaContractDocumentRepository';
 import { PrismaContractCompanyStatus } from './PrismaContractCompanyStatus';
@@ -36,6 +37,7 @@ export class PrismaContractWriteTransaction implements IContractWriteTransaction
         contractRepo: new PrismaContractRepository(client),
         paymentRepo: new PrismaContractPaymentRepository(client),
         historyRepo: new PrismaContractStatusHistoryRepository(client),
+        paymentHistoryRepo: new PrismaContractPaymentHistoryRepository(client),
         documentRepo: new PrismaContractDocumentRepository(client),
         companyStatus: new PrismaContractCompanyStatus(client),
         settingsStore: new PrismaContractSettingsStore(client),

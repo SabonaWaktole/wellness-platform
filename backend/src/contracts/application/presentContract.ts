@@ -1,5 +1,7 @@
 import { AccessContext } from '../../access/domain/AccessContext';
 import { Contract } from '../domain/Contract';
+import { ContractPayment } from '../domain/ContractPayment';
+import { presentInstalments } from './presentPayments';
 import { ValidityClock } from './ContractValidityBadges';
 import { validityBadge } from './validityBadge';
 
@@ -43,6 +45,12 @@ const COMMERCIAL_CONTRACT_FIELDS = [
   'documentName',
 ] as const;
 
+/** The instalments and their summary (FR-PAY-10); today is the workspace day when the page knows it. */
+const payments_ = (payments: ContractPayment[], access: AccessContext, clock?: ValidityClock) => {
+  const shaped = presentInstalments(payments, access, clock?.today ?? new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`));
+  return { payments: shaped.payments, paymentSummary: shaped.summary };
+};
+
 export type ContractView = Record<string, unknown>;
 
 export function presentContract(contract: Contract, access: AccessContext, clock?: ValidityClock): ContractView {
@@ -75,8 +83,8 @@ export function presentContracts(contracts: Contract[], access: AccessContext, c
  * `payments` key is absent, not empty, so nothing named for payments reaches
  * the viewer. The status history is a manager's record.
  */
-export function presentContractDetail<P, H>(
-  detail: { contract: Contract; payments: P[]; history: H[]; documents: unknown[]; permittedActions: string[] },
+export function presentContractDetail<H>(
+  detail: { contract: Contract; payments: ContractPayment[]; history: H[]; documents: unknown[]; permittedActions: string[] },
   access: AccessContext,
   clock?: ValidityClock
 ) {
@@ -87,7 +95,8 @@ export function presentContractDetail<P, H>(
     history: access.can('contracts.manage') ? detail.history : [],
     // The signed document is a commercial record (FR-CON-19, FR-RBAC-21).
     ...(access.can('commercial.view') ? { documents } : {}),
-    ...(access.can('payments.view') ? { payments } : {}),
+    // Instalments need payments.view; amounts in them need commercial.view too (FR-PAY-12).
+    ...(access.can('payments.view') ? payments_(payments, access, clock) : {}),
   };
 }
 

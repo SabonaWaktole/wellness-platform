@@ -4,6 +4,7 @@ import {
 } from '../../src/contracts/application/ports/IContractWriteTransaction';
 import { IContractRepository } from '../../src/contracts/domain/IContractRepository';
 import { IContractPaymentRepository } from '../../src/contracts/domain/IContractPaymentRepository';
+import { IContractPaymentHistoryRepository } from '../../src/contracts/domain/IContractPaymentHistoryRepository';
 import { IContractStatusHistoryRepository } from '../../src/contracts/domain/IContractStatusHistoryRepository';
 import { IContractDocumentRepository } from '../../src/contracts/domain/IContractDocumentRepository';
 import { IContractCompanyStatus } from '../../src/contracts/application/ports/IContractCompanyStatus';
@@ -18,6 +19,7 @@ export interface ContractWriteHarness {
   contractRepo: jest.Mocked<IContractRepository>;
   paymentRepo: jest.Mocked<IContractPaymentRepository>;
   historyRepo: jest.Mocked<IContractStatusHistoryRepository>;
+  paymentHistoryRepo: jest.Mocked<IContractPaymentHistoryRepository>;
   documentRepo: jest.Mocked<IContractDocumentRepository>;
   companyStatus: jest.Mocked<IContractCompanyStatus>;
   settingsStore: jest.Mocked<IContractSettingsStore>;
@@ -57,6 +59,11 @@ export function makeContractWriteHarness(): ContractWriteHarness {
     save: jest.fn(),
   } as unknown as jest.Mocked<IContractStatusHistoryRepository>;
 
+  const paymentHistoryRepo = {
+    findByPaymentId: jest.fn().mockResolvedValue([]),
+    save: jest.fn(),
+  } as unknown as jest.Mocked<IContractPaymentHistoryRepository>;
+
   const documentRepo = {
     findByContractId: jest.fn().mockResolvedValue([]),
     findById: jest.fn(),
@@ -84,11 +91,11 @@ export function makeContractWriteHarness(): ContractWriteHarness {
 
   const writeTx: IContractWriteTransaction = {
     run: <T>(work: (repos: ContractWriteRepos) => Promise<T>): Promise<T> =>
-      work({ contractRepo, paymentRepo, historyRepo, documentRepo, companyStatus, settingsStore, numbers, deals, auditTrail }),
+      work({ contractRepo, paymentRepo, historyRepo, paymentHistoryRepo, documentRepo, companyStatus, settingsStore, numbers, deals, auditTrail }),
   };
 
   const recordedAuditEntries = () =>
     (auditTrail.record as jest.Mock).mock.calls.map(([entry]: [AuditEntry]) => entry);
 
-  return { writeTx, contractRepo, paymentRepo, historyRepo, documentRepo, companyStatus, settingsStore, numbers, deals, auditTrail, recordedAuditEntries };
+  return { writeTx, contractRepo, paymentRepo, historyRepo, paymentHistoryRepo, documentRepo, companyStatus, settingsStore, numbers, deals, auditTrail, recordedAuditEntries };
 }

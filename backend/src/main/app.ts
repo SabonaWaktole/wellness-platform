@@ -1109,10 +1109,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { SearchContractsUseCase } = require('../contracts/application/use-cases/SearchContractsUseCase');
   const { GetContractDetailUseCase } = require('../contracts/application/use-cases/GetContractDetailUseCase');
   const { GetClientContractsUseCase } = require('../contracts/application/use-cases/GetClientContractsUseCase');
-  const { RecordContractPaymentUseCase } = require('../contracts/application/use-cases/RecordContractPaymentUseCase');
-  const { AddContractPaymentUseCase } = require('../contracts/application/use-cases/AddContractPaymentUseCase');
-  const { UpdateContractPaymentUseCase } = require('../contracts/application/use-cases/UpdateContractPaymentUseCase');
-  const { DeleteContractPaymentUseCase } = require('../contracts/application/use-cases/DeleteContractPaymentUseCase');
+  const instalments = require('../contracts/application/use-cases/InstalmentUseCases');
+  const { GetContractPaymentsUseCase } = require('../contracts/application/use-cases/GetContractPaymentsUseCase');
+  const { PrismaContractPaymentHistoryRepository } = require('../contracts/infrastructure/repositories/PrismaContractPaymentHistoryRepository');
   const { AttachContractDocumentUseCase } = require('../contracts/application/use-cases/AttachContractDocumentUseCase');
 
   const { ContractsController } = require('../contracts/interfaces/http/ContractsController');
@@ -1135,10 +1134,17 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
     new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, contractDocumentRepo, recordScopes),
     new GetClientContractsUseCase(contractRepo, recordScopes),
-    new RecordContractPaymentUseCase(contractWriteTx, recordScopes),
-    new AddContractPaymentUseCase(contractWriteTx, recordScopes),
-    new UpdateContractPaymentUseCase(contractWriteTx, recordScopes),
-    new DeleteContractPaymentUseCase(contractWriteTx, recordScopes),
+    {
+      recordInvoice: new instalments.RecordInvoiceUseCase(contractWriteTx, tenantRepository),
+      markPending: new instalments.MarkPaymentPendingUseCase(contractWriteTx, tenantRepository),
+      recordReceipt: new instalments.RecordReceiptUseCase(contractWriteTx, tenantRepository),
+      reverseReceipt: new instalments.ReverseReceiptUseCase(contractWriteTx, tenantRepository),
+      correctStatus: new instalments.CorrectPaymentStatusUseCase(contractWriteTx, tenantRepository),
+      add: new instalments.AddContractPaymentUseCase(contractWriteTx, tenantRepository),
+      update: new instalments.UpdateContractPaymentUseCase(contractWriteTx, tenantRepository),
+      remove: new instalments.DeleteContractPaymentUseCase(contractWriteTx, tenantRepository),
+    },
+    new GetContractPaymentsUseCase(contractRepo, contractPaymentRepo, new PrismaContractPaymentHistoryRepository(prisma), recordScopes, tenantRepository),
     new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes),
     new CreateContractFromDealUseCase(contractWriteTx, recordScopes, tenantRepository),
     new RefreshContractFromDealUseCase(contractWriteTx, recordScopes),

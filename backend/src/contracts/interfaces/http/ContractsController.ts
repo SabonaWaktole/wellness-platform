@@ -14,14 +14,14 @@ import { UpdateContractUseCase } from '../../application/use-cases/UpdateContrac
 import { ChangeContractStatusUseCase } from '../../application/use-cases/ChangeContractStatusUseCase';
 import { ContractDocumentsUseCases } from '../../application/use-cases/ContractDocumentsUseCases';
 import { ContractStatus } from '../../domain/Contract';
+import { ContractPayment, PaymentStatus } from '../../domain/ContractPayment';
 import { RenewContractUseCase } from '../../application/use-cases/RenewContractUseCase';
 import { SearchContractsUseCase } from '../../application/use-cases/SearchContractsUseCase';
 import { GetContractDetailUseCase } from '../../application/use-cases/GetContractDetailUseCase';
 import { GetClientContractsUseCase } from '../../application/use-cases/GetClientContractsUseCase';
-import { RecordContractPaymentUseCase } from '../../application/use-cases/RecordContractPaymentUseCase';
-import { AddContractPaymentUseCase } from '../../application/use-cases/AddContractPaymentUseCase';
-import { UpdateContractPaymentUseCase } from '../../application/use-cases/UpdateContractPaymentUseCase';
-import { DeleteContractPaymentUseCase } from '../../application/use-cases/DeleteContractPaymentUseCase';
+import type * as Instalments from '../../application/use-cases/InstalmentUseCases';
+import { GetContractPaymentsUseCase } from '../../application/use-cases/GetContractPaymentsUseCase';
+import { presentInstalments, presentPaymentHistory } from '../../application/presentPayments';
 import { AttachContractDocumentUseCase } from '../../application/use-cases/AttachContractDocumentUseCase';
 import {
   CONTRACT_DOC_MIME,
@@ -36,9 +36,14 @@ import {
   cancelContractSchema,
   changeContractStatusSchema,
   searchContractsSchema,
-  recordPaymentSchema,
   addPaymentSchema,
   updatePaymentSchema,
+  deletePaymentSchema,
+  recordInvoiceSchema,
+  markPendingSchema,
+  recordReceiptSchema,
+  reverseReceiptSchema,
+  correctPaymentStatusSchema,
 } from './schemas/contractSchemas';
 
 /**
@@ -68,10 +73,18 @@ export class ContractsController {
     private searchContractsUseCase: SearchContractsUseCase,
     private getContractDetailUseCase: GetContractDetailUseCase,
     private getClientContractsUseCase: GetClientContractsUseCase,
-    private recordContractPaymentUseCase: RecordContractPaymentUseCase,
-    private addContractPaymentUseCase: AddContractPaymentUseCase,
-    private updateContractPaymentUseCase: UpdateContractPaymentUseCase,
-    private deleteContractPaymentUseCase: DeleteContractPaymentUseCase,
+    /** The instalment actions (M3 Slice 8); every one needs `payments.update`. */
+    private instalments: {
+      recordInvoice: Instalments.RecordInvoiceUseCase;
+      markPending: Instalments.MarkPaymentPendingUseCase;
+      recordReceipt: Instalments.RecordReceiptUseCase;
+      reverseReceipt: Instalments.ReverseReceiptUseCase;
+      correctStatus: Instalments.CorrectPaymentStatusUseCase;
+      add: Instalments.AddContractPaymentUseCase;
+      update: Instalments.UpdateContractPaymentUseCase;
+      remove: Instalments.DeleteContractPaymentUseCase;
+    },
+    private getContractPaymentsUseCase: GetContractPaymentsUseCase,
     private attachContractDocumentUseCase: AttachContractDocumentUseCase,
     private createContractFromDealUseCase: CreateContractFromDealUseCase,
     private refreshContractFromDealUseCase: RefreshContractFromDealUseCase,
@@ -103,22 +116,19 @@ export class ContractsController {
     this.router.post('/:id/cancel', requirePermission('contracts.manage'), this.cancelContract.bind(this));
     this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
 
-    this.router.post('/:id/payments', requirePermission('contracts.manage'), this.addPayment.bind(this));
-    this.router.patch(
-      '/:id/payments/:paymentId',
-      requirePermission('contracts.manage'),
-      this.updatePayment.bind(this)
-    );
-    this.router.post(
-      '/:id/payments/:paymentId/record',
-      requirePermission('contracts.manage'),
-      this.recordPayment.bind(this)
-    );
-    this.router.delete(
-      '/:id/payments/:paymentId',
-      requirePermission('contracts.manage'),
-      this.deletePayment.bind(this)
-    );
+    // Instalments (M3 Slice 8). Reads need payments.view, narrowed to the viewer's
+    // scope; every write needs payments.update, which no sales role holds (FR-PAY-05,
+    // FR-RBAC-24). The use cases check it again.
+    this.router.get('/:id/payments', requirePermission('payments.view'), this.listPayments.bind(this));
+    this.router.get('/:id/payments/:paymentId/history', requirePermission('payments.view'), this.paymentHistory.bind(this));
+    this.router.post('/:id/payments', requirePermission('payments.update'), this.addPayment.bind(this));
+    this.router.patch('/:id/payments/:paymentId', requirePermission('payments.update'), this.updatePayment.bind(this));
+    this.router.delete('/:id/payments/:paymentId', requirePermission('payments.update'), this.deletePayment.bind(this));
+    this.router.post('/:id/payments/:paymentId/invoice', requirePermission('payments.update'), this.recordInvoice.bind(this));
+    this.router.post('/:id/payments/:paymentId/pending', requirePermission('payments.update'), this.markPending.bind(this));
+    this.router.post('/:id/payments/:paymentId/receipts', requirePermission('payments.update'), this.recordReceipt.bind(this));
+    this.router.post('/:id/payments/:paymentId/receipts/reverse', requirePermission('payments.update'), this.reverseReceipt.bind(this));
+    this.router.post('/:id/payments/:paymentId/correct', requirePermission('payments.update'), this.correctPaymentStatus.bind(this));
 
     this.router.post(
       '/:id/document',
@@ -357,22 +367,48 @@ export class ContractsController {
     }
   }
 
-  private async recordPayment(req: Request, res: Response) {
+  /** The ids every instalment action carries. */
+  private target(req: Request) {
+    return {
+      tenantId: requireTenantId(req),
+      contractId: req.params.id as string,
+      paymentId: req.params.paymentId as string,
+      actingUserId: req.user!.userId,
+      access: req.access!,
+    };
+  }
+
+  /** The instalment and its contract after a write, shaped for this viewer. */
+  private async paymentBody(req: Request, result: { payment: ContractPayment; contract: Contract }) {
+    const clock = await this.validityBadges.clock(requireTenantId(req), req.tenant!.timezone);
+    return {
+      payment: presentInstalments([result.payment], req.access!, clock.today).payments[0],
+      contract: presentContract(result.contract, req.access!),
+    };
+  }
+
+  private async listPayments(req: Request, res: Response) {
     try {
-      const data = recordPaymentSchema.parse(req.body);
-      const result = await this.recordContractPaymentUseCase.execute({
+      const result = await this.getContractPaymentsUseCase.list({
+        tenantId: requireTenantId(req),
+        contractId: req.params.id as string,
+        access: req.access!,
+      });
+      res.json(presentInstalments(result.payments, req.access!, result.today));
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async paymentHistory(req: Request, res: Response) {
+    try {
+      const history = await this.getContractPaymentsUseCase.history({
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
         paymentId: req.params.paymentId as string,
-        action: data.action,
-        amount: data.amount,
-        paidAt: data.paidAt ? new Date(data.paidAt) : undefined,
-        method: data.method,
-        note: data.note,
-        actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json({ payment: result.payment, contract: presentContract(result.contract, req.access!) });
+      res.json({ history: presentPaymentHistory(history, req.access!) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -381,17 +417,9 @@ export class ContractsController {
   private async addPayment(req: Request, res: Response) {
     try {
       const data = addPaymentSchema.parse(req.body);
-      const result = await this.addContractPaymentUseCase.execute({
-        tenantId: requireTenantId(req),
-        contractId: req.params.id as string,
-        dueDate: new Date(data.dueDate),
-        amount: data.amount,
-        method: data.method,
-        note: data.note,
-        actingUserId: req.user!.userId,
-        access: req.access!,
-      });
-      res.status(201).json({ payment: result.payment, contract: presentContract(result.contract, req.access!) });
+      const { paymentId: _unused, ...target } = this.target(req);
+      const result = await this.instalments.add.execute({ ...target, ...data });
+      res.status(201).json(await this.paymentBody(req, result));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -400,18 +428,7 @@ export class ContractsController {
   private async updatePayment(req: Request, res: Response) {
     try {
       const data = updatePaymentSchema.parse(req.body);
-      const result = await this.updateContractPaymentUseCase.execute({
-        tenantId: requireTenantId(req),
-        contractId: req.params.id as string,
-        paymentId: req.params.paymentId as string,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        amount: data.amount,
-        method: data.method,
-        note: data.note,
-        actingUserId: req.user!.userId,
-        access: req.access!,
-      });
-      res.json({ payment: result.payment, contract: presentContract(result.contract, req.access!) });
+      res.json(await this.paymentBody(req, await this.instalments.update.execute({ ...this.target(req), ...data })));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -419,14 +436,54 @@ export class ContractsController {
 
   private async deletePayment(req: Request, res: Response) {
     try {
-      const result = await this.deleteContractPaymentUseCase.execute({
-        tenantId: requireTenantId(req),
-        contractId: req.params.id as string,
-        paymentId: req.params.paymentId as string,
-        actingUserId: req.user!.userId,
-        access: req.access!,
-      });
+      const data = deletePaymentSchema.parse(req.body ?? {});
+      const result = await this.instalments.remove.execute({ ...this.target(req), reason: data.reason });
       res.json({ contract: presentContract(result.contract, req.access!) });
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async recordInvoice(req: Request, res: Response) {
+    try {
+      const data = recordInvoiceSchema.parse(req.body);
+      res.json(await this.paymentBody(req, await this.instalments.recordInvoice.execute({ ...this.target(req), ...data })));
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async markPending(req: Request, res: Response) {
+    try {
+      const data = markPendingSchema.parse(req.body ?? {});
+      res.json(await this.paymentBody(req, await this.instalments.markPending.execute({ ...this.target(req), ...data })));
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async recordReceipt(req: Request, res: Response) {
+    try {
+      const data = recordReceiptSchema.parse(req.body);
+      res.status(201).json(await this.paymentBody(req, await this.instalments.recordReceipt.execute({ ...this.target(req), ...data })));
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async reverseReceipt(req: Request, res: Response) {
+    try {
+      const data = reverseReceiptSchema.parse(req.body);
+      res.json(await this.paymentBody(req, await this.instalments.reverseReceipt.execute({ ...this.target(req), ...data })));
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async correctPaymentStatus(req: Request, res: Response) {
+    try {
+      const data = correctPaymentStatusSchema.parse(req.body);
+      res.json(await this.paymentBody(req, await this.instalments.correctStatus.execute({ ...this.target(req), ...data, status: data.status as PaymentStatus })));
     } catch (error: any) {
       this.fail(res, error);
     }

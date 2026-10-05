@@ -1,5 +1,6 @@
 import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
+import { IContractPaymentHistoryRepository } from '../../domain/IContractPaymentHistoryRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
 import { IContractDocumentRepository } from '../../domain/IContractDocumentRepository';
 import { IContractCompanyStatus } from './IContractCompanyStatus';
@@ -13,6 +14,8 @@ export interface ContractWriteRepos {
   contractRepo: IContractRepository;
   paymentRepo: IContractPaymentRepository;
   historyRepo: IContractStatusHistoryRepository;
+  /** One row per change to an instalment, in the same transaction as the change (M3 Slice 8, FR-PAY-08). */
+  paymentHistoryRepo: IContractPaymentHistoryRepository;
   /** The workspace's contract settings, written with their audit entry (M3 Slice 3). */
   settingsStore: IContractSettingsStore;
   /** The next contract number (M3 Slice 4, FR-CON-05), taken under a row lock in this transaction. */
