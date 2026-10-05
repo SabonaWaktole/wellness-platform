@@ -13,6 +13,8 @@ export interface DealForContract {
   /** The deal type key, for the Extra services rule (Q9). */
   type: string;
   stageKey: string;
+  /** The contract a Renewal deal renews (M3 FR-REN-06); null for every other deal. */
+  renewalOfContractId: string | null;
   /** The closing date, a calendar day as a UTC-midnight date. */
   closedAt: Date | null;
   /** NULL when the deal has no won offer with a price to copy. */

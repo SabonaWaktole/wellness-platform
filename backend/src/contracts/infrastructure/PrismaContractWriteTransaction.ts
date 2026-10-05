@@ -13,6 +13,8 @@ import { PrismaContractCompanyStatus } from './PrismaContractCompanyStatus';
 import { PrismaContractSettingsStore } from './PrismaContractSettingsStore';
 import { PrismaContractNumbers } from './PrismaContractNumbers';
 import { PrismaContractDealSource } from './PrismaContractDealSource';
+import { PrismaContractRenewals } from './PrismaContractRenewals';
+import { PrismaDealWrites } from '../../deals/infrastructure/PrismaDealWrites';
 import { IAuditTrail } from '../../audit/application/ports/IAuditTrail';
 import { PrismaAuditTrail } from '../../audit/infrastructure/PrismaAuditTrail';
 
@@ -43,6 +45,8 @@ export class PrismaContractWriteTransaction implements IContractWriteTransaction
         settingsStore: new PrismaContractSettingsStore(client),
         numbers: new PrismaContractNumbers(client),
         deals: new PrismaContractDealSource(client),
+        renewals: new PrismaContractRenewals(client),
+        dealWrites: new PrismaDealWrites(client),
         auditTrail: this.auditTrailFor(client),
       });
     });

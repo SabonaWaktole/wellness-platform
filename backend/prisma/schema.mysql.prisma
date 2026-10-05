@@ -1528,6 +1528,8 @@ model Contract {
 
   renewedFrom Contract? @relation("ContractRenewal", fields: [renewedFromContractId], references: [id], onDelete: Restrict)
   renewedInto Contract? @relation("ContractRenewal")
+  /// M3 Slice 10: the Renewal deals started from this contract (D9); at most one is open.
+  renewalDeals Deal[] @relation("DealRenewalOf")
 
   deal              Deal?           @relation(fields: [dealId], references: [id], onDelete: Restrict)
   quotation         Quotation?      @relation(fields: [quotationId], references: [id], onDelete: Restrict)
@@ -2155,6 +2157,9 @@ model Deal {
   packageId          String?
   wonQuotationId     String?
 
+  /// M3 Slice 10 (FR-REN-06): the contract this Renewal deal renews. NULL on every other deal.
+  renewalOfContractId String?
+
   /// The current offer's net monthly price and annual value (Slice 8), copied
   /// in the transaction that saves the offer, so the board totals, the value
   /// filter and the value sort read one indexed column (FR-DEAL-10, 11).
@@ -2169,6 +2174,7 @@ model Deal {
   lostReason   LostReason?        @relation(fields: [lostReasonId], references: [id], onDelete: Restrict)
   package      ServicePackage?    @relation(fields: [packageId], references: [id], onDelete: Restrict)
   wonQuotation Quotation?         @relation("DealWonQuotation", fields: [wonQuotationId], references: [id], onDelete: Restrict)
+  renewalOf    Contract?          @relation("DealRenewalOf", fields: [renewalOfContractId], references: [id], onDelete: Restrict)
   stageHistory DealStageHistory[]
   contract     Contract?
   interactions Interaction[]
@@ -2185,6 +2191,7 @@ model Deal {
   @@index([packageId])
   @@index([wonQuotationId])
   @@index([tenantId, stageKey, offerNetMonthlyPrice])
+  @@index([renewalOfContractId])
 }
 
 /// Every stage change of a deal (FR-DEAL-09): from, to, who and when. The

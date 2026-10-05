@@ -11,6 +11,8 @@ import { IContractCompanyStatus } from '../../src/contracts/application/ports/IC
 import { IContractSettingsStore } from '../../src/contracts/application/ports/IContractSettingsStore';
 import { IContractNumbers } from '../../src/contracts/application/ports/IContractNumbers';
 import { IContractDealSource } from '../../src/contracts/application/ports/IContractDealSource';
+import { IContractRenewals } from '../../src/contracts/application/ports/IContractRenewals';
+import { IDealWrites } from '../../src/deals/application/ports/IDealWriteTransaction';
 import { IAuditTrail } from '../../src/audit/application/ports/IAuditTrail';
 import { AuditEntry } from '../../src/audit/domain/AuditEntry';
 
@@ -25,6 +27,8 @@ export interface ContractWriteHarness {
   settingsStore: jest.Mocked<IContractSettingsStore>;
   numbers: jest.Mocked<IContractNumbers>;
   deals: jest.Mocked<IContractDealSource>;
+  renewals: jest.Mocked<IContractRenewals>;
+  dealWrites: jest.Mocked<IDealWrites>;
   auditTrail: jest.Mocked<IAuditTrail>;
   /** Every entry handed to auditTrail.record, in call order. */
   recordedAuditEntries: () => AuditEntry[];
@@ -85,17 +89,28 @@ export function makeContractWriteHarness(): ContractWriteHarness {
   const numbers = { next: jest.fn().mockResolvedValue('CTR-2026-0001') } as unknown as jest.Mocked<IContractNumbers>;
   const deals = { find: jest.fn() } as unknown as jest.Mocked<IContractDealSource>;
 
+  const renewals = {
+    links: jest.fn().mockResolvedValue({ renewedFrom: null, renewedInto: null, openDealId: null }),
+    lock: jest.fn().mockResolvedValue(true),
+    isActiveUser: jest.fn().mockResolvedValue(true),
+  } as unknown as jest.Mocked<IContractRenewals>;
+  const dealWrites = {
+    insert: jest.fn(),
+    recordChange: jest.fn(),
+    companyName: jest.fn().mockResolvedValue('Acme'),
+  } as unknown as jest.Mocked<IDealWrites>;
+
   const auditTrail = {
     record: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<IAuditTrail>;
 
   const writeTx: IContractWriteTransaction = {
     run: <T>(work: (repos: ContractWriteRepos) => Promise<T>): Promise<T> =>
-      work({ contractRepo, paymentRepo, historyRepo, paymentHistoryRepo, documentRepo, companyStatus, settingsStore, numbers, deals, auditTrail }),
+      work({ contractRepo, paymentRepo, historyRepo, paymentHistoryRepo, documentRepo, companyStatus, settingsStore, numbers, deals, renewals, dealWrites, auditTrail }),
   };
 
   const recordedAuditEntries = () =>
     (auditTrail.record as jest.Mock).mock.calls.map(([entry]: [AuditEntry]) => entry);
 
-  return { writeTx, contractRepo, paymentRepo, historyRepo, paymentHistoryRepo, documentRepo, companyStatus, settingsStore, numbers, deals, auditTrail, recordedAuditEntries };
+  return { writeTx, contractRepo, paymentRepo, historyRepo, paymentHistoryRepo, documentRepo, companyStatus, settingsStore, numbers, deals, renewals, dealWrites, auditTrail, recordedAuditEntries };
 }

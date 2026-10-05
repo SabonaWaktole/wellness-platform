@@ -31,6 +31,8 @@ export interface DealProps {
   agreedAnnualValue: string | null;
   packageId: string | null;
   wonQuotationId: string | null;
+  /** The contract a Renewal deal renews (M3 FR-REN-06); null on every other deal. */
+  renewalOfContractId: string | null;
 }
 
 /**
@@ -122,6 +124,7 @@ export class Deal {
       agreedAnnualValue: null,
       packageId: null,
       wonQuotationId: null,
+      renewalOfContractId: null,
     });
     const change: DealStageChange = {
       id: input.newId(),
@@ -130,6 +133,30 @@ export class Deal {
       toStage: DealStage.NewLead,
       changedByUserId: input.createdByUserId,
       at: input.now,
+    };
+    return { deal, change };
+  }
+
+  /**
+   * A Renewal deal started from a contract (M3 FR-REN-06). It begins in
+   * Interested, not New Lead: the company is already a client, so there is
+   * nothing to qualify. Its first history row says who started it and why.
+   */
+  static openRenewal(input: Omit<OpenDealInput, 'type' | 'title'> & { renewalOfContractId: string; note: string }): {
+    deal: Deal;
+    change: DealStageChange;
+  } {
+    const { deal } = Deal.open({ ...input, type: DealType.Renewal, title: null });
+    deal.props.stage = DealStage.Interested;
+    deal.props.renewalOfContractId = input.renewalOfContractId;
+    const change: DealStageChange = {
+      id: input.newId(),
+      dealId: input.id,
+      fromStage: null,
+      toStage: DealStage.Interested,
+      changedByUserId: input.createdByUserId,
+      at: input.now,
+      note: input.note,
     };
     return { deal, change };
   }
@@ -156,6 +183,9 @@ export class Deal {
   }
   get title(): string | null {
     return this.props.title;
+  }
+  get renewalOfContractId(): string | null {
+    return this.props.renewalOfContractId;
   }
   get stage(): DealStage {
     return this.props.stage;

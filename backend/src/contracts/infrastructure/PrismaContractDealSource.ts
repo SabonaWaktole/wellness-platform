@@ -37,6 +37,7 @@ export class PrismaContractDealSource implements IContractDealSource {
       ownerUserId: deal.ownerUserId,
       type: deal.type,
       stageKey: deal.stageKey,
+      renewalOfContractId: deal.renewalOfContractId,
       closedAt: deal.closedAt,
       packageName: deal.package?.nameSq ?? null,
     };

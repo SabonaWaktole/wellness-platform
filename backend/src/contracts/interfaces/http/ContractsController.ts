@@ -7,7 +7,7 @@ import { requireTenantId } from '@main/interfaces/http/tenantContext';
 import { ZodError } from 'zod';
 import { CreateContractFromDealUseCase } from '../../application/use-cases/CreateContractFromDealUseCase';
 import { RefreshContractFromDealUseCase } from '../../application/use-cases/RefreshContractFromDealUseCase';
-import { ContractAlreadyExistsError, ContractValidationError } from '../../domain/contractErrors';
+import { ContractAlreadyExistsError, ContractValidationError, RenewalNotAllowedError } from '../../domain/contractErrors';
 import { Contract, ContractEditRefusedError } from '../../domain/Contract';
 import { CreateContractUseCase } from '../../application/use-cases/CreateContractUseCase';
 import { UpdateContractUseCase } from '../../application/use-cases/UpdateContractUseCase';
@@ -16,6 +16,7 @@ import { ContractDocumentsUseCases } from '../../application/use-cases/ContractD
 import { ContractStatus } from '../../domain/Contract';
 import { ContractPayment, PaymentStatus } from '../../domain/ContractPayment';
 import { RenewContractUseCase } from '../../application/use-cases/RenewContractUseCase';
+import { StartRenewalUseCase } from '../../application/use-cases/StartRenewalUseCase';
 import { SearchContractsUseCase } from '../../application/use-cases/SearchContractsUseCase';
 import { GetContractDetailUseCase } from '../../application/use-cases/GetContractDetailUseCase';
 import { GetClientContractsUseCase } from '../../application/use-cases/GetClientContractsUseCase';
@@ -33,6 +34,7 @@ import {
   createContractFromDealSchema,
   updateContractSchema,
   renewContractSchema,
+  startRenewalSchema,
   cancelContractSchema,
   changeContractStatusSchema,
   searchContractsSchema,
@@ -70,6 +72,7 @@ export class ContractsController {
     private updateContractUseCase: UpdateContractUseCase,
     private changeContractStatusUseCase: ChangeContractStatusUseCase,
     private renewContractUseCase: RenewContractUseCase,
+    private startRenewalUseCase: StartRenewalUseCase,
     private searchContractsUseCase: SearchContractsUseCase,
     private getContractDetailUseCase: GetContractDetailUseCase,
     private getClientContractsUseCase: GetClientContractsUseCase,
@@ -115,6 +118,8 @@ export class ContractsController {
     this.router.post('/:id/activate', requirePermission('contracts.manage'), this.activateContract.bind(this));
     this.router.post('/:id/cancel', requirePermission('contracts.manage'), this.cancelContract.bind(this));
     this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
+    // The sales-process renewal: starts a Renewal deal (M3 Slice 10). It also needs deals.edit, which the use case checks.
+    this.router.post('/:id/renewal', requirePermission('contracts.manage'), this.startRenewal.bind(this));
 
     // Instalments (M3 Slice 8). Reads need payments.view, narrowed to the viewer's
     // scope; every write needs payments.update, which no sales role holds (FR-PAY-05,
@@ -166,6 +171,9 @@ export class ContractsController {
     if (error instanceof ZodError) return res.status(400).json({ error: error.errors });
     if (error instanceof ContractValidationError) return res.status(400).json({ error: error.message, field: error.field });
     if (error instanceof ContractEditRefusedError) return res.status(400).json({ error: error.message, field: error.field });
+    if (error instanceof RenewalNotAllowedError) {
+      return res.status(409).json({ error: error.message, code: error.code, dealId: error.dealId });
+    }
     if (error instanceof ContractAlreadyExistsError) {
       return res.status(409).json({ error: error.message, code: error.code, contractId: error.contractId });
     }
@@ -295,6 +303,23 @@ export class ContractsController {
       contract: presentContract(result.contract, req.access!),
       ...(req.access!.can('payments.view') ? { generatedPayments: result.generatedPayments } : {}),
     };
+  }
+
+  /** Starts a Renewal deal from the contract and returns its id, for the screen to open (FR-REN-06). */
+  private async startRenewal(req: Request, res: Response) {
+    try {
+      const data = startRenewalSchema.parse(req.body ?? {});
+      const result = await this.startRenewalUseCase.execute({
+        tenantId: requireTenantId(req),
+        contractId: req.params.id as string,
+        ownerUserId: data.ownerUserId,
+        actingUserId: req.user!.userId,
+        access: req.access!,
+      });
+      res.status(201).json(result);
+    } catch (error: any) {
+      this.fail(res, error);
+    }
   }
 
   private async renewContract(req: Request, res: Response) {

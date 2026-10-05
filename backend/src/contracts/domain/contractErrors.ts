@@ -18,3 +18,14 @@ export class ContractAlreadyExistsError extends DomainError {
     super('This deal already has a contract.');
   }
 }
+
+/** A renewal deal cannot be started from this contract, with the reason as a code the screen can read. Mapped to 409 (M3 FR-REN-06). */
+export class RenewalNotAllowedError extends DomainError {
+  constructor(
+    readonly code: 'NOT_RENEWABLE_STATUS' | 'ALREADY_RENEWED' | 'NOT_RENEWING' | 'RENEWAL_OPEN',
+    message: string,
+    readonly dealId: string | null = null
+  ) {
+    super(message);
+  }
+}

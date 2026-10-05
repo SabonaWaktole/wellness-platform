@@ -2,6 +2,7 @@ import { AccessContext } from '../../access/domain/AccessContext';
 import { Contract } from '../domain/Contract';
 import { ContractPayment } from '../domain/ContractPayment';
 import { presentInstalments } from './presentPayments';
+import { RenewalLinks } from './ports/IContractRenewals';
 import { ValidityClock } from './ContractValidityBadges';
 import { validityBadge } from './validityBadge';
 
@@ -84,15 +85,20 @@ export function presentContracts(contracts: Contract[], access: AccessContext, c
  * the viewer. The status history is a manager's record.
  */
 export function presentContractDetail<H>(
-  detail: { contract: Contract; payments: ContractPayment[]; history: H[]; documents: unknown[]; permittedActions: string[] },
+  detail: { contract: Contract; payments: ContractPayment[]; history: H[]; documents: unknown[]; permittedActions: string[]; renewal: RenewalLinks },
   access: AccessContext,
   clock?: ValidityClock
 ) {
-  const { payments, documents, ...rest } = detail;
+  const { payments, documents, renewal, ...rest } = detail;
   return {
     ...rest,
     contract: presentContract(detail.contract, access, clock),
     history: access.can('contracts.manage') ? detail.history : [],
+    // Which term this renews and which renewed it are the contract's own numbers; the open deal is a
+    // commercial record, so its link needs `commercial.view` (FR-RBAC-21). Reception sees none of it.
+    ...(access.can('contracts.manage')
+      ? { renewal: { renewedFrom: renewal.renewedFrom, renewedInto: renewal.renewedInto, ...(access.can('commercial.view') ? { openDealId: renewal.openDealId } : {}) } }
+      : {}),
     // The signed document is a commercial record (FR-CON-19, FR-RBAC-21).
     ...(access.can('commercial.view') ? { documents } : {}),
     // Instalments need payments.view; amounts in them need commercial.view too (FR-PAY-12).
