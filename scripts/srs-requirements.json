@@ -1,5 +1,5 @@
 {
-  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026)",
+  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026); Wellness Platform - Milestone 3 SRS.docx v0.1 (04.10.2026)",
   "note": "Extracted once from the SRS and reviewed by hand. Update it when the SRS changes; scripts/check-traceability.mjs reads it.",
   "requirements": [
     {
@@ -906,6 +906,26 @@
       "id": "FR-DEAL-18",
       "priority": "Must",
       "requirement": "Winning, losing, reopening and every change of the agreed values shall be recorded in the audit trail."
+    },
+    {
+      "id": "FR-RBAC-19",
+      "priority": "Must",
+      "requirement": "The permission catalogue shall activate \"Payments: view\", \"Payments: update\" and \"Performance: view\", and add \"Contracts: suspend, cancel, reinstate\" (contracts.terminate). The existing \"Contracts: view validity\" and \"Contracts: manage\" keep their meaning. The Administrator can assign all of them from the Milestone 1 roles screen."
+    },
+    {
+      "id": "FR-RBAC-20",
+      "priority": "Must",
+      "requirement": "The default roles shall receive the permissions in the matrix in 7.2 on upgrade, once, without changing what the Administrator already customised (the upgrade ledger of Milestone 2)."
+    },
+    {
+      "id": "FR-RBAC-21",
+      "priority": "Must",
+      "requirement": "Contract commercial fields (price, annual value, discount, services, package, terms, document, deal, offer) and all payment fields shall be removed from API responses for users without \"Commercial details: view\" or \"Payments: view\" respectively (extends Milestone 1 FR-RBAC-06 and Milestone 2 FR-RBAC-17). Reception receives only number, status, validity, start and end date, company."
+    },
+    {
+      "id": "FR-AUD-12",
+      "priority": "Must",
+      "requirement": "The audit log viewer shall offer filters for the new entity types: Contract and Payment (instalment)."
     }
   ]
 }
