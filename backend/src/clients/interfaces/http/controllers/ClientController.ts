@@ -30,6 +30,8 @@ import { parseSheet, buildTemplate } from '../../../infrastructure/excel/sheet';
 import { FieldType } from '../../../domain/enums/FieldType';
 import { ClientStatus } from '../../../domain/enums/ClientStatus';
 import { DomainError } from '../../../../shared/domain/errors/DomainError';
+import { ContractValidityBadges } from '../../../../contracts/application/ContractValidityBadges';
+import { ValidityBadge } from '../../../../contracts/application/validityBadge';
 import { CompanyReadModel } from '../../../application/CompanyReadModel';
 import { sendClientError } from './sendClientError';
 import { Client } from '../../../domain/entities/Client';
@@ -78,8 +80,19 @@ export class ClientController {
     private addContactPersonUseCase: AddContactPersonUseCase,
     private updateContactPersonUseCase: UpdateContactPersonUseCase,
     private removeContactPersonUseCase: RemoveContactPersonUseCase,
-    private setPrimaryContactUseCase: SetPrimaryContactUseCase
+    private setPrimaryContactUseCase: SetPrimaryContactUseCase,
+    private validityBadges: ContractValidityBadges
   ) {}
+
+  /**
+   * The contract validity badge per company, for a viewer with
+   * `contracts.validity.view` and for nobody else (FR-CON-21). One batched
+   * query however many companies; the companies are already in the viewer's scope.
+   */
+  private async badgesFor(req: Request, clientIds: string[]): Promise<Map<string, ValidityBadge> | null> {
+    if (!req.access!.can('contracts.validity.view')) return null;
+    return this.validityBadges.forClients(requireTenantId(req), req.tenant!.timezone, clientIds);
+  }
 
   /**
    * Multer buffers the upload in memory; an absent file means the client sent
@@ -216,7 +229,9 @@ export class ClientController {
       const tenantId = requireTenantId(req);
       const clientId = req.params.clientId as string;
       const client = await this.getClientUseCase.execute(tenantId, clientId, req.access!);
-      res.status(200).json(redactFields(await this.presentClient(tenantId, client), req.access!));
+      const badges = await this.badgesFor(req, [client.id]);
+      const presented = await this.presentClient(tenantId, client);
+      res.status(200).json(redactFields(badges ? { ...presented, validity: badges.get(client.id) } : presented, req.access!));
     } catch (error: any) {
       if (error instanceof DomainError) {
         res.status(404).json({ error: error.message });
@@ -275,9 +290,10 @@ export class ClientController {
         take: validatedData.take,
       });
 
-      const [profiles, contactsByClient] = await Promise.all([
+      const [profiles, contactsByClient, badges] = await Promise.all([
         this.companyReadModel.enrichMany(tenantId, result.items),
         this.contactRepo.listByClients(tenantId, result.items.map((c) => c.id)),
+        this.badgesFor(req, result.items.map((c) => c.id)),
       ]);
       res.status(200).json({
         total: result.total,
@@ -292,6 +308,7 @@ export class ClientController {
           profile: profiles[index],
           // The list stays light: just the primary contact, not the whole set.
           primaryContact: (contactsByClient.get(client.id) ?? []).find((c) => c.isPrimary) ?? null,
+          ...(badges ? { validity: badges.get(client.id) } : {}),
           lastUpdatedByUserId: client.lastUpdatedByUserId,
           createdAt: client.createdAt,
           updatedAt: client.updatedAt,

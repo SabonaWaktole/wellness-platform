@@ -320,7 +320,8 @@ describe('Data scope (FR-RBAC-11..13, UAT-1)', () => {
 
     it('Reception still sees contract validity', async () => {
       const res = await get('reception', `/contracts/${contractOfB}`);
-      expect(res.body.contract).toMatchObject({ status: 'ACTIVE', planName: 'Gold' });
+      expect(res.body.contract).toMatchObject({ status: 'ACTIVE', company: { id: expect.any(String) } });
+      expect(res.body.contract).not.toHaveProperty('planName');
       expect(res.body.contract.endsAt).toBeDefined();
     });
 

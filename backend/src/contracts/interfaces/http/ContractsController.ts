@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { ContractValidityBadges } from '../../application/ContractValidityBadges';
 import { presentClientContracts, presentContract, presentContractDetail, presentContracts } from '../../application/presentContract';
 import { PermissionDeniedError } from '../../../access/domain/errors';
 import multer from 'multer';
@@ -74,7 +75,8 @@ export class ContractsController {
     private attachContractDocumentUseCase: AttachContractDocumentUseCase,
     private createContractFromDealUseCase: CreateContractFromDealUseCase,
     private refreshContractFromDealUseCase: RefreshContractFromDealUseCase,
-    private contractDocumentsUseCases: ContractDocumentsUseCases
+    private contractDocumentsUseCases: ContractDocumentsUseCases,
+    private validityBadges: ContractValidityBadges
   ) {
     this.initializeRoutes();
   }
@@ -321,7 +323,7 @@ export class ContractsController {
           hasOverdue: params.hasOverdue === undefined ? undefined : params.hasOverdue === 'true',
         },
       });
-      res.json({ ...result, data: presentContracts(result.data, req.access!) });
+      res.json({ ...result, data: presentContracts(result.data, req.access!, await this.validityBadges.clock(requireTenantId(req), req.tenant!.timezone)) });
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -335,7 +337,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(presentContractDetail(result, req.access!));
+      res.json(presentContractDetail(result, req.access!, await this.validityBadges.clock(requireTenantId(req), req.tenant!.timezone)));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -349,7 +351,7 @@ export class ContractsController {
         actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(presentClientContracts(result, req.access!));
+      res.json(presentClientContracts(result, req.access!, await this.validityBadges.clock(requireTenantId(req), req.tenant!.timezone)));
     } catch (error: any) {
       this.fail(res, error);
     }

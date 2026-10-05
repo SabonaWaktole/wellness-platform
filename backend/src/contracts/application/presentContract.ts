@@ -1,12 +1,15 @@
 import { AccessContext } from '../../access/domain/AccessContext';
 import { Contract } from '../domain/Contract';
+import { ValidityClock } from './ContractValidityBadges';
+import { validityBadge } from './validityBadge';
 
 /**
  * What a viewer may see of a contract (FR-RBAC-06): fields a role may not
  * see are removed from the response, not merely hidden in the UI.
  *
- *   - Without `contracts.manage`, only the contract's validity — which plan,
- *     from when, until when, in what state (Reception's "contract validity").
+ *   - Without `contracts.manage`, only the contract's validity: number,
+ *     status, validity, start, end and company (Reception, FR-RBAC-21). `id`
+ *     is the handle the page opens it by, not data about the contract.
  *   - Without `commercial.view`, no amount and none of the contract's other
  *     commercial fields: annual value, discount, package and services, terms,
  *     deal, offer, renewal date and signed document (FR-RBAC-21).
@@ -15,17 +18,7 @@ import { Contract } from '../domain/Contract';
  * The CEO (read-only, but with commercial and payment data) therefore gets
  * validity plus the money, and Reception gets validity alone.
  */
-const VALIDITY_FIELDS = [
-  'id',
-  'number',
-  'clientId',
-  'clientName',
-  'planName',
-  'status',
-  'startsAt',
-  'endsAt',
-  'daysUntilExpiry',
-] as const;
+const VALIDITY_FIELDS = ['id', 'number', 'status', 'startsAt', 'endsAt'] as const;
 
 /**
  * The contract keys that need `commercial.view` (FR-RBAC-21). `dealId`,
@@ -52,9 +45,12 @@ const COMMERCIAL_CONTRACT_FIELDS = [
 
 export type ContractView = Record<string, unknown>;
 
-export function presentContract(contract: Contract, access: AccessContext): ContractView {
+export function presentContract(contract: Contract, access: AccessContext, clock?: ValidityClock): ContractView {
   const full = contract.toJSON() as ContractView;
   const view: ContractView = access.can('contracts.manage') ? { ...full } : pick(full, VALIDITY_FIELDS);
+  if (!access.can('contracts.manage')) view.company = { id: contract.clientId, name: contract.clientName };
+  // The same badge the company search shows, from the same function (FR-CON-20, FR-CON-21).
+  if (clock) view.validity = validityBadge([contract], clock.today, clock.expiringSoonDays);
 
   if (access.can('commercial.view')) {
     // Validity-only viewers (no `contracts.manage`) never had these, so only the amount is added back.
@@ -70,8 +66,8 @@ export function presentContract(contract: Contract, access: AccessContext): Cont
   return view;
 }
 
-export function presentContracts(contracts: Contract[], access: AccessContext): ContractView[] {
-  return contracts.map((contract) => presentContract(contract, access));
+export function presentContracts(contracts: Contract[], access: AccessContext, clock?: ValidityClock): ContractView[] {
+  return contracts.map((contract) => presentContract(contract, access, clock));
 }
 
 /**
@@ -81,12 +77,13 @@ export function presentContracts(contracts: Contract[], access: AccessContext): 
  */
 export function presentContractDetail<P, H>(
   detail: { contract: Contract; payments: P[]; history: H[]; documents: unknown[]; permittedActions: string[] },
-  access: AccessContext
+  access: AccessContext,
+  clock?: ValidityClock
 ) {
   const { payments, documents, ...rest } = detail;
   return {
     ...rest,
-    contract: presentContract(detail.contract, access),
+    contract: presentContract(detail.contract, access, clock),
     history: access.can('contracts.manage') ? detail.history : [],
     // The signed document is a commercial record (FR-CON-19, FR-RBAC-21).
     ...(access.can('commercial.view') ? { documents } : {}),
@@ -97,14 +94,19 @@ export function presentContractDetail<P, H>(
 /** The contracts tab on a company. What the client owes needs `payments.view`. */
 export function presentClientContracts<S extends { outstanding: number; overdueCount: number }>(
   result: { contracts: Contract[]; summary: S },
-  access: AccessContext
+  access: AccessContext,
+  clock?: ValidityClock
 ) {
   const summary: Record<string, unknown> = { ...result.summary };
   if (!access.can('payments.view')) {
     delete summary.outstanding;
     delete summary.overdueCount;
   }
-  return { contracts: presentContracts(result.contracts, access), summary };
+  // Which plan the client is on is a commercial fact (FR-CON-21).
+  if (!access.can('commercial.view')) delete summary.activePlanName;
+  // The company's one badge, from the same function the search uses (FR-CON-21, FR-CON-22).
+  if (clock) summary.validity = validityBadge(result.contracts, clock.today, clock.expiringSoonDays);
+  return { contracts: presentContracts(result.contracts, access, clock), summary };
 }
 
 function pick(source: ContractView, keys: readonly string[]): ContractView {

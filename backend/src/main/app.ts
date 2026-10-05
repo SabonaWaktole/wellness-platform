@@ -236,6 +236,8 @@ import { PrismaInteractionWriteTransaction } from '../clients/infrastructure/rep
 import { PrismaSalesSettingsStore } from '../deals/infrastructure/PrismaSalesSettingsStore';
 import { GetSalesSettingsUseCase, UpdateSalesSettingsUseCase } from '../deals/application/use-cases/SalesSettingsUseCases';
 import { createSalesSettingsRouter } from '../deals/interfaces/http/salesSettingsRoutes';
+import { ContractValidityBadges } from '../contracts/application/ContractValidityBadges';
+import { PrismaContractValidityReader } from '../contracts/infrastructure/PrismaContractValidityReader';
 import { PrismaContractSettingsStore } from '../contracts/infrastructure/PrismaContractSettingsStore';
 import { GetContractSettingsUseCase, UpdateContractSettingsUseCase } from '../contracts/application/use-cases/ContractSettingsUseCases';
 import { createContractSettingsRouter } from '../contracts/interfaces/http/contractSettingsRoutes';
@@ -1140,7 +1142,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes),
     new CreateContractFromDealUseCase(contractWriteTx, recordScopes, tenantRepository),
     new RefreshContractFromDealUseCase(contractWriteTx, recordScopes),
-    new ContractDocumentsUseCases(contractRepo, contractDocumentRepo, contractDocumentStore, recordScopes)
+    new ContractDocumentsUseCases(contractRepo, contractDocumentRepo, contractDocumentStore, recordScopes),
+    new ContractValidityBadges(new PrismaContractValidityReader(prisma), new PrismaContractSettingsStore(prisma))
   );
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);

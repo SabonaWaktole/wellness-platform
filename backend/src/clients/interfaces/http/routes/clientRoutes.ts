@@ -39,6 +39,9 @@ import { PrismaInteractionRepository } from '../../../infrastructure/repositorie
 import { PrismaInteractionWriteTransaction } from '../../../infrastructure/repositories/PrismaInteractionWriteTransaction';
 import { PrismaOutcomeCategoryRepository } from '../../../infrastructure/repositories/PrismaOutcomeCategoryRepository';
 import { PrismaClient } from '@prisma/client';
+import { ContractValidityBadges } from '../../../../contracts/application/ContractValidityBadges';
+import { PrismaContractValidityReader } from '../../../../contracts/infrastructure/PrismaContractValidityReader';
+import { PrismaContractSettingsStore } from '../../../../contracts/infrastructure/PrismaContractSettingsStore';
 import { authenticate } from '../../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../../main/interfaces/http/middlewares/resolveTenant';
 import { loadAccess } from '../../../../main/interfaces/http/middlewares/loadAccess';
@@ -175,7 +178,8 @@ export const createClientRouter = (
     addContactPersonUseCase,
     updateContactPersonUseCase,
     removeContactPersonUseCase,
-    setPrimaryContactUseCase
+    setPrimaryContactUseCase,
+    new ContractValidityBadges(new PrismaContractValidityReader(prisma), new PrismaContractSettingsStore(prisma))
   );
 
   // Middlewares applied to all routes in this router
