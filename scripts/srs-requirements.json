@@ -1341,6 +1341,21 @@
       "id": "FR-DSH-13",
       "priority": "Must",
       "requirement": "The CEO dashboard is read only. It can open any list behind a figure but not edit it (Milestone 1 Q7 default)."
+    },
+    {
+      "id": "NFR-USE-03",
+      "priority": "Must",
+      "requirement": "All Milestone 3 screens, including the dashboards, Renewals, Payments overview and Performance screen, shall work on desktop and mobile from 360 px wide."
+    },
+    {
+      "id": "NFR-I18N-03",
+      "priority": "Must",
+      "requirement": "All new screens, messages, notifications, status labels and chart labels shall be translated in sq and en."
+    },
+    {
+      "id": "NFR-MNT-03",
+      "priority": "Must",
+      "requirement": "The Milestone 3 requirement IDs shall be added to scripts/srs-requirements.json as each implementation slice starts, so the CI traceability check covers them."
     }
   ]
 }
