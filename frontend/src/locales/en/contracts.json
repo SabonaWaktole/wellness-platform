@@ -40,6 +40,7 @@
     "columnClient": "Client",
     "columnPlan": "Plan",
     "columnTerm": "Term",
+    "columnValidity": "Validity",
     "columnValue": "Per period",
     "columnOwed": "Outstanding",
     "columnStatus": "Status",
@@ -193,5 +194,14 @@
     "outstanding": "{{amount}} outstanding",
     "allSettled": "All payments settled",
     "overdue": "{{count}} overdue payment(s)"
+  },
+  "validity": {
+    "validUntil": "Valid until {{date}}",
+    "expiringSoon": "Expiring soon · until {{date}}",
+    "notValid": "Not valid: {{reason}}",
+    "reason": {
+      "NOT_STARTED": "Not started",
+      "NO_CONTRACT": "No contract"
+    }
   }
 }

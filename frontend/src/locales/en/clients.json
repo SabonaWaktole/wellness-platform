@@ -16,6 +16,7 @@
     "columnContact": "Contact",
     "columnAssigned": "Assigned To",
     "columnStatus": "Status",
+    "columnValidity": "Contract",
     "empty": "No clients yet",
     "emptyFiltered": "No clients match your search",
     "actionsFor": "Actions for {{name}}",

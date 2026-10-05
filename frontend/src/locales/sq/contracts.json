@@ -40,6 +40,7 @@
     "columnClient": "Klienti",
     "columnPlan": "Plani",
     "columnTerm": "Afati",
+    "columnValidity": "Vlefshmëria",
     "columnValue": "Për periudhë",
     "columnOwed": "Papaguar",
     "columnStatus": "Statusi",
@@ -193,5 +194,14 @@
     "outstanding": "{{amount}} papaguar",
     "allSettled": "Të gjitha pagesat janë mbyllur",
     "overdue": "{{count}} pagesa të vonuara"
+  },
+  "validity": {
+    "validUntil": "I vlefshëm deri më {{date}}",
+    "expiringSoon": "Skadon së shpejti · deri më {{date}}",
+    "notValid": "Jo i vlefshëm: {{reason}}",
+    "reason": {
+      "NOT_STARTED": "Nuk ka filluar",
+      "NO_CONTRACT": "Pa kontratë"
+    }
   }
 }

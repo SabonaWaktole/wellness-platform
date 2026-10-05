@@ -101,8 +101,8 @@ export const ContractFormContent: React.FC = () => {
       .then(({ contract }) => {
         setSource(contract);
         setForm({
-          clientId: contract.clientId,
-          planName: contract.planName,
+          clientId: contract.clientId ?? '',
+          planName: contract.planName ?? '',
           amount: String(contract.amount),
           billingPeriod: contract.billingPeriod ?? 'MONTHLY',
           startsAt: toDateInput(contract.startsAt),

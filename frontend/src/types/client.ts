@@ -1,3 +1,4 @@
+import type { ValidityBadgeData } from './contract';
 /** The fixed client status set (Slice 11, Q9). */
 export const ClientStatus = {
   LEAD: 'LEAD',
@@ -88,6 +89,8 @@ export interface Client {
   contacts?: ContactPerson[];
   /** The primary contact only — what the company list carries, to stay light. */
   primaryContact?: ContactPerson | null;
+  /** Contract validity today; sent only with `contracts.validity.view` (FR-CON-21). */
+  validity?: ValidityBadgeData;
   lastUpdatedByUserId: string;
   createdAt: string;
   updatedAt: string;
