@@ -8,11 +8,15 @@ import { RoleKey } from '../../../src/access/domain/RoleKey';
 import { PrismaTenantDeletionTransaction } from '../../../src/tenant/infrastructure/PrismaTenantDeletionTransaction';
 import { seedSystemRoles } from '../../support/seedRoles';
 
+// Each check takes the fastest of three requests, so a screen well inside its 2 second budget can still take
+// more than Jest's default 5 seconds to measure, more so when the whole suite is running at once.
+jest.setTimeout(30_000);
+
 const prisma = new PrismaClient();
 const tokenService = new JwtTokenService();
 
 /**
- * NFR-PERF-04: the Performance screen loads in under 2 seconds at the volume of the SRS (2,000 deals,
+ * NFR-PERF-04: the Performance screen and the Sales User and Sales Manager dashboards load in under 2 seconds at the volume of the SRS (2,000 deals,
  * 5,000 activities, and as many follow-ups) for the whole sales team, with the comparison, the
  * drill-down and the series. This runs on the test database, which is smaller than staging, so it is a
  * guard against a query that stops using its index, not the staging measurement
@@ -25,7 +29,8 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
   const sellers = Array.from({ length: 6 }, (_, i) => `u-pv-sales${i}-${randomUUID()}`);
   let app: express.Express;
   let token: string;
-  const get = (path: string) => request(app).get(`/api/${slug}${path}`).set('Authorization', `Bearer ${token}`);
+  let sellerToken: string;
+  const get = (path: string, bearer?: string) => request(app).get(`/api/${slug}${path}`).set('Authorization', `Bearer ${bearer ?? token}`);
 
   beforeAll(async () => {
     app = createApp();
@@ -38,6 +43,7 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
       ].map(({ id, roleId }) => ({ id, email: `${id}@example.com`, hashedPassword: 'x', role: 'STAFF', roleId, tenantId, firstName: id.slice(5, 14), lastName: 'Vol' })),
     });
     token = tokenService.sign({ userId: manager, role: 'STAFF', tenantId, tenantSlug: slug } as any);
+    sellerToken = tokenService.sign({ userId: sellers[0], role: 'STAFF', tenantId, tenantSlug: slug } as any);
 
     const companyIds = Array.from({ length: 200 }, () => randomUUID());
     await prisma.client.createMany({
@@ -98,12 +104,12 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
   });
 
   /** The fastest of three requests: a query that lost its index is slow every time, a busy test machine only some. */
-  const timed = async (path: string) => {
+  const timed = async (path: string, bearer?: string) => {
     let fastest = Infinity;
     let body: any;
     for (let attempt = 0; attempt < 3; attempt++) {
       const start = performance.now();
-      const res = await get(path).expect(200);
+      const res = await get(path, bearer).expect(200);
       fastest = Math.min(fastest, performance.now() - start);
       body = res.body;
     }
@@ -119,6 +125,27 @@ describe('Performance screen at volume (NFR-PERF-04)', () => {
   ])('NFR-PERF-04: %s loads in under 2 seconds', async (_label, path) => {
     const { ms } = await timed(path.replace('SELLER0', sellers[0]));
     expect(ms).toBeLessThan(2_000);
+  });
+
+  it.each([
+    ['the Sales Manager dashboard for the year', 'manager', '/dashboard/sales-manager?preset=THIS_YEAR'],
+    ['the Sales Manager dashboard over 300 days', 'manager', `/dashboard/sales-manager?preset=CUSTOM&from=${new Date(Date.now() - 300 * 86_400_000).toISOString().slice(0, 10)}&to=${new Date().toISOString().slice(0, 10)}`],
+    ['a Sales User dashboard for the year', 'seller', '/dashboard/sales-user?preset=THIS_YEAR'],
+  ])('NFR-PERF-04: %s loads in under 2 seconds', async (_label, who, path) => {
+    const { ms, body } = await timed(path, who === 'seller' ? sellerToken : token);
+    expect(ms).toBeLessThan(2_000);
+    expect(body.figures.length).toBeGreaterThan(5);
+  });
+
+  it('NFR-PERF-04: the Manager dashboard at this volume adds up to its rows', async () => {
+    const { body } = await timed('/dashboard/sales-manager?preset=CUSTOM&from=2000-01-01&to=2100-01-01');
+    const sum = (key: string) => body.tables.perSalesperson.reduce((total: number, row: any) => total + row[key], 0);
+    const total = (key: string) => body.figures.find((figure: any) => figure.key === key).value;
+    expect(body.tables.perSalesperson).toHaveLength(sellers.length);
+    expect(total('dealsWon')).toBe(sum('dealsWon'));
+    expect(total('dealsLost')).toBe(sum('dealsLost'));
+    expect(total('activeDeals')).toBe(body.charts.pipeline.reduce((count: number, point: any) => count + point.count, 0));
+    expect(body.tables.lostReasons.reduce((count: number, row: any) => count + row.count, 0)).toBe(total('dealsLost'));
   });
 
   it('NFR-PERF-04: the table at this volume has a row for each salesperson and a total equal to their sum', async () => {

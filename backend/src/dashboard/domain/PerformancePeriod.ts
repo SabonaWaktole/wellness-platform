@@ -1,7 +1,10 @@
 import { dayKeyInZone, instantInZone } from '../../shared/domain/time/tenantDay';
 
-export const PERIOD_PRESETS = ['THIS_WEEK', 'THIS_MONTH', 'LAST_MONTH', 'THIS_QUARTER', 'THIS_YEAR', 'CUSTOM'] as const;
+/** `TODAY` is for the dashboards (FR-DSH-03); the Performance screen does not offer it. */
+export const PERIOD_PRESETS = ['TODAY', 'THIS_WEEK', 'THIS_MONTH', 'LAST_MONTH', 'THIS_QUARTER', 'THIS_YEAR', 'CUSTOM'] as const;
 export type PeriodPreset = (typeof PERIOD_PRESETS)[number];
+/** The presets of the Performance screen (FR-PRF-02). */
+export const PERFORMANCE_PRESETS = ['THIS_WEEK', 'THIS_MONTH', 'LAST_MONTH', 'THIS_QUARTER', 'THIS_YEAR', 'CUSTOM'] as const;
 
 /** Whole workspace days, `YYYY-MM-DD`, both ends included. */
 export interface DayRange {
@@ -40,6 +43,8 @@ export function resolvePeriod(preset: PeriodPreset, today: string, custom?: DayR
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth();
   switch (preset) {
+    case 'TODAY':
+      return { from: today, to: today };
     case 'THIS_WEEK': {
       const sinceMonday = (date.getUTCDay() + 6) % 7;
       const monday = addDays(today, -sinceMonday);
@@ -73,6 +78,8 @@ export function resolvePeriod(preset: PeriodPreset, today: string, custom?: DayR
 export function previousPeriod(preset: PeriodPreset, range: DayRange): DayRange {
   const from = utc(range.from);
   switch (preset) {
+    case 'TODAY':
+      return { from: addDays(range.from, -1), to: addDays(range.from, -1) };
     case 'THIS_WEEK':
       return { from: addDays(range.from, -7), to: addDays(range.to, -7) };
     case 'THIS_MONTH':

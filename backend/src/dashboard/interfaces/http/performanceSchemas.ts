@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PERIOD_PRESETS } from '../../domain/PerformancePeriod';
+import { PERFORMANCE_PRESETS } from '../../domain/PerformancePeriod';
 import { PERFORMANCE_INDICATORS } from '../../application/wellness/ports/IPerformanceReader';
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD.');
@@ -14,7 +14,7 @@ const bool = z.enum(['true', 'false']).transform((value) => value === 'true');
 
 /** The period and the salespeople. The scope is never a parameter: it comes from the access context (FR-RBAC-23). */
 const filters = {
-  preset: z.enum(PERIOD_PRESETS).default('THIS_MONTH'),
+  preset: z.enum(PERFORMANCE_PRESETS).default('THIS_MONTH'),
   from: day.optional(),
   to: day.optional(),
   salespersonIds: idList,
@@ -40,7 +40,7 @@ export const performanceRecordsSchema = z
 
 export const performanceSeriesSchema = z
   .object({
-    preset: z.enum(PERIOD_PRESETS).default('THIS_YEAR'),
+    preset: z.enum(PERFORMANCE_PRESETS).default('THIS_YEAR'),
     from: day.optional(),
     to: day.optional(),
     salespersonId: z.string().min(1),

@@ -1207,6 +1207,35 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     );
   }
 
+  // The role dashboards (M3 Slice 13, FR-DSH-01 to 10, FR-RBAC-23). Mounted beside the older metrics
+  // router; its paths are different, so each request reaches exactly one of them.
+  {
+    const { PrismaDashboardReader } = require('../dashboard/infrastructure/PrismaDashboardReader');
+    const { PrismaPerformanceReader } = require('../dashboard/infrastructure/PrismaPerformanceReader');
+    const { GetDashboardHomeUseCase } = require('../dashboard/application/wellness/GetDashboardHomeUseCase');
+    const { GetSalesUserDashboardUseCase } = require('../dashboard/application/wellness/GetSalesUserDashboardUseCase');
+    const { GetSalesManagerDashboardUseCase } = require('../dashboard/application/wellness/GetSalesManagerDashboardUseCase');
+    const { DashboardController } = require('../dashboard/interfaces/http/DashboardController');
+    const { createRoleDashboardRouter } = require('../dashboard/interfaces/http/dashboardHomeRoutes');
+    const performanceReader = new PrismaPerformanceReader(prisma);
+    const dashboardReader = new PrismaDashboardReader(prisma, performanceReader);
+    const dashboardRoster = new PrismaTeamRoster();
+    const dashboardSettings = new PrismaContractSettingsStore(prisma);
+    app.use(
+      '/api/:tenantSlug/dashboard',
+      createRoleDashboardRouter(
+        new DashboardController(
+          new GetDashboardHomeUseCase(dashboardReader),
+          new GetSalesUserDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings),
+          new GetSalesManagerDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings)
+        ),
+        tokenService,
+        tenantRepository,
+        resolveAccessContext
+      )
+    );
+  }
+
   // Payments overview and CSV export (M3 Slice 9, FR-PAY-11, 14, FR-AUD-13).
   const paymentOverviewReader = new PrismaPaymentOverviewReader(prisma);
   app.use(

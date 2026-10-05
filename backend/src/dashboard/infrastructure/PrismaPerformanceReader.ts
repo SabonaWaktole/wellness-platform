@@ -24,6 +24,12 @@ const CHANNELS_OF: Partial<Record<PerformanceIndicator, string[]>> = {
 };
 const OPEN_FOLLOW_UP = ['SCHEDULED', 'CONFIRMED'];
 
+/** The dashboards' location filter (FR-DSH-04): the company's predefined Area and City. */
+const inLocation = (location: IndicatorQuery['location']) =>
+  location && (location.areaId || location.cityId)
+    ? { client: { ...(location.areaId ? { areaId: location.areaId } : {}), ...(location.cityId ? { cityId: location.cityId } : {}) } }
+    : {};
+
 const utcDay = (key: string) => new Date(`${key}T00:00:00.000Z`);
 const nextDay = (key: string) => new Date(utcDay(key).getTime() + DAY_MS);
 
@@ -40,6 +46,9 @@ interface DealResult {
   companyName: string;
   title: string | null;
   annualValue: Money | null;
+  lostReasonId: string | null;
+  /** The annual value of the deal's latest offer, for the lost-deal analysis (§5.3). */
+  offerAnnualValue: Money | null;
 }
 
 /**
@@ -72,28 +81,28 @@ export class PrismaPerformanceReader implements IPerformanceReader {
     const [contacts, created, sent, won, lost, completed, overdue] = await Promise.all([
       this.prisma.interaction.groupBy({
         by: ['authorUserId', 'channel', 'clientId'],
-        where: { tenantId, authorUserId: { in: ids }, channel: { in: CONTACT_CHANNELS }, occurredAt: between },
+        where: { tenantId, authorUserId: { in: ids }, channel: { in: CONTACT_CHANNELS }, occurredAt: between, ...inLocation(query.location) },
         _count: { _all: true },
       }),
       this.prisma.quotation.groupBy({
         by: ['createdByUserId'],
-        where: { tenantId, createdByUserId: { in: ids }, version: 1, createdAt: between },
+        where: { tenantId, createdByUserId: { in: ids }, version: 1, createdAt: between, ...inLocation(query.location) },
         _count: { _all: true },
       }),
       this.prisma.quotation.groupBy({
         by: ['createdByUserId'],
-        where: { tenantId, createdByUserId: { in: ids }, sentAt: between },
+        where: { tenantId, createdByUserId: { in: ids }, sentAt: between, ...inLocation(query.location) },
         _count: { _all: true },
       }),
       this.dealResults(query, 'WON'),
       this.dealResults(query, 'LOST'),
       this.prisma.appointment.findMany({
-        where: { tenantId, kind: 'FOLLOW_UP', status: 'COMPLETED', assignedUserId: { in: ids }, completedAt: between },
+        where: { tenantId, kind: 'FOLLOW_UP', status: 'COMPLETED', assignedUserId: { in: ids }, completedAt: between, ...inLocation(query.location) },
         select: { assignedUserId: true, scheduledAt: true, completedAt: true },
       }),
       this.prisma.appointment.groupBy({
         by: ['assignedUserId'],
-        where: { tenantId, kind: 'FOLLOW_UP', status: { in: OPEN_FOLLOW_UP }, assignedUserId: { in: ids }, scheduledAt: { lt: query.now } },
+        where: { tenantId, kind: 'FOLLOW_UP', status: { in: OPEN_FOLLOW_UP }, assignedUserId: { in: ids }, scheduledAt: { lt: query.now }, ...inLocation(query.location) },
         _count: { _all: true },
       }),
     ]);
@@ -142,11 +151,20 @@ export class PrismaPerformanceReader implements IPerformanceReader {
    * owner on the latest history row of that result; rows from before the owner was recorded took
    * the deal's owner in the migration.
    */
+  /** Deals lost in the period with their predefined reason, by the owner when they were lost. */
+  async lostDeals(query: IndicatorQuery) {
+    return (await this.dealResults(query, 'LOST')).map((deal) => ({
+      ownerId: deal.ownerId,
+      reasonId: deal.lostReasonId,
+      annualValue: deal.offerAnnualValue,
+    }));
+  }
+
   private async dealResults(query: IndicatorQuery, result: 'WON' | 'LOST'): Promise<DealResult[]> {
     const { tenantId, days } = query;
     const column = result === 'WON' ? 'wonAt' : 'lostAt';
     const deals = await this.prisma.deal.findMany({
-      where: { tenantId, deletedAt: null, [column]: { gte: utcDay(days.from), lt: nextDay(days.to) } },
+      where: { tenantId, deletedAt: null, [column]: { gte: utcDay(days.from), lt: nextDay(days.to) }, ...inLocation(query.location) },
       select: {
         id: true,
         ownerUserId: true,
@@ -156,6 +174,8 @@ export class PrismaPerformanceReader implements IPerformanceReader {
         clientId: true,
         title: true,
         agreedAnnualValue: true,
+        lostReasonId: true,
+        offerAnnualValue: true,
         client: { select: { name: true } },
       },
     });
@@ -180,6 +200,8 @@ export class PrismaPerformanceReader implements IPerformanceReader {
         companyName: deal.client.name ?? '',
         title: deal.title,
         annualValue: deal.agreedAnnualValue ? Money.of(deal.agreedAnnualValue.toFixed(2)) : null,
+        lostReasonId: deal.lostReasonId,
+        offerAnnualValue: deal.offerAnnualValue ? Money.of(deal.offerAnnualValue.toFixed(2)) : null,
       }))
       .filter((deal) => wanted.has(deal.ownerId));
   }

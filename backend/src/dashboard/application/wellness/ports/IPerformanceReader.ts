@@ -37,6 +37,8 @@ export interface IndicatorQuery {
   timezone: string;
   /** "Now" for the overdue follow-ups, which are as of the time of viewing. */
   now: Date;
+  /** Only companies in this predefined Area and City (the dashboards, FR-DSH-04). */
+  location?: { areaId?: string; cityId?: string };
 }
 
 export interface IndicatorResult {

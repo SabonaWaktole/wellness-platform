@@ -18,6 +18,7 @@ const EXEMPT_ROUTES: Record<string, string> = {
   [`GET ${TENANT}/settings`]: 'Any tenant user needs workspace language, date format and currency (FR-LNG-04).',
   [`POST ${TENANT}/media/:kind`]: "Personal images are the caller's own; workspace branding is checked against settings.manage in MediaController.authorize.",
   [`DELETE ${TENANT}/media/:kind`]: 'Same guard as POST /media/:kind.',
+  [`GET ${TENANT}/dashboard/home`]: 'Every tenant user needs to know which dashboard is theirs after login (FR-DSH-01); it returns only the kind.',
   [`GET ${TENANT}/notifications`]: "The caller's own notifications only.",
   [`GET ${TENANT}/notifications/settings`]: "The caller's own notification preferences.",
   [`PATCH ${TENANT}/notifications/read-all`]: "Marks the caller's own notifications read.",
