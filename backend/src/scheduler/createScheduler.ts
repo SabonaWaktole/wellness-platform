@@ -13,6 +13,8 @@ import { QuotationFollowUpJob } from './jobs/QuotationFollowUpJob';
 import { QuotationExpiryJob } from './jobs/QuotationExpiryJob';
 import { InvoiceOverdueJob } from './jobs/InvoiceOverdueJob';
 import { ContractExpiryJob } from './jobs/ContractExpiryJob';
+import { MarkPaymentsOverdueJob } from './jobs/MarkPaymentsOverdueJob';
+import { MarkPaymentOverdueUseCase } from '../contracts/application/use-cases/MarkPaymentOverdueUseCase';
 import { ContractRenewalReminderJob } from './jobs/ContractRenewalReminderJob';
 
 import { PrismaUserRepository } from '../auth/infrastructure/repositories/PrismaUserRepository';
@@ -91,6 +93,7 @@ export function createScheduler(): Scheduler {
     new FollowUpDailySummaryJob(followUpQueries, settingsRepository, notifications),
     new InvoiceOverdueJob(queries, markInvoiceOverdue),
     new ContractExpiryJob(queries, expireContract, notifications),
+    new MarkPaymentsOverdueJob(queries, new MarkPaymentOverdueUseCase(new PrismaContractWriteTransaction()), notifications),
     new ContractRenewalReminderJob(queries, notifications),
   ];
 

@@ -3066,6 +3066,19 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261012100000_m3_contract_payment_history'
 );
 
+-- M3 Slice 9: ContractPayment (tenantId, paidAt)
+SET @needed := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContractPayment' AND INDEX_NAME = 'ContractPayment_tenantId_paidAt_idx');
+SET @sql := IF(@needed = 0, 'CREATE INDEX `ContractPayment_tenantId_paidAt_idx` ON `ContractPayment`(`tenantId`, `paidAt`)', 'SELECT ''skip: ContractPayment_tenantId_paidAt_idx'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261013100000_m3_payment_paid_at_index', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261013100000_m3_payment_paid_at_index'
+);
+
 -- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
@@ -3212,6 +3225,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractSettings'
   UNION ALL SELECT 'ContractDocument table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
+  UNION ALL SELECT 'ContractPayment_tenantId_paidAt_idx', COUNT(*) FROM information_schema.STATISTICS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractPayment' AND INDEX_NAME='ContractPayment_tenantId_paidAt_idx'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;
