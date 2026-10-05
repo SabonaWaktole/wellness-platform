@@ -1276,6 +1276,56 @@
       "id": "NFR-ACC-04",
       "priority": "Must",
       "requirement": "Every figure in sections 5.3 and 6.2 shall be reproduced exactly on a fixed set of test data, including the conversion rate and sales value example in 5.3 and the total-row example in FR-PRF-04."
+    },
+    {
+      "id": "FR-DSH-01",
+      "priority": "Must",
+      "requirement": "After login, each user shall land on the dashboard of their role: Sales User, Sales Manager, Administrator or CEO. Reception lands on the company search of Milestone 1 and has no dashboard. The dashboard is also reachable from the main menu."
+    },
+    {
+      "id": "FR-DSH-02",
+      "priority": "Must",
+      "requirement": "Every number shall be calculated on the server within the data scope of the user: Sales User Own, Sales Manager Team (the sales team only), Administrator and CEO All. A user cannot obtain another scope by changing the request."
+    },
+    {
+      "id": "FR-DSH-03",
+      "priority": "Must",
+      "requirement": "Dashboards shall have a period selector: Today, This week, This month (default), This quarter, This year and a custom range. Period figures (for example deals won) follow it. Figures that describe the situation now (open pipeline, active contracts) do not, and are labelled \"as of now\"."
+    },
+    {
+      "id": "FR-DSH-04",
+      "priority": "Should",
+      "requirement": "Dashboards that can be filtered by company location shall offer the predefined Area and City lists, never free text."
+    },
+    {
+      "id": "FR-DSH-05",
+      "priority": "Should",
+      "requirement": "Each figure shall show its value, its label, and whether it follows the period or is as of now. Where a list sits behind it (for example overdue follow-ups, expiring contracts, overdue instalments), clicking it opens that list already filtered."
+    },
+    {
+      "id": "FR-DSH-06",
+      "priority": "Must",
+      "requirement": "Money is shown in EUR with two decimals and the Albanian or English number format of the user. Charts have a table view with the same numbers. A dashboard with no data shows an empty state, not zeros without explanation."
+    },
+    {
+      "id": "FR-DSH-07",
+      "priority": "Must",
+      "requirement": "The dashboard shall show the time it was calculated and a refresh button. Figures are calculated when the page is opened, not stored."
+    },
+    {
+      "id": "FR-DSH-08",
+      "priority": "Must",
+      "requirement": "Figures that contain prices, offers, deal values, contract values or payments shall be hidden for any user without \"Commercial details: view\" (or \"Payments: view\" for payments), and removed from the API response."
+    },
+    {
+      "id": "FR-DSH-09",
+      "priority": "Must",
+      "requirement": "Sales User dashboard. Own leads; own active deals with a count per stage; follow-ups due today and in the next 7 days; overdue follow-ups; offers created and offers sent in the period; deals won in the period; own sales value in the period; own activity in the period (calls, emails, visits, meetings). Should: own contracts expiring soon and own overdue instalments."
+    },
+    {
+      "id": "FR-DSH-10",
+      "priority": "Must",
+      "requirement": "Sales Manager dashboard. Total leads and leads per salesperson; active deals; the full team pipeline (count and value per stage); offers created and sent; follow-ups due and overdue, in total and per salesperson; deals won and lost; conversion rate in total and per salesperson; total sales value and per salesperson; activity per salesperson; lost-deal analysis (count and value per lost reason). Should: pending discount approvals, contracts expiring soon and overdue instalments of the team."
     }
   ]
 }
