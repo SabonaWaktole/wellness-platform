@@ -3100,6 +3100,42 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261014100000_m3_renewal_deal'
 );
 
+-- M3 Slice 11: ContractReminder replaces Contract.expiryNotifiedAt (FR-REN-01, FR-REN-03)
+CREATE TABLE IF NOT EXISTS `ContractReminder` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `contractId` VARCHAR(191) NOT NULL,
+    `leadDays` INTEGER NOT NULL,
+    `state` VARCHAR(191) NOT NULL,
+    `sentAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `ContractReminder_contractId_leadDays_key`(`contractId`, `leadDays`),
+    INDEX `ContractReminder_tenantId_contractId_idx`(`tenantId`, `contractId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ContractReminder' AND CONSTRAINT_NAME = 'ContractReminder_contractId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed, 'ALTER TABLE `ContractReminder` ADD CONSTRAINT `ContractReminder_contractId_fkey` FOREIGN KEY (`contractId`) REFERENCES `Contract`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: ContractReminder_contractId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @has_old := (SELECT COUNT(*) > 0 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Contract' AND COLUMN_NAME = 'expiryNotifiedAt');
+
+SET @sql := IF(@has_old,
+  'INSERT IGNORE INTO `ContractReminder` (`id`, `tenantId`, `contractId`, `leadDays`, `state`, `sentAt`) SELECT UUID(), `tenantId`, `id`, 30, ''SENT'', `expiryNotifiedAt` FROM `Contract` WHERE `expiryNotifiedAt` IS NOT NULL',
+  'SELECT ''skip: copy of Contract.expiryNotifiedAt'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(@has_old, 'ALTER TABLE `Contract` DROP COLUMN `expiryNotifiedAt`', 'SELECT ''skip: Contract.expiryNotifiedAt already dropped'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261015100000_m3_contract_reminders', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261015100000_m3_contract_reminders'
+);
+
 -- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
@@ -3250,6 +3286,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractPayment' AND INDEX_NAME='ContractPayment_tenantId_paidAt_idx'
   UNION ALL SELECT 'Deal.renewalOfContractId', COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Deal' AND COLUMN_NAME='renewalOfContractId'
+  UNION ALL SELECT 'ContractReminder table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractReminder'
 ) AS checks;
 
 SELECT 'upgrade complete' AS step, NOW() AS at;

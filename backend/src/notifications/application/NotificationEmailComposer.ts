@@ -282,7 +282,7 @@ export class NotificationEmailComposer {
       case 'CONTRACT_EXPIRING':
         return {
           subject: `${client}'s contract expires in ${String(p.daysRemaining ?? '')} days`,
-          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> ends on <strong>${esc(String(p.endsAt ?? ''))}</strong>. Renew it before then to keep the subscription running.`,
+          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong>${p.number ? ` (${esc(String(p.number))})` : ''} ends on <strong>${esc(String(p.endsAt ?? ''))}</strong>. Open the contract and start the renewal before then to keep the subscription running.`,
         };
       case 'CONTRACT_EXPIRED':
         return {

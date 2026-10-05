@@ -43,4 +43,8 @@ export class PrismaContractRenewals implements IContractRenewals {
   async isActiveUser(tenantId: string, userId: string): Promise<boolean> {
     return (await this.prisma.user.count({ where: { id: userId, tenantId, isActive: true, deletedAt: null } })) > 0;
   }
+
+  async activeLostReason(tenantId: string, reasonId: string): Promise<{ id: string } | null> {
+    return this.prisma.lostReason.findFirst({ where: { id: reasonId, tenantId, active: true }, select: { id: true } });
+  }
 }

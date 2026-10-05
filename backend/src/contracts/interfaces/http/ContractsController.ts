@@ -17,6 +17,7 @@ import { ContractStatus } from '../../domain/Contract';
 import { ContractPayment, PaymentStatus } from '../../domain/ContractPayment';
 import { RenewContractUseCase } from '../../application/use-cases/RenewContractUseCase';
 import { StartRenewalUseCase } from '../../application/use-cases/StartRenewalUseCase';
+import { ClearNotRenewingUseCase, MarkNotRenewingUseCase } from '../../application/use-cases/NotRenewingUseCases';
 import { SearchContractsUseCase } from '../../application/use-cases/SearchContractsUseCase';
 import { GetContractDetailUseCase } from '../../application/use-cases/GetContractDetailUseCase';
 import { GetClientContractsUseCase } from '../../application/use-cases/GetClientContractsUseCase';
@@ -35,6 +36,7 @@ import {
   updateContractSchema,
   renewContractSchema,
   startRenewalSchema,
+  markNotRenewingSchema,
   cancelContractSchema,
   changeContractStatusSchema,
   searchContractsSchema,
@@ -92,7 +94,9 @@ export class ContractsController {
     private createContractFromDealUseCase: CreateContractFromDealUseCase,
     private refreshContractFromDealUseCase: RefreshContractFromDealUseCase,
     private contractDocumentsUseCases: ContractDocumentsUseCases,
-    private validityBadges: ContractValidityBadges
+    private validityBadges: ContractValidityBadges,
+    /** Marking a contract Not renewing and taking it back (M3 Slice 11, FR-REN-08). */
+    private notRenewing: { mark: MarkNotRenewingUseCase; clear: ClearNotRenewingUseCase }
   ) {
     this.initializeRoutes();
   }
@@ -120,6 +124,9 @@ export class ContractsController {
     this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
     // The sales-process renewal: starts a Renewal deal (M3 Slice 10). It also needs deals.edit, which the use case checks.
     this.router.post('/:id/renewal', requirePermission('contracts.manage'), this.startRenewal.bind(this));
+    // "Not renewing" with its reason, and taking it back (M3 Slice 11, FR-REN-08).
+    this.router.post('/:id/not-renewing', requirePermission('contracts.manage'), this.markNotRenewing.bind(this));
+    this.router.delete('/:id/not-renewing', requirePermission('contracts.manage'), this.clearNotRenewing.bind(this));
 
     // Instalments (M3 Slice 8). Reads need payments.view, narrowed to the viewer's
     // scope; every write needs payments.update, which no sales role holds (FR-PAY-05,
@@ -317,6 +324,37 @@ export class ContractsController {
         access: req.access!,
       });
       res.status(201).json(result);
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async markNotRenewing(req: Request, res: Response) {
+    try {
+      const data = markNotRenewingSchema.parse(req.body ?? {});
+      await this.notRenewing.mark.execute({
+        tenantId: requireTenantId(req),
+        contractId: req.params.id as string,
+        reasonId: data.reasonId,
+        note: data.note,
+        actingUserId: req.user!.userId,
+        access: req.access!,
+      });
+      res.status(204).end();
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async clearNotRenewing(req: Request, res: Response) {
+    try {
+      await this.notRenewing.clear.execute({
+        tenantId: requireTenantId(req),
+        contractId: req.params.id as string,
+        actingUserId: req.user!.userId,
+        access: req.access!,
+      });
+      res.status(204).end();
     } catch (error: any) {
       this.fail(res, error);
     }

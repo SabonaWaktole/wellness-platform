@@ -3,6 +3,7 @@ import { ITokenService } from '../../../auth/application/ports/ITokenService';
 import { ITenantRepository } from '../../../tenant/domain/repositories/ITenantRepository';
 import { ContractsController } from './ContractsController';
 import { PaymentsController } from './PaymentsController';
+import { RenewalsController } from './RenewalsController';
 import { authenticate } from '../../../main/interfaces/http/middlewares/authenticate';
 import { resolveTenant } from '../../../main/interfaces/http/middlewares/resolveTenant';
 import { loadAccess } from '../../../main/interfaces/http/middlewares/loadAccess';
@@ -39,5 +40,20 @@ export const createPaymentsRouter = (
   router.use(resolveTenant(tenantRepository));
   router.use(loadAccess(resolveAccessContext));
   router.use('/', paymentsController.router);
+  return router;
+};
+
+/** The Renewals screen (M3 Slice 11), under the same guard chain. */
+export const createRenewalsRouter = (
+  renewalsController: RenewalsController,
+  tokenService: ITokenService,
+  tenantRepository: ITenantRepository,
+  resolveAccessContext: ResolveAccessContextUseCase
+) => {
+  const router = Router({ mergeParams: true });
+  router.use(authenticate(tokenService));
+  router.use(resolveTenant(tenantRepository));
+  router.use(loadAccess(resolveAccessContext));
+  router.use('/', renewalsController.router);
   return router;
 };

@@ -93,6 +93,7 @@ export function makeContractWriteHarness(): ContractWriteHarness {
     links: jest.fn().mockResolvedValue({ renewedFrom: null, renewedInto: null, openDealId: null }),
     lock: jest.fn().mockResolvedValue(true),
     isActiveUser: jest.fn().mockResolvedValue(true),
+    activeLostReason: jest.fn().mockResolvedValue({ id: 'reason-1' }),
   } as unknown as jest.Mocked<IContractRenewals>;
   const dealWrites = {
     insert: jest.fn(),

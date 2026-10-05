@@ -3,7 +3,8 @@ import { prisma as defaultPrisma } from '../../../shared/infrastructure/prisma/c
 import { RecordScope } from '../../../access/domain/RecordScope';
 import { ownerWhere } from '../../../access/infrastructure/prismaRecordScope';
 import { AppointmentStatus } from '../../domain/enums/AppointmentStatus';
-import { CalendarItem, CalendarKind } from '../../application/calendar/calendarViews';
+import { CalendarItem, CalendarKind, ContractCalendarItem, ContractCalendarKind } from '../../application/calendar/calendarViews';
+import { contractReference } from '../../../contracts/domain/contractReference';
 import { CalendarFilters, ICalendarStore } from '../../application/calendar/ports/ICalendarStore';
 
 const OPEN = [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED];
@@ -87,5 +88,67 @@ export class PrismaCalendarStore implements ICalendarStore {
       take: limit,
     });
     return rows.map(toItem);
+  }
+
+  /** A term that is in force or has ended: a Draft, a Pending Signature or a Cancelled one has no end to plan around. */
+  private static readonly DATED_STATUSES = ['ACTIVE', 'SUSPENDED', 'EXPIRED'];
+
+  async contractDates(
+    tenantId: string,
+    scope: RecordScope,
+    filters: { userIds?: string[]; kinds: ContractCalendarKind[] },
+    fromDay: string,
+    toDay: string,
+    limit: number
+  ): Promise<ContractCalendarItem[]> {
+    const range = { gte: new Date(`${fromDay}T00:00:00.000Z`), lt: new Date(`${toDay}T00:00:00.000Z`) };
+    const dated: Prisma.ContractWhereInput[] = [];
+    if (filters.kinds.includes('CONTRACT_END')) dated.push({ endsAt: range });
+    if (filters.kinds.includes('CONTRACT_RENEWAL')) dated.push({ renewalDate: range });
+    if (dated.length === 0) return [];
+
+    const and: Prisma.ContractWhereInput[] = [{ client: ownerWhere(scope, 'assignedUserId') }, { OR: dated }];
+    // The responsible salesperson is the contract's, else the company's.
+    if (filters.userIds?.length) {
+      and.push({ OR: [{ assignedUserId: { in: filters.userIds } }, { assignedUserId: null, client: { assignedUserId: { in: filters.userIds } } }] });
+    }
+
+    const rows = await this.prisma.contract.findMany({
+      where: { tenantId, status: { in: PrismaCalendarStore.DATED_STATUSES }, AND: and },
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        endsAt: true,
+        renewalDate: true,
+        clientId: true,
+        assignedUser: { select: { id: true, ...personName.select } },
+        client: { select: { name: true, assignedUser: { select: { id: true, ...personName.select } } } },
+      },
+      orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
+      take: limit,
+    });
+
+    const inRange = (date: Date | null) => date !== null && date >= range.gte && date < range.lt;
+    const items: ContractCalendarItem[] = [];
+    for (const row of rows) {
+      const person = row.assignedUser ?? row.client.assignedUser;
+      const base = {
+        contractId: row.id,
+        number: row.number ?? contractReference(row.id),
+        contractStatus: row.status,
+        clientId: row.clientId,
+        companyName: row.client.name ?? '',
+        assignedUserId: person?.id ?? null,
+        assignedUserName: person ? displayName(person) : null,
+      };
+      if (filters.kinds.includes('CONTRACT_END') && inRange(row.endsAt)) {
+        items.push({ ...base, id: `${row.id}:END`, kind: 'CONTRACT_END', date: row.endsAt.toISOString().slice(0, 10) });
+      }
+      if (filters.kinds.includes('CONTRACT_RENEWAL') && inRange(row.renewalDate)) {
+        items.push({ ...base, id: `${row.id}:RENEWAL`, kind: 'CONTRACT_RENEWAL', date: row.renewalDate!.toISOString().slice(0, 10) });
+      }
+    }
+    return items.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   }
 }

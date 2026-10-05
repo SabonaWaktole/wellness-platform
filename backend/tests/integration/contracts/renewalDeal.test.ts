@@ -208,8 +208,8 @@ describe('Renewal deal and renewal contract (M3 Slice 10)', () => {
     });
     expect(made.body.number).toMatch(/^CTR-\d{4}-\d{4}$/);
     expect(made.body.number).not.toBe(before.contract.number);
-    // The new term starts with no expiry warning sent.
-    expect((await prisma.contract.findUniqueOrThrow({ where: { id: made.body.id } })).expiryNotifiedAt).toBeNull();
+    // The new term starts with no reminder sent (FR-REN-03).
+    expect(await prisma.contractReminder.count({ where: { contractId: made.body.id } })).toBe(0);
 
     const old = await detail(id);
     expect(old.contract).toMatchObject({ status: 'EXPIRED', endsAt: before.contract.endsAt, startsAt: before.contract.startsAt, amount: before.contract.amount });

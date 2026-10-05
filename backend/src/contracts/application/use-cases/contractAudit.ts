@@ -23,6 +23,9 @@ export const CONTRACT_AUDIT_FIELDS = [
   // M3 Slice 5 (FR-AUD-11): the reason that goes with a suspension or a cancellation.
   'suspensionReason',
   'cancelReason',
+  // M3 Slice 11 (FR-AUD-11): the "Not renewing" mark and its note.
+  'notRenewingReasonId',
+  'notRenewingNote',
 ] as const;
 
 /** The payment fields the audit trail cares about (FR-AUD-02). */

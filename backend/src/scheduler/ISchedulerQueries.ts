@@ -139,31 +139,43 @@ export interface ISchedulerQueries {
   /** Idempotency marker, set only once the overdue notification was emitted (`overdueNotifiedAt`). */
   markPaymentOverdueNotified(paymentId: string, at: Date): Promise<void>;
 
-  /**
-   * ACTIVE contracts ending within `days` that have not been warned about yet.
-   *
-   * Unlike the sweep above, this one DOES need a marker column
-   * (`expiryNotifiedAt`): warning about an upcoming expiry does not change the
-   * contract, so nothing about the row would stop the next hourly pass from
-   * warning again. Same mechanism as `Appointment.remindedAt`.
-   */
-  findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]>;
+  /** The workspace's renewal reminder lead times, in days before the end date (FR-REN-01); 60, 30 and 7 until set. */
+  getReminderLeadDays(tenantId: string): Promise<number[]>;
 
-  /** Idempotency marker. Set once the expiry warning has actually been emitted. */
-  markContractExpiryNotified(contractId: string, at: Date): Promise<void>;
+  /**
+   * One workspace's contracts that may be reminded now (FR-REN-02, 03): Active,
+   * ending between `today` and `today + withinDays`, not marked Not renewing
+   * and not renewed, with the lead times already recorded for each. Selected by
+   * state, so a run after a gap finds what it missed.
+   */
+  findContractsForReminder(tenantId: string, today: Date, withinDays: number): Promise<ReminderCandidate[]>;
+
+  /**
+   * Records lead times for a contract: the one sent (SENT) and the larger ones
+   * passed over (SKIPPED). Called only after the notification was emitted
+   * (FR-REN-03). A lead time that already has a row is left as it is.
+   */
+  recordContractReminders(
+    contract: { id: string; tenantId: string },
+    rows: { leadDays: number; state: 'SENT' | 'SKIPPED' }[],
+    at: Date
+  ): Promise<void>;
 }
 
-/** A contract at or near the end of its term, with enough context to write a notice. */
-export interface ExpiringContract {
+/** An Active contract inside the widest reminder window, with what the notice needs. */
+export interface ReminderCandidate {
   id: string;
   tenantId: string;
-  clientId: string;
   clientName: string;
   planName: string;
+  number: string | null;
   endsAt: Date;
-  /** Who to tell. NULL when nobody owns the account — see the job for the fallback. */
+  /** The contract's salesperson, else the company's, else whoever sold it. */
   assignedUserId: string | null;
+  clientAssignedUserId: string | null;
   createdByUserId: string;
+  /** Lead times that already have a row (SENT or SKIPPED). */
+  recordedLeadDays: number[];
 }
 
 /** A contract the system expired, with what the notice needs. */
