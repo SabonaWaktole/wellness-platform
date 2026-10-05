@@ -37,7 +37,7 @@ export interface ContractWriteHarness {
 export function makeContractWriteHarness(): ContractWriteHarness {
   const contractRepo = {
     findById: jest.fn(),
-    findByClientId: jest.fn(),
+    findByClientId: jest.fn().mockResolvedValue([]),
     findByDealId: jest.fn(),
     search: jest.fn(),
     save: jest.fn(),
@@ -64,7 +64,11 @@ export function makeContractWriteHarness(): ContractWriteHarness {
     addCurrent: jest.fn(),
   } as unknown as jest.Mocked<IContractDocumentRepository>;
 
-  const companyStatus = { makeClient: jest.fn().mockResolvedValue(null) } as unknown as jest.Mocked<IContractCompanyStatus>;
+  const companyStatus = {
+    makeClient: jest.fn().mockResolvedValue(null),
+    makeFormerClient: jest.fn().mockResolvedValue(null),
+    hasOpenRenewalDeal: jest.fn().mockResolvedValue(false),
+  } as unknown as jest.Mocked<IContractCompanyStatus>;
 
   const settingsStore = {
     get: jest.fn(),

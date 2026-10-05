@@ -195,7 +195,7 @@ describe('ExpireContractUseCase audit trail', () => {
     harness.contractRepo.findById.mockResolvedValue(contract);
     const useCase = new ExpireContractUseCase(harness.writeTx);
 
-    await useCase.execute({ tenantId: TENANT_ID, contractId: contract.id });
+    await useCase.execute({ tenantId: TENANT_ID, contractId: contract.id, today: new Date('2999-01-01T00:00:00Z'), now: new Date('2999-01-01T10:00:00Z') });
 
     const [entry] = harness.recordedAuditEntries();
     expect(entry.action).toBe(AuditAction.StatusChange);
