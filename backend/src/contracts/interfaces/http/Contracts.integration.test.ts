@@ -474,7 +474,7 @@ describe('Contracts API', () => {
       });
       await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
 
-      const notifications = { emitSafe: jest.fn().mockResolvedValue([]) } as any;
+      const notifications = { emitStrict: jest.fn().mockResolvedValue(undefined) } as any;
       const job = new ContractExpiryJob(
         queries,
         new ExpireContractUseCase(new PrismaContractWriteTransaction(prisma)),
@@ -485,7 +485,7 @@ describe('Contracts API', () => {
 
       const row = await prisma.contract.findUnique({ where: { id: contract.id } });
       expect(row?.status).toBe(ContractStatus.Expired);
-      expect(notifications.emitSafe).toHaveBeenCalledWith(
+      expect(notifications.emitStrict).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'CONTRACT_EXPIRED', entityId: contract.id })
       );
 

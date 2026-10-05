@@ -96,15 +96,26 @@ export interface ISchedulerQueries {
    */
   findInvoicesPastDue(now: Date): Promise<PastDueInvoice[]>;
 
+  /** Every workspace with its time zone, for the daily jobs (NFR-REL-01). */
+  listTenants(): Promise<{ id: string; timeZone: string }[]>;
+
   /**
-   * Every ACTIVE contract whose end date has passed, across all tenants.
+   * One workspace's ACTIVE contracts whose end date is before `today`
+   * (a UTC-midnight date, the workspace's day).
    *
-   * Cross-tenant and unconditional for the same reason as
-   * `findInvoicesPastDue`: a term running out is a fact about the calendar,
-   * not a destructive action a tenant needs to have switched on. The state
-   * change (Active -> Expired) is its own idempotency marker.
+   * Selected by state, not by "ended yesterday", so a run after a gap still
+   * finds everything it missed. The state change (Active -> Expired) is its own
+   * idempotency marker.
    */
-  findContractsPastEnd(now: Date): Promise<ExpiringContract[]>;
+  findContractsPastEnd(tenantId: string, today: Date): Promise<{ id: string; tenantId: string }[]>;
+
+  /**
+   * Contracts the system expired since `since` that nobody has been told about
+   * and that have no renewal (FR-CON-16): the retry list for a notification
+   * that failed after the state change committed. A contract with a renewal
+   * contract or an open renewal deal never appears.
+   */
+  findExpiredAwaitingNotice(tenantId: string, since: Date): Promise<ExpiredContractNotice[]>;
 
   /**
    * ACTIVE contracts ending within `days` that have not been warned about yet.
@@ -130,6 +141,19 @@ export interface ExpiringContract {
   endsAt: Date;
   /** Who to tell. NULL when nobody owns the account — see the job for the fallback. */
   assignedUserId: string | null;
+  createdByUserId: string;
+}
+
+/** A contract the system expired, with what the notice needs. */
+export interface ExpiredContractNotice {
+  id: string;
+  tenantId: string;
+  clientName: string;
+  planName: string;
+  number: string | null;
+  endsAt: Date;
+  assignedUserId: string | null;
+  clientAssignedUserId: string | null;
   createdByUserId: string;
 }
 

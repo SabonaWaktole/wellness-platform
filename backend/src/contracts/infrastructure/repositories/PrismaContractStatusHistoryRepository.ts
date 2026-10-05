@@ -35,6 +35,7 @@ export class PrismaContractStatusHistoryRepository implements IContractStatusHis
         toStatus: history.toStatus,
         changedByUserId: history.changedByUserId,
         note: history.note,
+        createdAt: history.changedAt,
       },
     });
   }

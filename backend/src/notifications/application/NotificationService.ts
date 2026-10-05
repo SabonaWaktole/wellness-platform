@@ -113,6 +113,16 @@ export class NotificationService {
     }
   }
 
+  /**
+   * `emitSafe` that lets a failure through, for a job that records "done" by
+   * the notification itself existing and so has to know whether it was written
+   * (retry after a failure, FR-CON-16). Email is still best-effort.
+   */
+  async emitStrict(input: EmitInput): Promise<void> {
+    const notifications = await this.emit(input);
+    await this.emailDispatcher?.dispatch(notifications);
+  }
+
   private async resolveRecipients(input: EmitInput): Promise<string[]> {
     const ids = new Set(input.recipientUserIds ?? []);
 

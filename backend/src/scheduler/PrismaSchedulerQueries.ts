@@ -1,11 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../shared/infrastructure/prisma/client';
+import { OPEN_DEAL_STAGES } from '../deals/domain/DealStage';
 import {
   ISchedulerQueries,
   DueAppointment,
   StaleQuotation,
   PastDueInvoice,
   ExpiringContract,
+  ExpiredContractNotice,
 } from './ISchedulerQueries';
 
 /** Rows a sweep will consider in one pass. Bounds the blast radius of a backlog. */
@@ -181,15 +183,78 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
     };
   }
 
-  async findContractsPastEnd(now: Date): Promise<ExpiringContract[]> {
-    const rows = await this.prisma.contract.findMany({
-      where: { status: 'ACTIVE', endsAt: { lt: now } },
-      select: PrismaSchedulerQueries.CONTRACT_SELECT,
+  async listTenants(): Promise<{ id: string; timeZone: string }[]> {
+    const rows = await this.prisma.tenant.findMany({ select: { id: true, timezone: true } });
+    return rows.map((row) => ({ id: row.id, timeZone: row.timezone }));
+  }
+
+  async findContractsPastEnd(tenantId: string, today: Date): Promise<{ id: string; tenantId: string }[]> {
+    return this.prisma.contract.findMany({
+      where: { tenantId, status: 'ACTIVE', endsAt: { lt: today } },
+      select: { id: true, tenantId: true },
       orderBy: { endsAt: 'asc' },
       take: SWEEP_LIMIT,
     });
+  }
 
-    return rows.map((row) => this.toExpiringContract(row));
+  async findExpiredAwaitingNotice(tenantId: string, since: Date): Promise<ExpiredContractNotice[]> {
+    const rows = await this.prisma.contract.findMany({
+      where: {
+        tenantId,
+        status: 'EXPIRED',
+        renewedInto: null,
+        // The system's own Expired entry, so a contract an old release or a
+        // person moved to Expired is not announced as the job's doing.
+        statusHistory: { some: { toStatus: 'EXPIRED', changedByUserId: null, createdAt: { gte: since } } },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        clientId: true,
+        planName: true,
+        number: true,
+        endsAt: true,
+        assignedUserId: true,
+        createdByUserId: true,
+        client: { select: { name: true, assignedUserId: true } },
+      },
+      orderBy: { endsAt: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((row) => row.id);
+    const told = await this.prisma.notification.findMany({
+      where: { tenantId, type: 'CONTRACT_EXPIRED', entityType: 'CONTRACT', entityId: { in: ids } },
+      select: { entityId: true },
+    });
+    const toldIds = new Set(told.map((row) => row.entityId));
+
+    const renewing = await this.prisma.deal.findMany({
+      where: {
+        tenantId,
+        type: 'RENEWAL',
+        deletedAt: null,
+        stageKey: { in: [...OPEN_DEAL_STAGES] },
+        clientId: { in: rows.map((row) => row.clientId) },
+      },
+      select: { clientId: true },
+    });
+    const renewingClients = new Set(renewing.map((row) => row.clientId));
+
+    return rows
+      .filter((row) => !toldIds.has(row.id) && !renewingClients.has(row.clientId))
+      .map((row) => ({
+        id: row.id,
+        tenantId: row.tenantId,
+        clientName: row.client.name ?? 'Client',
+        planName: row.planName,
+        number: row.number ?? null,
+        endsAt: row.endsAt,
+        assignedUserId: row.assignedUserId,
+        clientAssignedUserId: row.client.assignedUserId ?? null,
+        createdByUserId: row.createdByUserId,
+      }));
   }
 
   async findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]> {

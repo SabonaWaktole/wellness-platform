@@ -14,6 +14,7 @@ import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { ContractValidationError } from '../../domain/contractErrors';
 import { buildInstalmentSchedule } from '../../domain/paymentSchedule';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
+import { updateCompanyStatusAfterEnd } from './updateCompanyStatus';
 import { reachableContract } from './contractAccess';
 import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
 
@@ -34,6 +35,9 @@ import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contra
  * - Cancelled removes the Not Invoiced instalments due after today; anything
  *   invoiced, partly paid or paid stays for an authorized user to settle or
  *   correct (FR-CON-15, D15).
+ *
+ * Cancelling an Active or Suspended contract also turns a Client with nothing
+ * valid or upcoming left into a Former client (FR-CON-17).
  *
  * Suspending and cancelling notify the salesperson and the people who hold
  * `contracts.terminate` over the company, once the change is committed.
@@ -136,6 +140,18 @@ export class ChangeContractStatusUseCase {
         entityLabel: contractLabel(contract),
         changes: [...diff(before, contractSnapshot(contract), [...CONTRACT_AUDIT_FIELDS]), ...extra],
       });
+
+      // A Draft or Pending Signature contract was never in force, so cancelling it
+      // does not end a client relationship (FR-CON-17).
+      if (input.status === ContractStatus.Cancelled && (from === ContractStatus.Active || from === ContractStatus.Suspended)) {
+        await updateCompanyStatusAfterEnd(repos, {
+          tenantId: input.tenantId,
+          clientId: contract.clientId,
+          clientName: contract.clientName ?? null,
+          today,
+          actor: { userId: input.actingUserId, userRole: input.access.auditRole },
+        });
+      }
 
       const generatedPayments = extra.find((c) => c.field === 'generatedPayments')?.new as number | undefined;
       return { contract, generatedPayments: generatedPayments ?? 0 };
