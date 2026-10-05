@@ -1326,6 +1326,21 @@
       "id": "FR-DSH-10",
       "priority": "Must",
       "requirement": "Sales Manager dashboard. Total leads and leads per salesperson; active deals; the full team pipeline (count and value per stage); offers created and sent; follow-ups due and overdue, in total and per salesperson; deals won and lost; conversion rate in total and per salesperson; total sales value and per salesperson; activity per salesperson; lost-deal analysis (count and value per lost reason). Should: pending discount approvals, contracts expiring soon and overdue instalments of the team."
+    },
+    {
+      "id": "FR-DSH-11",
+      "priority": "Must",
+      "requirement": "Administrator dashboard. Pricing configuration summary (discount cap, active employee bands, risk surcharges, visit frequencies, price zones, and the date of the last change of each); current users per role and inactive users; recent changes from the audit log (the last 20, with a link to the full log); items needing attention (for example cities in no price zone, a role with no users). It shows no sales figures."
+    },
+    {
+      "id": "FR-DSH-12",
+      "priority": "Must",
+      "requirement": "CEO dashboard. Total sales pipeline (count and value); sales value in the period; revenue in the period; monthly recurring value of active contracts; sales performance over time (per month); team performance (per salesperson table); contracts: active, expired and expiring soon, with count and value; payments: count and amount per payment status, outstanding and overdue; operational indicators: overdue follow-ups, pending discount approvals, offers waiting; company counts per status. A place for the Wellness+ indicators is prepared and stays empty until Milestone 4."
+    },
+    {
+      "id": "FR-DSH-13",
+      "priority": "Must",
+      "requirement": "The CEO dashboard is read only. It can open any list behind a figure but not edit it (Milestone 1 Q7 default)."
     }
   ]
 }
