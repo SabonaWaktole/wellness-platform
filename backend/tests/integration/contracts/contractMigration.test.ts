@@ -68,4 +68,36 @@ describe('Contract tables after the Slice 4 migration', () => {
       await new PrismaTenantDeletionTransaction(prisma).run(tenantId);
     }
   });
+
+  it('FR-CON-19 ContractDocument keeps one row per file, indexed by contract and currency, and goes with its contract', async () => {
+    const cols = await columns('ContractDocument');
+    expect(cols.map((c) => c.column_name).sort()).toEqual(['contractId', 'fileName', 'id', 'isCurrent', 'tenantId', 'uploadedAt', 'uploadedByUserId', 'url']);
+    const indexes = await prisma.$queryRawUnsafe<Array<{ indexname: string }>>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = 'ContractDocument'`
+    );
+    expect(indexes.map((i) => i.indexname)).toContain('ContractDocument_contractId_isCurrent_idx');
+
+    const tenantId = `t-mig-doc-${randomUUID()}`;
+    const userId = `u-mig-doc-${randomUUID()}`;
+    await prisma.tenant.create({ data: { id: tenantId, name: 'Mig', urlSlug: tenantId } });
+    try {
+      await prisma.user.create({ data: { id: userId, tenantId, email: `${userId}@example.com`, hashedPassword: 'x', role: 'STAFF' } });
+      const clientId = randomUUID();
+      await prisma.client.create({ data: { id: clientId, tenantId, name: 'Co', status: 'ACTIVE', customFieldValues: {}, lastUpdatedByUserId: userId } });
+      const contractId = randomUUID();
+      await prisma.contract.create({
+        data: { id: contractId, tenantId, clientId, planName: 'p', status: 'DRAFT', amount: '1.00', billingPeriod: 'MONTHLY', startsAt: new Date(), endsAt: new Date(), createdByUserId: userId, documentUrl: '/uploads/x/contract-old.pdf', documentName: 'old.pdf' },
+      });
+      // The migration's copy step, as written in the migration file: an existing document becomes one current row.
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "ContractDocument" ("id", "tenantId", "contractId", "fileName", "url", "uploadedByUserId", "uploadedAt", "isCurrent")
+         SELECT gen_random_uuid()::text, c."tenantId", c."id", COALESCE(c."documentName", 'contract.pdf'), c."documentUrl", c."createdByUserId", c."updatedAt", true
+         FROM "Contract" c WHERE c."id" = '${contractId}' AND c."documentUrl" IS NOT NULL`
+      );
+      expect(await prisma.contractDocument.findMany({ where: { contractId } })).toMatchObject([{ fileName: 'old.pdf', url: '/uploads/x/contract-old.pdf', uploadedByUserId: userId, isCurrent: true }]);
+    } finally {
+      await new PrismaTenantDeletionTransaction(prisma).run(tenantId);
+    }
+    expect(await prisma.contractDocument.count({ where: { tenantId } })).toBe(0);
+  });
 });

@@ -1,4 +1,8 @@
 import { BillingPeriod, Contract, ContractEditRefusedError, ContractStatus } from './Contract';
+import { ContractValidationError } from './contractErrors';
+
+const NO_DOCUMENT_NEEDED = { documentRequired: false, hasSignedDocument: false };
+const activate = (contract: Contract) => contract.changeStatus(ContractStatus.Active, NO_DOCUMENT_NEEDED);
 
 function makeContract(overrides: Partial<Parameters<typeof Contract.create>[0]> = {}) {
   return Contract.create({
@@ -41,7 +45,7 @@ describe('Contract', () => {
   describe('transitions', () => {
     it('activates a Draft contract and stamps activatedAt', () => {
       const contract = makeContract();
-      contract.activate();
+      activate(contract);
 
       expect(contract.status).toBe(ContractStatus.Active);
       expect(contract.activatedAt).toBeInstanceOf(Date);
@@ -49,9 +53,9 @@ describe('Contract', () => {
 
     it('refuses to activate twice', () => {
       const contract = makeContract();
-      contract.activate();
+      activate(contract);
 
-      expect(() => contract.activate()).toThrow(/Invalid state transition/);
+      expect(() => activate(contract)).toThrow(ContractValidationError);
     });
 
     it('expires only an Active contract', () => {
@@ -59,23 +63,87 @@ describe('Contract', () => {
       expect(() => draft.expire()).toThrow(/Invalid state transition/);
 
       const active = makeContract();
-      active.activate();
+      activate(active);
       active.expire();
       expect(active.status).toBe(ContractStatus.Expired);
     });
 
-    it('cancels from Draft and from Active, but not from a terminal state', () => {
+    it('FR-CON-15 cancels from Draft and from Active with a reason, but not from a terminal state', () => {
       const draft = makeContract();
-      draft.cancel();
+      draft.changeStatus(ContractStatus.Cancelled, { ...NO_DOCUMENT_NEEDED, reason: 'Client changed their mind' });
       expect(draft.status).toBe(ContractStatus.Cancelled);
       expect(draft.cancelledAt).toBeInstanceOf(Date);
+      expect(draft.cancelReason).toBe('Client changed their mind');
 
       const active = makeContract();
-      active.activate();
-      active.cancel();
+      activate(active);
+      active.changeStatus(ContractStatus.Cancelled, { ...NO_DOCUMENT_NEEDED, reason: 'Closed down' });
       expect(active.status).toBe(ContractStatus.Cancelled);
 
-      expect(() => active.cancel()).toThrow(/Invalid state transition/);
+      expect(() => active.changeStatus(ContractStatus.Cancelled, { ...NO_DOCUMENT_NEEDED, reason: 'Again' })).toThrow(ContractValidationError);
+    });
+
+    it('FR-CON-15 refuses to cancel without a reason', () => {
+      const contract = makeContract();
+      expect(() => contract.changeStatus(ContractStatus.Cancelled, NO_DOCUMENT_NEEDED)).toThrow(/reason is required/);
+      expect(() => contract.changeStatus(ContractStatus.Cancelled, { ...NO_DOCUMENT_NEEDED, reason: '   ' })).toThrow(/reason is required/);
+      expect(contract.status).toBe(ContractStatus.Draft);
+    });
+
+    it('FR-CON-12 marks pending signature with a start, end, billing period and price, and locks the values', () => {
+      const contract = makeContract();
+      contract.changeStatus(ContractStatus.PendingSignature, NO_DOCUMENT_NEEDED);
+      expect(contract.status).toBe(ContractStatus.PendingSignature);
+      expect(contract.lockedAt).toBeInstanceOf(Date);
+    });
+
+    it.each([
+      ['an end date', { endsAt: new Date('nope') }, 'endsAt'],
+      ['a start date', { startsAt: new Date('nope') }, 'startsAt'],
+      ['a price', { amount: 0 }, 'amount'],
+    ])('FR-CON-12 a Draft without %s cannot be marked pending signature', (_label, overrides, field) => {
+      const contract = makeContract(overrides as any);
+      expect(() => contract.changeStatus(ContractStatus.PendingSignature, NO_DOCUMENT_NEEDED)).toThrow(
+        expect.objectContaining({ field })
+      );
+      expect(contract.status).toBe(ContractStatus.Draft);
+      expect(contract.lockedAt).toBeNull();
+    });
+
+    it('FR-CON-13 activation needs the signed document where the workspace requires one', () => {
+      const contract = makeContract();
+      expect(() => contract.changeStatus(ContractStatus.Active, { documentRequired: true, hasSignedDocument: false })).toThrow(
+        expect.objectContaining({ field: 'document' })
+      );
+      expect(contract.status).toBe(ContractStatus.Draft);
+
+      contract.changeStatus(ContractStatus.Active, { documentRequired: true, hasSignedDocument: true });
+      expect(contract.status).toBe(ContractStatus.Active);
+      expect(contract.activatedAt).toBeInstanceOf(Date);
+      expect(contract.lockedAt).toBeInstanceOf(Date);
+    });
+
+    it('FR-CON-14 suspends and reinstates with a reason, stored on the contract, and reinstating needs no document', () => {
+      const contract = makeContract();
+      contract.changeStatus(ContractStatus.Active, { documentRequired: true, hasSignedDocument: true });
+      expect(() => contract.changeStatus(ContractStatus.Suspended, { documentRequired: true, hasSignedDocument: true })).toThrow(/reason is required/);
+
+      contract.changeStatus(ContractStatus.Suspended, { documentRequired: true, hasSignedDocument: true, reason: 'Unpaid invoices' });
+      expect(contract.status).toBe(ContractStatus.Suspended);
+      expect(contract.suspendedAt).toBeInstanceOf(Date);
+      expect(contract.suspensionReason).toBe('Unpaid invoices');
+
+      expect(() => contract.changeStatus(ContractStatus.Active, { documentRequired: true, hasSignedDocument: false })).toThrow(/reason is required/);
+      contract.changeStatus(ContractStatus.Active, { documentRequired: true, hasSignedDocument: false, reason: 'Paid in full' });
+      expect(contract.status).toBe(ContractStatus.Active);
+      expect(contract.suspendedAt).toBeNull();
+      expect(contract.suspensionReason).toBeNull();
+    });
+
+    it('FR-CON-11 a person cannot expire a contract', () => {
+      const contract = makeContract();
+      activate(contract);
+      expect(() => contract.changeStatus(ContractStatus.Expired, NO_DOCUMENT_NEEDED)).toThrow(/expires on its own/);
     });
   });
 
@@ -85,7 +153,7 @@ describe('Contract', () => {
       expect(draft.canRenew()).toBe(false);
 
       const active = makeContract();
-      active.activate();
+      activate(active);
       expect(active.canRenew()).toBe(false);
 
       active.expire();
@@ -112,7 +180,7 @@ describe('Contract', () => {
   describe('isExpiringWithin', () => {
     it('is true for an Active contract inside the window', () => {
       const contract = makeContract({ endsAt: new Date('2026-06-20T00:00:00Z') });
-      contract.activate();
+      activate(contract);
 
       expect(contract.isExpiringWithin(30, new Date('2026-06-01T00:00:00Z'))).toBe(true);
     });
@@ -125,7 +193,7 @@ describe('Contract', () => {
 
     it('is false once the contract has already lapsed', () => {
       const contract = makeContract({ endsAt: new Date('2026-05-01T00:00:00Z') });
-      contract.activate();
+      activate(contract);
 
       expect(contract.isExpiringWithin(30, new Date('2026-06-01T00:00:00Z'))).toBe(false);
     });

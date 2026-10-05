@@ -162,7 +162,8 @@ describe('Contracts API', () => {
       .set('Authorization', `Bearer ${tokenOwner}`);
 
     expect(detail.body.payments).toHaveLength(12);
-    expect(detail.body.payments.every((p: any) => p.status === PaymentStatus.PaymentPending)).toBe(true);
+    // FR-PAY-02: activation lays the instalments out as Not Invoiced, nothing received.
+    expect(detail.body.payments.every((p: any) => p.status === PaymentStatus.NotInvoiced && p.paidAmount === 0)).toBe(true);
     expect(detail.body.contract.paymentSummary.outstanding).toBe(1200);
   });
 
@@ -316,8 +317,9 @@ describe('Contracts API', () => {
   });
 
   describe('lifecycle', () => {
-    it('cancels a contract and leaves its outstanding instalments in place', async () => {
-      const contract = await createContract();
+    it('cancels a contract and leaves its already-due instalments in place', async () => {
+      // A term that began last year: every instalment is already due, so none is "future" (FR-CON-15).
+      const contract = await createContract({ startsAt: '2025-01-01', endsAt: '2025-12-31' });
       await api().post(`${base()}/${contract.id}/activate`).set('Authorization', `Bearer ${tokenOwner}`);
 
       const res = await api()
@@ -345,7 +347,7 @@ describe('Contracts API', () => {
         .send({});
       expect(tooEarly.status).toBe(400);
 
-      await api().post(`${base()}/${contract.id}/cancel`).set('Authorization', `Bearer ${tokenOwner}`).send({});
+      await api().post(`${base()}/${contract.id}/cancel`).set('Authorization', `Bearer ${tokenOwner}`).send({ reason: 'Ended early' });
 
       const renewed = await api()
         .post(`${base()}/${contract.id}/renew`)
@@ -371,7 +373,7 @@ describe('Contracts API', () => {
 
     it('refuses to edit a terminal contract', async () => {
       const contract = await createContract();
-      await api().post(`${base()}/${contract.id}/cancel`).set('Authorization', `Bearer ${tokenOwner}`).send({});
+      await api().post(`${base()}/${contract.id}/cancel`).set('Authorization', `Bearer ${tokenOwner}`).send({ reason: 'Ended early' });
 
       const res = await api()
         .patch(`${base()}/${contract.id}`)

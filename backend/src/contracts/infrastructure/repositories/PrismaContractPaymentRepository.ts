@@ -93,4 +93,11 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
     // learned the id. The extra predicate costs nothing and closes that.
     await this.prisma.contractPayment.deleteMany({ where: { id, tenantId } });
   }
+
+  async deleteNotInvoicedDueAfter(tenantId: string, contractId: string, day: Date): Promise<number> {
+    const result = await this.prisma.contractPayment.deleteMany({
+      where: { tenantId, contractId, status: PaymentStatus.NotInvoiced, dueDate: { gt: day } },
+    });
+    return result.count;
+  }
 }

@@ -7,11 +7,12 @@ import { ZodError } from 'zod';
 import { CreateContractFromDealUseCase } from '../../application/use-cases/CreateContractFromDealUseCase';
 import { RefreshContractFromDealUseCase } from '../../application/use-cases/RefreshContractFromDealUseCase';
 import { ContractAlreadyExistsError, ContractValidationError } from '../../domain/contractErrors';
-import { ContractEditRefusedError } from '../../domain/Contract';
+import { Contract, ContractEditRefusedError } from '../../domain/Contract';
 import { CreateContractUseCase } from '../../application/use-cases/CreateContractUseCase';
 import { UpdateContractUseCase } from '../../application/use-cases/UpdateContractUseCase';
-import { ActivateContractUseCase } from '../../application/use-cases/ActivateContractUseCase';
-import { CancelContractUseCase } from '../../application/use-cases/CancelContractUseCase';
+import { ChangeContractStatusUseCase } from '../../application/use-cases/ChangeContractStatusUseCase';
+import { ContractDocumentsUseCases } from '../../application/use-cases/ContractDocumentsUseCases';
+import { ContractStatus } from '../../domain/Contract';
 import { RenewContractUseCase } from '../../application/use-cases/RenewContractUseCase';
 import { SearchContractsUseCase } from '../../application/use-cases/SearchContractsUseCase';
 import { GetContractDetailUseCase } from '../../application/use-cases/GetContractDetailUseCase';
@@ -32,6 +33,7 @@ import {
   updateContractSchema,
   renewContractSchema,
   cancelContractSchema,
+  changeContractStatusSchema,
   searchContractsSchema,
   recordPaymentSchema,
   addPaymentSchema,
@@ -60,8 +62,7 @@ export class ContractsController {
   constructor(
     private createContractUseCase: CreateContractUseCase,
     private updateContractUseCase: UpdateContractUseCase,
-    private activateContractUseCase: ActivateContractUseCase,
-    private cancelContractUseCase: CancelContractUseCase,
+    private changeContractStatusUseCase: ChangeContractStatusUseCase,
     private renewContractUseCase: RenewContractUseCase,
     private searchContractsUseCase: SearchContractsUseCase,
     private getContractDetailUseCase: GetContractDetailUseCase,
@@ -72,7 +73,8 @@ export class ContractsController {
     private deleteContractPaymentUseCase: DeleteContractPaymentUseCase,
     private attachContractDocumentUseCase: AttachContractDocumentUseCase,
     private createContractFromDealUseCase: CreateContractFromDealUseCase,
-    private refreshContractFromDealUseCase: RefreshContractFromDealUseCase
+    private refreshContractFromDealUseCase: RefreshContractFromDealUseCase,
+    private contractDocumentsUseCases: ContractDocumentsUseCases
   ) {
     this.initializeRoutes();
   }
@@ -91,6 +93,10 @@ export class ContractsController {
     this.router.get('/:id', requirePermission('contracts.validity.view'), this.getContractDetail.bind(this));
     this.router.patch('/:id', requirePermission('contracts.manage'), this.updateContract.bind(this));
     this.router.post('/:id/refresh-from-deal', requirePermission('contracts.manage'), this.refreshFromDeal.bind(this));
+    // Every status change goes through one use case, which checks the transition table and
+    // the permission it names (`contracts.manage` or `contracts.terminate`). /activate and
+    // /cancel are the same call with the target fixed.
+    this.router.post('/:id/status', requirePermission('contracts.manage'), this.changeStatus.bind(this));
     this.router.post('/:id/activate', requirePermission('contracts.manage'), this.activateContract.bind(this));
     this.router.post('/:id/cancel', requirePermission('contracts.manage'), this.cancelContract.bind(this));
     this.router.post('/:id/renew', requirePermission('contracts.manage'), this.renewContract.bind(this));
@@ -132,7 +138,9 @@ export class ContractsController {
       },
       this.attachDocument.bind(this)
     );
-    this.router.delete('/:id/document', requirePermission('contracts.manage'), this.clearDocument.bind(this));
+    // Viewing and downloading the signed document needs commercial.view and access to the contract (FR-CON-19).
+    this.router.get('/:id/documents', requirePermission('commercial.view'), this.listDocuments.bind(this));
+    this.router.get('/:id/documents/:documentId/download', requirePermission('commercial.view'), this.downloadDocument.bind(this));
   }
 
   /**
@@ -230,18 +238,19 @@ export class ContractsController {
     }
   }
 
+  private async changeStatus(req: Request, res: Response) {
+    try {
+      const data = changeContractStatusSchema.parse(req.body ?? {});
+      const result = await this.moveStatus(req, data.status, data.reason);
+      res.json(this.statusBody(req, result));
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
   private async activateContract(req: Request, res: Response) {
     try {
-      const result = await this.activateContractUseCase.execute({
-        tenantId: requireTenantId(req),
-        contractId: req.params.id as string,
-        actingUserId: req.user!.userId,
-        access: req.access!,
-      });
-      res.json({
-        contract: presentContract(result.contract, req.access!),
-        ...(req.access!.can('payments.view') ? { generatedPayments: result.generatedPayments } : {}),
-      });
+      res.json(this.statusBody(req, await this.moveStatus(req, ContractStatus.Active)));
     } catch (error: any) {
       this.fail(res, error);
     }
@@ -250,17 +259,30 @@ export class ContractsController {
   private async cancelContract(req: Request, res: Response) {
     try {
       const data = cancelContractSchema.parse(req.body ?? {});
-      const result = await this.cancelContractUseCase.execute({
-        tenantId: requireTenantId(req),
-        contractId: req.params.id as string,
-        reason: data.reason,
-        actingUserId: req.user!.userId,
-        access: req.access!,
-      });
+      const result = await this.moveStatus(req, ContractStatus.Cancelled, data.reason);
       res.json(presentContract(result.contract, req.access!));
     } catch (error: any) {
       this.fail(res, error);
     }
+  }
+
+  private moveStatus(req: Request, status: ContractStatus, reason?: string | null) {
+    return this.changeContractStatusUseCase.execute({
+      tenantId: requireTenantId(req),
+      contractId: req.params.id as string,
+      status,
+      reason,
+      actingUserId: req.user!.userId,
+      access: req.access!,
+    });
+  }
+
+  /** The instalment count is a payment figure: it needs `payments.view` (FR-RBAC-21). */
+  private statusBody(req: Request, result: { contract: Contract; generatedPayments: number }) {
+    return {
+      contract: presentContract(result.contract, req.access!),
+      ...(req.access!.can('payments.view') ? { generatedPayments: result.generatedPayments } : {}),
+    };
   }
 
   private async renewContract(req: Request, res: Response) {
@@ -426,15 +448,32 @@ export class ContractsController {
     }
   }
 
-  private async clearDocument(req: Request, res: Response) {
+  private async listDocuments(req: Request, res: Response) {
     try {
-      const result = await this.attachContractDocumentUseCase.execute({
+      const documents = await this.contractDocumentsUseCases.list({
         tenantId: requireTenantId(req),
         contractId: req.params.id as string,
-        actingUserId: req.user!.userId,
         access: req.access!,
       });
-      res.json(presentContract(result.contract, req.access!));
+      res.json({ documents });
+    } catch (error: any) {
+      this.fail(res, error);
+    }
+  }
+
+  private async downloadDocument(req: Request, res: Response) {
+    try {
+      const file = await this.contractDocumentsUseCases.download({
+        tenantId: requireTenantId(req),
+        contractId: req.params.id as string,
+        documentId: req.params.documentId as string,
+        access: req.access!,
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${file.fileName.replace(/"/g, '')}"`);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(file.bytes);
     } catch (error: any) {
       this.fail(res, error);
     }

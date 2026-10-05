@@ -289,6 +289,15 @@ export class NotificationEmailComposer {
           subject: `${client}'s contract has expired`,
           body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> reached its end date and is now marked expired.`,
         };
+      case 'CONTRACT_SUSPENDED':
+      case 'CONTRACT_CANCELLED': {
+        const word = type === 'CONTRACT_SUSPENDED' ? 'suspended' : 'cancelled';
+        const reason = String(p.reason ?? '');
+        return {
+          subject: `${client}'s contract was ${word}`,
+          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> was ${word}.${reason ? ` Reason: ${esc(reason)}` : ''}`,
+        };
+      }
       case 'FOLLOW_UP_ASSIGNED':
       case 'FOLLOW_UP_DUE':
       case 'FOLLOW_UP_DAILY_SUMMARY':

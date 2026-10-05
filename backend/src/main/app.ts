@@ -1100,8 +1100,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { CreateContractFromDealUseCase } = require('../contracts/application/use-cases/CreateContractFromDealUseCase');
   const { RefreshContractFromDealUseCase } = require('../contracts/application/use-cases/RefreshContractFromDealUseCase');
   const { UpdateContractUseCase } = require('../contracts/application/use-cases/UpdateContractUseCase');
-  const { ActivateContractUseCase } = require('../contracts/application/use-cases/ActivateContractUseCase');
-  const { CancelContractUseCase } = require('../contracts/application/use-cases/CancelContractUseCase');
+  const { ChangeContractStatusUseCase } = require('../contracts/application/use-cases/ChangeContractStatusUseCase');
+  const { ContractDocumentsUseCases } = require('../contracts/application/use-cases/ContractDocumentsUseCases');
+  const { PrismaContractDocumentRepository } = require('../contracts/infrastructure/repositories/PrismaContractDocumentRepository');
   const { RenewContractUseCase } = require('../contracts/application/use-cases/RenewContractUseCase');
   const { SearchContractsUseCase } = require('../contracts/application/use-cases/SearchContractsUseCase');
   const { GetContractDetailUseCase } = require('../contracts/application/use-cases/GetContractDetailUseCase');
@@ -1119,16 +1120,18 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const contractPaymentRepo = new PrismaContractPaymentRepository(prisma);
   const contractHistoryRepo = new PrismaContractStatusHistoryRepository(prisma);
   const contractWriteTx = new PrismaContractWriteTransaction(prisma);
+  const contractDocumentRepo = new PrismaContractDocumentRepository(prisma);
   const contractDocumentStore = new ContractDocumentStore();
+  // Suspending or cancelling tells the people who hold contracts.terminate over the company (M3 Slice 5).
+  const contractNotifications = new NotificationService(notificationRepository, userRepository, notificationEmailDispatcher, permissionDirectory);
 
   const contractsController = new ContractsController(
     new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes, tenantRepository),
     new UpdateContractUseCase(contractWriteTx, recordScopes),
-    new ActivateContractUseCase(contractWriteTx, recordScopes),
-    new CancelContractUseCase(contractWriteTx, recordScopes),
+    new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications),
     new RenewContractUseCase(contractWriteTx, recordScopes),
     new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
-    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, recordScopes),
+    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, contractDocumentRepo, recordScopes),
     new GetClientContractsUseCase(contractRepo, recordScopes),
     new RecordContractPaymentUseCase(contractWriteTx, recordScopes),
     new AddContractPaymentUseCase(contractWriteTx, recordScopes),
@@ -1136,7 +1139,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     new DeleteContractPaymentUseCase(contractWriteTx, recordScopes),
     new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes),
     new CreateContractFromDealUseCase(contractWriteTx, recordScopes, tenantRepository),
-    new RefreshContractFromDealUseCase(contractWriteTx, recordScopes)
+    new RefreshContractFromDealUseCase(contractWriteTx, recordScopes),
+    new ContractDocumentsUseCases(contractRepo, contractDocumentRepo, contractDocumentStore, recordScopes)
   );
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
@@ -1167,6 +1171,13 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   // Serve stored images. Filenames contain a UUID and are never reused, so a
   // long immutable cache is safe — replacing an image yields a new URL.
+  // Signed contracts are not public files: they are read through the contract's
+  // document endpoint, which checks commercial.view and the contract's scope
+  // (FR-CON-19, NFR-SEC-06). The store names every one `contract-<uuid>.pdf`.
+  app.use('/uploads', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (/(^|\/)contract-[^/]*\.pdf$/i.test(req.path)) return res.status(404).end();
+    next();
+  });
   app.use(
     '/uploads',
     express.static(UPLOADS_DIR, {

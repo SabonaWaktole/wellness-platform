@@ -1,5 +1,6 @@
 import { Money } from '../../pricing/domain/Money';
 import { daysBetween } from './calendarDay';
+import { ContractValidationError } from './contractErrors';
 
 /**
  * How often a contract's `amount` falls due.
@@ -460,12 +461,84 @@ export class Contract {
     return remaining >= 0 && remaining <= days;
   }
 
-  activate(): void {
-    if (this.status !== ContractStatus.Draft) {
-      throw new Error(`Invalid state transition from ${this.status} to Active`);
+  /**
+   * The one way a person moves a contract between statuses (FR-CON-11..15).
+   * The transition must be in the table, a reason is stored where the table
+   * asks for one, and the target's own conditions hold:
+   *
+   * - Pending Signature needs a start date, an end date, a billing period and
+   *   a price, and locks the commercial values (FR-CON-12);
+   * - Active needs the signed document where the workspace requires one
+   *   (FR-CON-13, `documentRequired`);
+   * - Suspended and Cancelled keep their reason on the contract (FR-CON-14, 15).
+   *
+   * Expired is the daily job's (`expire()`). Which permission the person needs
+   * for the move is the use case's to check, from the same table.
+   */
+  changeStatus(
+    to: ContractStatus,
+    options: { reason?: string | null; documentRequired: boolean; hasSignedDocument: boolean; now?: Date }
+  ): { from: ContractStatus; reason: string | null } {
+    const from = this.status;
+    const transition = findContractTransition(from, to);
+    if (!transition) {
+      throw new ContractValidationError('status', `A contract cannot go from ${from} to ${to}.`);
     }
-    this.status = ContractStatus.Active;
-    this.activatedAt = new Date();
+    if (transition.permission === 'system') {
+      throw new ContractValidationError('status', 'A contract expires on its own once its end date has passed.');
+    }
+
+    const reason = options.reason?.trim() || null;
+    if (transition.reasonRequired && !reason) {
+      throw new ContractValidationError('reason', 'A reason is required for this change.');
+    }
+
+    const now = options.now ?? new Date();
+    if (to === ContractStatus.PendingSignature) this.assertReadyForSignature();
+    if (to === ContractStatus.Active && from !== ContractStatus.Suspended) {
+      if (options.documentRequired && !options.hasSignedDocument) {
+        throw new ContractValidationError('document', 'Attach the signed contract before activating it.');
+      }
+    }
+
+    this.status = to;
+    switch (to) {
+      case ContractStatus.PendingSignature:
+        this.lockedAt = now;
+        break;
+      case ContractStatus.Active:
+        if (from === ContractStatus.Suspended) {
+          this.suspendedAt = null;
+          this.suspensionReason = null;
+        } else {
+          this.activatedAt = now;
+          this.lockedAt = this.lockedAt ?? now;
+        }
+        break;
+      case ContractStatus.Suspended:
+        this.suspendedAt = now;
+        this.suspensionReason = reason;
+        break;
+      case ContractStatus.Cancelled:
+        this.cancelledAt = now;
+        this.cancelReason = reason;
+        break;
+    }
+    this.updatedAt = now;
+    return { from, reason };
+  }
+
+  /** FR-CON-12: a contract goes out for signature only when its term and price are all there. */
+  private assertReadyForSignature(): void {
+    const isDate = (value: unknown): value is Date => value instanceof Date && !Number.isNaN(value.getTime());
+    if (!isDate(this.startsAt)) throw new ContractValidationError('startsAt', 'A start date is required before the contract can be sent for signature.');
+    if (!isDate(this.endsAt)) throw new ContractValidationError('endsAt', 'An end date is required before the contract can be sent for signature.');
+    if (!this.billingPeriod || !isBillingPeriod(this.billingPeriod)) {
+      throw new ContractValidationError('billingPeriod', 'A billing period is required before the contract can be sent for signature.');
+    }
+    if (!Number.isFinite(this.amount) || this.amount <= 0) {
+      throw new ContractValidationError('amount', 'A price is required before the contract can be sent for signature.');
+    }
   }
 
   /**
@@ -480,19 +553,6 @@ export class Contract {
       throw new Error(`Invalid state transition from ${this.status} to Expired`);
     }
     this.status = ContractStatus.Expired;
-  }
-
-  /**
-   * Ending a term early. Allowed from Draft too — abandoning a contract that
-   * was drawn up but never signed is a real thing that happens, and deleting
-   * the row instead would lose the fact that it was ever quoted.
-   */
-  cancel(): void {
-    if (this.status !== ContractStatus.Draft && this.status !== ContractStatus.Active) {
-      throw new Error(`Invalid state transition from ${this.status} to Cancelled`);
-    }
-    this.status = ContractStatus.Cancelled;
-    this.cancelledAt = new Date();
   }
 
   /**
@@ -610,12 +670,6 @@ export class Contract {
   attachDocument(url: string, name: string): void {
     this.documentUrl = url;
     this.documentName = name;
-    this.updatedAt = new Date();
-  }
-
-  clearDocument(): void {
-    this.documentUrl = null;
-    this.documentName = null;
     this.updatedAt = new Date();
   }
 }

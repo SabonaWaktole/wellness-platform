@@ -1,6 +1,8 @@
 import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
+import { IContractDocumentRepository } from '../../domain/IContractDocumentRepository';
+import { IContractCompanyStatus } from './IContractCompanyStatus';
 import { IContractSettingsStore } from './IContractSettingsStore';
 import { IContractNumbers } from './IContractNumbers';
 import { IContractDealSource } from './IContractDealSource';
@@ -17,6 +19,10 @@ export interface ContractWriteRepos {
   numbers: IContractNumbers;
   /** Reads the won deal and offer a contract is filled from (M3 Slice 4, FR-CON-03). */
   deals: IContractDealSource;
+  /** The signed document and its previous versions (M3 Slice 5, FR-CON-19). */
+  documentRepo: IContractDocumentRepository;
+  /** Sets the company to Client when a contract is activated (M3 Slice 5, FR-CON-13). */
+  companyStatus: IContractCompanyStatus;
   /** Same connection as the other three — see IAuditTrail for the pattern. */
   auditTrail: IAuditTrail;
 }
