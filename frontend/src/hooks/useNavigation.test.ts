@@ -69,6 +69,14 @@ describe('useNavigation', () => {
       expect(idsFor(userWith({ 'companies.view': 'ALL' }))).not.toContain('renewals');
     });
 
+    it('FR-PRF-01 offers Performance to everyone holding performance.view, at any scope, and to no one else', () => {
+      expect(idsFor(userWith({ 'performance.view': 'OWN' }))).toContain('performance');
+      expect(idsFor(userWith({ 'performance.view': 'TEAM' }))).toContain('performance');
+      expect(idsFor(userWith({ 'performance.view': 'ALL' }))).toContain('performance');
+      expect(idsFor(RECEPTION)).not.toContain('performance');
+      expect(idsFor(ADMINISTRATOR)).not.toContain('performance');
+    });
+
     it('offers Clients to everyone holding companies.view, at any scope', () => {
       expect(idsFor(SALES_USER)).toContain('clients');
       expect(idsFor(RECEPTION)).toContain('clients');

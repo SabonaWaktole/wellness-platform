@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Calendar, Package, FileText, BarChart3,
   Settings, Building, CreditCard, Search, ClipboardCheck, Plus,
-  HelpCircle, LogOut, Receipt, FileSignature, Columns3, CalendarClock, Banknote, RefreshCw,
+  HelpCircle, LogOut, Receipt, FileSignature, Columns3, CalendarClock, Banknote, RefreshCw, TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
@@ -34,6 +34,8 @@ const iconMap: Record<string, LucideIcon> = {
   payments: Banknote,
   // Renewals (M3 Slice 11): a term coming round again.
   autorenew: RefreshCw,
+  // Performance (M3 Slice 12): results per salesperson, as a rising line.
+  trending_up: TrendingUp,
   // The sales pipeline: columns of cards, as the board shows it.
   pipeline: Columns3,
   // Follow-ups (M2 Slice 11): a clock on a calendar, apart from appointments.
