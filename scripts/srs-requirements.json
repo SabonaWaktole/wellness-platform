@@ -951,6 +951,71 @@
       "id": "FR-AUD-11",
       "priority": "Must",
       "requirement": "In Milestone 3 the following shall be audited with old and new values, using the Milestone 1 audit mechanism (FR-AUD-03): creation of a contract from a deal; every change of a contract field, status (with reason), renewal link and \"not renewing\" mark; signed document attached or replaced; every instalment action (generated, added, changed, removed, invoice recorded, receipt recorded, status change with comment); and the reminder, expiring-soon and payment settings."
+    },
+    {
+      "id": "FR-CON-01",
+      "priority": "Must",
+      "requirement": "A user with \"Contracts: manage\" shall create a contract from a Won deal, from the deal screen and from the company page. A Won deal can have one contract."
+    },
+    {
+      "id": "FR-CON-02",
+      "priority": "Must",
+      "requirement": "A contract cannot exist without a won deal. Contracts created before this milestone (without a deal) stay readable and are marked \"Legacy: no deal\"."
+    },
+    {
+      "id": "FR-CON-03",
+      "priority": "Must",
+      "requirement": "The contract shall be filled from the won deal and its offer: company, deal, offer, responsible salesperson, package and its services, agreed monthly price and annual value, discount %, and the offer terms text. Start date defaults to the deal closing date; end date defaults to start date plus the contract months of the offer minus one day. Billing period defaults to monthly."
+    },
+    {
+      "id": "FR-CON-04",
+      "priority": "Must",
+      "requirement": "The agreed price, annual value, package and services shall be copied onto the contract and are read only. They cannot be typed. While the contract is Draft, a \"Refresh from deal\" action re-reads them from the deal (for example after the Sales Manager reopened the deal and a new offer was won). From Pending Signature on, they are locked."
+    },
+    {
+      "id": "FR-CON-06",
+      "priority": "Must",
+      "requirement": "The contract record shall show: number, status, validity, company, deal, offer, responsible salesperson, package and services, start date, end date, renewal date, agreed monthly price, annual value, discount %, billing period, commercial terms, notes, signed document, previous term (if a renewal), status history and the payment schedule summary."
+    },
+    {
+      "id": "FR-CON-07",
+      "priority": "Should",
+      "requirement": "The renewal date shall default to the end date minus the largest reminder lead time (FR-REN-01) and can be changed while the contract is Draft or Active. It is the date by which the renewal should be agreed."
+    },
+    {
+      "id": "FR-CON-08",
+      "priority": "Must",
+      "requirement": "The contract list shall search and filter by number, company, status, validity, responsible salesperson, end date range and payment state (any overdue instalment), and by predefined Area and City of the company. Results respect the scope of the user (Own, Team, All)."
+    },
+    {
+      "id": "FR-CON-09",
+      "priority": "Must",
+      "requirement": "Contracts shall appear on the company page and in the company history timeline (Milestone 1 FR-CMP-05): created, status changes, document attached, renewed."
+    },
+    {
+      "id": "FR-CON-10",
+      "priority": "Must",
+      "requirement": "While a contract is Draft, the user can edit dates, billing period, commercial terms, renewal date, notes and responsible salesperson. After activation only notes, the signed document and the renewal date can be changed. A contract cannot be deleted; a Draft is cancelled instead."
+    },
+    {
+      "id": "FR-RBAC-22",
+      "priority": "Must",
+      "requirement": "Own, Team and All shall mean for contracts and payments what they mean for companies (Milestone 1 section 4.3): Own is the contracts and instalments of companies where the user is the responsible salesperson; Team is those of all Sales Users; All is everything. The Sales Manager never sees data of other roles or of companies outside the sales team (Dimitris)."
+    },
+    {
+      "id": "NFR-ACC-03",
+      "priority": "Must",
+      "requirement": "Contract amounts, instalments, receipts, outstanding amounts and all money figures on dashboards and the performance screen shall be calculated as Decimal (two decimals, half-up), never Float. The existing Float columns of Contract and ContractPayment shall be converted (Milestone 2 D4)."
+    },
+    {
+      "id": "NFR-DAT-01",
+      "priority": "Must",
+      "requirement": "One contract per won deal and one reminder per contract and lead time shall be guaranteed by the database (unique constraints), not only by the application."
+    },
+    {
+      "id": "NFR-OPS-03",
+      "priority": "Must",
+      "requirement": "Migrations shall run on PostgreSQL and MySQL, including the Float to Decimal conversion, the new default payment status, existing contracts without a deal (marked Legacy) and the replacement of the reminder marker, and be reversible or backed up."
     }
   ]
 }
