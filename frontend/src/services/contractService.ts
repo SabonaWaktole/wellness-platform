@@ -30,23 +30,31 @@ export const contractService = {
     const response = await apiClient.post(`/${tenantSlug}/contracts/${id}/${action}`, data ?? {});
     return response.data;
   },
-  addPayment: async (tenantSlug: string, id: string, data: any) => {
+  /** Instalments (M3 Slice 8). Every write needs `payments.update`; the server decides. */
+  fetchPaymentHistory: async (tenantSlug: string, id: string, paymentId: string) => {
+    const response = await apiClient.get(`/${tenantSlug}/contracts/${id}/payments/${paymentId}/history`);
+    return response.data.history;
+  },
+  addPayment: async (tenantSlug: string, id: string, data: { dueDate: string; amount: string; reason: string; note?: string | null }) => {
     const response = await apiClient.post(`/${tenantSlug}/contracts/${id}/payments`, data);
     return response.data;
   },
-  updatePayment: async (tenantSlug: string, id: string, paymentId: string, data: any) => {
+  updatePayment: async (
+    tenantSlug: string,
+    id: string,
+    paymentId: string,
+    data: { dueDate?: string; amount?: string; note?: string | null; reason?: string }
+  ) => {
     const response = await apiClient.patch(`/${tenantSlug}/contracts/${id}/payments/${paymentId}`, data);
     return response.data;
   },
-  recordPayment: async (tenantSlug: string, id: string, paymentId: string, data: any) => {
-    const response = await apiClient.post(
-      `/${tenantSlug}/contracts/${id}/payments/${paymentId}/record`,
-      data
-    );
+  deletePayment: async (tenantSlug: string, id: string, paymentId: string, reason: string) => {
+    const response = await apiClient.delete(`/${tenantSlug}/contracts/${id}/payments/${paymentId}`, { data: { reason } });
     return response.data;
   },
-  deletePayment: async (tenantSlug: string, id: string, paymentId: string) => {
-    const response = await apiClient.delete(`/${tenantSlug}/contracts/${id}/payments/${paymentId}`);
+  /** One POST per instalment action: `invoice`, `pending`, `receipts`, `receipts/reverse` or `correct`. */
+  paymentAction: async (tenantSlug: string, id: string, paymentId: string, action: string, data?: object) => {
+    const response = await apiClient.post(`/${tenantSlug}/contracts/${id}/payments/${paymentId}/${action}`, data ?? {});
     return response.data;
   },
   /**

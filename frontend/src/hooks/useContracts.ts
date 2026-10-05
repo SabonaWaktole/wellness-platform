@@ -110,13 +110,16 @@ export function useContractActions() {
       call((slug) => contractService.changeStatus(slug, id, status, reason)),
     renewContract: (id: string, data?: any) =>
       call((slug) => contractService.performAction(slug, id, 'renew', data)),
-    addPayment: (id: string, data: any) => call((slug) => contractService.addPayment(slug, id, data)),
-    updatePayment: (id: string, paymentId: string, data: any) =>
+    fetchPaymentHistory: (id: string, paymentId: string) =>
+      call((slug) => contractService.fetchPaymentHistory(slug, id, paymentId)),
+    addPayment: (id: string, data: Parameters<typeof contractService.addPayment>[2]) =>
+      call((slug) => contractService.addPayment(slug, id, data)),
+    updatePayment: (id: string, paymentId: string, data: Parameters<typeof contractService.updatePayment>[3]) =>
       call((slug) => contractService.updatePayment(slug, id, paymentId, data)),
-    recordPayment: (id: string, paymentId: string, data: any) =>
-      call((slug) => contractService.recordPayment(slug, id, paymentId, data)),
-    deletePayment: (id: string, paymentId: string) =>
-      call((slug) => contractService.deletePayment(slug, id, paymentId)),
+    deletePayment: (id: string, paymentId: string, reason: string) =>
+      call((slug) => contractService.deletePayment(slug, id, paymentId, reason)),
+    paymentAction: (id: string, paymentId: string, action: string, data?: object) =>
+      call((slug) => contractService.paymentAction(slug, id, paymentId, action, data)),
     uploadDocument: (id: string, file: File) =>
       call((slug) => contractService.uploadDocument(slug, id, file)),
     downloadDocument: (id: string, documentId: string) =>

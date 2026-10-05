@@ -143,21 +143,64 @@ export interface Contract {
   daysUntilExpiry?: number;
 }
 
+/** The ways money can arrive (FR-PAY-03). Existing rows may hold older free text. */
+export const PAYMENT_METHODS = ['BANK_TRANSFER', 'CASH', 'CARD', 'OTHER'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * One instalment (FR-PAY-03). Money is a two-decimal string, only formatted here and
+ * never calculated (NFR-ACC-03). `amount`, `paidAmount` and `outstanding` are absent
+ * without `commercial.view`; the whole payment is absent without `payments.view` (FR-PAY-12).
+ */
 export interface ContractPayment {
   id: string;
   tenantId: string;
   contractId: string;
   periodIndex: number;
   dueDate: string;
-  amount: number;
+  amount?: string;
   status: PaymentStatus;
-  paidAmount: number;
-  outstanding: number;
+  paidAmount?: string;
+  outstanding?: string;
+  /** The date of the last receipt. */
   paidAt: string | null;
   method: string | null;
   note: string | null;
+  invoiceNumber: string | null;
+  invoiceDate: string | null;
+  /** Past its due date and still Not Invoiced: keeps its status, shows a flag (FR-PAY-09). */
+  dueNotInvoiced: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** The contract's payment summary, worked out by the server from its instalments (FR-PAY-10). */
+export interface InstalmentSummary {
+  total?: string;
+  received?: string;
+  outstanding?: string;
+  /** `YYYY-MM-DD`. */
+  nextDueDate: string | null;
+  overdueCount: number;
+  overdueAmount?: string;
+}
+
+/**
+ * One change to an instalment (FR-PAY-08). Every receipt is one entry; a reversal has a
+ * negative amount. `fromStatus` is `NONE` when the instalment was added.
+ */
+export interface ContractPaymentHistoryEntry {
+  id: string;
+  paymentId: string;
+  fromStatus: string;
+  toStatus: string;
+  amountReceived?: string;
+  receivedOn: string | null;
+  method: string | null;
+  /** Null when the system made the change. */
+  changedByUserId: string | null;
+  comment: string | null;
+  changedAt: string;
 }
 
 export interface ContractStatusHistoryEntry {
@@ -189,6 +232,7 @@ export interface ContractDetail {
   contract: Contract;
   /** Absent without `payments.view` (FR-RBAC-06). */
   payments?: ContractPayment[];
+  paymentSummary?: InstalmentSummary;
   history: ContractStatusHistoryEntry[];
   /** Absent without `commercial.view` (FR-RBAC-21). Newest first. */
   documents?: ContractDocumentVersion[];

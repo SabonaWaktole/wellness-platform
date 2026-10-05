@@ -13,11 +13,8 @@ import {
   Pause,
   Pencil,
   Play,
-  Plus,
   RefreshCw,
   RotateCcw,
-  Trash2,
-  Undo2,
   X,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card/Card';
@@ -29,7 +26,6 @@ import { Button } from '../../components/ui/Button/Button';
 import { Can } from '../../components/auth/Can';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { useContracts, useContractActions } from '../../hooks/useContracts';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
@@ -38,22 +34,9 @@ import { useDateFormat } from '../../hooks/useDateFormat';
 import { useTeam } from '../../hooks/useTeam';
 import { findPersonById, getStaffDisplayName } from '../../utils/userUtils';
 import { contractReference } from '../../utils/contractReference';
-import type { ContractDetail, ContractPayment } from '../../types/contract';
+import { ContractPaymentsCard } from '../../components/contracts/ContractPaymentsCard';
+import type { ContractDetail } from '../../types/contract';
 import styles from './ContractDetailContent.module.css';
-
-/** `YYYY-MM-DD` for a date input, which is the only format it accepts. */
-const toDateInput = (value: string | null | undefined): string =>
-  value ? new Date(value).toISOString().slice(0, 10) : '';
-
-/** Draft state for the add/edit payment modal. */
-interface PaymentDraft {
-  dueDate: string;
-  amount: string;
-  method: string;
-  note: string;
-}
-
-const emptyDraft: PaymentDraft = { dueDate: '', amount: '', method: '', note: '' };
 
 export const ContractDetailContent: React.FC = () => {
   const { t, i18n } = useTranslation('contracts');
@@ -87,17 +70,8 @@ export const ContractDetailContent: React.FC = () => {
   const [reasonFor, setReasonFor] = useState<null | 'SUSPENDED' | 'ACTIVE' | 'CANCELLED'>(null);
   const [reason, setReason] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<ContractPayment | null>(null);
 
-  const [recordFor, setRecordFor] = useState<ContractPayment | null>(null);
-  const [recordAmount, setRecordAmount] = useState('');
-  const [recordDate, setRecordDate] = useState('');
-  const [recordMethod, setRecordMethod] = useState('');
-  const [recordNote, setRecordNote] = useState('');
 
-  const [editingPayment, setEditingPayment] = useState<ContractPayment | null>(null);
-  const [isAddingPayment, setIsAddingPayment] = useState(false);
-  const [draft, setDraft] = useState<PaymentDraft>(emptyDraft);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,13 +90,11 @@ export const ContractDetailContent: React.FC = () => {
   }, [reload, fetchStaff]);
 
   const contract = detail?.contract;
-  const payments = detail?.payments ?? [];
   const can = useCallback(
     (action: string) => detail?.permittedActions.includes(action) ?? false,
     [detail]
   );
 
-  const summary = contract?.paymentSummary;
   /** The signed document is a commercial record: without `commercial.view` the server sends no `documents` (FR-CON-19). */
   const documents = detail?.documents ?? [];
   const documentsShown = detail?.documents !== undefined;
@@ -182,74 +154,6 @@ export const ContractDetailContent: React.FC = () => {
     // Land on the new term rather than the old one — the renewal is what the
     // user now has to fill in and activate.
     navigate(`/${tenantSlug}/contracts/${renewal.id}`);
-  };
-
-  const openRecord = (payment: ContractPayment) => {
-    setRecordFor(payment);
-    setRecordAmount('');
-    setRecordDate(new Date().toISOString().slice(0, 10));
-    setRecordMethod(payment.method ?? '');
-    setRecordNote('');
-  };
-
-  const submitRecord = async () => {
-    if (!contractId || !recordFor) return;
-    await actions.recordPayment(contractId, recordFor.id, {
-      action: 'PAY',
-      // Blank means "in full" — the backend settles the outstanding balance,
-      // so nothing is sent rather than a guessed figure.
-      amount: recordAmount ? Number(recordAmount) : undefined,
-      paidAt: recordDate || undefined,
-      method: recordMethod || null,
-      note: recordNote || null,
-    });
-    setRecordFor(null);
-    await reload();
-  };
-
-  const quickAction = async (payment: ContractPayment, action: 'UNPAY' | 'WAIVE') => {
-    if (!contractId) return;
-    await actions.recordPayment(contractId, payment.id, { action });
-    await reload();
-  };
-
-  const openAddPayment = () => {
-    setDraft({ ...emptyDraft, dueDate: new Date().toISOString().slice(0, 10) });
-    setIsAddingPayment(true);
-  };
-
-  const openEditPayment = (payment: ContractPayment) => {
-    setDraft({
-      dueDate: toDateInput(payment.dueDate),
-      amount: String(payment.amount),
-      method: payment.method ?? '',
-      note: payment.note ?? '',
-    });
-    setEditingPayment(payment);
-  };
-
-  const submitDraft = async () => {
-    if (!contractId) return;
-    const payload = {
-      dueDate: draft.dueDate,
-      amount: Number(draft.amount),
-      method: draft.method || null,
-      note: draft.note || null,
-    };
-
-    if (editingPayment) await actions.updatePayment(contractId, editingPayment.id, payload);
-    else await actions.addPayment(contractId, payload);
-
-    setEditingPayment(null);
-    setIsAddingPayment(false);
-    await reload();
-  };
-
-  const confirmDeletePayment = async () => {
-    if (!contractId || !pendingDelete) return;
-    await actions.deletePayment(contractId, pendingDelete.id);
-    setPendingDelete(null);
-    await reload();
   };
 
   const handleFilePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -608,145 +512,16 @@ export const ContractDetailContent: React.FC = () => {
         </div>
 
         <div className={styles.column}>
-          {/* The whole card needs payments.view; ADD_PAYMENT needs contracts.manage on top (FR-RBAC-06). */}
-          {detail?.payments !== undefined && (
-          <Card padding="lg">
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>{t('payments.heading')}</h2>
-              {can('ADD_PAYMENT') && (
-                <Button variant="outline" icon={<Plus size={16} />} onClick={openAddPayment}>
-                  {t('payments.addPayment')}
-                </Button>
-              )}
-            </div>
-
-            {summary && (
-              <div className={styles.summaryGrid}>
-                <div className={styles.summaryTile}>
-                  <span className={styles.summaryLabel}>{t('payments.summaryTotal')}</span>
-                  <span className={styles.summaryValue}>{formatMoney(summary.total)}</span>
-                </div>
-                <div className={styles.summaryTile}>
-                  <span className={styles.summaryLabel}>{t('payments.summaryPaid')}</span>
-                  <span className={styles.summaryValue}>{formatMoney(summary.paid)}</span>
-                </div>
-                <div className={styles.summaryTile}>
-                  <span className={styles.summaryLabel}>{t('payments.summaryOutstanding')}</span>
-                  <span
-                    className={`${styles.summaryValue} ${
-                      summary.outstanding > 0 ? styles.summaryValueOwed : ''
-                    }`}
-                  >
-                    {formatMoney(summary.outstanding)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {payments.length === 0 ? (
-              <div className={styles.emptyMessage}>
-                {contract.status === 'DRAFT' ? t('payments.notActivated') : t('payments.empty')}
-              </div>
-            ) : (
-              <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>{t('payments.columnPeriod')}</th>
-                      <th>{t('payments.columnDue')}</th>
-                      <th>{t('payments.columnAmount')}</th>
-                      <th>{t('payments.columnStatus')}</th>
-                      <th>{t('payments.columnPaidOn')}</th>
-                      <th>{t('payments.columnMethod')}</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((payment) => {
-                      const overdue =
-                        payment.outstanding > 0 && new Date(payment.dueDate) < new Date();
-
-                      return (
-                        <tr key={payment.id} className={overdue ? styles.rowOverdue : ''}>
-                          <td className={styles.muted}>{payment.periodIndex}</td>
-                          <td>
-                            {dates.date(payment.dueDate)}
-                            {overdue && (
-                              <span className={styles.partialHint}>{t('payments.overdue')}</span>
-                            )}
-                          </td>
-                          <td className={styles.amountCell}>
-                            {formatMoney(payment.amount)}
-                            {payment.status === 'PARTIALLY_PAID' && (
-                              <span className={styles.partialHint}>
-                                {t('payments.outstandingOf', {
-                                  outstanding: formatMoney(payment.outstanding),
-                                  amount: formatMoney(payment.amount),
-                                })}
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <StatusBadge domain="payment" status={payment.status} />
-                          </td>
-                          <td className={styles.muted}>
-                            {payment.paidAt ? dates.date(payment.paidAt) : '—'}
-                          </td>
-                          <td className={styles.muted}>{payment.method || '—'}</td>
-                          <td>
-                            <div className={styles.rowActions}>
-                              {can('RECORD_PAYMENT') && payment.outstanding > 0 && (
-                                <Button
-                                  variant="outline"
-                                  onClick={() => openRecord(payment)}
-                                  title={t('payments.markPaid')}
-                                  aria-label={t('payments.markPaid')}
-                                >
-                                  <Check size={14} />
-                                </Button>
-                              )}
-                              {can('RECORD_PAYMENT') && payment.status !== 'PAYMENT_PENDING' && (
-                                <Button
-                                  variant="outline"
-                                  onClick={() => quickAction(payment, 'UNPAY')}
-                                  title={t('payments.markUnpaid')}
-                                  aria-label={t('payments.markUnpaid')}
-                                >
-                                  <Undo2 size={14} />
-                                </Button>
-                              )}
-                              {can('ADD_PAYMENT') && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => openEditPayment(payment)}
-                                    title={t('payments.edit')}
-                                    aria-label={t('payments.edit')}
-                                  >
-                                    <Pencil size={14} />
-                                  </Button>
-                                  {payment.paidAmount === 0 && (
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => setPendingDelete(payment)}
-                                      title={t('payments.delete')}
-                                      aria-label={t('payments.delete')}
-                                    >
-                                      <Trash2 size={14} />
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
+          {/* The whole card needs payments.view; the controls need payments.update (FR-PAY-05, FR-PAY-12). */}
+          {detail?.payments !== undefined && contract && (
+            <ContractPaymentsCard
+              contractId={contract.id}
+              contractStatus={contract.status}
+              payments={detail.payments}
+              summary={detail.paymentSummary}
+              canUpdate={can('UPDATE_PAYMENTS')}
+              onChanged={reload}
+            />
           )}
 
           {/* The status history is a manager's record (FR-RBAC-06). */}
@@ -834,118 +609,6 @@ export const ContractDetailContent: React.FC = () => {
             disabled={actions.loading || reason.trim() === ''}
           >
             {t('detail.confirmReason')}
-          </Button>
-        </div>
-      </Modal>
-
-      <ConfirmDialog
-        isOpen={pendingDelete !== null}
-        onClose={() => setPendingDelete(null)}
-        onConfirm={confirmDeletePayment}
-        title={t('payments.delete')}
-        message={t('payments.confirmDelete')}
-      />
-
-      <Modal
-        isOpen={recordFor !== null}
-        onClose={() => setRecordFor(null)}
-        title={t('payments.recordTitle')}
-      >
-        <div className={styles.formGrid}>
-          <TextInput
-            label={t('payments.recordAmount')}
-            helperText={t('payments.recordAmountHint')}
-            type="number"
-            step="0.01"
-            min="0"
-            value={recordAmount}
-            placeholder={recordFor ? String(recordFor.outstanding) : ''}
-            onChange={(e) => setRecordAmount(e.target.value)}
-          />
-          <TextInput
-            label={t('payments.recordDate')}
-            type="date"
-            value={recordDate}
-            onChange={(e) => setRecordDate(e.target.value)}
-          />
-          <TextInput
-            label={t('payments.recordMethod')}
-            placeholder={t('payments.recordMethodPlaceholder')}
-            value={recordMethod}
-            onChange={(e) => setRecordMethod(e.target.value)}
-          />
-          <TextInput
-            label={t('payments.recordNote')}
-            value={recordNote}
-            onChange={(e) => setRecordNote(e.target.value)}
-          />
-        </div>
-        <div className={styles.modalActions}>
-          <Button variant="outline" onClick={() => setRecordFor(null)}>
-            {tc('action.cancel')}
-          </Button>
-          <Button variant="outline" onClick={() => recordFor && quickAction(recordFor, 'WAIVE').then(() => setRecordFor(null))}>
-            {t('payments.waive')}
-          </Button>
-          <Button variant="primary" onClick={submitRecord} disabled={actions.loading}>
-            {t('payments.markPaid')}
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isAddingPayment || editingPayment !== null}
-        onClose={() => {
-          setIsAddingPayment(false);
-          setEditingPayment(null);
-        }}
-        title={editingPayment ? t('payments.editTitle') : t('payments.addTitle')}
-      >
-        <div className={styles.formGrid}>
-          <TextInput
-            label={t('payments.dueDate')}
-            type="date"
-            value={draft.dueDate}
-            onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })}
-          />
-          <TextInput
-            label={t('payments.amount')}
-            type="number"
-            step="0.01"
-            min="0"
-            value={draft.amount}
-            onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-          />
-          <TextInput
-            label={t('payments.recordMethod')}
-            placeholder={t('payments.recordMethodPlaceholder')}
-            value={draft.method}
-            onChange={(e) => setDraft({ ...draft, method: e.target.value })}
-          />
-          <div className={styles.formGridFull}>
-            <TextareaInput
-              label={t('payments.recordNote')}
-              value={draft.note}
-              onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className={styles.modalActions}>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setIsAddingPayment(false);
-              setEditingPayment(null);
-            }}
-          >
-            {tc('action.cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={submitDraft}
-            disabled={actions.loading || !draft.dueDate || draft.amount === ''}
-          >
-            {t('payments.save')}
           </Button>
         </div>
       </Modal>
