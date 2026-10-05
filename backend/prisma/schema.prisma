@@ -723,6 +723,8 @@ model Interaction {
   @@index([tenantId, authorUserId])
   @@index([tenantId, clientId, occurredAt])
   @@index([tenantId, dealId, occurredAt])
+  /// M3 Slice 12: a salesperson's activities in a period (FR-PRF-03).
+  @@index([tenantId, authorUserId, occurredAt])
   @@index([contactPersonId])
   @@index([dealId])
   @@index([resultId])
@@ -767,6 +769,8 @@ model Appointment {
   /// When the follow-up's "due now" notification went out (FR-FUP-09). NULL
   /// means not yet; a reschedule clears it, as it clears `remindedAt`.
   dueNotifiedAt          DateTime?
+  /// M3 Slice 12 (FR-PRF-05): when the follow-up was completed. NULL while open.
+  completedAt            DateTime?
 
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
   client               Client                @relation(fields: [clientId], references: [id])
@@ -786,6 +790,8 @@ model Appointment {
   @@index([status, scheduledAt])
   /// "My follow-ups", the overdue count and the calendar (M2 Slice 11, 12).
   @@index([tenantId, assignedUserId, status, scheduledAt])
+  /// M3 Slice 12: follow-ups completed in a period (FR-PRF-03).
+  @@index([tenantId, completedAt])
   /// A deal's follow-ups, its next one and its overdue marker (FR-DEAL-12).
   @@index([tenantId, dealId, status])
   @@index([dealId])
@@ -1065,6 +1071,9 @@ model Quotation {
   /// Drives the follow-up and auto-expiry sweeps, which both scan SENT
   /// quotations by age across all tenants.
   @@index([status, sentAt])
+  /// M3 Slice 12: offers sent in a period (FR-PRF-03).
+  @@index([tenantId, sentAt])
+  @@index([tenantId, createdByUserId, createdAt])
   @@index([tenantId, dealId, status])
   @@index([dealId])
   @@index([packageId])
@@ -2297,6 +2306,9 @@ model Deal {
   @@index([packageId])
   @@index([wonQuotationId])
   @@index([tenantId, stageKey, offerNetMonthlyPrice])
+  /// M3 Slice 12: the period queries of the Performance screen and dashboards.
+  @@index([tenantId, wonAt])
+  @@index([tenantId, lostAt])
   @@index([renewalOfContractId])
 }
 
@@ -2312,6 +2324,10 @@ model DealStageHistory {
   fromStage       String?
   toStage         String
   changedByUserId String?
+  /// M3 Slice 12 (D13, FR-PRF-05): the deal's owner when this change happened.
+  /// Won and lost are attributed from here, so reassigning a deal later does
+  /// not move its result. Rows from before Slice 12 took the deal's owner then.
+  ownerUserId     String?
   at              DateTime @default(now())
   note            String?
 
@@ -2321,4 +2337,5 @@ model DealStageHistory {
   @@index([tenantId, dealId, at])
   @@index([dealId])
   @@index([changedByUserId])
+  @@index([tenantId, ownerUserId, toStage, at])
 }

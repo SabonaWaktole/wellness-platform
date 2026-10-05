@@ -66,6 +66,7 @@ async function main(): Promise<void> {
     console.log(`${result.dealsCreated} UAT deals and ${result.bulkDealsCreated} bulk deals created.`);
     console.log(`${result.plannedCreated} follow-ups and meetings created for Sales User A and B.`);
     console.log(`${result.bulkFollowUpsCreated} bulk follow-ups created.`);
+    console.log(`${result.performanceCreated} activities, deals, offers and follow-ups created for the Performance screen.`);
   } finally {
     server.close();
   }

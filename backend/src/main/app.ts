@@ -1178,6 +1178,35 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     )
   );
 
+  // The Performance screen (M3 Slice 12, FR-PRF-01 to 10, FR-RBAC-23, FR-AUD-13).
+  {
+    const { PrismaPerformanceReader } = require('../dashboard/infrastructure/PrismaPerformanceReader');
+    const { GetPerformanceUseCase } = require('../dashboard/application/wellness/GetPerformanceUseCase');
+    const { GetPerformanceRecordsUseCase } = require('../dashboard/application/wellness/GetPerformanceRecordsUseCase');
+    const { GetPerformanceSeriesUseCase } = require('../dashboard/application/wellness/GetPerformanceSeriesUseCase');
+    const { ExportPerformanceUseCase } = require('../dashboard/application/wellness/ExportPerformanceUseCase');
+    const { PerformanceController } = require('../dashboard/interfaces/http/PerformanceController');
+    const { createPerformanceRouter } = require('../dashboard/interfaces/http/performanceRoutes');
+    const performanceReader = new PrismaPerformanceReader(prisma);
+    const performanceRoster = new PrismaTeamRoster();
+    const getPerformance = new GetPerformanceUseCase(performanceReader, performanceRoster);
+    app.use(
+      '/api/:tenantSlug/performance',
+      createPerformanceRouter(
+        new PerformanceController(
+          getPerformance,
+          new GetPerformanceRecordsUseCase(performanceReader, performanceRoster),
+          new GetPerformanceSeriesUseCase(performanceReader, performanceRoster),
+          new ExportPerformanceUseCase(getPerformance, new PaymentExportAuditTrail(prisma)),
+          tenantRepository
+        ),
+        tokenService,
+        tenantRepository,
+        resolveAccessContext
+      )
+    );
+  }
+
   // Payments overview and CSV export (M3 Slice 9, FR-PAY-11, 14, FR-AUD-13).
   const paymentOverviewReader = new PrismaPaymentOverviewReader(prisma);
   app.use(

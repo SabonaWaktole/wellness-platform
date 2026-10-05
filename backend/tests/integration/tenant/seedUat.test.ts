@@ -82,8 +82,26 @@ describe('UAT seed (Slice 15)', () => {
     expect(second.plannedCreated).toBe(0);
     expect(second.bulkDealsCreated).toBe(0);
     expect(second.bulkFollowUpsCreated).toBe(0);
-    expect(await prisma.client.count({ where: { tenantId } })).toBe(UAT_COMPANIES.length + 30);
+    expect(second.performanceCreated).toBe(0);
+    // The named companies, the bulk ones, and three of their own for each salesperson's performance data.
+    expect(await prisma.client.count({ where: { tenantId } })).toBe(UAT_COMPANIES.length + 30 + 6);
     expect(await prisma.client.count({ where: { tenantId, name: { startsWith: BULK_PREFIX } } })).toBe(30);
+  });
+
+  it('UAT-6 (M3 Slice 12) gives Sales User A and B three months of activity, deals won and lost, offers and completed follow-ups', async () => {
+    expect(first.performanceCreated).toBeGreaterThan(100);
+    for (const key of ['salesA', 'salesB'] as const) {
+      const userId = first.users[key].id;
+      const where = { tenantId, authorUserId: userId, content: { startsWith: 'UAT performance ' } };
+      expect(await prisma.interaction.count({ where })).toBeGreaterThan(40);
+      const won = await prisma.deal.count({ where: { tenantId, ownerUserId: userId, stageKey: 'WON', title: { startsWith: 'UAT performance ' } } });
+      const lost = await prisma.deal.count({ where: { tenantId, ownerUserId: userId, stageKey: 'LOST', title: { startsWith: 'UAT performance ' } } });
+      expect([won, lost]).toEqual([5, 7]);
+      // Each result has its history row with the owner then (D13).
+      expect(await prisma.dealStageHistory.count({ where: { tenantId, ownerUserId: userId, toStage: { in: ['WON', 'LOST'] } } })).toBe(12);
+      expect(await prisma.quotation.count({ where: { tenantId, createdByUserId: userId, version: 1 } })).toBe(8);
+      expect(await prisma.appointment.count({ where: { tenantId, assignedUserId: userId, kind: 'FOLLOW_UP', status: 'COMPLETED', completedAt: { not: null } } })).toBe(10);
+    }
   });
 
   it('UAT-2 each company of Sales User A or B has one New contract deal, owned by its salesperson', async () => {

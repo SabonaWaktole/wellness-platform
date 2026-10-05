@@ -64,6 +64,8 @@ export interface DealStageChange {
   fromStage: DealStage | null;
   toStage: DealStage;
   changedByUserId: string | null;
+  /** The deal's owner when the change happened, so a result stays with who had the deal (FR-PRF-05, D13). */
+  ownerUserId: string | null;
   at: Date;
   /** Reopening keeps the previous result here (FR-DEAL-17). */
   note?: string | null;
@@ -132,6 +134,7 @@ export class Deal {
       fromStage: null,
       toStage: DealStage.NewLead,
       changedByUserId: input.createdByUserId,
+      ownerUserId: input.ownerUserId,
       at: input.now,
     };
     return { deal, change };
@@ -155,6 +158,7 @@ export class Deal {
       fromStage: null,
       toStage: DealStage.Interested,
       changedByUserId: input.createdByUserId,
+      ownerUserId: input.ownerUserId,
       at: input.now,
       note: input.note,
     };
@@ -344,6 +348,7 @@ export class Deal {
       fromStage: this.props.stage,
       toStage: target,
       changedByUserId: userId,
+      ownerUserId: this.props.ownerUserId,
       at: now,
     };
     this.props.stage = target;

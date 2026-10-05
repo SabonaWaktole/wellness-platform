@@ -332,6 +332,13 @@ describe('Deals and pipeline (M2 Slice 6)', () => {
       await as('salesB').get(`/deals/${deal.id}`).expect(200);
     });
 
+    it('FR-PRF-05 (D13) the history keeps who owned the deal at each change: reassigning does not rewrite earlier rows', async () => {
+      const deal = await dealOf('salesA', { clientId: companies.a, type: 'NEW_CONTRACT' });
+      await as('manager').post(`/deals/${deal.id}/reassign`, { ownerUserId: users.salesB }).expect(200);
+      const rows = await prisma.dealStageHistory.findMany({ where: { dealId: deal.id } });
+      expect(rows.map((row) => row.ownerUserId)).toEqual([users.salesA]);
+    });
+
     it('FR-DEAL-05 a deal cannot be handed to someone the reassigner\'s scope does not reach, or to an inactive user', async () => {
       const deal = await dealOf('salesA', { clientId: companies.a, type: 'NEW_CONTRACT' });
       const res = await as('manager').post(`/deals/${deal.id}/reassign`, { ownerUserId: users.reception });

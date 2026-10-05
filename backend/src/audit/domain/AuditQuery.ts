@@ -42,6 +42,8 @@ export const AUDITED_ENTITY_TYPES = [
   'DiscountApproval',
   // Milestone 3 Slice 3: the reminder, expiring-soon and payment settings (FR-AUD-11).
   'ContractSettings',
+  // Milestone 3 Slice 12: an export of the Performance screen (FR-PRF-09, FR-AUD-13).
+  'Performance',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -69,7 +71,7 @@ export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types
     types: ['EmployeeBand', 'RiskSurcharge', 'VisitFrequency', 'PriceZone', 'PricingSettings', 'Service', 'ServicePackage'],
   },
   { group: 'salesScript', types: ['SalesScript'] },
-  { group: 'deals', types: ['Deal'] },
+  { group: 'deals', types: ['Deal', 'Performance'] },
   { group: 'offers', types: ['Offer'] },
   { group: 'discounts', types: ['DiscountApproval'] },
 ];
