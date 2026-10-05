@@ -6,6 +6,29 @@
 export const CALENDAR_KINDS = ['FOLLOW_UP', 'PLANNED'] as const;
 export type CalendarKind = (typeof CALENDAR_KINDS)[number];
 
+/**
+ * The read-only items the contracts add (M3 Slice 11, FR-REN-11): the day a term
+ * ends and the date a renewal should be agreed. They are not appointments: they
+ * have no time and cannot be moved, completed or cancelled, and they open the contract.
+ */
+export const CONTRACT_CALENDAR_KINDS = ['CONTRACT_END', 'CONTRACT_RENEWAL'] as const;
+export type ContractCalendarKind = (typeof CONTRACT_CALENDAR_KINDS)[number];
+
+export interface ContractCalendarItem {
+  /** `<contractId>:END` or `<contractId>:RENEWAL`. */
+  id: string;
+  kind: ContractCalendarKind;
+  /** A calendar day, `YYYY-MM-DD`: the same day in every time zone. */
+  date: string;
+  contractId: string;
+  number: string;
+  contractStatus: string;
+  clientId: string;
+  companyName: string;
+  assignedUserId: string | null;
+  assignedUserName: string | null;
+}
+
 /** What a planned item can be (FR-CAL-02). A follow-up's type can also be an email. */
 export const PLANNED_TYPES = ['CALL', 'VISIT', 'MEETING', 'ONLINE_MEETING'] as const;
 export type PlannedType = (typeof PLANNED_TYPES)[number];
@@ -43,13 +66,16 @@ export interface CalendarFeed {
   itemsTruncated: boolean;
   overdue: CalendarItem[];
   overdueTruncated: boolean;
+  /** Contract end and renewal dates of the viewer's scope in the range (FR-REN-11). */
+  contractItems: ContractCalendarItem[];
+  contractItemsTruncated: boolean;
 }
 
 export interface CalendarFeedParams {
   from: string;
   to: string;
   userIds?: string[];
-  kinds?: CalendarKind[];
+  kinds?: (CalendarKind | ContractCalendarKind)[];
   types?: CalendarType[];
 }
 

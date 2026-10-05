@@ -59,6 +59,7 @@ export const NAMESPACES = [
   'invoices',
   'contracts',
   'payments',
+  'renewals',
   'settings',
   'dashboard',
   'notifications',

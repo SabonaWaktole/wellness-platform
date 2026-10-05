@@ -28,7 +28,7 @@
     "INVITATION_ACCEPTED": "{{email}} pranoi ftesën tuaj dhe iu bashkua ekipit",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "CONTRACT_EXPIRING": "Kontrata {{planName}} e {{clientName}} skadon për {{daysRemaining}} ditë",
+    "CONTRACT_EXPIRING": "Kontrata {{planName}} {{number}} e {{clientName}} mbaron më {{endsAt}}, pas {{daysRemaining}} ditësh. Hapeni për të nisur rinovimin.",
     "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar",
     "CONTRACT_SUSPENDED": "{{actor}} e pezulloi kontratën {{planName}} të {{clientName}}. Arsyeja: {{reason}}",
     "CONTRACT_CANCELLED": "{{actor}} e anuloi kontratën {{planName}} të {{clientName}}. Arsyeja: {{reason}}",

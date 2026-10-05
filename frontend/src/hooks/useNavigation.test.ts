@@ -62,6 +62,13 @@ describe('useNavigation', () => {
       expect(idsFor(SALES_USER)).not.toContain('payments');
     });
 
+    it('FR-REN-05 offers Renewals to everyone who may read contracts, at any scope', () => {
+      expect(idsFor(SALES_USER)).toContain('renewals');
+      expect(idsFor(userWith({ 'contracts.validity.view': 'TEAM' }))).toContain('renewals');
+      expect(idsFor(RECEPTION)).toContain('renewals');
+      expect(idsFor(userWith({ 'companies.view': 'ALL' }))).not.toContain('renewals');
+    });
+
     it('offers Clients to everyone holding companies.view, at any scope', () => {
       expect(idsFor(SALES_USER)).toContain('clients');
       expect(idsFor(RECEPTION)).toContain('clients');
@@ -203,7 +210,7 @@ describe('useNavigation', () => {
 
       expect(afterwards).toEqual(first);
       expect(idsFor(ADMINISTRATOR)).toEqual([
-        'dashboard', 'clients', 'follow-ups', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'reports', 'settings',
+        'dashboard', 'clients', 'follow-ups', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'renewals', 'reports', 'settings',
       ]);
     });
 

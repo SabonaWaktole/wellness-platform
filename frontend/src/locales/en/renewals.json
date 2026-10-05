@@ -1,0 +1,57 @@
+{
+  "breadcrumb": "CRM > Renewals",
+  "title": "Renewals",
+  "tabsLabel": "Renewal period",
+  "tabs": {
+    "30": "Next 30 days",
+    "60": "Next 60 days",
+    "90": "Next 90 days",
+    "RECENTLY_EXPIRED": "Recently expired"
+  },
+  "filterSearch": "Company or contract",
+  "searchPlaceholder": "Company name or contract number...",
+  "filterSalesperson": "Salesperson",
+  "all": "All",
+  "columnContract": "Contract",
+  "columnCompany": "Company",
+  "columnSalesperson": "Salesperson",
+  "columnEnds": "Ends",
+  "columnPrice": "Monthly price",
+  "columnState": "Renewal",
+  "columnActions": "Actions",
+  "daysLeft_one": "{{count}} day left",
+  "daysLeft_other": "{{count}} days left",
+  "endedDaysAgo_one": "Ended {{count}} day ago",
+  "endedDaysAgo_other": "Ended {{count}} days ago",
+  "state": {
+    "NOT_STARTED": "Not started",
+    "IN_NEGOTIATION": "In negotiation",
+    "RENEWED": "Renewed",
+    "NOT_RENEWING": "Not renewing"
+  },
+  "openDeal": "Open the deal",
+  "renewedBy": "Renewed by {{number}}",
+  "startRenewal": "Start renewal",
+  "markNotRenewing": "Not renewing",
+  "undoNotRenewing": "Undo",
+  "notRenewing": {
+    "title": "Not renewing",
+    "hint": "No more reminders will be sent for {{company}}'s contract. Say why it will not be renewed.",
+    "reason": "Reason",
+    "note": "Note",
+    "cancel": "Cancel",
+    "confirm": "Mark as not renewing",
+    "done": "Marked as not renewing.",
+    "undone": "The contract is renewing again.",
+    "reasonsFailed": "The reasons could not be loaded."
+  },
+  "empty": {
+    "30": "Nothing ends in the next 30 days",
+    "60": "Nothing ends in the next 60 days",
+    "90": "Nothing ends in the next 90 days",
+    "RECENTLY_EXPIRED": "No contract ended in the last 90 days"
+  },
+  "emptyMessage": "Try another period or change the filters.",
+  "failed": "The renewals could not be loaded.",
+  "items": "contracts"
+}

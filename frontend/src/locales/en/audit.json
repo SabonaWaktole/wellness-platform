@@ -94,6 +94,8 @@
     "notes": "Notes",
     "note": "Note",
     "renewedFromContractId": "Renewed from",
+    "notRenewingReasonId": "Not renewing reason",
+    "notRenewingNote": "Not renewing note",
     "renewalDealId": "Renewal deal",
     "renewedIntoContractId": "Renewed into",
     "renewalOfContractId": "Renews contract",

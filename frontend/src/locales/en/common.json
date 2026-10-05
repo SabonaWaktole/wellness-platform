@@ -107,7 +107,8 @@
     "settings": "Settings",
     "tenants": "Business Clients",
     "people": "Users",
-    "payments": "Payments"
+    "payments": "Payments",
+    "renewals": "Renewals"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

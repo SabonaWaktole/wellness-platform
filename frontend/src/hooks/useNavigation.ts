@@ -52,6 +52,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract', permission: 'contracts.validity.view' },
   // The Payments overview (M3 Slice 9, FR-PAY-11): instalments in the viewer's scope, with totals.
   { id: 'payments', labelKey: 'nav.payments', icon: 'payments', permission: 'payments.view' },
+  // The Renewals screen (M3 Slice 11, FR-REN-05): contracts about to end and just ended, with their renewal state.
+  { id: 'renewals', labelKey: 'nav.renewals', icon: 'autorenew', permission: 'contracts.validity.view' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },
   // settings/profile carries no permission gate on the backend, so every
   // tenant user can reach their own profile.
