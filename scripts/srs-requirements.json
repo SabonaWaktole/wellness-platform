@@ -1028,6 +1028,16 @@
       "requirement": "Validity shall be one rule, calculated on the server: a contract is valid when its status is Active and today is between its start and end date, both included. Every other contract is not valid, with the reason shown as its status (Pending Signature, Suspended, Expired, Cancelled, Draft) or \"Not started\"."
     },
     {
+      "id": "FR-CON-21",
+      "priority": "Must",
+      "requirement": "Users with \"Contracts: view validity\" shall see a validity badge (Valid, Expiring soon, Not valid with reason) with start and end date in company search results, on the company page and on the contract list. They shall not see the price, services, commercial terms, discount, payments, deal, offer or document."
+    },
+    {
+      "id": "FR-CON-22",
+      "priority": "Must",
+      "requirement": "When a company has more than one contract, the badge shall reflect the contract valid today (the one ending last if several), otherwise the latest contract."
+    },
+    {
       "id": "FR-PAY-02",
       "priority": "Must",
       "requirement": "When a contract is activated, the platform shall generate one instalment per billing period of the term, as the existing schedule does: the first instalment due on the start date and the next ones on the same day of each following period (clamped to the last day of a shorter month), none starting after the end date, at most 120. Each instalment gets the contract price for one period, as Decimal, status Not Invoiced and nothing received."
