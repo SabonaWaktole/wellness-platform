@@ -1016,6 +1016,36 @@
       "id": "NFR-OPS-03",
       "priority": "Must",
       "requirement": "Migrations shall run on PostgreSQL and MySQL, including the Float to Decimal conversion, the new default payment status, existing contracts without a deal (marked Legacy) and the replacement of the reminder marker, and be reversible or backed up."
+    },
+    {
+      "id": "FR-CON-11",
+      "priority": "Must",
+      "requirement": "The transitions above, and only these, shall be allowed, and enforced on the server for every request. Any other transition is refused with a clear message."
+    },
+    {
+      "id": "FR-CON-20",
+      "priority": "Must",
+      "requirement": "Validity shall be one rule, calculated on the server: a contract is valid when its status is Active and today is between its start and end date, both included. Every other contract is not valid, with the reason shown as its status (Pending Signature, Suspended, Expired, Cancelled, Draft) or \"Not started\"."
+    },
+    {
+      "id": "FR-PAY-02",
+      "priority": "Must",
+      "requirement": "When a contract is activated, the platform shall generate one instalment per billing period of the term, as the existing schedule does: the first instalment due on the start date and the next ones on the same day of each following period (clamped to the last day of a shorter month), none starting after the end date, at most 120. Each instalment gets the contract price for one period, as Decimal, status Not Invoiced and nothing received."
+    },
+    {
+      "id": "FR-PAY-06",
+      "priority": "Must",
+      "requirement": "The status of an instalment shall follow the table above: moving to Invoice Issued requires an invoice number and date; Payment Pending needs an invoice; Partially Paid and Paid are set by recording a receipt, never by choosing the status; Overdue is set by the system. An authorized user can correct an instalment back to an earlier status with a comment."
+    },
+    {
+      "id": "FR-PAY-07",
+      "priority": "Must",
+      "requirement": "Recording a receipt shall require the amount, the date received (not in the future) and the method, and shall add the amount to the amount already received. A receipt that would exceed the instalment amount is refused. The status becomes Partially Paid or Paid automatically."
+    },
+    {
+      "id": "FR-PAY-10",
+      "priority": "Must",
+      "requirement": "The contract shall show a payment summary: total of instalments, received, outstanding, next due date and the number and amount overdue, calculated from its instalments."
     }
   ]
 }

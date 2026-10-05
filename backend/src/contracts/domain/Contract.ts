@@ -1,3 +1,5 @@
+import { daysBetween } from './calendarDay';
+
 /**
  * How often a contract's `amount` falls due.
  *
@@ -263,6 +265,11 @@ export class Contract {
     return Math.round((startOfDay(this.endsAt) - startOfDay(now)) / day);
   }
 
+  /** Validity on a workspace day (FR-CON-20). A thin wrapper over `contractValidityOn`. */
+  validityOn(today: Date, expiringSoonDays: number): ContractValidity {
+    return contractValidityOn(this, today, expiringSoonDays);
+  }
+
   /** Active and ending within `days`. The "expires soon" sweep's predicate. */
   isExpiringWithin(days: number, now: Date = new Date()): boolean {
     if (this.status !== ContractStatus.Active) return false;
@@ -367,4 +374,109 @@ export class Contract {
     this.documentName = null;
     this.updatedAt = new Date();
   }
+}
+
+/**
+ * Who may cause a transition. `system` is the daily expiry job: nobody acts,
+ * time passes (FR-CON-16).
+ */
+export type ContractTransitionActor = 'contracts.manage' | 'contracts.terminate' | 'system';
+
+export interface ContractTransition {
+  from: ContractStatus;
+  to: ContractStatus;
+  /** The permission the acting user needs (FR-CON-11, FR-RBAC-19). */
+  permission: ContractTransitionActor;
+  reasonRequired: boolean;
+}
+
+const S = ContractStatus;
+
+/**
+ * The allowed status transitions, and only these (SRS §3.2, FR-CON-11).
+ * Expired and Cancelled are final: a client moves forward through a renewal,
+ * which is a new contract. A Draft is cancelled with `contracts.manage`; once
+ * it has gone out for signature, cancelling needs `contracts.terminate`.
+ */
+export const CONTRACT_TRANSITIONS: readonly ContractTransition[] = [
+  { from: S.Draft, to: S.PendingSignature, permission: 'contracts.manage', reasonRequired: false },
+  { from: S.Draft, to: S.Active, permission: 'contracts.manage', reasonRequired: false },
+  { from: S.PendingSignature, to: S.Active, permission: 'contracts.manage', reasonRequired: false },
+  { from: S.Active, to: S.Suspended, permission: 'contracts.terminate', reasonRequired: true },
+  { from: S.Suspended, to: S.Active, permission: 'contracts.terminate', reasonRequired: true },
+  { from: S.Active, to: S.Expired, permission: 'system', reasonRequired: false },
+  { from: S.Draft, to: S.Cancelled, permission: 'contracts.manage', reasonRequired: true },
+  { from: S.PendingSignature, to: S.Cancelled, permission: 'contracts.terminate', reasonRequired: true },
+  { from: S.Active, to: S.Cancelled, permission: 'contracts.terminate', reasonRequired: true },
+  { from: S.Suspended, to: S.Cancelled, permission: 'contracts.terminate', reasonRequired: true },
+];
+
+/** The rule for one move, or `undefined` when it is not allowed. */
+export const findContractTransition = (from: ContractStatus, to: ContractStatus): ContractTransition | undefined =>
+  CONTRACT_TRANSITIONS.find((t) => t.from === from && t.to === to);
+
+export const canTransition = (from: ContractStatus, to: ContractStatus): boolean =>
+  findContractTransition(from, to) !== undefined;
+
+/** Why a contract is not valid today. `null` when it is valid (FR-CON-20). */
+export type ContractInvalidReason =
+  | 'NOT_STARTED'
+  | 'DRAFT'
+  | 'PENDING_SIGNATURE'
+  | 'SUSPENDED'
+  | 'EXPIRED'
+  | 'CANCELLED';
+
+export interface ContractValidity {
+  valid: boolean;
+  reason: ContractInvalidReason | null;
+  /** Valid and ending within the expiring-soon window (FR-REN-04). */
+  expiringSoon: boolean;
+  /** Whole days from today to the end date, today counted as 0; negative once past. */
+  daysLeft: number;
+}
+
+/**
+ * The one validity rule (FR-CON-20): a contract is valid when it is Active and
+ * today is between its start and end date, both included. Everything else is
+ * not valid, with the status as the reason, or NOT_STARTED for an Active
+ * contract whose start is still ahead. An Active contract past its end date
+ * reads EXPIRED even before the daily job has recorded it, so Reception never
+ * sees a stale "valid".
+ *
+ * Search, the company page and the list all call this and nothing else.
+ * `today` is the workspace day, as a date (see calendarDay.ts).
+ */
+export function contractValidityOn(
+  contract: { status: ContractStatus; startsAt: Date; endsAt: Date },
+  today: Date,
+  expiringSoonDays: number
+): ContractValidity {
+  const daysLeft = daysBetween(today, contract.endsAt);
+  const notInvalid = (reason: ContractInvalidReason): ContractValidity => ({
+    valid: false,
+    reason,
+    expiringSoon: false,
+    daysLeft,
+  });
+
+  switch (contract.status) {
+    case ContractStatus.Draft:
+      return notInvalid('DRAFT');
+    case ContractStatus.PendingSignature:
+      return notInvalid('PENDING_SIGNATURE');
+    case ContractStatus.Suspended:
+      return notInvalid('SUSPENDED');
+    case ContractStatus.Expired:
+      return notInvalid('EXPIRED');
+    case ContractStatus.Cancelled:
+      return notInvalid('CANCELLED');
+    case ContractStatus.Active:
+      break;
+  }
+
+  if (daysBetween(contract.startsAt, today) < 0) return notInvalid('NOT_STARTED');
+  if (daysLeft < 0) return notInvalid('EXPIRED');
+
+  return { valid: true, reason: null, expiringSoon: daysLeft <= expiringSoonDays, daysLeft };
 }
