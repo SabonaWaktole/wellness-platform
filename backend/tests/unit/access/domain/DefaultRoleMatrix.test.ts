@@ -29,6 +29,52 @@ describe('PermissionCatalogue', () => {
   });
 });
 
+describe('Milestone 3 contracts and payments permissions (FR-RBAC-19)', () => {
+  it('FR-RBAC-19 adds contracts.terminate under Contracts, scoped', () => {
+    expect(catalogueEntry('contracts.terminate')).toEqual({ key: 'contracts.terminate', group: 'contracts', supportsScope: true });
+  });
+
+  it('FR-RBAC-19 payments.view, payments.update and performance.view are no longer tagged Milestone 3', () => {
+    for (const key of ['payments.view', 'payments.update', 'performance.view']) {
+      expect(catalogueEntry(key)).toBeDefined();
+      expect(catalogueEntry(key)!.milestone).toBeUndefined();
+    }
+    expect(PERMISSION_CATALOGUE.filter((entry) => entry.milestone === 'M3')).toEqual([]);
+  });
+
+  it('FR-RBAC-20 the §7.2 defaults for contracts, payments and performance', () => {
+    const { Own, Team, All } = PermissionScope;
+    const rowOf = (key: string) =>
+      Object.fromEntries(Object.entries(DEFAULT_ROLE_MATRIX).map(([role, grants]) => [role, grants[key]]));
+    expect(rowOf('contracts.terminate')).toEqual({
+      [RoleKey.SalesUser]: undefined, [RoleKey.SalesManager]: Team, [RoleKey.Reception]: undefined,
+      [RoleKey.Administrator]: All, [RoleKey.Ceo]: undefined,
+    });
+    expect(rowOf('contracts.validity.view')).toEqual({
+      [RoleKey.SalesUser]: Own, [RoleKey.SalesManager]: Team, [RoleKey.Reception]: All,
+      [RoleKey.Administrator]: All, [RoleKey.Ceo]: All,
+    });
+    expect(rowOf('contracts.manage')).toEqual({
+      [RoleKey.SalesUser]: Own, [RoleKey.SalesManager]: Team, [RoleKey.Reception]: undefined,
+      [RoleKey.Administrator]: All, [RoleKey.Ceo]: undefined,
+    });
+    expect(rowOf('payments.view')).toEqual({
+      [RoleKey.SalesUser]: Own, [RoleKey.SalesManager]: Team, [RoleKey.Reception]: undefined,
+      [RoleKey.Administrator]: All, [RoleKey.Ceo]: All,
+    });
+    // Q3: payments.update is the Administrator's alone.
+    expect(rowOf('payments.update')).toEqual({
+      [RoleKey.SalesUser]: undefined, [RoleKey.SalesManager]: undefined, [RoleKey.Reception]: undefined,
+      [RoleKey.Administrator]: true, [RoleKey.Ceo]: undefined,
+    });
+    // The Administrator has no performance view.
+    expect(rowOf('performance.view')).toEqual({
+      [RoleKey.SalesUser]: Own, [RoleKey.SalesManager]: Team, [RoleKey.Reception]: undefined,
+      [RoleKey.Administrator]: undefined, [RoleKey.Ceo]: All,
+    });
+  });
+});
+
 describe('DEFAULT_ROLE_MATRIX (SRS §4.2)', () => {
   it('seeds exactly the five system roles', () => {
     expect(Object.keys(DEFAULT_ROLE_MATRIX).sort()).toEqual(

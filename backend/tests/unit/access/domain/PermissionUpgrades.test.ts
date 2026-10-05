@@ -56,10 +56,22 @@ describe('PermissionUpgrades (FR-RBAC-16)', () => {
     for (const roleKey of Object.values(RoleKey)) {
       const withUpgrade = {
         ...baseline[roleKey],
-        ...grantsForUpgrade(m2, roleKey),
+        ...PERMISSION_UPGRADES.reduce((all, upgrade) => ({ ...all, ...grantsForUpgrade(upgrade, roleKey) }), {}),
       };
       expect(withUpgrade).toEqual(DEFAULT_ROLE_MATRIX[roleKey]);
-      for (const key of m2.permissionKeys) expect(baseline[roleKey][key]).toBeUndefined();
+      for (const key of PERMISSION_UPGRADES.flatMap((upgrade) => upgrade.permissionKeys)) {
+        expect(baseline[roleKey][key]).toBeUndefined();
+      }
+    }
+  });
+
+  it('FR-RBAC-20 m3-contracts-payments adds only the key existing workspaces lack, at the §7.2 default', () => {
+    const m3 = permissionUpgrade('m3-contracts-payments');
+    expect(m3.permissionKeys).toEqual(['contracts.terminate']);
+    expect(grantsForUpgrade(m3, RoleKey.SalesManager)).toEqual({ 'contracts.terminate': PermissionScope.Team });
+    expect(grantsForUpgrade(m3, RoleKey.Administrator)).toEqual({ 'contracts.terminate': PermissionScope.All });
+    for (const roleKey of [RoleKey.SalesUser, RoleKey.Reception, RoleKey.Ceo]) {
+      expect(grantsForUpgrade(m3, roleKey)).toEqual({});
     }
   });
 

@@ -59,4 +59,25 @@ describe('generate-role-seed-sql (NFR-MNT-01: the matrix and the migration SQL c
       expect(upgradeBlockOf(combined)).toBe(generateMysqlPermissionUpgradeSql('m2-sales'));
     });
   });
+
+  describe('FR-RBAC-20 the m3-contracts-payments permission upgrade', () => {
+    const upgradeBlockOf = (filePath: string) =>
+      generatedBlockOf(
+        filePath,
+        '-- BEGIN GENERATED PERMISSION UPGRADE m3-contracts-payments',
+        '-- END GENERATED PERMISSION UPGRADE m3-contracts-payments'
+      );
+
+    it('the Postgres migration carries exactly what the generator produces today', () => {
+      const migration = path.join(__dirname, '../../../prisma/migrations/20261008100000_m3_contracts_permissions/migration.sql');
+      expect(upgradeBlockOf(migration)).toBe(generatePostgresPermissionUpgradeSql('m3-contracts-payments'));
+    });
+
+    it('the MySQL script and the combined MySQL upgrade carry exactly what the generator produces today', () => {
+      const standalone = path.join(__dirname, '../../../prisma/mysql_migration_m3_contracts_permissions.sql');
+      const combined = path.join(__dirname, '../../../prisma/mysql_upgrade_to_current.sql');
+      expect(upgradeBlockOf(standalone)).toBe(generateMysqlPermissionUpgradeSql('m3-contracts-payments'));
+      expect(upgradeBlockOf(combined)).toBe(generateMysqlPermissionUpgradeSql('m3-contracts-payments'));
+    });
+  });
 });

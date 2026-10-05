@@ -8,6 +8,8 @@ vi.mock('../../../hooks/useRoleAdmin');
 const CATALOGUE = [
   { key: 'companies.view', group: 'companies', supportsScope: true },
   { key: 'contracts.validity.view', group: 'contracts', supportsScope: true },
+  { key: 'contracts.terminate', group: 'contracts', supportsScope: true },
+  { key: 'payments.view', group: 'payments', supportsScope: true },
   { key: 'commercial.view', group: 'sales', supportsScope: true, milestone: 'M2' },
   { key: 'notes.add', group: 'activities', supportsScope: true },
   { key: 'roles.manage', group: 'admin', supportsScope: false },
@@ -97,6 +99,15 @@ describe('RolesSettingsContent', () => {
 
     const row = screen.getByLabelText(/View commercial details/).closest('li')!;
     expect(within(row).getByText('Available from Milestone 2')).toBeDefined();
+  });
+
+  it('FR-RBAC-19 lists "Contracts: suspend, cancel, reinstate" under Contracts, and an activated Milestone 3 key carries no milestone tag', () => {
+    renderRoles();
+
+    const terminate = screen.getByLabelText('Suspend, cancel and reinstate contracts').closest('li')!;
+    expect(within(terminate).queryByText(/Available from Milestone/)).toBeNull();
+    const payments = screen.getByLabelText('View payments').closest('li')!;
+    expect(within(payments).queryByText('Available from Milestone 3')).toBeNull();
   });
 
   it('UAT-3 FR-RBAC-03 removes contract validity from Reception and saves the whole new set', async () => {

@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { DEFAULT_ROLE_MATRIX, RoleGrantMap } from '../../../src/access/domain/DefaultRoleMatrix';
 import { PermissionScope } from '../../../src/access/domain/PermissionScope';
-import { baselineRoleMatrix, permissionUpgrade } from '../../../src/access/domain/PermissionUpgrades';
+import { PERMISSION_UPGRADES, baselineRoleMatrix, grantsForUpgrade, permissionUpgrade } from '../../../src/access/domain/PermissionUpgrades';
 import { RoleKey, SYSTEM_ROLE_NAMES } from '../../../src/access/domain/RoleKey';
 import { generatePostgresPermissionUpgradeStatements } from '../../../scripts/generate-role-seed-sql';
 import { seedSystemRoles } from '../../support/seedRoles';
@@ -102,7 +102,11 @@ describe('m2-sales permission upgrade (FR-RBAC-16)', () => {
 
   it('FR-RBAC-16 every other system role ends with the full §9.2 default matrix', async () => {
     for (const roleKey of [RoleKey.SalesUser, RoleKey.SalesManager, RoleKey.Administrator, RoleKey.Ceo]) {
-      expect([roleKey, await grantsOf(roles[roleKey])]).toEqual([roleKey, DEFAULT_ROLE_MATRIX[roleKey]]);
+      // The m3-contracts-payments keys come from the later upgrade, which this suite does not run.
+      expect([roleKey, await grantsOf(roles[roleKey])]).toEqual([
+        roleKey,
+        { ...baselineRoleMatrix()[roleKey], ...grantsForUpgrade(permissionUpgrade('m2-sales'), roleKey) },
+      ]);
     }
     const salesUser = await grantsOf(roles[RoleKey.SalesUser]);
     expect(salesUser['deals.view']).toBe(Own);
@@ -177,7 +181,7 @@ describe('m2-sales permission upgrade (FR-RBAC-16)', () => {
         await prisma.appliedPermissionUpgrade.count({
           where: { tenantId: freshId },
         })
-      ).toBe(1);
+      ).toBe(PERMISSION_UPGRADES.length);
       expect(await prisma.auditEntry.count({ where: { tenantId: freshId } })).toBe(0);
     } finally {
       await prisma.auditEntry.deleteMany({ where: { tenantId: freshId } });

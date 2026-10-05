@@ -1,4 +1,4 @@
-import { COMMERCIAL_FIELDS, redactFields } from '../../../../src/access/domain/redactFields';
+import { COMMERCIAL_FIELDS, PAYMENT_FIELDS, redactFields } from '../../../../src/access/domain/redactFields';
 import { accessWith, administrator, reception } from '../../../support/access';
 import { expectNoCommercialFields } from '../../../support/expectNoCommercialFields';
 
@@ -121,6 +121,66 @@ describe('redactFields (FR-RBAC-06)', () => {
 
     it('expectNoCommercialFields fails on a guarded name nested in an array', () => {
       expect(() => expectNoCommercialFields({ items: [{ id: 'x', listPrice: '1.00' }] })).toThrow(/listPrice/);
+    });
+  });
+
+  describe('FR-RBAC-21 Milestone 3 contract and payment fields', () => {
+    const contract = {
+      id: 'c1',
+      number: 'CTR-2027-0001',
+      status: 'ACTIVE',
+      startsAt: '2027-03-01',
+      endsAt: '2028-02-29',
+      company: { id: 'k1', name: 'Alba Shpk' },
+      agreedMonthlyPrice: '49.40',
+      agreedAnnualValue: '592.80',
+      discountPercent: '0.00',
+      servicesSnapshot: [{ name: 'Medical check', price: '10.00' }],
+      packageId: 'p1',
+      packageName: 'Standard',
+      termsText: 'Terms',
+      quotationId: 'q1',
+      documents: [{ id: 'd1', name: 'signed.pdf' }],
+      paymentSummary: { total: '592.80', received: '148.20', outstanding: '444.60' },
+      payments: [
+        { id: 'i1', dueDate: '2027-03-01', status: 'PAID', amount: '49.40', paidAmount: '49.40', outstanding: '0.00', invoiceNumber: 'F-1', invoiceDate: '2027-03-02' },
+      ],
+    };
+    const shown = ['id', 'number', 'status', 'startsAt', 'endsAt', 'company'];
+
+    it('guards each Milestone 3 field name under its permission', () => {
+      expect(COMMERCIAL_FIELDS).toEqual(
+        expect.arrayContaining(['servicesSnapshot', 'termsText', 'packageId', 'packageName', 'quotationId', 'documents'])
+      );
+      expect(PAYMENT_FIELDS).toEqual(
+        expect.arrayContaining(['paidAmount', 'outstanding', 'paymentSummary', 'payments', 'invoiceNumber', 'invoiceDate'])
+      );
+    });
+
+    it('Reception receives only number, status, validity dates and company', () => {
+      const view = redactFields(contract, reception()) as Record<string, unknown>;
+      expect(Object.keys(view).sort()).toEqual([...shown].sort());
+      expectNoCommercialFields(view);
+    });
+
+    it('a viewer with payments.view but not commercial.view loses the commercial fields and keeps payments', () => {
+      const view = redactFields(contract, administrator({ revoke: ['commercial.view'] })) as any;
+      expect(view).not.toHaveProperty('agreedMonthlyPrice');
+      expect(view).not.toHaveProperty('termsText');
+      expect(view.payments[0]).toMatchObject({ paidAmount: '49.40', invoiceNumber: 'F-1' });
+      expect(view.payments[0]).not.toHaveProperty('amount');
+    });
+
+    it('a viewer with commercial.view but not payments.view loses every payment field', () => {
+      const view = redactFields(contract, administrator({ revoke: ['payments.view'] })) as any;
+      for (const key of ['paymentSummary', 'payments']) expect(view).not.toHaveProperty(key);
+      expect(view).toHaveProperty('agreedMonthlyPrice', '49.40');
+      const instalment = redactFields(contract.payments[0], administrator({ revoke: ['payments.view'] })) as any;
+      for (const key of PAYMENT_FIELDS) expect(instalment).not.toHaveProperty(key);
+    });
+
+    it('an Administrator receives the whole contract', () => {
+      expect(redactFields(contract, administrator())).toEqual(contract);
     });
   });
 });
