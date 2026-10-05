@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BillingPeriod, ContractStatus } from '../../../domain/Contract';
+import { PaymentStatus } from '../../../domain/ContractPayment';
 
 /**
  * Dates arrive as plain strings and are parsed by the controller — `startsAt`
@@ -142,4 +143,28 @@ export const reverseReceiptSchema = z.object({
 export const correctPaymentStatusSchema = z.object({
   status: z.enum(PAYMENT_STATUS_CHOICES),
   comment: z.string().max(2000),
+});
+
+const dayString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/** The Payments overview's filters and the export's (FR-PAY-11, FR-PAY-14). */
+export const paymentFiltersSchema = z.object({
+  status: z.nativeEnum(PaymentStatus).optional(),
+  clientId: z.string().min(1).optional(),
+  assignedUserId: z.string().min(1).optional(),
+  contractId: z.string().min(1).optional(),
+  /** Part of the company's name or the contract's number. */
+  query: z.string().max(100).optional(),
+  /** Due date range, both ends included. */
+  dueFrom: dayString.optional(),
+  dueTo: dayString.optional(),
+  /** Past due and still Not Invoiced (FR-PAY-09). */
+  dueNotInvoiced: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+  areaId: z.string().min(1).optional(),
+  cityId: z.string().min(1).optional(),
+});
+
+export const searchPaymentsSchema = paymentFiltersSchema.extend({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
 });

@@ -1115,7 +1115,11 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { AttachContractDocumentUseCase } = require('../contracts/application/use-cases/AttachContractDocumentUseCase');
 
   const { ContractsController } = require('../contracts/interfaces/http/ContractsController');
-  const { createContractRouter } = require('../contracts/interfaces/http/contractRoutes');
+  const { createContractRouter, createPaymentsRouter } = require('../contracts/interfaces/http/contractRoutes');
+  const { PaymentsController } = require('../contracts/interfaces/http/PaymentsController');
+  const { SearchPaymentsUseCase, ExportPaymentsUseCase } = require('../contracts/application/use-cases/PaymentsOverviewUseCases');
+  const { PrismaPaymentOverviewReader } = require('../contracts/infrastructure/repositories/PrismaPaymentOverviewReader');
+  const { PrismaAuditTrail: PaymentExportAuditTrail } = require('../audit/infrastructure/PrismaAuditTrail');
 
   const contractRepo = new PrismaContractRepository(prisma);
   const contractPaymentRepo = new PrismaContractPaymentRepository(prisma);
@@ -1154,6 +1158,21 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/contracts', contractRoutes);
+
+  // Payments overview and CSV export (M3 Slice 9, FR-PAY-11, 14, FR-AUD-13).
+  const paymentOverviewReader = new PrismaPaymentOverviewReader(prisma);
+  app.use(
+    '/api/:tenantSlug/payments',
+    createPaymentsRouter(
+      new PaymentsController(
+        new SearchPaymentsUseCase(paymentOverviewReader, recordScopes),
+        new ExportPaymentsUseCase(paymentOverviewReader, recordScopes, new PaymentExportAuditTrail(prisma))
+      ),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
 
   // Contract settings (M3 Slice 3): reminder lead times, expiring-soon window,
   // payment grace days and number prefix, under settings.manage.

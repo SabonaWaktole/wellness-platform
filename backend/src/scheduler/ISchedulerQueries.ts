@@ -117,6 +117,28 @@ export interface ISchedulerQueries {
    */
   findExpiredAwaitingNotice(tenantId: string, since: Date): Promise<ExpiredContractNotice[]>;
 
+  /** The workspace's payment grace days (FR-PAY-09), 0 until the Administrator sets it. */
+  getPaymentGraceDays(tenantId: string): Promise<number>;
+
+  /**
+   * One workspace's instalments that are Invoice Issued, Payment Pending or
+   * Partially Paid and whose due date plus `graceDays` is before `today`
+   * (FR-PAY-09). Selected by state, so a run after a gap finds everything it
+   * missed; the change to Overdue is its own idempotency marker. Not Invoiced
+   * instalments never appear.
+   */
+  findPaymentsPastDue(tenantId: string, today: Date, graceDays: number): Promise<{ id: string; tenantId: string }[]>;
+
+  /**
+   * Overdue instalments nobody has been told about yet (FR-PAY-13): the
+   * notification's own list, which is also the retry list when sending failed
+   * after the state change committed.
+   */
+  findOverdueAwaitingNotice(tenantId: string): Promise<OverduePaymentNotice[]>;
+
+  /** Idempotency marker, set only once the overdue notification was emitted (`overdueNotifiedAt`). */
+  markPaymentOverdueNotified(paymentId: string, at: Date): Promise<void>;
+
   /**
    * ACTIVE contracts ending within `days` that have not been warned about yet.
    *
@@ -162,4 +184,20 @@ export interface PastDueInvoice {
   id: string;
   tenantId: string;
   dueDate: Date;
+}
+
+/** An Overdue instalment that has not been announced, with what the notice needs. */
+export interface OverduePaymentNotice {
+  id: string;
+  tenantId: string;
+  contractId: string;
+  periodIndex: number;
+  dueDate: Date;
+  clientName: string;
+  planName: string;
+  number: string | null;
+  /** The contract's salesperson, else the company's, else whoever sold it. */
+  assignedUserId: string | null;
+  clientAssignedUserId: string | null;
+  createdByUserId: string;
 }

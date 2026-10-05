@@ -29,6 +29,8 @@ export interface EmitInput {
      * no actor (FR-DSC-09, 12: nobody is asked to decide their own request).
      */
     excludeUserId?: string;
+    /** Only holders at exactly this scope, such as the Sales Manager's Team grant (M3 Slice 9). */
+    onlyScope?: 'OWN' | 'TEAM' | 'ALL';
   };
   type: NotificationType;
   params: NotificationParams;
@@ -123,6 +125,11 @@ export class NotificationService {
     await this.emailDispatcher?.dispatch(notifications);
   }
 
+  /** Who `emit` would write to, for a caller that joins several groups before emitting once. */
+  async recipientsFor(input: EmitInput): Promise<string[]> {
+    return this.resolveRecipients(input);
+  }
+
   private async resolveRecipients(input: EmitInput): Promise<string[]> {
     const ids = new Set(input.recipientUserIds ?? []);
 
@@ -139,7 +146,8 @@ export class NotificationService {
         input.tenantId,
         input.toPermission.key,
         input.toPermission.subjectOwnerId,
-        input.actorUserId ?? undefined
+        input.actorUserId ?? undefined,
+        input.toPermission.onlyScope
       );
       for (const id of approvers) if (id !== input.toPermission.excludeUserId) ids.add(id);
     }

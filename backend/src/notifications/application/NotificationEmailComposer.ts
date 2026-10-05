@@ -298,6 +298,11 @@ export class NotificationEmailComposer {
           body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> was ${word}.${reason ? ` Reason: ${esc(reason)}` : ''}`,
         };
       }
+      case 'PAYMENT_OVERDUE':
+        return {
+          subject: `A payment from ${client} is overdue`,
+          body: `Instalment <strong>${esc(String(p.instalment ?? ''))}</strong> of the <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> was due on <strong>${esc(String(p.dueDate ?? ''))}</strong> and is overdue. Contact the client to settle it.`,
+        };
       case 'FOLLOW_UP_ASSIGNED':
       case 'FOLLOW_UP_DUE':
       case 'FOLLOW_UP_DAILY_SUMMARY':

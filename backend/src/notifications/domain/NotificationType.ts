@@ -52,6 +52,8 @@ export const NOTIFICATION_TYPES = [
   // M3 Slice 5 (FR-CON-14, 15): someone suspended or cancelled a contract, with a reason. These have an actor.
   'CONTRACT_SUSPENDED',
   'CONTRACT_CANCELLED',
+  // M3 Slice 9 (FR-PAY-13): an instalment became Overdue. Time passing, so no actor; opens the contract.
+  'PAYMENT_OVERDUE',
 
   // Team.
   'INVITATION_ACCEPTED',

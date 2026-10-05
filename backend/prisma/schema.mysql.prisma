@@ -1614,6 +1614,8 @@ model ContractPayment {
   @@index([tenantId, contractId, dueDate])
   /// Drives the unpaid/overdue rollup across all of a tenant's contracts.
   @@index([tenantId, status, dueDate])
+  /// The revenue figure of the KPI engine and the dashboards: money received in a period (M3 Slice 9).
+  @@index([tenantId, paidAt])
 }
 
 /// Audit trail for a contract's lifecycle transitions, mirroring

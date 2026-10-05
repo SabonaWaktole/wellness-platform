@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../shared/infrastructure/prisma/client';
+import { addDays } from '../contracts/domain/calendarDay';
 import { OPEN_DEAL_STAGES } from '../deals/domain/DealStage';
 import {
   ISchedulerQueries,
@@ -8,6 +9,7 @@ import {
   PastDueInvoice,
   ExpiringContract,
   ExpiredContractNotice,
+  OverduePaymentNotice,
 } from './ISchedulerQueries';
 
 /** Rows a sweep will consider in one pass. Bounds the blast radius of a backlog. */
@@ -255,6 +257,67 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
         clientAssignedUserId: row.client.assignedUserId ?? null,
         createdByUserId: row.createdByUserId,
       }));
+  }
+
+  async getPaymentGraceDays(tenantId: string): Promise<number> {
+    const row = await this.prisma.contractSettings.findUnique({ where: { tenantId }, select: { paymentGraceDays: true } });
+    return row?.paymentGraceDays ?? 0;
+  }
+
+  async findPaymentsPastDue(tenantId: string, today: Date, graceDays: number): Promise<{ id: string; tenantId: string }[]> {
+    return this.prisma.contractPayment.findMany({
+      where: {
+        tenantId,
+        status: { in: ['INVOICE_ISSUED', 'PAYMENT_PENDING', 'PARTIALLY_PAID'] },
+        // dueDate + graceDays < today
+        dueDate: { lt: addDays(today, -graceDays) },
+      },
+      select: { id: true, tenantId: true },
+      orderBy: { dueDate: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+  }
+
+  async findOverdueAwaitingNotice(tenantId: string): Promise<OverduePaymentNotice[]> {
+    const rows = await this.prisma.contractPayment.findMany({
+      where: { tenantId, status: 'OVERDUE', overdueNotifiedAt: null },
+      select: {
+        id: true,
+        tenantId: true,
+        contractId: true,
+        periodIndex: true,
+        dueDate: true,
+        contract: {
+          select: {
+            planName: true,
+            number: true,
+            assignedUserId: true,
+            createdByUserId: true,
+            client: { select: { name: true, assignedUserId: true } },
+          },
+        },
+      },
+      orderBy: { dueDate: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      contractId: row.contractId,
+      periodIndex: row.periodIndex,
+      dueDate: row.dueDate,
+      clientName: row.contract.client.name ?? 'Client',
+      planName: row.contract.planName,
+      number: row.contract.number ?? null,
+      assignedUserId: row.contract.assignedUserId,
+      clientAssignedUserId: row.contract.client.assignedUserId ?? null,
+      createdByUserId: row.contract.createdByUserId,
+    }));
+  }
+
+  async markPaymentOverdueNotified(paymentId: string, at: Date): Promise<void> {
+    await this.prisma.contractPayment.update({ where: { id: paymentId }, data: { overdueNotifiedAt: at } });
   }
 
   async findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]> {
