@@ -54,6 +54,14 @@ describe('useNavigation', () => {
       expect(idsFor(RECEPTION)).not.toContain('reports');
     });
 
+    it('FR-PAY-11 offers Payments to a permissions map holding payments.view, at any scope, and never to Reception', () => {
+      const MANAGER = userWith({ 'payments.view': 'TEAM' });
+      expect(idsFor(MANAGER)).toContain('payments');
+      expect(idsFor(userWith({ 'payments.view': 'OWN' }))).toContain('payments');
+      expect(idsFor(RECEPTION)).not.toContain('payments');
+      expect(idsFor(SALES_USER)).not.toContain('payments');
+    });
+
     it('offers Clients to everyone holding companies.view, at any scope', () => {
       expect(idsFor(SALES_USER)).toContain('clients');
       expect(idsFor(RECEPTION)).toContain('clients');

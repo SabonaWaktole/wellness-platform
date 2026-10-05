@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { Download, Plus } from 'lucide-react';
 import { Card } from '../ui/Card/Card';
 import { Button } from '../ui/Button/Button';
 import { Modal } from '../ui/Modal';
@@ -10,6 +11,9 @@ import { TextInput } from '../ui/TextInput/TextInput';
 import { TextareaInput } from '../ui/TextareaInput/TextareaInput';
 import { SelectInput } from '../ui/SelectInput/SelectInput';
 import { useContractActions } from '../../hooks/useContracts';
+import { usePermission } from '../../hooks/usePermission';
+import { paymentService } from '../../services/paymentService';
+import { downloadBlob } from '../../utils/downloadBlob';
 import { useDateFormat } from '../../hooks/useDateFormat';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
@@ -89,6 +93,8 @@ export const ContractPaymentsCard: React.FC<ContractPaymentsCardProps> = ({
   const { format: formatMoney } = useMoneyFormat();
   const statusLabel = useStatusLabel();
   const actions = useContractActions();
+  const { tenantSlug } = useParams();
+  const canExport = usePermission('payments.view');
   const { staff, fetchStaff } = useTeam();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -98,6 +104,7 @@ export const ContractPaymentsCard: React.FC<ContractPaymentsCardProps> = ({
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [exportError, setExportError] = useState(false);
 
   useEffect(() => {
     fetchStaff();
@@ -246,20 +253,46 @@ export const ContractPaymentsCard: React.FC<ContractPaymentsCardProps> = ({
     <Card padding="lg">
       <div className={styles.cardHeader}>
         <h2 className={styles.cardTitle}>{t('payments.heading')}</h2>
-        {canAdd && (
-          <Button
-            variant="outline"
-            icon={<Plus size={16} />}
-            onClick={() => {
-              setError(null);
-              setForm({ ...emptyForm, dueDate: today() });
-              setAdding(true);
-            }}
-          >
-            {t('payments.addPayment')}
-          </Button>
-        )}
+        <div className={styles.headerActions}>
+          {canExport && payments.length > 0 && (
+            <Button
+              variant="outline"
+              icon={<Download size={16} />}
+              onClick={async () => {
+                if (!tenantSlug) return;
+                setExportError(false);
+                try {
+                  // The same export as the Payments overview, for this contract (FR-PAY-14).
+                  downloadBlob(await paymentService.downloadCsv(tenantSlug, { contractId }), `payments-${contractId.split('-')[0]}.csv`);
+                } catch {
+                  setExportError(true);
+                }
+              }}
+            >
+              {t('payments.exportCsv')}
+            </Button>
+          )}
+          {canAdd && (
+            <Button
+              variant="outline"
+              icon={<Plus size={16} />}
+              onClick={() => {
+                setError(null);
+                setForm({ ...emptyForm, dueDate: today() });
+                setAdding(true);
+              }}
+            >
+              {t('payments.addPayment')}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {exportError && (
+        <div className={styles.error} role="alert">
+          {t('payments.exportFailed')}
+        </div>
+      )}
 
       {summary && (
         <div className={styles.summaryGrid}>

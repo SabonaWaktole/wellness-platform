@@ -21,13 +21,14 @@ import type { AuditAction, AuditEntry, AuditFilters } from '../../../services/au
 import { AuditEntryDetail } from './AuditEntryDetail';
 import styles from './AuditLogContent.module.css';
 
-const ACTIONS: AuditAction[] = ['CREATE', 'UPDATE', 'DELETE', 'STATUS_CHANGE'];
+const ACTIONS: AuditAction[] = ['CREATE', 'UPDATE', 'DELETE', 'STATUS_CHANGE', 'EXPORT'];
 
 const ACTION_BADGE: Record<AuditAction, BadgeProps['variant']> = {
   CREATE: 'success',
   UPDATE: 'primary',
   DELETE: 'error',
   STATUS_CHANGE: 'warning',
+  EXPORT: 'secondary',
 };
 
 /** The record-type select's value: a whole group (`group:<key>`) or one type (`type:<key>`). */

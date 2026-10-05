@@ -178,7 +178,9 @@
       "CASH": "Para në dorë",
       "CARD": "Kartë",
       "OTHER": "Tjetër"
-    }
+    },
+    "exportCsv": "Eksporto CSV",
+    "exportFailed": "Eksporti nuk u krijua."
   },
   "form": {
     "createTitle": "Kontratë e re",

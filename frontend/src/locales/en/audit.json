@@ -27,7 +27,8 @@
     "CREATE": "Created",
     "UPDATE": "Updated",
     "DELETE": "Deleted",
-    "STATUS_CHANGE": "Status changed"
+    "STATUS_CHANGE": "Status changed",
+    "EXPORT": "Exported"
   },
   "entityTypes": {
     "Contract": "Contract",

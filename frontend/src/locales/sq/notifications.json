@@ -42,7 +42,8 @@
     "DISCOUNT_APPROVAL_REMINDER_manual": "Kujtesë: çmimi manual {{requestedMonthlyPrice}} i propozuar nga {{salespersonName}} për {{reference}} ({{clientName}}) ende pret miratim",
     "FOLLOW_UP_ASSIGNED": "{{actor}} ju caktoi një ndjekje ({{followUpType}}) me {{clientName}}, afati {{scheduledAt}}",
     "FOLLOW_UP_DUE": "Ndjekja është për tani: {{followUpType}} me {{clientName}}",
-    "FOLLOW_UP_DAILY_SUMMARY": "Sot: {{today}} ndjekje, dhe {{overdue}} të vonuara nga ditët e kaluara"
+    "FOLLOW_UP_DAILY_SUMMARY": "Sot: {{today}} ndjekje, dhe {{overdue}} të vonuara nga ditët e kaluara",
+    "PAYMENT_OVERDUE": "Kësti {{instalment}} i kontratës {{planName}} të {{clientName}} ishte i pagueshëm më {{dueDate}} dhe ka vonuar"
   },
   "followUpType": {
     "CALL": "telefonatë",

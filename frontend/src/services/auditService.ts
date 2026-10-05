@@ -1,6 +1,6 @@
 import { apiClient as api } from '../api';
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE';
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE' | 'EXPORT';
 
 /** A filter group and its audited entity types, as `GET /audit/entity-types` sends them (FR-AUD-10). */
 export interface AuditEntityGroup {
