@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STATE } from './support/sessions';
 
 /**
- * NFR-USE-01, NFR-USE-02: every Milestone 1 and 2 screen works from 360 px wide. Opens each one
+ * NFR-USE-01, NFR-USE-02, NFR-USE-03: every Milestone 1, 2 and 3 screen works from 360 px wide. Opens each one
  * in a 360 px viewport (the `mobile-360` project) and asserts the page never
  * scrolls sideways — the failure that makes a phone layout unusable.
  *
@@ -27,7 +27,7 @@ async function expectNoHorizontalOverflow(page: Page, screen: string) {
   expect(scrollWidth, `${screen} scrolls sideways at ${clientWidth}px`).toBeLessThanOrEqual(clientWidth);
 }
 
-test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360px', () => {
+test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overflow at 360px', () => {
   test.skip(!process.env.E2E_ADMIN_PASSWORD, 'Set E2E_ADMIN_PASSWORD to the seeded Administrator password.');
 
   test('the sign-in and password-recovery pages', async ({ page }) => {
@@ -62,6 +62,7 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
     test.use({ storageState: ADMIN_STATE });
     let companyId: string;
     let dealId: string;
+    let contractId: string;
 
     test.beforeEach(async ({ page }) => {
       if (!companyId) {
@@ -77,6 +78,15 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       }
     });
 
+    // M3 Slices 4 to 6 (NFR-USE-03): the contract screens open on a seeded contract (seed:uat gives UAT Kafe Blloku one).
+    test.beforeEach(async ({ page }) => {
+      if (!contractId) {
+        const contracts = await page.request.get(`/api/${TENANT}/contracts?search=${encodeURIComponent('UAT Kafe Blloku')}`);
+        contractId = (await contracts.json()).data?.[0]?.id;
+        expect(contractId, 'run seed:uat first — UAT Kafe Blloku has no contract').toBeTruthy();
+      }
+    });
+
     const screens: Array<[string, (id: string) => string]> = [
       // M3 Slice 14: this is the Administrator dashboard, the Administrator's landing page (FR-DSH-11)
       ['dashboard', () => 'dashboard'],
@@ -85,6 +95,10 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       ['company detail (contacts, timeline)', (id) => `clients/${id}`],
       ['company edit form', (id) => `clients/${id}/edit`],
       ['contracts', () => 'contracts'],
+      // M3 Slices 4 to 6: the contract's own screens
+      ['contract detail (instalments, history, document)', () => `contracts/${contractId}`],
+      ['contract edit form', () => `contracts/${contractId}/edit`],
+      ['new contract form', () => 'contracts/new'],
       // M3 Slice 9
       ['payments overview', () => 'payments'],
       // M3 Slice 11
