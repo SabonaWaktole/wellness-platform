@@ -1,4 +1,4 @@
-import { Scheduler, ScheduledJob } from './Scheduler';
+import { Scheduler, ScheduledJob, SchedulerOptions } from './Scheduler';
 import { RecordScopeResolver } from '../access/application/RecordScopeResolver';
 import { PrismaTeamRoster } from '../access/infrastructure/PrismaTeamRoster';
 import { PrismaDiscountApprovalStore } from '../discounts/infrastructure/PrismaDiscountApprovalStore';
@@ -43,7 +43,7 @@ import { ExpireContractUseCase } from '../contracts/application/use-cases/Expire
  * whatever database the test happened to be pointed at. The web process and the
  * worker share repositories and use cases but not a composition root.
  */
-export function createScheduler(): Scheduler {
+export function createScheduler(options: SchedulerOptions = {}): Scheduler {
   const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   const userRepository = new PrismaUserRepository();
@@ -97,5 +97,5 @@ export function createScheduler(): Scheduler {
     new ContractRenewalReminderJob(queries, notifications),
   ];
 
-  return new Scheduler(jobs);
+  return new Scheduler(jobs, options);
 }

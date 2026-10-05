@@ -1,5 +1,5 @@
 /**
- * NFR-PERF-01, 02 and 03 on a real deployment: signs in against a running
+ * NFR-PERF-01, 02, 03 and 04 on a real deployment: signs in against a running
  * API and times the Milestone 1 company queries (budget 1 s), the Milestone 2
  * pipeline board and deal list and the calendar's month and day feeds
  * (budget 2 s), the pricing screen's calculation (budget 300 ms) and the offer PDF in
@@ -9,8 +9,12 @@
  *
  * Seed the target first (`npm run seed:uat -- --companies 10000 --deals 2000`)
  * so the numbers are taken at the SRS figures of 10,000 companies and 2,000
- * open deals, and add `--follow-ups 5000` for the calendar. Sign in as a
- * user who sees every deal (the Administrator).
+ * open deals, and add `--follow-ups 5000` for the calendar. For NFR-PERF-04
+ * (the dashboards, the Performance screen and the contract and payment lists,
+ * budget 2 s) add `--activities 5000 --contracts 500 --instalments 6000`.
+ * Sign in as a user who sees every deal (the Administrator), and again as the
+ * CEO, who also sees the Performance screen, the CEO dashboard and the
+ * Payments overview.
  *
  * Usage:
  *   npm run perf:staging -- --api https://api.example.com/api --tenant wellness-albania \
@@ -109,6 +113,18 @@ async function main(): Promise<void> {
       );
     }
   }
+  // The contract and payment lists (M3 Slices 4, 6, 9 and 11, NFR-PERF-04): the first page, the filters
+  // that read the most rows, and the Payments overview with its totals. Each is measured only when the
+  // user may open it.
+  for (const [label, path] of [
+    ['contract list, first page', '/contracts'],
+    ['contract list, Active', '/contracts?status=ACTIVE'],
+    ['payments overview', '/payments'],
+    ['payments overview, Overdue', '/payments?status=OVERDUE'],
+    ['renewals', '/renewals'],
+  ] as const) {
+    if ((await get(`/${tenant}${path}`)).ok) queries.push([label, `/${tenant}${path}`, PIPELINE_BUDGET_MS]);
+  }
   const deals = (await (await get(`/${tenant}/deals?pageSize=1`)).json()) as { data: { items: { id: string }[] } };
   const config = (await (await get(`/${tenant}/pricing/config`)).json()) as { data?: { frequencies?: { id: string }[] } };
   if (deals.data?.items?.[0]) {
@@ -162,7 +178,7 @@ async function main(): Promise<void> {
   }
 
   if (failed) {
-    console.log('\nAt least one query is over its budget (NFR-PERF-01, 02 or 03).');
+    console.log('\nAt least one query is over its budget (NFR-PERF-01, 02, 03 or 04).');
     process.exitCode = 1;
   }
 }

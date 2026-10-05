@@ -10,7 +10,7 @@
  *
  * Usage:
  *   npm run seed:uat -- --password '<pw for every UAT user>' \
- *     [--email-domain wellness-albania.al] [--companies 10000] [--deals 2000] [--follow-ups 5000] [--tenant wellness-albania]
+ *     [--email-domain wellness-albania.al] [--companies 10000] [--deals 2000] [--follow-ups 5000] [--activities 5000] [--contracts 500] [--instalments 6000] [--tenant wellness-albania]
  *
  *   --companies N  also creates bulk companies up to N in total, for the
  *                  NFR-PERF-01 measurement (npm run perf:staging).
@@ -19,6 +19,10 @@
  *   --follow-ups N also creates bulk open follow-ups up to N in total over
  *                  those companies, for the NFR-PERF-03 calendar measurement
  *                  (5000).
+ *   --activities N, --contracts N, --instalments N
+ *                  also create bulk activities, contracts and instalments up
+ *                  to N in total, for the NFR-PERF-04 measurement (5000, 500
+ *                  and 6000; with --deals 2000 that is the SRS volume).
  *
  * There is deliberately no default password.
  */
@@ -53,6 +57,9 @@ async function main(): Promise<void> {
       bulkCompanies: Number(argOf('companies') ?? 0),
       bulkDeals: Number(argOf('deals') ?? 0),
       bulkFollowUps: Number(argOf('follow-ups') ?? 0),
+      bulkActivities: Number(argOf('activities') ?? 0),
+      bulkContracts: Number(argOf('contracts') ?? 0),
+      bulkInstalments: Number(argOf('instalments') ?? 0),
       log: (line) => console.log(line),
     });
 
@@ -67,6 +74,10 @@ async function main(): Promise<void> {
     console.log(`${result.plannedCreated} follow-ups and meetings created for Sales User A and B.`);
     console.log(`${result.bulkFollowUpsCreated} bulk follow-ups created.`);
     console.log(`${result.performanceCreated} activities, deals, offers and follow-ups created for the Performance screen.`);
+    console.log(
+      `${result.m3.contractsCreated} contracts, ${result.m3.instalmentsCreated} instalments and ${result.m3.wonDealsCreated + result.m3.exampleDealsCreated} won or lost deals created for Milestone 3;` +
+        ` bulk: ${result.m3.bulkContractsCreated} contracts, ${result.m3.bulkInstalmentsCreated} instalments, ${result.m3.bulkActivitiesCreated} activities.`
+    );
   } finally {
     server.close();
   }
