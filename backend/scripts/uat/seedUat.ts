@@ -5,6 +5,7 @@ import { FieldRole } from '../../src/clients/domain/enums/FieldRole';
 import { ClientStatus } from '../../src/clients/domain/enums/ClientStatus';
 import { ITokenService } from '../../src/auth/application/ports/ITokenService';
 import { UserRole } from '../../src/auth/domain/enums/UserRole';
+import { PrismaContractNumbers } from '../../src/contracts/infrastructure/PrismaContractNumbers';
 import { OPEN_DEAL_STAGES } from '../../src/deals/domain/DealStage';
 
 /**
@@ -248,17 +249,17 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
 
     if (spec.contract) {
       const year = new Date().getFullYear();
-      const contract = await api.call('POST', '/contracts', {
-        clientId: company.id,
-        planName: 'Paketa Wellness UAT',
-        amount: 2400,
-        billingPeriod: 'ANNUAL',
-        startsAt: `${year}-01-01`,
-        endsAt: `${year}-12-31`,
-        assignedUserId: ownerId,
+      // Written to the database: the workspace runs the sales process, where POST /contracts
+      // refuses a contract that is not made from a won deal (M3 Slice 4). This one has no deal.
+      const contractId = randomUUID();
+      const startsAt = new Date(Date.UTC(year, 0, 1));
+      await prisma.contract.create({
+        data: {
+          id: contractId, tenantId, clientId: company.id, assignedUserId: ownerId, planName: 'Paketa Wellness UAT', status: 'ACTIVE', amount: '2400.00',
+          billingPeriod: 'ANNUAL', startsAt, endsAt: new Date(Date.UTC(year, 11, 31)), number: await new PrismaContractNumbers(prisma).next(tenantId, new Date()),
+          activatedAt: startsAt, lockedAt: startsAt, createdByUserId: admin.id,
+        } as any,
       });
-      const contractId = contract.id;
-      await api.call('POST', `/contracts/${contractId}/activate`, {});
       const added = await api.call('POST', `/contracts/${contractId}/payments`, { dueDate: `${year}-01-15`, amount: '2400.00', reason: 'UAT seed' });
       // A receipt dated today: the date cannot be in the future (FR-PAY-07).
       await api.call('POST', `/contracts/${contractId}/payments/${added.payment.id}/receipts`, {
