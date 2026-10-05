@@ -1141,6 +1141,31 @@
       "id": "NFR-SEC-06",
       "priority": "Must",
       "requirement": "Contract status transitions, payment permissions, payment status rules, data scope, field removal and document access shall be enforced on the server for every request. The signed document is validated by content, size and type."
+    },
+    {
+      "id": "FR-PAY-09",
+      "priority": "Must",
+      "requirement": "A daily job shall set an instalment to Overdue when its due date has passed (plus the grace days of the Administrator, default 0) and it is Invoice Issued, Payment Pending or Partially Paid. An instalment past its due date that is still Not Invoiced keeps that status and is flagged \"Due, not invoiced\". The job records the change as done by the system and running it twice changes nothing."
+    },
+    {
+      "id": "FR-PAY-11",
+      "priority": "Must",
+      "requirement": "A Payments overview shall list instalments with filters by status, company, responsible salesperson, due date range, and contract, with totals of amount, received and outstanding for the filtered list. Scope follows the user: Sales User Own, Sales Manager Team, CEO and authorized payment users All."
+    },
+    {
+      "id": "FR-PAY-13",
+      "priority": "Should",
+      "requirement": "When an instalment becomes Overdue, the authorized payment users, the responsible salesperson and the Sales Manager shall get a notification (once per instalment), so the client can be contacted."
+    },
+    {
+      "id": "FR-PAY-14",
+      "priority": "Could",
+      "requirement": "The payments overview and a contract's instalments shall export to CSV for users who can view them. The export is recorded in the audit log."
+    },
+    {
+      "id": "FR-AUD-13",
+      "priority": "Should",
+      "requirement": "Exports of payments and performance (FR-PAY-14, FR-PRF-09) shall be recorded in the audit log with who, when and the filters used. Viewing a dashboard is not audited."
     }
   ]
 }
