@@ -1,5 +1,5 @@
 {
-  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026); Wellness Platform - Milestone 3 SRS.docx v0.1 (04.10.2026)",
+  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026); Wellness Platform - Milestone 3 SRS.docx v0.1 (04.10.2026); Wellness Platform - Milestone 4 SRS.docx v0.1 (06.10.2026)",
   "note": "Extracted once from the SRS and reviewed by hand. Update it when the SRS changes; scripts/check-traceability.mjs reads it.",
   "requirements": [
     {
@@ -1351,6 +1351,86 @@
       "id": "NFR-MNT-03",
       "priority": "Must",
       "requirement": "The Milestone 3 requirement IDs shall be added to scripts/srs-requirements.json as each implementation slice starts, so the CI traceability check covers them."
+    },
+    {
+      "id": "NFR-ACC-05",
+      "priority": "Must",
+      "requirement": "Fees, discounts, upgrade differences, payments and revenue shall be calculated as Decimal (two decimals, half up), never Float."
+    },
+    {
+      "id": "NFR-ACC-06",
+      "priority": "Must",
+      "requirement": "Every figure in section 9.3 shall be reproduced exactly on a fixed set of test data, including the worked example."
+    },
+    {
+      "id": "FR-MEM-06",
+      "priority": "Must",
+      "requirement": "Validity shall be one rule, calculated on the server: a member is valid when the status is Active. Every Active member is valid at least as Bronze. Every other member is not valid, with the status as the reason. The tier is never a reason for not being valid."
+    },
+    {
+      "id": "FR-TIR-02",
+      "priority": "Must",
+      "requirement": "The effective tier of a member shall be the highest tier among the terms valid today, with Bronze as the floor. A sponsored term counts only while the employer has a valid contract (Milestone 3 FR-CON-20); a term counts until its end date plus the grace days (FR-TIR-05). It is one rule in the domain, used by the list, the card, Reception, partner verification and the reports."
+    },
+    {
+      "id": "FR-TIR-03",
+      "priority": "Must",
+      "requirement": "A paid term shall start on the payment date for a new purchase, an upgrade or a purchase after the previous term ended, and on the day after the current end date for a renewal. It ends on the start date plus the term months minus one day."
+    },
+    {
+      "id": "FR-TIR-04",
+      "priority": "Must",
+      "requirement": "A renewal can be recorded at any time while a paid term is valid or within the grace days after it ended. A payment for the same tier after that is a new purchase and starts on the payment date."
+    },
+    {
+      "id": "FR-TIR-05",
+      "priority": "Should",
+      "requirement": "The Administrator shall set the grace days (default 0). The member keeps the tier during the grace days, and the daily job downgrades only after term end plus grace days."
+    },
+    {
+      "id": "FR-TIR-06",
+      "priority": "Must",
+      "requirement": "When a paid term has ended without renewal, the member shall be downgraded one step: Gold to Silver, Silver to Bronze. The Silver term created by a Gold downgrade lasts 12 months from the next day and, if not renewed, ends in Bronze in the same way."
+    },
+    {
+      "id": "FR-TIR-10",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the \"expiring soon\" window (default 30 days). A paid term ending within it shows the Expiring soon badge, counts in the reports and appears in the list of expiring memberships (FR-RPT-09)."
+    },
+    {
+      "id": "FR-MPAY-02",
+      "priority": "Must",
+      "requirement": "The amount shall be calculated on the server by the price rule above from the fee settings and the family discount valid on the payment date. Silver and Gold can be bought by any Active member. VIP cannot be bought."
+    },
+    {
+      "id": "FR-MPAY-03",
+      "priority": "Must",
+      "requirement": "Any Active member, including a family member and a sponsored Silver employee, can upgrade to a higher paid tier by paying the difference. A payment cannot move a member to a lower tier. Bronze to Gold is allowed in one step at the full Gold price."
+    },
+    {
+      "id": "FR-MPAY-04",
+      "priority": "Must",
+      "requirement": "An upgrade shall start the new term on the payment date for the full term length and close the member's earlier paid term the day before. A sponsored term is left as it is. A member has at most one paid term at a time."
+    },
+    {
+      "id": "FR-FAM-04",
+      "priority": "Must",
+      "requirement": "The family discount (Administrator setting, default 50%) shall apply to the price of Silver and Gold, to renewals and to upgrades of a family member, on the payment date, when the principal is Active and has the effective tier Silver, Gold or VIP. Otherwise the full price applies."
+    },
+    {
+      "id": "FR-VIP-03",
+      "priority": "Must",
+      "requirement": "An approval shall create a VIP term from the approval date for the VIP term length (default 12 months), free of charge, with the review date equal to its end date. No payment is created."
+    },
+    {
+      "id": "FR-VIP-04",
+      "priority": "Must",
+      "requirement": "The approvers shall be notified once, 30 days before the review date, and the member list shall offer the filter \"VIP review due\". A new approved request before the end extends VIP from the next day. If the VIP term ends without a new approval, the member falls back to the highest other valid tier, Bronze if none."
+    },
+    {
+      "id": "FR-EMP-09",
+      "priority": "Must",
+      "requirement": "Sponsored Silver shall last as long as the employer company has a valid contract. The expiry date shown on the member is the end date of that contract. When a renewal contract takes over without a gap, the employees stay Silver and their expiry date moves to the new end date, with no action by anyone."
     }
   ]
 }
