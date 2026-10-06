@@ -12,4 +12,4 @@ frontend/design/
 deploy/*.zip
 
 # Client documents (kept locally, not versioned)
-/docs/
+# /docs/
