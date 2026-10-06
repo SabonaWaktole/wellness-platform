@@ -68,6 +68,18 @@ export class Money {
     return this.value.isZero();
   }
 
+  isPositive(): boolean {
+    return this.value.greaterThan(0);
+  }
+
+  isNegative(): boolean {
+    return this.value.lessThan(0);
+  }
+
+  isGreaterThan(other: Money): boolean {
+    return this.value.greaterThan(other.value);
+  }
+
   equals(other: Money): boolean {
     return this.value.equals(other.value);
   }
