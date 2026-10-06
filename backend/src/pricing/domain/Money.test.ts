@@ -68,3 +68,14 @@ describe('Money (NFR-ACC-02)', () => {
     expect(Money.zero().isZero()).toBe(true);
   });
 });
+
+describe('Money comparisons', () => {
+  it('NFR-ACC-03: isPositive, isNegative and isGreaterThan compare exact two-decimal values', () => {
+    expect(Money.of('0.01').isPositive()).toBe(true);
+    expect(Money.zero().isPositive()).toBe(false);
+    expect(Money.of('-0.01').isNegative()).toBe(true);
+    expect(Money.of('49.41').isGreaterThan(Money.of('49.40'))).toBe(true);
+    expect(Money.of('49.40').isGreaterThan(Money.of('49.40'))).toBe(false);
+    expect(Money.of('0.1').add(Money.of('0.2')).isGreaterThan(Money.of('0.30'))).toBe(false);
+  });
+});
