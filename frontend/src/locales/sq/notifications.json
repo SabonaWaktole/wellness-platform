@@ -28,8 +28,10 @@
     "INVITATION_ACCEPTED": "{{email}} pranoi ftesën tuaj dhe iu bashkua ekipit",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "CONTRACT_EXPIRING": "Kontrata {{planName}} e {{clientName}} skadon për {{daysRemaining}} ditë",
+    "CONTRACT_EXPIRING": "Kontrata {{planName}} {{number}} e {{clientName}} mbaron më {{endsAt}}, pas {{daysRemaining}} ditësh. Hapeni për të nisur rinovimin.",
     "CONTRACT_EXPIRED": "Kontrata {{planName}} e {{clientName}} ka skaduar",
+    "CONTRACT_SUSPENDED": "{{actor}} e pezulloi kontratën {{planName}} të {{clientName}}. Arsyeja: {{reason}}",
+    "CONTRACT_CANCELLED": "{{actor}} e anuloi kontratën {{planName}} të {{clientName}}. Arsyeja: {{reason}}",
     "DISCOUNT_APPROVAL_REQUESTED": "{{actor}} kërkoi zbritje {{requestedPercent}}% për {{reference}} ({{clientName}}), çmimi i listës {{listPrice}}. Arsyeja: {{reason}}",
     "DISCOUNT_APPROVED": "{{actor}} miratoi zbritjen {{approvedPercent}}% për {{reference}}",
     "DISCOUNT_REJECTED": "{{actor}} refuzoi zbritjen mbi kufirin për {{reference}}",
@@ -40,7 +42,8 @@
     "DISCOUNT_APPROVAL_REMINDER_manual": "Kujtesë: çmimi manual {{requestedMonthlyPrice}} i propozuar nga {{salespersonName}} për {{reference}} ({{clientName}}) ende pret miratim",
     "FOLLOW_UP_ASSIGNED": "{{actor}} ju caktoi një ndjekje ({{followUpType}}) me {{clientName}}, afati {{scheduledAt}}",
     "FOLLOW_UP_DUE": "Ndjekja është për tani: {{followUpType}} me {{clientName}}",
-    "FOLLOW_UP_DAILY_SUMMARY": "Sot: {{today}} ndjekje, dhe {{overdue}} të vonuara nga ditët e kaluara"
+    "FOLLOW_UP_DAILY_SUMMARY": "Sot: {{today}} ndjekje, dhe {{overdue}} të vonuara nga ditët e kaluara",
+    "PAYMENT_OVERDUE": "Kësti {{instalment}} i kontratës {{planName}} të {{clientName}} ishte i pagueshëm më {{dueDate}} dhe ka vonuar"
   },
   "followUpType": {
     "CALL": "telefonatë",

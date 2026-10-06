@@ -27,7 +27,8 @@
     "CREATE": "Created",
     "UPDATE": "Updated",
     "DELETE": "Deleted",
-    "STATUS_CHANGE": "Status changed"
+    "STATUS_CHANGE": "Status changed",
+    "EXPORT": "Exported"
   },
   "entityTypes": {
     "Contract": "Contract",
@@ -55,7 +56,9 @@
     "SalesScript": "Sales script",
     "Deal": "Deal",
     "Offer": "Offer",
-    "DiscountApproval": "Discount approval"
+    "DiscountApproval": "Discount approval",
+    "ContractSettings": "Contract settings",
+    "Performance": "Performance export"
   },
   "entityGroups": {
     "access": "Users, roles & workspace",
@@ -92,6 +95,11 @@
     "notes": "Notes",
     "note": "Note",
     "renewedFromContractId": "Renewed from",
+    "notRenewingReasonId": "Not renewing reason",
+    "notRenewingNote": "Not renewing note",
+    "renewalDealId": "Renewal deal",
+    "renewedIntoContractId": "Renewed into",
+    "renewalOfContractId": "Renews contract",
     "generatedPayments": "Generated payments",
     "cancelReason": "Cancellation reason",
     "dueDate": "Due date",

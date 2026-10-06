@@ -297,3 +297,36 @@ describe('Won and lost on the deal page (FR-DEAL-14..17)', () => {
     expect(screen.queryByRole('button', { name: 'Reopen' })).toBeNull();
   });
 });
+
+describe('Renewal deal on the deal page (M3 FR-REN-06, 07)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setPermissions({ 'deals.view': 'TEAM', 'deals.edit': 'TEAM', 'commercial.view': 'TEAM', 'contracts.manage': 'TEAM', 'script.view': true, 'calendar.view': 'TEAM', 'followups.manage': 'TEAM' });
+    vi.mocked(followUpService.list).mockResolvedValue([]);
+    vi.mocked(dealService.activities).mockResolvedValue([]);
+    vi.mocked(dealService.offers).mockResolvedValue([]);
+  });
+
+  it('FR-REN-06 says which contract a Renewal deal renews, with a link to it', async () => {
+    vi.mocked(dealService.get).mockResolvedValue(detail({ type: 'RENEWAL', stage: 'INTERESTED', renewalOfContractId: 'k1', renewalOfContractNumber: 'CTR-2026-0001', renewalStartsOn: '2027-01-01' }));
+    renderPage();
+    expect(await screen.findByRole('link', { name: 'Renewal of CTR-2026-0001' })).toHaveAttribute('href', '/acme/contracts/k1');
+  });
+
+  it('FR-REN-07 a won Renewal deal shows "Create contract" with the start date the new term gets', async () => {
+    vi.mocked(dealService.get).mockResolvedValue(
+      detail({ type: 'RENEWAL', stage: 'WON', wonAt: '2026-12-01T00:00:00Z', closedAt: '2026-12-01T00:00:00Z', renewalOfContractId: 'k1', renewalOfContractNumber: 'CTR-2026-0001', renewalStartsOn: '2027-01-01', contractId: null })
+    );
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Create contract' })).toBeInTheDocument();
+    expect(screen.getByText(/The new term starts on/)).toBeInTheDocument();
+  });
+
+  it('a deal that is not a renewal shows neither the link nor the start date', async () => {
+    vi.mocked(dealService.get).mockResolvedValue(detail());
+    renderPage();
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByText(/Renewal of/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/The new term starts on/)).not.toBeInTheDocument();
+  });
+});

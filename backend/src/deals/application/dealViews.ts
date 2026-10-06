@@ -76,6 +76,13 @@ export interface DealResultView {
 export interface DealDetail extends DealSummary, DealResultView {
   notes: string | null;
   createdByUserId: string;
+  /** The contract made from this deal, so the screen can swap "Create contract" for a link (M3 FR-CON-01). */
+  contractId: string | null;
+  /** The contract a Renewal deal renews and its number, for "Renewal of CTR-…" (M3 FR-REN-06); null on other deals. */
+  renewalOfContractId: string | null;
+  renewalOfContractNumber: string | null;
+  /** `YYYY-MM-DD`: the day after the renewed contract ends, which "Create contract" starts the next term on (M3 FR-REN-07). */
+  renewalStartsOn: string | null;
   contacts: DealContactView[];
   history: DealStageChangeView[];
 }

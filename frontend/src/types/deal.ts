@@ -93,6 +93,12 @@ export interface DealResult {
 export interface DealDetail extends DealSummary, DealResult {
   notes: string | null;
   createdByUserId: string;
+  /** The contract made from this deal, if any (M3 FR-CON-01). */
+  contractId?: string | null;
+  /** The contract a Renewal deal renews, its number, and the day after it ends (M3 FR-REN-06, 07). */
+  renewalOfContractId?: string | null;
+  renewalOfContractNumber?: string | null;
+  renewalStartsOn?: string | null;
   contacts: DealContact[];
   history: DealStageChange[];
 }

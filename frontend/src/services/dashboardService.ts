@@ -1,4 +1,5 @@
 import { apiClient } from '../api';
+import type { DashboardData, DashboardFilters, DashboardKind, RoleDashboardKind } from '../types/roleDashboard';
 
 export interface DashboardMetrics {
   totalClients: number;
@@ -404,6 +405,27 @@ export const dashboardService = {
     const response = await apiClient.put<{ updatedCount: number }>(`/tenants/bulk-settings`, {
       tenantIds,
       settings,
+    });
+    return response.data;
+  },
+};
+
+/** The role dashboards (M3 Slices 13 and 14). The server applies the viewer's scope and the value rule (FR-DSH-02, 08). */
+export const roleDashboardService = {
+  /** Which dashboard is this user's (FR-DSH-01). */
+  home: async (tenantSlug: string): Promise<DashboardKind> =>
+    (await apiClient.get<{ kind: DashboardKind }>(`/${tenantSlug}/dashboard/home`)).data.kind,
+
+  fetch: async (tenantSlug: string, kind: RoleDashboardKind, filters: DashboardFilters): Promise<DashboardData> => {
+    const path = { SALES_USER: 'sales-user', SALES_MANAGER: 'sales-manager', ADMINISTRATOR: 'administrator', CEO: 'ceo' }[kind];
+    const response = await apiClient.get<DashboardData>(`/${tenantSlug}/dashboard/${path}`, {
+      params: {
+        preset: filters.preset,
+        ...(filters.preset === 'CUSTOM' ? { from: filters.from, to: filters.to } : {}),
+        ...(filters.salespersonId ? { salespersonId: filters.salespersonId } : {}),
+        ...(filters.areaId ? { areaId: filters.areaId } : {}),
+        ...(filters.cityId ? { cityId: filters.cityId } : {}),
+      },
     });
     return response.data;
   },

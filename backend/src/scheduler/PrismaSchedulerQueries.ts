@@ -1,11 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../shared/infrastructure/prisma/client';
+import { randomUUID } from 'crypto';
+import { addDays } from '../contracts/domain/calendarDay';
+import { ContractSettings } from '../contracts/domain/ContractSettings';
+import { OPEN_DEAL_STAGES } from '../deals/domain/DealStage';
 import {
   ISchedulerQueries,
   DueAppointment,
   StaleQuotation,
   PastDueInvoice,
-  ExpiringContract,
+  ReminderCandidate,
+  ExpiredContractNotice,
+  OverduePaymentNotice,
 } from './ISchedulerQueries';
 
 /** Rows a sweep will consider in one pass. Bounds the blast radius of a backlog. */
@@ -156,66 +162,197 @@ export class PrismaSchedulerQueries implements ISchedulerQueries {
     }));
   }
 
-  /** Columns every contract sweep needs. Declared once so the two agree. */
-  private static readonly CONTRACT_SELECT = {
-    id: true,
-    tenantId: true,
-    clientId: true,
-    planName: true,
-    endsAt: true,
-    assignedUserId: true,
-    createdByUserId: true,
-    client: { select: { name: true } },
-  } as const;
-
-  private toExpiringContract(row: any): ExpiringContract {
-    return {
-      id: row.id,
-      tenantId: row.tenantId,
-      clientId: row.clientId,
-      clientName: row.client.name ?? 'Client',
-      planName: row.planName,
-      endsAt: row.endsAt,
-      assignedUserId: row.assignedUserId,
-      createdByUserId: row.createdByUserId,
-    };
+  async listTenants(): Promise<{ id: string; timeZone: string }[]> {
+    const rows = await this.prisma.tenant.findMany({ select: { id: true, timezone: true } });
+    return rows.map((row) => ({ id: row.id, timeZone: row.timezone }));
   }
 
-  async findContractsPastEnd(now: Date): Promise<ExpiringContract[]> {
-    const rows = await this.prisma.contract.findMany({
-      where: { status: 'ACTIVE', endsAt: { lt: now } },
-      select: PrismaSchedulerQueries.CONTRACT_SELECT,
+  async findContractsPastEnd(tenantId: string, today: Date): Promise<{ id: string; tenantId: string }[]> {
+    return this.prisma.contract.findMany({
+      where: { tenantId, status: 'ACTIVE', endsAt: { lt: today } },
+      select: { id: true, tenantId: true },
       orderBy: { endsAt: 'asc' },
       take: SWEEP_LIMIT,
     });
-
-    return rows.map((row) => this.toExpiringContract(row));
   }
 
-  async findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]> {
-    const horizon = new Date(now.getTime() + days * 24 * 60 * 60_000);
-
+  async findExpiredAwaitingNotice(tenantId: string, since: Date): Promise<ExpiredContractNotice[]> {
     const rows = await this.prisma.contract.findMany({
       where: {
-        status: 'ACTIVE',
-        expiryNotifiedAt: null,
-        // `gte: now` keeps this sweep off contracts that have already lapsed —
-        // those belong to findContractsPastEnd, and warning that something
-        // "expires soon" after it already has would be worse than silence.
-        endsAt: { gte: now, lte: horizon },
+        tenantId,
+        status: 'EXPIRED',
+        renewedInto: null,
+        // The system's own Expired entry, so a contract an old release or a
+        // person moved to Expired is not announced as the job's doing.
+        statusHistory: { some: { toStatus: 'EXPIRED', changedByUserId: null, createdAt: { gte: since } } },
       },
-      select: PrismaSchedulerQueries.CONTRACT_SELECT,
+      select: {
+        id: true,
+        tenantId: true,
+        clientId: true,
+        planName: true,
+        number: true,
+        endsAt: true,
+        assignedUserId: true,
+        createdByUserId: true,
+        client: { select: { name: true, assignedUserId: true } },
+      },
       orderBy: { endsAt: 'asc' },
       take: SWEEP_LIMIT,
     });
+    if (rows.length === 0) return [];
 
-    return rows.map((row) => this.toExpiringContract(row));
+    const ids = rows.map((row) => row.id);
+    const told = await this.prisma.notification.findMany({
+      where: { tenantId, type: 'CONTRACT_EXPIRED', entityType: 'CONTRACT', entityId: { in: ids } },
+      select: { entityId: true },
+    });
+    const toldIds = new Set(told.map((row) => row.entityId));
+
+    const renewing = await this.prisma.deal.findMany({
+      where: {
+        tenantId,
+        type: 'RENEWAL',
+        deletedAt: null,
+        stageKey: { in: [...OPEN_DEAL_STAGES] },
+        clientId: { in: rows.map((row) => row.clientId) },
+      },
+      select: { clientId: true },
+    });
+    const renewingClients = new Set(renewing.map((row) => row.clientId));
+
+    return rows
+      .filter((row) => !toldIds.has(row.id) && !renewingClients.has(row.clientId))
+      .map((row) => ({
+        id: row.id,
+        tenantId: row.tenantId,
+        clientName: row.client.name ?? 'Client',
+        planName: row.planName,
+        number: row.number ?? null,
+        endsAt: row.endsAt,
+        assignedUserId: row.assignedUserId,
+        clientAssignedUserId: row.client.assignedUserId ?? null,
+        createdByUserId: row.createdByUserId,
+      }));
   }
 
-  async markContractExpiryNotified(contractId: string, at: Date): Promise<void> {
-    await this.prisma.contract.update({
-      where: { id: contractId },
-      data: { expiryNotifiedAt: at },
+  async getPaymentGraceDays(tenantId: string): Promise<number> {
+    const row = await this.prisma.contractSettings.findUnique({ where: { tenantId }, select: { paymentGraceDays: true } });
+    return row?.paymentGraceDays ?? 0;
+  }
+
+  async findPaymentsPastDue(tenantId: string, today: Date, graceDays: number): Promise<{ id: string; tenantId: string }[]> {
+    return this.prisma.contractPayment.findMany({
+      where: {
+        tenantId,
+        status: { in: ['INVOICE_ISSUED', 'PAYMENT_PENDING', 'PARTIALLY_PAID'] },
+        // dueDate + graceDays < today
+        dueDate: { lt: addDays(today, -graceDays) },
+      },
+      select: { id: true, tenantId: true },
+      orderBy: { dueDate: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+  }
+
+  async findOverdueAwaitingNotice(tenantId: string): Promise<OverduePaymentNotice[]> {
+    const rows = await this.prisma.contractPayment.findMany({
+      where: { tenantId, status: 'OVERDUE', overdueNotifiedAt: null },
+      select: {
+        id: true,
+        tenantId: true,
+        contractId: true,
+        periodIndex: true,
+        dueDate: true,
+        contract: {
+          select: {
+            planName: true,
+            number: true,
+            assignedUserId: true,
+            createdByUserId: true,
+            client: { select: { name: true, assignedUserId: true } },
+          },
+        },
+      },
+      orderBy: { dueDate: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      contractId: row.contractId,
+      periodIndex: row.periodIndex,
+      dueDate: row.dueDate,
+      clientName: row.contract.client.name ?? 'Client',
+      planName: row.contract.planName,
+      number: row.contract.number ?? null,
+      assignedUserId: row.contract.assignedUserId,
+      clientAssignedUserId: row.contract.client.assignedUserId ?? null,
+      createdByUserId: row.contract.createdByUserId,
+    }));
+  }
+
+  async markPaymentOverdueNotified(paymentId: string, at: Date): Promise<void> {
+    await this.prisma.contractPayment.update({ where: { id: paymentId }, data: { overdueNotifiedAt: at } });
+  }
+
+  async getReminderLeadDays(tenantId: string): Promise<number[]> {
+    const row = await this.prisma.contractSettings.findUnique({ where: { tenantId }, select: { reminderLeadDays: true } });
+    return ContractSettings.rebuild({
+      ...ContractSettings.defaults(tenantId).toJSON(),
+      tenantId,
+      ...(row ? { reminderLeadDays: row.reminderLeadDays as number[] } : {}),
+    }).reminderLeadDays.slice();
+  }
+
+  async findContractsForReminder(tenantId: string, today: Date, withinDays: number): Promise<ReminderCandidate[]> {
+    const rows = await this.prisma.contract.findMany({
+      where: {
+        tenantId,
+        status: 'ACTIVE',
+        // Not yet past its end: those belong to the expiry sweep, and a warning that something
+        // "ends soon" after it already has would be worse than silence.
+        endsAt: { gte: today, lt: addDays(today, withinDays + 1) },
+        notRenewingReasonId: null,
+        renewedInto: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        planName: true,
+        number: true,
+        endsAt: true,
+        assignedUserId: true,
+        createdByUserId: true,
+        client: { select: { name: true, assignedUserId: true } },
+        reminders: { select: { leadDays: true } },
+      },
+      orderBy: { endsAt: 'asc' },
+      take: SWEEP_LIMIT,
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      clientName: row.client.name ?? 'Client',
+      planName: row.planName,
+      number: row.number ?? null,
+      endsAt: row.endsAt,
+      assignedUserId: row.assignedUserId,
+      clientAssignedUserId: row.client.assignedUserId ?? null,
+      createdByUserId: row.createdByUserId,
+      recordedLeadDays: row.reminders.map((reminder) => reminder.leadDays),
+    }));
+  }
+
+  async recordContractReminders(
+    contract: { id: string; tenantId: string },
+    rows: { leadDays: number; state: 'SENT' | 'SKIPPED' }[],
+    at: Date
+  ): Promise<void> {
+    await this.prisma.contractReminder.createMany({
+      data: rows.map((row) => ({ id: randomUUID(), tenantId: contract.tenantId, contractId: contract.id, leadDays: row.leadDays, state: row.state, sentAt: at })),
+      skipDuplicates: true,
     });
   }
 

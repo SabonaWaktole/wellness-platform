@@ -136,6 +136,14 @@ describe('The team\'s follow-ups (FR-FUP-08, 10)', () => {
     await waitFor(() => expect(followUpService.list).toHaveBeenLastCalledWith('acme', { assignedUserId: 'u-b', overdueOnly: true }));
   });
 
+  it('FR-DSH-05 opened from a dashboard figure, the Sales Manager lands on the team tab with the overdue ones, for that salesperson', async () => {
+    signIn({ 'calendar.view': 'TEAM', 'followups.manage': 'TEAM' });
+    renderPage('/acme/follow-ups?overdueOnly=true&assignedUserId=u-b');
+    await waitFor(() => expect(followUpService.list).toHaveBeenCalledWith('acme', { assignedUserId: 'u-b', overdueOnly: true }));
+    expect(screen.getByRole('tab', { name: /Team/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('checkbox', { name: 'Overdue only' })).toBeChecked();
+  });
+
   it('FR-FUP-10 the Sales Manager reassigns a follow-up to another salesperson', async () => {
     signIn({ 'calendar.view': 'TEAM', 'followups.manage': 'TEAM' });
     vi.mocked(followUpService.reassign).mockResolvedValue(followUp('a1', { assignedUserId: 'u-b', assignedUserName: 'Dritan Test' }));

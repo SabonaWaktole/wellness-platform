@@ -908,14 +908,119 @@
       "requirement": "Winning, losing, reopening and every change of the agreed values shall be recorded in the audit trail."
     },
     {
+      "id": "FR-RBAC-19",
+      "priority": "Must",
+      "requirement": "The permission catalogue shall activate \"Payments: view\", \"Payments: update\" and \"Performance: view\", and add \"Contracts: suspend, cancel, reinstate\" (contracts.terminate). The existing \"Contracts: view validity\" and \"Contracts: manage\" keep their meaning. The Administrator can assign all of them from the Milestone 1 roles screen."
+    },
+    {
+      "id": "FR-RBAC-20",
+      "priority": "Must",
+      "requirement": "The default roles shall receive the permissions in the matrix in 7.2 on upgrade, once, without changing what the Administrator already customised (the upgrade ledger of Milestone 2)."
+    },
+    {
+      "id": "FR-RBAC-21",
+      "priority": "Must",
+      "requirement": "Contract commercial fields (price, annual value, discount, services, package, terms, document, deal, offer) and all payment fields shall be removed from API responses for users without \"Commercial details: view\" or \"Payments: view\" respectively (extends Milestone 1 FR-RBAC-06 and Milestone 2 FR-RBAC-17). Reception receives only number, status, validity, start and end date, company."
+    },
+    {
+      "id": "FR-AUD-12",
+      "priority": "Must",
+      "requirement": "The audit log viewer shall offer filters for the new entity types: Contract and Payment (instalment)."
+    },
+    {
+      "id": "FR-CON-05",
+      "priority": "Must",
+      "requirement": "Each contract shall get a sequential number, per year, for example CTR-2026-0001, using the same numbering mechanism as offers (Milestone 2 FR-OFR-08). The number prefix is an offer-style setting of the Administrator."
+    },
+    {
+      "id": "FR-REN-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the reminder lead times, in days before the end date, as a list. Default 60, 30 and 7. Changes apply to contracts not yet reminded at that lead time."
+    },
+    {
+      "id": "FR-REN-04",
+      "priority": "Must",
+      "requirement": "The \"expiring soon\" window shall be set by the Administrator (default 30 days). A valid contract ending within it shows the Expiring soon badge and counts in the dashboard figures."
+    },
+    {
+      "id": "FR-PAY-09",
+      "priority": "Must",
+      "requirement": "A daily job shall set an instalment to Overdue when its due date has passed (plus the grace days of the Administrator, default 0) and it is Invoice Issued, Payment Pending or Partially Paid. An instalment past its due date that is still Not Invoiced keeps that status and is flagged \"Due, not invoiced\". The job records the change as done by the system and running it twice changes nothing."
+    },
+    {
+      "id": "FR-AUD-11",
+      "priority": "Must",
+      "requirement": "In Milestone 3 the following shall be audited with old and new values, using the Milestone 1 audit mechanism (FR-AUD-03): creation of a contract from a deal; every change of a contract field, status (with reason), renewal link and \"not renewing\" mark; signed document attached or replaced; every instalment action (generated, added, changed, removed, invoice recorded, receipt recorded, status change with comment); and the reminder, expiring-soon and payment settings."
+    },
+    {
+      "id": "FR-CON-01",
+      "priority": "Must",
+      "requirement": "A user with \"Contracts: manage\" shall create a contract from a Won deal, from the deal screen and from the company page. A Won deal can have one contract."
+    },
+    {
+      "id": "FR-CON-02",
+      "priority": "Must",
+      "requirement": "A contract cannot exist without a won deal. Contracts created before this milestone (without a deal) stay readable and are marked \"Legacy: no deal\"."
+    },
+    {
       "id": "FR-CON-03",
       "priority": "Must",
       "requirement": "The contract shall be filled from the won deal and its offer: company, deal, offer, responsible salesperson, package and its services, agreed monthly price and annual value, discount %, and the offer terms text. Start date defaults to the deal closing date; end date defaults to start date plus the contract months of the offer minus one day. Billing period defaults to monthly."
     },
     {
+      "id": "FR-CON-04",
+      "priority": "Must",
+      "requirement": "The agreed price, annual value, package and services shall be copied onto the contract and are read only. They cannot be typed. While the contract is Draft, a \"Refresh from deal\" action re-reads them from the deal (for example after the Sales Manager reopened the deal and a new offer was won). From Pending Signature on, they are locked."
+    },
+    {
+      "id": "FR-CON-06",
+      "priority": "Must",
+      "requirement": "The contract record shall show: number, status, validity, company, deal, offer, responsible salesperson, package and services, start date, end date, renewal date, agreed monthly price, annual value, discount %, billing period, commercial terms, notes, signed document, previous term (if a renewal), status history and the payment schedule summary."
+    },
+    {
       "id": "FR-CON-07",
       "priority": "Should",
       "requirement": "The renewal date shall default to the end date minus the largest reminder lead time (FR-REN-01) and can be changed while the contract is Draft or Active. It is the date by which the renewal should be agreed."
+    },
+    {
+      "id": "FR-CON-08",
+      "priority": "Must",
+      "requirement": "The contract list shall search and filter by number, company, status, validity, responsible salesperson, end date range and payment state (any overdue instalment), and by predefined Area and City of the company. Results respect the scope of the user (Own, Team, All)."
+    },
+    {
+      "id": "FR-CON-09",
+      "priority": "Must",
+      "requirement": "Contracts shall appear on the company page and in the company history timeline (Milestone 1 FR-CMP-05): created, status changes, document attached, renewed."
+    },
+    {
+      "id": "FR-CON-10",
+      "priority": "Must",
+      "requirement": "While a contract is Draft, the user can edit dates, billing period, commercial terms, renewal date, notes and responsible salesperson. After activation only notes, the signed document and the renewal date can be changed. A contract cannot be deleted; a Draft is cancelled instead."
+    },
+    {
+      "id": "FR-RBAC-22",
+      "priority": "Must",
+      "requirement": "Own, Team and All shall mean for contracts and payments what they mean for companies (Milestone 1 section 4.3): Own is the contracts and instalments of companies where the user is the responsible salesperson; Team is those of all Sales Users; All is everything. The Sales Manager never sees data of other roles or of companies outside the sales team (Dimitris)."
+    },
+    {
+      "id": "FR-RBAC-24",
+      "priority": "Must",
+      "requirement": "The CEO shall be read only for contracts and payments. Only \"Payments: update\" changes payments, and a Sales User or Sales Manager never does, even for their own contracts."
+    },
+    {
+      "id": "NFR-ACC-03",
+      "priority": "Must",
+      "requirement": "Contract amounts, instalments, receipts, outstanding amounts and all money figures on dashboards and the performance screen shall be calculated as Decimal (two decimals, half-up), never Float. The existing Float columns of Contract and ContractPayment shall be converted (Milestone 2 D4)."
+    },
+    {
+      "id": "NFR-DAT-01",
+      "priority": "Must",
+      "requirement": "One contract per won deal and one reminder per contract and lead time shall be guaranteed by the database (unique constraints), not only by the application."
+    },
+    {
+      "id": "NFR-OPS-03",
+      "priority": "Must",
+      "requirement": "Migrations shall run on PostgreSQL and MySQL, including the Float to Decimal conversion, the new default payment status, existing contracts without a deal (marked Legacy) and the replacement of the reminder marker, and be reversible or backed up."
     },
     {
       "id": "FR-CON-11",
@@ -928,14 +1033,49 @@
       "requirement": "Validity shall be one rule, calculated on the server: a contract is valid when its status is Active and today is between its start and end date, both included. Every other contract is not valid, with the reason shown as its status (Pending Signature, Suspended, Expired, Cancelled, Draft) or \"Not started\"."
     },
     {
-      "id": "FR-REN-04",
+      "id": "FR-CON-21",
       "priority": "Must",
-      "requirement": "The \"expiring soon\" window shall be set by the Administrator (default 30 days). A valid contract ending within it shows the Expiring soon badge and counts in the dashboard figures."
+      "requirement": "Users with \"Contracts: view validity\" shall see a validity badge (Valid, Expiring soon, Not valid with reason) with start and end date in company search results, on the company page and on the contract list. They shall not see the price, services, commercial terms, discount, payments, deal, offer or document."
+    },
+    {
+      "id": "FR-CON-22",
+      "priority": "Must",
+      "requirement": "When a company has more than one contract, the badge shall reflect the contract valid today (the one ending last if several), otherwise the latest contract."
+    },
+    {
+      "id": "FR-CON-16",
+      "priority": "Must",
+      "requirement": "A daily job shall set an Active contract to Expired when its end date has passed, in the workspace time zone, record the change as done by the system, and notify the responsible salesperson and the Sales Manager if no renewal exists. Running the job twice shall change nothing the second time."
+    },
+    {
+      "id": "FR-CON-17",
+      "priority": "Should",
+      "requirement": "When the last valid or upcoming contract of a company has Expired or been Cancelled and no renewal deal is open, the company status shall change to Former client. A new activated contract sets it back to Client."
+    },
+    {
+      "id": "NFR-REL-01",
+      "priority": "Must",
+      "requirement": "The scheduled jobs (expiry, renewal reminders, overdue instalments) shall be idempotent, use the workspace time zone, record \"system\" as the actor, and catch up after a missed run (for example after a restart) without duplicating anything."
     },
     {
       "id": "FR-PAY-02",
       "priority": "Must",
       "requirement": "When a contract is activated, the platform shall generate one instalment per billing period of the term, as the existing schedule does: the first instalment due on the start date and the next ones on the same day of each following period (clamped to the last day of a shorter month), none starting after the end date, at most 120. Each instalment gets the contract price for one period, as Decimal, status Not Invoiced and nothing received."
+    },
+    {
+      "id": "FR-PAY-03",
+      "priority": "Must",
+      "requirement": "Each instalment shall record: due date, amount, status, amount received, date received, payment method (Bank transfer, Cash, Card, Other), invoice number, invoice date and a note."
+    },
+    {
+      "id": "FR-PAY-04",
+      "priority": "Must",
+      "requirement": "An authorized user shall be able to add an extra instalment, change the due date or amount of an instalment that has nothing received, and remove an instalment that has nothing received, each with a reason. An instalment with any amount received cannot be removed. Changing the contract price later never changes instalments already issued (the existing rule)."
+    },
+    {
+      "id": "FR-PAY-05",
+      "priority": "Must",
+      "requirement": "Only users with \"Payments: update\" shall create, change or remove instalments, record invoices and record receipts. Sales User, Sales Manager, Reception and CEO cannot, even for their own contracts. The rule is enforced on the server."
     },
     {
       "id": "FR-PAY-06",
@@ -948,9 +1088,9 @@
       "requirement": "Recording a receipt shall require the amount, the date received (not in the future) and the method, and shall add the amount to the amount already received. A receipt that would exceed the instalment amount is refused. The status becomes Partially Paid or Paid automatically."
     },
     {
-      "id": "FR-PAY-09",
+      "id": "FR-PAY-08",
       "priority": "Must",
-      "requirement": "A daily job shall set an instalment to Overdue when its due date has passed (plus the grace days of the Administrator, default 0) and it is Invoice Issued, Payment Pending or Partially Paid. An instalment past its due date that is still Not Invoiced keeps that status and is flagged \"Due, not invoiced\". The job records the change as done by the system and running it twice changes nothing."
+      "requirement": "Every change to an instalment shall be written to its history with who (or \"system\"), when, old and new status, the amount received and a comment, and shown on the instalment."
     },
     {
       "id": "FR-PAY-10",
@@ -958,9 +1098,259 @@
       "requirement": "The contract shall show a payment summary: total of instalments, received, outstanding, next due date and the number and amount overdue, calculated from its instalments."
     },
     {
-      "id": "NFR-ACC-03",
+      "id": "FR-PAY-12",
       "priority": "Must",
-      "requirement": "Contract amounts, instalments, receipts, outstanding amounts and all money figures on dashboards and the performance screen shall be calculated as Decimal (two decimals, half-up), never Float. The existing Float columns of Contract and ContractPayment shall be converted (Milestone 2 D4)."
+      "requirement": "Users with \"Payments: view\" shall see instalments read only, and users without \"Commercial details: view\" shall see no amounts (Reception sees no payment data at all). Payment fields are removed from API responses for users without the permission."
+    },
+    {
+      "id": "FR-CON-12",
+      "priority": "Must",
+      "requirement": "Marking a contract Pending Signature shall require start date, end date, billing period and price, and shall lock the commercial values (FR-CON-04)."
+    },
+    {
+      "id": "FR-CON-13",
+      "priority": "Must",
+      "requirement": "Activating a contract shall require the signed document (FR-CON-19). Activation generates the payment schedule (FR-PAY-02) and sets the company status to Client (Milestone 1 Q9) if it is not already."
+    },
+    {
+      "id": "FR-CON-14",
+      "priority": "Must",
+      "requirement": "Suspending and reinstating a contract shall require a reason, which is stored on the status history and shown on the contract. A suspended contract is not valid (FR-CON-20)."
+    },
+    {
+      "id": "FR-CON-15",
+      "priority": "Must",
+      "requirement": "Cancelling a contract shall require a reason. Future instalments that are still Not Invoiced are removed. Instalments already invoiced, partly paid or paid stay and must be settled or corrected by an authorized user."
+    },
+    {
+      "id": "FR-CON-18",
+      "priority": "Must",
+      "requirement": "Every status change shall be written to the contract status history with who (or \"system\"), when, the old and new status and the reason, and shown on the contract."
+    },
+    {
+      "id": "FR-CON-19",
+      "priority": "Must",
+      "requirement": "The signed contract document shall be attached to the contract as a PDF (maximum 15 MB, checked by content, not by file name). Replacing it keeps the earlier file as a previous version with date and user. Viewing and downloading requires \"Commercial details: view\" and access to the contract."
+    },
+    {
+      "id": "FR-PAY-01",
+      "priority": "Must",
+      "requirement": "Winning a deal, creating a contract and activating a contract shall be separate from confirming payment: winning a deal never creates or changes an instalment, and no user can mark an instalment Paid because of a deal or contract status."
+    },
+    {
+      "id": "NFR-SEC-06",
+      "priority": "Must",
+      "requirement": "Contract status transitions, payment permissions, payment status rules, data scope, field removal and document access shall be enforced on the server for every request. The signed document is validated by content, size and type."
+    },
+    {
+      "id": "FR-PAY-11",
+      "priority": "Must",
+      "requirement": "A Payments overview shall list instalments with filters by status, company, responsible salesperson, due date range, and contract, with totals of amount, received and outstanding for the filtered list. Scope follows the user: Sales User Own, Sales Manager Team, CEO and authorized payment users All."
+    },
+    {
+      "id": "FR-PAY-13",
+      "priority": "Should",
+      "requirement": "When an instalment becomes Overdue, the authorized payment users, the responsible salesperson and the Sales Manager shall get a notification (once per instalment), so the client can be contacted."
+    },
+    {
+      "id": "FR-PAY-14",
+      "priority": "Could",
+      "requirement": "The payments overview and a contract's instalments shall export to CSV for users who can view them. The export is recorded in the audit log."
+    },
+    {
+      "id": "FR-AUD-13",
+      "priority": "Should",
+      "requirement": "Exports of payments and performance (FR-PAY-14, FR-PRF-09) shall be recorded in the audit log with who, when and the filters used. Viewing a dashboard is not audited."
+    },
+    {
+      "id": "FR-REN-06",
+      "priority": "Must",
+      "requirement": "\"Start renewal\" shall create a deal of type Renewal for the company, linked to the contract, owned by the responsible salesperson, in the stage Interested (editable), with the company data filled in. The salesperson then prices and offers it with the Milestone 2 flow."
+    },
+    {
+      "id": "FR-REN-07",
+      "priority": "Must",
+      "requirement": "When a Renewal deal is won, \"Create contract\" (FR-CON-01) shall pre-fill the start date as the day after the previous end date and link the new contract to the previous one (previous term and renewed into). The previous contract stays unchanged in its own status and history."
+    },
+    {
+      "id": "FR-REN-10",
+      "priority": "Must",
+      "requirement": "Contracts shall never renew automatically. A renewal always goes through a deal and an offer."
+    },
+    {
+      "id": "FR-REN-02",
+      "priority": "Must",
+      "requirement": "At each lead time a reminder shall go to the responsible salesperson and to every user with \"Contracts: manage\" at Team or All scope for that contract (by default the Sales Manager), in the app and by email if enabled in notification settings. The reminder opens the contract and offers \"Start renewal\"."
+    },
+    {
+      "id": "FR-REN-03",
+      "priority": "Must",
+      "requirement": "A reminder for a contract and a lead time shall be sent once. The sent reminders shall be recorded per contract and lead time, and a failure to send is retried on the next run. A renewal contract starts with no reminders sent."
+    },
+    {
+      "id": "FR-REN-05",
+      "priority": "Must",
+      "requirement": "A Renewals screen shall list valid contracts ending in the next 30, 60 or 90 days, and contracts expired in the last 90 days, with end date, days remaining, responsible salesperson, monthly price and renewal state: Not started, In negotiation (an open renewal deal), Renewed, Not renewing. Scope follows the user (Own, Team, All)."
+    },
+    {
+      "id": "FR-REN-08",
+      "priority": "Should",
+      "requirement": "The salesperson can mark a contract \"Not renewing\" with a reason from the predefined lost-deal reasons (Milestone 1 FR-SET-06) and a note. No further reminders are sent for it."
+    },
+    {
+      "id": "FR-REN-09",
+      "priority": "Should",
+      "requirement": "A contract that ended without a renewal shall stay visible in \"Recently expired\" for 90 days so the team can win the client back, and the company status follows FR-CON-17."
+    },
+    {
+      "id": "FR-REN-11",
+      "priority": "Should",
+      "requirement": "Contract end dates and renewal dates of the user's scope shall appear in the sales calendar as read-only items that open the contract."
+    },
+    {
+      "id": "NFR-PERF-04",
+      "priority": "Should",
+      "requirement": "Each dashboard and the performance screen shall load in under 2 seconds with 2,000 deals, 5,000 activities, 500 contracts and 6,000 instalments on the staging server. The contract and payment lists shall load in under 2 seconds with the same data."
+    },
+    {
+      "id": "FR-PRF-01",
+      "priority": "Must",
+      "requirement": "Users with \"Performance: view\" shall open a Performance screen with one row per salesperson and a total row. Scope: Sales User Own (only their own row, no ranking and no other salesperson's figures), Sales Manager Team (all Sales Users), CEO All. The Administrator has no access by default."
+    },
+    {
+      "id": "FR-PRF-02",
+      "priority": "Must",
+      "requirement": "The screen shall filter by salesperson (one or several, for Sales Manager and CEO) and by date range: presets (This week, This month, Last month, This quarter, This year) and a custom range. Default is This month."
+    },
+    {
+      "id": "FR-PRF-03",
+      "priority": "Must",
+      "requirement": "For each salesperson the screen shall show: number of calls, emails, visits and meetings; companies contacted; offers created; offers sent; deals won; deals lost; total value of won deals; conversion rate; follow-ups completed; overdue follow-ups; and average time to close."
+    },
+    {
+      "id": "FR-PRF-04",
+      "priority": "Must",
+      "requirement": "The total row shall be calculated from the underlying data of the selected salespeople, not by averaging the rows (conversion rate and average time to close in particular)."
+    },
+    {
+      "id": "FR-PRF-05",
+      "priority": "Must",
+      "requirement": "Each indicator shall be attributed to the date of its own event (date of contact, date offer was marked sent, won date, lost date, completion date) in the workspace time zone, and to the salesperson responsible for the record at that time. Salespeople deactivated later keep their history."
+    },
+    {
+      "id": "FR-PRF-06",
+      "priority": "Should",
+      "requirement": "The user shall be able to compare with the previous period of the same length (each indicator shows the change)."
+    },
+    {
+      "id": "FR-PRF-07",
+      "priority": "Should",
+      "requirement": "Clicking an indicator of a row opens the underlying records (activities, offers, deals, follow-ups) with the same filters."
+    },
+    {
+      "id": "FR-PRF-08",
+      "priority": "Could",
+      "requirement": "A salesperson detail view shall show the indicators per week or month as a chart with a table view."
+    },
+    {
+      "id": "FR-PRF-09",
+      "priority": "Should",
+      "requirement": "The screen shall export the filtered table to PDF and CSV, using the existing report output. Exports are recorded in the audit log."
+    },
+    {
+      "id": "FR-PRF-10",
+      "priority": "Must",
+      "requirement": "Value figures (offers value, total value, sales value) shall be hidden for any user without \"Commercial details: view\" and removed from the API response."
+    },
+    {
+      "id": "FR-RBAC-23",
+      "priority": "Must",
+      "requirement": "The dashboard and performance endpoints shall enforce the scope on the server (FR-DSH-02, FR-PRF-01), whatever filters the client sends."
+    },
+    {
+      "id": "NFR-ACC-04",
+      "priority": "Must",
+      "requirement": "Every figure in sections 5.3 and 6.2 shall be reproduced exactly on a fixed set of test data, including the conversion rate and sales value example in 5.3 and the total-row example in FR-PRF-04."
+    },
+    {
+      "id": "FR-DSH-01",
+      "priority": "Must",
+      "requirement": "After login, each user shall land on the dashboard of their role: Sales User, Sales Manager, Administrator or CEO. Reception lands on the company search of Milestone 1 and has no dashboard. The dashboard is also reachable from the main menu."
+    },
+    {
+      "id": "FR-DSH-02",
+      "priority": "Must",
+      "requirement": "Every number shall be calculated on the server within the data scope of the user: Sales User Own, Sales Manager Team (the sales team only), Administrator and CEO All. A user cannot obtain another scope by changing the request."
+    },
+    {
+      "id": "FR-DSH-03",
+      "priority": "Must",
+      "requirement": "Dashboards shall have a period selector: Today, This week, This month (default), This quarter, This year and a custom range. Period figures (for example deals won) follow it. Figures that describe the situation now (open pipeline, active contracts) do not, and are labelled \"as of now\"."
+    },
+    {
+      "id": "FR-DSH-04",
+      "priority": "Should",
+      "requirement": "Dashboards that can be filtered by company location shall offer the predefined Area and City lists, never free text."
+    },
+    {
+      "id": "FR-DSH-05",
+      "priority": "Should",
+      "requirement": "Each figure shall show its value, its label, and whether it follows the period or is as of now. Where a list sits behind it (for example overdue follow-ups, expiring contracts, overdue instalments), clicking it opens that list already filtered."
+    },
+    {
+      "id": "FR-DSH-06",
+      "priority": "Must",
+      "requirement": "Money is shown in EUR with two decimals and the Albanian or English number format of the user. Charts have a table view with the same numbers. A dashboard with no data shows an empty state, not zeros without explanation."
+    },
+    {
+      "id": "FR-DSH-07",
+      "priority": "Must",
+      "requirement": "The dashboard shall show the time it was calculated and a refresh button. Figures are calculated when the page is opened, not stored."
+    },
+    {
+      "id": "FR-DSH-08",
+      "priority": "Must",
+      "requirement": "Figures that contain prices, offers, deal values, contract values or payments shall be hidden for any user without \"Commercial details: view\" (or \"Payments: view\" for payments), and removed from the API response."
+    },
+    {
+      "id": "FR-DSH-09",
+      "priority": "Must",
+      "requirement": "Sales User dashboard. Own leads; own active deals with a count per stage; follow-ups due today and in the next 7 days; overdue follow-ups; offers created and offers sent in the period; deals won in the period; own sales value in the period; own activity in the period (calls, emails, visits, meetings). Should: own contracts expiring soon and own overdue instalments."
+    },
+    {
+      "id": "FR-DSH-10",
+      "priority": "Must",
+      "requirement": "Sales Manager dashboard. Total leads and leads per salesperson; active deals; the full team pipeline (count and value per stage); offers created and sent; follow-ups due and overdue, in total and per salesperson; deals won and lost; conversion rate in total and per salesperson; total sales value and per salesperson; activity per salesperson; lost-deal analysis (count and value per lost reason). Should: pending discount approvals, contracts expiring soon and overdue instalments of the team."
+    },
+    {
+      "id": "FR-DSH-11",
+      "priority": "Must",
+      "requirement": "Administrator dashboard. Pricing configuration summary (discount cap, active employee bands, risk surcharges, visit frequencies, price zones, and the date of the last change of each); current users per role and inactive users; recent changes from the audit log (the last 20, with a link to the full log); items needing attention (for example cities in no price zone, a role with no users). It shows no sales figures."
+    },
+    {
+      "id": "FR-DSH-12",
+      "priority": "Must",
+      "requirement": "CEO dashboard. Total sales pipeline (count and value); sales value in the period; revenue in the period; monthly recurring value of active contracts; sales performance over time (per month); team performance (per salesperson table); contracts: active, expired and expiring soon, with count and value; payments: count and amount per payment status, outstanding and overdue; operational indicators: overdue follow-ups, pending discount approvals, offers waiting; company counts per status. A place for the Wellness+ indicators is prepared and stays empty until Milestone 4."
+    },
+    {
+      "id": "FR-DSH-13",
+      "priority": "Must",
+      "requirement": "The CEO dashboard is read only. It can open any list behind a figure but not edit it (Milestone 1 Q7 default)."
+    },
+    {
+      "id": "NFR-USE-03",
+      "priority": "Must",
+      "requirement": "All Milestone 3 screens, including the dashboards, Renewals, Payments overview and Performance screen, shall work on desktop and mobile from 360 px wide."
+    },
+    {
+      "id": "NFR-I18N-03",
+      "priority": "Must",
+      "requirement": "All new screens, messages, notifications, status labels and chart labels shall be translated in sq and en."
+    },
+    {
+      "id": "NFR-MNT-03",
+      "priority": "Must",
+      "requirement": "The Milestone 3 requirement IDs shall be added to scripts/srs-requirements.json as each implementation slice starts, so the CI traceability check covers them."
     }
   ]
 }

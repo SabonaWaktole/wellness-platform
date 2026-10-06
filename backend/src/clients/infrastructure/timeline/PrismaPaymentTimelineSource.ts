@@ -32,8 +32,9 @@ export class PrismaPaymentTimelineSource implements TimelineSource {
         planName: payment.contract.planName,
         paymentId: payment.id,
         status: payment.status,
-        amount: payment.amount,
-        paidAmount: payment.paidAmount,
+        // Decimal(12,2) goes out as a two-decimal string (NFR-ACC-03).
+        amount: payment.amount.toFixed(2),
+        paidAmount: payment.paidAmount.toFixed(2),
         dueDate: payment.dueDate.toISOString(),
         method: payment.method,
       },

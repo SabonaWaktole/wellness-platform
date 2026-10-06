@@ -41,6 +41,8 @@ export const PERMISSION_CATALOGUE: readonly PermissionCatalogueEntry[] = [
   // Contracts
   { key: 'contracts.validity.view', group: 'contracts', supportsScope: true },
   { key: 'contracts.manage', group: 'contracts', supportsScope: true },
+  // Suspend, cancel and reinstate (M3 FR-RBAC-19).
+  { key: 'contracts.terminate', group: 'contracts', supportsScope: true },
 
   // Quotations
   { key: 'quotations.manage', group: 'quotations', supportsScope: true },
@@ -69,9 +71,9 @@ export const PERMISSION_CATALOGUE: readonly PermissionCatalogueEntry[] = [
   { key: 'activityResults.manage', group: 'sales', supportsScope: false, milestone: 'M2' },
 
   // Payments (M3) — groundwork only, per cross-cutting rule 9.
-  { key: 'payments.view', group: 'payments', supportsScope: true, milestone: 'M3' },
-  { key: 'payments.update', group: 'payments', supportsScope: false, milestone: 'M3' },
-  { key: 'performance.view', group: 'performance', supportsScope: true, milestone: 'M3' },
+  { key: 'payments.view', group: 'payments', supportsScope: true },
+  { key: 'payments.update', group: 'payments', supportsScope: false },
+  { key: 'performance.view', group: 'performance', supportsScope: true },
 
   // Administration
   { key: 'users.manage', group: 'admin', supportsScope: false },

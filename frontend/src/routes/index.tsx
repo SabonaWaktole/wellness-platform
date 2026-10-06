@@ -21,6 +21,7 @@ import { ListsSettingsPage } from '../pages/settings/lists/ListsSettingsPage';
 import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPage';
 import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
+import { ContractSettingsPage } from '../pages/settings/contracts/ContractSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
 import { InventoryList } from '../pages/inventory/InventoryList';
@@ -46,6 +47,9 @@ import { InvoiceDetail } from '../pages/invoices/InvoiceDetail';
 import { ContractList } from '../pages/contracts/ContractList';
 import { ContractDetail } from '../pages/contracts/ContractDetail';
 import { ContractFormPage } from '../pages/contracts/ContractFormPage';
+import { Renewals } from '../pages/renewals/Renewals';
+import { Performance } from '../pages/performance/Performance';
+import { PaymentsOverview } from '../pages/payments/PaymentsOverview';
 import { DealsPage } from '../pages/deals/DealsPage';
 import { PipelineBoardContent } from '../pages/deals/PipelineBoardContent';
 import { DealListContent } from '../pages/deals/DealListContent';
@@ -65,8 +69,9 @@ import { TenantGuard } from './TenantGuard';
 // of the whole tenant, anything narrower (OWN/TEAM) or absent is the staff
 // dashboard. We will refine this as we build out the AppShell properly.
 import { usePermissionScope } from '../hooks/usePermission';
+import { DashboardLanding } from '../pages/dashboard/DashboardLanding';
 
-const DashboardSelector = () => {
+const LegacyDashboardSelector = () => {
   const scope = usePermissionScope('companies.view');
 
   if (scope === 'ALL') {
@@ -74,6 +79,11 @@ const DashboardSelector = () => {
   }
   return <StaffShell />;
 };
+
+// M3 Slices 13 and 14 (FR-DSH-01): each role lands on its own dashboard: Sales User, Sales Manager,
+// Administrator and CEO. Reception goes to the company search. The dashboard above is only the fallback for
+// when the server cannot say which dashboard is the user's.
+const DashboardSelector = () => <DashboardLanding fallback={<LegacyDashboardSelector />} />;
 
 export const routes: RouteObject[] = [
   /*
@@ -222,6 +232,16 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="settings.manage">
               <StatusesSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/contracts',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="settings.manage">
+              <ContractSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),
@@ -517,6 +537,39 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ContractDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The Payments overview (M3 Slice 9, FR-PAY-11).
+        path: 'payments',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="payments.view">
+              <PaymentsOverview />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The Renewals screen (M3 Slice 11, FR-REN-05).
+        path: 'renewals',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="contracts.validity.view">
+              <Renewals />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // The Performance screen (M3 Slice 12, FR-PRF-01).
+        path: 'performance',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="performance.view">
+              <Performance />
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

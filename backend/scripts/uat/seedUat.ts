@@ -6,6 +6,7 @@ import { ClientStatus } from '../../src/clients/domain/enums/ClientStatus';
 import { ITokenService } from '../../src/auth/application/ports/ITokenService';
 import { UserRole } from '../../src/auth/domain/enums/UserRole';
 import { OPEN_DEAL_STAGES } from '../../src/deals/domain/DealStage';
+import { seedActiveContract, seedM3, SeedM3Result } from './seedM3';
 
 /**
  * The staging data Milestone 1 UAT runs on (deploy/uat-milestone-1.md): one
@@ -23,7 +24,7 @@ import { OPEN_DEAL_STAGES } from '../../src/deals/domain/DealStage';
  */
 
 export interface UatUserSpec {
-  key: 'salesA' | 'salesB' | 'manager' | 'reception' | 'ceo' | 'roleChange' | 'leaver';
+  key: 'salesA' | 'salesB' | 'salesC' | 'manager' | 'reception' | 'ceo' | 'roleChange' | 'leaver';
   local: string;
   firstName: string;
   lastName: string;
@@ -33,6 +34,8 @@ export interface UatUserSpec {
 export const UAT_USERS: UatUserSpec[] = [
   { key: 'salesA', local: 'uat.sales.a', firstName: 'Arta', lastName: 'Shitjet', roleKey: RoleKey.SalesUser },
   { key: 'salesB', local: 'uat.sales.b', firstName: 'Besnik', lastName: 'Shitjet', roleKey: RoleKey.SalesUser },
+  // M3 Slice 15: the SRS §5.3 conversion example (4 won, 6 lost) is this user's last month and nothing else.
+  { key: 'salesC', local: 'uat.sales.c', firstName: 'Dorina', lastName: 'Shitjet', roleKey: RoleKey.SalesUser },
   { key: 'manager', local: 'uat.manager', firstName: 'Mira', lastName: 'Menaxhere', roleKey: RoleKey.SalesManager },
   { key: 'reception', local: 'uat.reception', firstName: 'Rea', lastName: 'Recepsioni', roleKey: RoleKey.Reception },
   { key: 'ceo', local: 'uat.ceo', firstName: 'Cela', lastName: 'Drejtore', roleKey: RoleKey.Ceo },
@@ -72,6 +75,8 @@ export const UAT_COMPANIES: UatCompanySpec[] = [
 export const BULK_PREFIX = 'UAT Bulk Company ';
 export const BULK_DEAL_PREFIX = 'UAT Bulk Deal ';
 const BULK_FOLLOW_UP_PREFIX = 'UAT bulk follow-up ';
+/** Marks the three months of activity UAT-6 reads the Performance screen on (M3 Slice 12). */
+const PERFORMANCE_PREFIX = 'UAT performance ';
 /** Marks the named follow-ups and meetings, so a re-run adds only what is missing. */
 export const UAT_PLANNED_PREFIX = 'UAT planned: ';
 /** The company whose second deal is the one UAT-2 loses. */
@@ -95,6 +100,10 @@ export interface SeedUatOptions {
   bulkDeals?: number;
   /** Total bulk follow-ups wanted for the NFR-PERF-03 calendar measurement (5000), spread over the bulk companies; 0 for none. */
   bulkFollowUps?: number;
+  /** Total bulk contracts, instalments and activities wanted for the NFR-PERF-04 measurement (500, 6000, 5000); 0 for none. */
+  bulkContracts?: number;
+  bulkInstalments?: number;
+  bulkActivities?: number;
   log?: (line: string) => void;
 }
 
@@ -107,6 +116,10 @@ export interface SeedUatResult {
   plannedCreated: number;
   bulkDealsCreated: number;
   bulkFollowUpsCreated: number;
+  /** The three months of activity behind the Performance screen (UAT-6). */
+  performanceCreated: number;
+  /** The Milestone 3 contracts, instalments and won deals, and the bulk volumes (SRS §9.1, NFR-PERF-04). */
+  m3: SeedM3Result;
 }
 
 class Api {
@@ -243,20 +256,7 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     });
 
     if (spec.contract) {
-      const year = new Date().getFullYear();
-      const contract = await api.call('POST', '/contracts', {
-        clientId: company.id,
-        planName: 'Paketa Wellness UAT',
-        amount: 2400,
-        billingPeriod: 'ANNUAL',
-        startsAt: `${year}-01-01`,
-        endsAt: `${year}-12-31`,
-        assignedUserId: ownerId,
-      });
-      const contractId = contract.id;
-      await api.call('POST', `/contracts/${contractId}/activate`, {});
-      const added = await api.call('POST', `/contracts/${contractId}/payments`, { dueDate: `${year}-01-15`, amount: 2400 });
-      await api.call('POST', `/contracts/${contractId}/payments/${added.payment.id}/record`, { action: 'PAY' });
+      await seedActiveContract({ prisma, tenantId, adminId: admin.id, clientId: company.id, ownerId, today: new Date() });
     }
   }
 
@@ -484,5 +484,102 @@ export async function seedUat(options: SeedUatOptions): Promise<SeedUatResult> {
     }
   }
 
-  return { users, companiesCreated, bulkCreated, dealsCreated, plannedCreated, bulkDealsCreated, bulkFollowUpsCreated };
+  // --- Three months of activity for the Performance screen (M3 Slice 12, UAT-6) ---
+  // Straight to the database, for Sales User A and B: calls, emails, visits and meetings on their
+  // companies, offers, deals won and lost (with the owner on the history row) and completed
+  // follow-ups, spread over the last 13 weeks so "This month", "Last month" and the chart all have
+  // numbers. Written once: it does nothing when the marker content already exists.
+  const performanceSeeded = await prisma.interaction.count({ where: { tenantId, content: { startsWith: PERFORMANCE_PREFIX } } });
+  let performanceCreated = 0;
+  if (performanceSeeded === 0) {
+    const day = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const channels = ['CALL', 'CALL', 'CALL', 'EMAIL', 'VISIT', 'MEETING', 'ONLINE_MEETING'];
+    for (const [salesIndex, salesperson] of [users.salesA, users.salesB].entries()) {
+      // Companies of their own, so the deals and activities here never change what UAT-1 and UAT-2
+      // read on the named companies.
+      const performanceCompanies = Array.from({ length: 3 }, (_, i) => `${PERFORMANCE_PREFIX}company ${salesIndex === 0 ? 'A' : 'B'}${i + 1}`);
+      const have = new Set((await prisma.client.findMany({ where: { tenantId, name: { in: performanceCompanies } }, select: { name: true } })).map((c) => c.name));
+      const missingCompanies = performanceCompanies.filter((name) => !have.has(name));
+      if (missingCompanies.length > 0) {
+        await prisma.client.createMany({
+          data: missingCompanies.map((name) => ({
+            id: randomUUID(), tenantId, name, status: 'CLIENT', customFieldValues: {}, lastUpdatedByUserId: admin.id, assignedUserId: salesperson.id,
+          })) as any,
+        });
+      }
+      const companies = await prisma.client.findMany({ where: { tenantId, name: { in: performanceCompanies } }, select: { id: true }, orderBy: { name: 'asc' } });
+      const pick = (n: number) => companies[n % companies.length].id;
+      // About one activity a day on weekdays, more for A than B so the rows differ.
+      const interactions = Array.from({ length: 91 }, (_, offset) => offset)
+        .filter((offset) => offset % (salesIndex === 0 ? 1 : 2) === 0)
+        .map((offset) => ({
+          id: randomUUID(),
+          tenantId,
+          clientId: pick(offset),
+          authorUserId: salesperson.id,
+          channel: channels[(offset + salesIndex) % channels.length],
+          content: `${PERFORMANCE_PREFIX}${offset}`,
+          occurredAt: new Date(now - offset * day - 3 * 60 * 60 * 1000),
+          createdAt: new Date(now - offset * day - 3 * 60 * 60 * 1000),
+        }));
+      await prisma.interaction.createMany({ data: interactions });
+
+      const stamps = (offset: number) => new Date(now - offset * day);
+      // A deal won every 18 days (value 500 + 90 per deal) and one lost every 12 days.
+      const closed = [
+        ...Array.from({ length: 5 }, (_, i) => ({ result: 'WON' as const, offset: 6 + i * 18, n: i })),
+        ...Array.from({ length: 7 }, (_, i) => ({ result: 'LOST' as const, offset: 4 + i * 12, n: i })),
+      ];
+      for (const { result, offset, n } of closed) {
+        const id = randomUUID();
+        const closedOn = new Date(Date.UTC(stamps(offset).getUTCFullYear(), stamps(offset).getUTCMonth(), stamps(offset).getUTCDate()));
+        await prisma.deal.create({
+          data: {
+            id, tenantId, clientId: pick(n), ownerUserId: salesperson.id, createdByUserId: salesperson.id, type: 'NEW_CONTRACT', stageKey: result,
+            title: `${PERFORMANCE_PREFIX}${result.toLowerCase()} ${n}`, createdAt: new Date(closedOn.getTime() - (12 + n * 3) * day), updatedAt: closedOn, closedAt: closedOn,
+            ...(result === 'WON' ? { wonAt: closedOn, agreedMonthlyPrice: String(50 + n * 5), agreedAnnualValue: (500 + n * 90).toFixed(2) } : { lostAt: closedOn }),
+          } as any,
+        });
+        await prisma.dealStageHistory.create({
+          data: { id: randomUUID(), tenantId, dealId: id, fromStage: 'NEGOTIATION', toStage: result, changedByUserId: salesperson.id, ownerUserId: salesperson.id, at: closedOn },
+        });
+      }
+      await prisma.quotation.createMany({
+        data: Array.from({ length: 8 }, (_, i) => ({
+          id: randomUUID(), tenantId, clientId: pick(i), createdByUserId: salesperson.id, status: i % 2 === 0 ? 'SENT' : 'DRAFT', version: 1,
+          createdAt: stamps(3 + i * 10), sentAt: i % 2 === 0 ? stamps(2 + i * 10) : null,
+        })) as any,
+      });
+      await prisma.appointment.createMany({
+        data: Array.from({ length: 10 }, (_, i) => ({
+          id: randomUUID(), tenantId, clientId: pick(i), assignedUserId: salesperson.id, kind: 'FOLLOW_UP', type: 'CALL', status: 'COMPLETED',
+          scheduledAt: stamps(5 + i * 8), completedAt: stamps(i % 3 === 0 ? 4 + i * 8 : 5 + i * 8), notes: `${PERFORMANCE_PREFIX}follow-up ${i}`,
+          createdAt: stamps(9 + i * 8), updatedAt: stamps(5 + i * 8),
+        })) as any,
+      });
+      performanceCreated += interactions.length + closed.length + 8 + 10;
+    }
+    log(`performance + ${performanceCreated} activities, deals, offers and follow-ups over 13 weeks`);
+  }
+
+  // --- Milestone 3: contracts in every status, instalments, the example month and the volumes ---
+  const bulkCompanyIds = (
+    await prisma.client.findMany({ where: { tenantId, name: { startsWith: BULK_PREFIX } }, select: { id: true }, orderBy: { name: 'asc' } })
+  ).map((c) => c.id);
+  const m3 = await seedM3({
+    prisma,
+    tenantId,
+    adminId: admin.id,
+    salesA: users.salesA.id,
+    salesB: users.salesB.id,
+    salesC: users.salesC.id,
+    bulkContracts: options.bulkContracts ?? 0,
+    bulkInstalments: options.bulkInstalments ?? 0,
+    bulkActivities: options.bulkActivities ?? 0,
+    bulkCompanyIds,
+    log,
+  });
+
+  return { users, companiesCreated, bulkCreated, dealsCreated, plannedCreated, bulkDealsCreated, bulkFollowUpsCreated, performanceCreated, m3 };
 }

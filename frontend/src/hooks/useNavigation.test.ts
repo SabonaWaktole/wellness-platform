@@ -54,6 +54,29 @@ describe('useNavigation', () => {
       expect(idsFor(RECEPTION)).not.toContain('reports');
     });
 
+    it('FR-PAY-11 offers Payments to a permissions map holding payments.view, at any scope, and never to Reception', () => {
+      const MANAGER = userWith({ 'payments.view': 'TEAM' });
+      expect(idsFor(MANAGER)).toContain('payments');
+      expect(idsFor(userWith({ 'payments.view': 'OWN' }))).toContain('payments');
+      expect(idsFor(RECEPTION)).not.toContain('payments');
+      expect(idsFor(SALES_USER)).not.toContain('payments');
+    });
+
+    it('FR-REN-05 offers Renewals to everyone who may read contracts, at any scope', () => {
+      expect(idsFor(SALES_USER)).toContain('renewals');
+      expect(idsFor(userWith({ 'contracts.validity.view': 'TEAM' }))).toContain('renewals');
+      expect(idsFor(RECEPTION)).toContain('renewals');
+      expect(idsFor(userWith({ 'companies.view': 'ALL' }))).not.toContain('renewals');
+    });
+
+    it('FR-PRF-01 offers Performance to everyone holding performance.view, at any scope, and to no one else', () => {
+      expect(idsFor(userWith({ 'performance.view': 'OWN' }))).toContain('performance');
+      expect(idsFor(userWith({ 'performance.view': 'TEAM' }))).toContain('performance');
+      expect(idsFor(userWith({ 'performance.view': 'ALL' }))).toContain('performance');
+      expect(idsFor(RECEPTION)).not.toContain('performance');
+      expect(idsFor(ADMINISTRATOR)).not.toContain('performance');
+    });
+
     it('offers Clients to everyone holding companies.view, at any scope', () => {
       expect(idsFor(SALES_USER)).toContain('clients');
       expect(idsFor(RECEPTION)).toContain('clients');
@@ -195,7 +218,7 @@ describe('useNavigation', () => {
 
       expect(afterwards).toEqual(first);
       expect(idsFor(ADMINISTRATOR)).toEqual([
-        'dashboard', 'clients', 'follow-ups', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'reports', 'settings',
+        'dashboard', 'clients', 'follow-ups', 'appointments', 'inventory', 'quotations', 'invoices', 'contracts', 'renewals', 'reports', 'settings',
       ]);
     });
 

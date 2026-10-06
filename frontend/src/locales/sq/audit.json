@@ -27,7 +27,8 @@
     "CREATE": "Krijuar",
     "UPDATE": "Përditësuar",
     "DELETE": "Fshirë",
-    "STATUS_CHANGE": "Statusi ndryshuar"
+    "STATUS_CHANGE": "Statusi ndryshuar",
+    "EXPORT": "Eksportuar"
   },
   "entityTypes": {
     "Contract": "Kontratë",
@@ -55,7 +56,9 @@
     "SalesScript": "Skripti i shitjes",
     "Deal": "Marrëveshje",
     "Offer": "Ofertë",
-    "DiscountApproval": "Miratim zbritjeje"
+    "DiscountApproval": "Miratim zbritjeje",
+    "ContractSettings": "Cilësimet e kontratave",
+    "Performance": "Eksporti i performancës"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
@@ -92,6 +95,11 @@
     "notes": "Shënime",
     "note": "Shënim",
     "renewedFromContractId": "Rinovuar nga",
+    "notRenewingReasonId": "Arsyeja e mos-rinovimit",
+    "notRenewingNote": "Shënimi i mos-rinovimit",
+    "renewalDealId": "Marrëveshja e rinovimit",
+    "renewedIntoContractId": "Rinovuar në",
+    "renewalOfContractId": "Rinovon kontratën",
     "generatedPayments": "Pagesat e gjeneruara",
     "cancelReason": "Arsyeja e anulimit",
     "dueDate": "Afati i pagesës",

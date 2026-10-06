@@ -6,7 +6,8 @@ import { instantAtMinutes, minutesIntoDay, snapMinutes, SNAP_MINUTES } from '../
 import { layoutDay } from '../../utils/calendarLayout';
 import type { CalendarItem } from '../../types/calendar';
 import { CalendarChip } from './CalendarChip';
-import { dayAsDate, groupByDay } from './calendarGrouping';
+import { dayAsDate, groupByDay, groupContractsByDay } from './calendarGrouping';
+import { ContractDateChip } from './ContractDateChip';
 import { isOpen } from './calendarStyle';
 import type { CalendarViewProps } from './CalendarMonthView';
 import styles from './Calendar.module.css';
@@ -17,7 +18,7 @@ const MINUTE_PX = HOUR_PX / 60;
 /** The grid opens scrolled to this hour, or to the first item if it is earlier. */
 const OPENS_AT_HOUR = 7;
 
-export interface CalendarTimeGridProps extends Pick<CalendarViewProps, 'days' | 'items' | 'today' | 'onOpen' | 'personColour' | 'onPickDay'> {
+export interface CalendarTimeGridProps extends Pick<CalendarViewProps, 'days' | 'items' | 'today' | 'onOpen' | 'personColour' | 'onPickDay' | 'contractItems' | 'onOpenContract'> {
   /** FR-CAL-07: drops an item on a new slot. Absent where the viewer cannot change items. */
   onMove?: (item: CalendarItem, day: string, minutes: number) => void;
   /** Which items the viewer may move: a follow-up and a planned item are changed under different permissions. */
@@ -37,11 +38,12 @@ interface DragState {
  * minutes (FR-CAL-07); there is no drag on touch, where Reschedule in the
  * item panel does the same.
  */
-export const CalendarTimeGrid: React.FC<CalendarTimeGridProps> = ({ days, items, today, onOpen, onPickDay, personColour, onMove, canMove }) => {
+export const CalendarTimeGrid: React.FC<CalendarTimeGridProps> = ({ days, items, today, onOpen, onPickDay, personColour, onMove, canMove, contractItems = [], onOpenContract }) => {
   const { t } = useTranslation('appointments');
   const dates = useDateFormat();
   const finePointer = useMediaQuery('(pointer: fine)', true);
   const byDay = useMemo(() => groupByDay(items, dates.dayKey), [items, dates.dayKey]);
+  const contractsByDay = useMemo(() => groupContractsByDay(contractItems), [contractItems]);
   const scroller = useRef<HTMLDivElement | null>(null);
   const drag = useRef<DragState | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -87,6 +89,14 @@ export const CalendarTimeGrid: React.FC<CalendarTimeGridProps> = ({ days, items,
             <button type="button" className={styles.dayHeadButton} onClick={() => onPickDay(key)} aria-current={key === today ? 'date' : undefined}>
               {label(key, { weekday: 'short', day: 'numeric', month: 'short' })}
             </button>
+            {/* Contract end and renewal dates have no time: they sit with the day's heading (FR-REN-11). */}
+            {(contractsByDay.get(key) ?? []).length > 0 && (
+              <div className={styles.dayHeadContracts}>
+                {(contractsByDay.get(key) ?? []).map((item) => (
+                  <ContractDateChip key={item.id} item={item} onOpen={(id) => onOpenContract?.(id)} personColour={item.assignedUserId ? personColour?.(item.assignedUserId) : undefined} />
+                ))}
+              </div>
+            )}
           </div>
         ))}
 
@@ -168,7 +178,7 @@ export const CalendarTimeGrid: React.FC<CalendarTimeGridProps> = ({ days, items,
           );
         })}
       </div>
-      {days.every((key) => !byDay.has(key)) && <p className={styles.empty}>{days.length === 1 ? t('calendar.emptyDay') : t('calendar.emptyWeek')}</p>}
+      {days.every((key) => !byDay.has(key) && !contractsByDay.has(key)) && <p className={styles.empty}>{days.length === 1 ? t('calendar.emptyDay') : t('calendar.emptyWeek')}</p>}
     </div>
   );
 };

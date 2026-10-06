@@ -134,6 +134,18 @@ describe('Permission matrix (SRS §4.2)', () => {
     });
   }
 
+  /**
+   * Routes whose permission is not the whole rule: the use case also checks the role the dashboard is for
+   * (FR-DSH-01, FR-DSH-02), so a role that holds `deals.view` still gets a 403 for another role's dashboard.
+   * The route is allowed only for the roles listed (a role copied from one follows it).
+   */
+  const ROLE_SPECIFIC: Record<string, readonly RoleKey[]> = {
+    'GET /api/:tenantSlug/dashboard/sales-user': [RoleKey.SalesUser],
+    'GET /api/:tenantSlug/dashboard/sales-manager': [RoleKey.SalesManager],
+    'GET /api/:tenantSlug/dashboard/administrator': [RoleKey.Administrator],
+    'GET /api/:tenantSlug/dashboard/ceo': [RoleKey.Ceo],
+  };
+
   const gatedRoutes = routeTable(createApp()).filter(
     (route): route is RouteEntry & { gate: Extract<RouteEntry['gate'], { kind: 'permission' }> } =>
       route.path.startsWith('/api/:tenantSlug/') && route.gate.kind === 'permission'
@@ -148,7 +160,8 @@ describe('Permission matrix (SRS §4.2)', () => {
       const url = route.path.replace(':tenantSlug', tenantSlug).replace(/:([A-Za-z]+)/g, (_, name: string) => REAL_PARAMS[name] ?? FAKE_ID);
       const label = `${route.method} ${route.path} [${route.gate.key}${route.gate.minScope ? `:${route.gate.minScope}` : ''}]`;
       for (const roleKey of Object.values(RoleKey)) {
-        const allowed = gateAllows(roleKey, route.gate);
+        const forRoles = ROLE_SPECIFIC[`${route.method} ${route.path}`];
+        const allowed = gateAllows(roleKey, route.gate) && (!forRoles || forRoles.includes(roleKey));
         it(`${label} — ${roleKey} ${allowed ? 'is allowed (not 403)' : 'is forbidden (403)'}`, async () => {
           const method = route.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete';
           let req = request(app)[method](url).set('Authorization', `Bearer ${tokens[roleKey]}`);
@@ -271,6 +284,12 @@ describe('Permission matrix (SRS §4.2)', () => {
       permissionKey: 'settings.manage',
       request: (t) =>
         request(app).patch(`/api/${tenantSlug}/lookups/risk-levels/nonexistent`).set('Authorization', `Bearer ${t}`).send({}),
+    },
+    {
+      label: 'settings.manage — PATCH /settings/contracts',
+      permissionKey: 'settings.manage',
+      request: (t) =>
+        request(app).patch(`/api/${tenantSlug}/settings/contracts`).set('Authorization', `Bearer ${t}`).send({ expiringSoonDays: 30 }),
     },
     {
       label: 'settings.manage — PATCH /status-labels/contract/:key',

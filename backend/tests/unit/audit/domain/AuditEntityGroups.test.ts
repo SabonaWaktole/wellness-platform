@@ -8,7 +8,7 @@ describe('audit entity groups (FR-AUD-10)', () => {
   });
 
   it('FR-AUD-10 a group expands to its entity types', () => {
-    expect(typesForGroup('contracts')).toEqual(['Contract', 'ContractPayment']);
+    expect(typesForGroup('contracts')).toEqual(['Contract', 'ContractPayment', 'ContractSettings']);
     expect(typesForGroup('access')).toContain('Workspace');
   });
 });

@@ -1,0 +1,57 @@
+{
+  "breadcrumb": "CRM > Rinovimet",
+  "title": "Rinovimet",
+  "tabsLabel": "Periudha e rinovimit",
+  "tabs": {
+    "30": "30 ditët e ardhshme",
+    "60": "60 ditët e ardhshme",
+    "90": "90 ditët e ardhshme",
+    "RECENTLY_EXPIRED": "Skaduar së fundmi"
+  },
+  "filterSearch": "Kompania ose kontrata",
+  "searchPlaceholder": "Emri i kompanisë ose numri i kontratës...",
+  "filterSalesperson": "Shitësi",
+  "all": "Të gjitha",
+  "columnContract": "Kontrata",
+  "columnCompany": "Kompania",
+  "columnSalesperson": "Shitësi",
+  "columnEnds": "Mbaron",
+  "columnPrice": "Çmimi mujor",
+  "columnState": "Rinovimi",
+  "columnActions": "Veprime",
+  "daysLeft_one": "edhe {{count}} ditë",
+  "daysLeft_other": "edhe {{count}} ditë",
+  "endedDaysAgo_one": "Ka mbaruar {{count}} ditë më parë",
+  "endedDaysAgo_other": "Ka mbaruar {{count}} ditë më parë",
+  "state": {
+    "NOT_STARTED": "Nuk ka filluar",
+    "IN_NEGOTIATION": "Në negocim",
+    "RENEWED": "E rinovuar",
+    "NOT_RENEWING": "Nuk rinovohet"
+  },
+  "openDeal": "Hap marrëveshjen",
+  "renewedBy": "Rinovuar nga {{number}}",
+  "startRenewal": "Fillo rinovimin",
+  "markNotRenewing": "Nuk rinovohet",
+  "undoNotRenewing": "Anulo",
+  "notRenewing": {
+    "title": "Nuk rinovohet",
+    "hint": "Nuk do të dërgohen më kujtesa për kontratën e {{company}}. Thoni pse nuk do të rinovohet.",
+    "reason": "Arsyeja",
+    "note": "Shënim",
+    "cancel": "Anulo",
+    "confirm": "Shëno si \"nuk rinovohet\"",
+    "done": "U shënua si \"nuk rinovohet\".",
+    "undone": "Kontrata rinovohet sërish.",
+    "reasonsFailed": "Arsyet nuk mund të ngarkoheshin."
+  },
+  "empty": {
+    "30": "Asgjë nuk mbaron në 30 ditët e ardhshme",
+    "60": "Asgjë nuk mbaron në 60 ditët e ardhshme",
+    "90": "Asgjë nuk mbaron në 90 ditët e ardhshme",
+    "RECENTLY_EXPIRED": "Asnjë kontratë nuk ka mbaruar në 90 ditët e fundit"
+  },
+  "emptyMessage": "Provoni një periudhë tjetër ose ndryshoni filtrat.",
+  "failed": "Rinovimet nuk mund të ngarkoheshin.",
+  "items": "kontrata"
+}

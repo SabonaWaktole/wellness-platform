@@ -16,6 +16,7 @@
     "columnContact": "Kontakti",
     "columnAssigned": "Caktuar tek",
     "columnStatus": "Statusi",
+    "columnValidity": "Kontrata",
     "empty": "Ende asnjë klient",
     "emptyFiltered": "Asnjë klient nuk përputhet me kërkimin",
     "actionsFor": "Veprimet për {{name}}",

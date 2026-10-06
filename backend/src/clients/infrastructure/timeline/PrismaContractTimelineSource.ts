@@ -22,7 +22,8 @@ export class PrismaContractTimelineSource implements TimelineSource {
     });
 
     return contracts.flatMap((contract) => {
-      const reference = contractReference(contract.id);
+      // The number from M3 Slice 4 (FR-CON-09); a Legacy contract keeps its old reference (D3).
+      const reference = contract.number ?? contractReference(contract.id);
       const created: TimelineEntry = {
         id: `contract:${contract.id}`,
         category: this.category,
@@ -36,7 +37,8 @@ export class PrismaContractTimelineSource implements TimelineSource {
           startsAt: contract.startsAt.toISOString(),
           endsAt: contract.endsAt.toISOString(),
           billingPeriod: contract.billingPeriod,
-          amount: contract.amount,
+          amount: contract.amount.toFixed(2),
+          number: contract.number,
         },
       };
       const changes: TimelineEntry[] = contract.statusHistory.map((change) => ({

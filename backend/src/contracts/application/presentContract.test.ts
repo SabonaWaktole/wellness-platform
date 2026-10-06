@@ -28,10 +28,16 @@ const keysOf = (value: unknown): string[] => {
 };
 const MONEY = /amount|price|payment|paid|outstanding|overdue|total/i;
 
+const LINKS = {
+  renewedFrom: { id: 'c0', number: 'CTR-2025-0001' },
+  renewedInto: null,
+  openDealId: 'deal-1',
+};
+
 describe('presentContract (FR-RBAC-06)', () => {
   it('gives the Administrator the whole contract', () => {
     const view = presentContract(contract(), administrator());
-    expect(view.amount).toBe(100);
+    expect(view.amount).toBe('100.00');
     expect(view.paymentSummary).toBeDefined();
     expect(view.notes).toBe('Discount agreed at 10%');
   });
@@ -41,20 +47,23 @@ describe('presentContract (FR-RBAC-06)', () => {
 
     expect(view).toEqual({
       id: 'c1',
-      clientId: 'client-1',
-      clientName: 'Acme',
-      planName: 'Gold',
+      number: null,
       status: 'DRAFT',
       startsAt: new Date('2026-01-01'),
       endsAt: new Date('2026-12-31'),
-      daysUntilExpiry: expect.any(Number),
+      company: { id: 'client-1', name: 'Acme' },
     });
     expect(keysOf(view).filter((key) => MONEY.test(key))).toEqual([]);
   });
 
+  it('FR-RBAC-21: Reception gets exactly number, status, validity, start, end and company (and the id it opens by)', () => {
+    const view = presentContract(contract(), reception(), { today: new Date('2026-06-01'), expiringSoonDays: 30 });
+    expect(Object.keys(view).sort()).toEqual(['company', 'endsAt', 'id', 'number', 'startsAt', 'status', 'validity']);
+  });
+
   it('keeps the money for a reader who holds commercial.view and payments.view (the CEO)', () => {
     const view = presentContract(contract(), ceo());
-    expect(view.amount).toBe(100);
+    expect(view.amount).toBe('100.00');
     expect(view.paymentSummary).toBeDefined();
     expect(view.notes).toBeUndefined();
   });
@@ -66,12 +75,21 @@ describe('presentContract (FR-RBAC-06)', () => {
 
   it('drops payment rows and history from Reception\'s detail view', () => {
     const detail = presentContractDetail(
-      { contract: contract(), payments: [{ id: 'p1', amount: 100 } as any], history: [{ id: 'h1' } as any], permittedActions: [] },
+      { contract: contract(), payments: [], history: [{ id: 'h1' } as any], documents: [{ id: 'd1' }], permittedActions: [], renewal: LINKS },
       reception()
     );
+    expect(detail).not.toHaveProperty('renewal');
     expect(detail).not.toHaveProperty('payments');
+    expect(detail).not.toHaveProperty('documents');
     expect(detail.history).toEqual([]);
     expect(keysOf(detail).filter((key) => MONEY.test(key))).toEqual([]);
+  });
+
+  it('FR-RBAC-21: the open renewal deal needs commercial.view; the term links need contracts.manage', () => {
+    const detail = (access: ReturnType<typeof administrator>) =>
+      presentContractDetail({ contract: contract(), payments: [], history: [], documents: [], permittedActions: [], renewal: LINKS }, access) as any;
+    expect(detail(administrator()).renewal).toEqual(LINKS);
+    expect(detail(administrator({ revoke: ['commercial.view'] })).renewal).toEqual({ renewedFrom: LINKS.renewedFrom, renewedInto: LINKS.renewedInto });
   });
 
   it('drops what a client owes from Reception\'s client summary', () => {

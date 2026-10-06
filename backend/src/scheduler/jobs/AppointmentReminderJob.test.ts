@@ -28,9 +28,16 @@ describe('AppointmentReminderJob', () => {
       listSalesProcessTenants: jest.fn().mockResolvedValue([]),
       findOffersPastValidity: jest.fn().mockResolvedValue([]),
       findInvoicesPastDue: jest.fn().mockResolvedValue([]),
+      listTenants: jest.fn().mockResolvedValue([]),
       findContractsPastEnd: jest.fn().mockResolvedValue([]),
-      findContractsNearingExpiry: jest.fn().mockResolvedValue([]),
-      markContractExpiryNotified: jest.fn().mockResolvedValue(undefined),
+      findExpiredAwaitingNotice: jest.fn().mockResolvedValue([]),
+      getPaymentGraceDays: jest.fn().mockResolvedValue(0),
+      findPaymentsPastDue: jest.fn().mockResolvedValue([]),
+      findOverdueAwaitingNotice: jest.fn().mockResolvedValue([]),
+      markPaymentOverdueNotified: jest.fn().mockResolvedValue(undefined),
+      getReminderLeadDays: jest.fn().mockResolvedValue([60, 30, 7]),
+      findContractsForReminder: jest.fn().mockResolvedValue([]),
+      recordContractReminders: jest.fn().mockResolvedValue(undefined),
     };
     settingsRepo = {
       listAll: jest.fn().mockResolvedValue([NotificationSettings.defaults('tenant-1')]),

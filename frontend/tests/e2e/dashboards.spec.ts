@@ -26,19 +26,12 @@ test.describe('Dashboard Dashboards Wiring E2E', () => {
     await page.getByPlaceholder('••••••••').fill(password);
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // 4. Verify Business Owner Dashboard KPIs (Real Data -> 0 clients)
+    // 4. The Business Owner is the Administrator, so signing in lands on the Administrator dashboard
+    //    (M3 Slice 14, FR-DSH-01, FR-DSH-11): configuration, users and recent changes, no sales figures.
     await expect(page).toHaveURL(new RegExp(`/${slug}`));
-    await expect(page.getByText('Welcome back')).toBeVisible();
-    
-    // The metric KPICard should have "0" total clients initially
-    try {
-      await expect(page.getByText('0', { exact: true })).toBeVisible({ timeout: 5000 });
-    } catch (err) {
-      console.log('PAGE CONTENT DUMP:');
-      console.log(await page.content());
-      throw err;
-    }
-    await expect(page.getByText('No recent activity.')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Administrator dashboard|Paneli i administratorit/ })).toBeVisible();
+    await expect(page.getByRole('region', { name: /Pricing configuration|Konfigurimi i çmimeve/ })).toBeVisible();
+    await expect(page.getByRole('region', { name: /Users per role|Përdorues sipas rolit/ })).toBeVisible();
 
     // 5. Navigate to Clients and Create a Client to trigger data changes
     await page.getByRole('link', { name: 'Clients' }).click();
@@ -48,15 +41,11 @@ test.describe('Dashboard Dashboards Wiring E2E', () => {
     await page.getByLabel('Email').fill('john.doe@example.com');
     await page.getByRole('button', { name: 'Save Client' }).click();
 
-    // 6. Go back to Dashboard and verify metrics and feed updated
+    // 6. Go back to the dashboard: the new company is in the recent changes, read from the audit log.
     await page.getByRole('link', { name: 'Dashboard' }).click();
     await expect(page).toHaveURL(new RegExp(`/${slug}`));
-    
-    // Total clients should now be 1
-    await expect(page.getByText('1', { exact: true })).toBeVisible();
-    
-    // Activity feed should show the client creation
-    await expect(page.getByText('No recent activity.')).not.toBeVisible();
-    await expect(page.getByText('Client Added')).toBeVisible();
+    const recent = page.getByRole('region', { name: /Recent changes|Ndryshimet e fundit/ });
+    await expect(recent).toBeVisible();
+    await expect(recent.getByText(/Created · Company|Krijuar · Kompani/).first()).toBeVisible();
   });
 });

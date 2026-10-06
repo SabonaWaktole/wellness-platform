@@ -282,12 +282,26 @@ export class NotificationEmailComposer {
       case 'CONTRACT_EXPIRING':
         return {
           subject: `${client}'s contract expires in ${String(p.daysRemaining ?? '')} days`,
-          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> ends on <strong>${esc(String(p.endsAt ?? ''))}</strong>. Renew it before then to keep the subscription running.`,
+          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong>${p.number ? ` (${esc(String(p.number))})` : ''} ends on <strong>${esc(String(p.endsAt ?? ''))}</strong>. Open the contract and start the renewal before then to keep the subscription running.`,
         };
       case 'CONTRACT_EXPIRED':
         return {
           subject: `${client}'s contract has expired`,
           body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> reached its end date and is now marked expired.`,
+        };
+      case 'CONTRACT_SUSPENDED':
+      case 'CONTRACT_CANCELLED': {
+        const word = type === 'CONTRACT_SUSPENDED' ? 'suspended' : 'cancelled';
+        const reason = String(p.reason ?? '');
+        return {
+          subject: `${client}'s contract was ${word}`,
+          body: `The <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> was ${word}.${reason ? ` Reason: ${esc(reason)}` : ''}`,
+        };
+      }
+      case 'PAYMENT_OVERDUE':
+        return {
+          subject: `A payment from ${client} is overdue`,
+          body: `Instalment <strong>${esc(String(p.instalment ?? ''))}</strong> of the <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> was due on <strong>${esc(String(p.dueDate ?? ''))}</strong> and is overdue. Contact the client to settle it.`,
         };
       case 'FOLLOW_UP_ASSIGNED':
       case 'FOLLOW_UP_DUE':

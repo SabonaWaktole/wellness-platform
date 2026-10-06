@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STATE } from './support/sessions';
 
 /**
- * NFR-USE-01, NFR-USE-02: every Milestone 1 and 2 screen works from 360 px wide. Opens each one
+ * NFR-USE-01, NFR-USE-02, NFR-USE-03: every Milestone 1, 2 and 3 screen works from 360 px wide. Opens each one
  * in a 360 px viewport (the `mobile-360` project) and asserts the page never
  * scrolls sideways — the failure that makes a phone layout unusable.
  *
@@ -27,7 +27,7 @@ async function expectNoHorizontalOverflow(page: Page, screen: string) {
   expect(scrollWidth, `${screen} scrolls sideways at ${clientWidth}px`).toBeLessThanOrEqual(clientWidth);
 }
 
-test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360px', () => {
+test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overflow at 360px', () => {
   test.skip(!process.env.E2E_ADMIN_PASSWORD, 'Set E2E_ADMIN_PASSWORD to the seeded Administrator password.');
 
   test('the sign-in and password-recovery pages', async ({ page }) => {
@@ -39,10 +39,30 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
     await expectNoHorizontalOverflow(page, 'forgot-password');
   });
 
+  // M3 Slices 13 and 14: the Sales User, Sales Manager and CEO dashboards are the landing page of those roles, so
+  // they are opened by signing in as them (seed:uat creates them). Set the passwords to run them. The
+  // Administrator's is opened below, with the Administrator session.
+  for (const [role, emailVar, passwordVar, fallbackEmail] of [
+    ['Sales User', 'E2E_SALES_USER_EMAIL', 'E2E_SALES_USER_PASSWORD', 'uat.sales.a@wellness-albania.al'],
+    ['Sales Manager', 'E2E_MANAGER_EMAIL', 'E2E_MANAGER_PASSWORD', 'uat.manager@wellness-albania.al'],
+    ['CEO', 'E2E_CEO_EMAIL', 'E2E_CEO_PASSWORD', 'uat.ceo@wellness-albania.al'],
+  ] as const) {
+    test(`NFR-USE-02 FR-DSH-01 the ${role} dashboard has no horizontal overflow`, async ({ page }) => {
+      const password = process.env[passwordVar];
+      test.skip(!password, `Set ${passwordVar} to the seeded ${role} password.`);
+      const login = await page.request.post('/api/auth/login', { data: { email: process.env[emailVar] ?? fallbackEmail, password } });
+      expect(login.ok(), `sign-in failed: ${login.status()}`).toBe(true);
+      await page.goto(`/${TENANT}/dashboard`);
+      await expect(page.getByRole('heading', { level: 1, name: /My dashboard|Paneli im|Sales team dashboard|Paneli i ekipit|CEO dashboard|Paneli i drejtorit/ })).toBeVisible();
+      await expectNoHorizontalOverflow(page, `${role} dashboard`);
+    });
+  }
+
   test.describe('signed in as the Administrator', () => {
     test.use({ storageState: ADMIN_STATE });
     let companyId: string;
     let dealId: string;
+    let contractId: string;
 
     test.beforeEach(async ({ page }) => {
       if (!companyId) {
@@ -58,18 +78,40 @@ test.describe('NFR-USE-01 NFR-USE-02 screens have no horizontal overflow at 360p
       }
     });
 
+    // M3 Slices 4 to 6 (NFR-USE-03): the contract screens open on a seeded contract (seed:uat gives UAT Kafe Blloku one).
+    test.beforeEach(async ({ page }) => {
+      if (!contractId) {
+        const contracts = await page.request.get(`/api/${TENANT}/contracts?search=${encodeURIComponent('UAT Kafe Blloku')}`);
+        contractId = (await contracts.json()).data?.[0]?.id;
+        expect(contractId, 'run seed:uat first — UAT Kafe Blloku has no contract').toBeTruthy();
+      }
+    });
+
     const screens: Array<[string, (id: string) => string]> = [
+      // M3 Slice 14: this is the Administrator dashboard, the Administrator's landing page (FR-DSH-11)
       ['dashboard', () => 'dashboard'],
       ['company list', () => 'clients'],
       ['new company form', () => 'clients/new'],
       ['company detail (contacts, timeline)', (id) => `clients/${id}`],
       ['company edit form', (id) => `clients/${id}/edit`],
       ['contracts', () => 'contracts'],
+      // M3 Slices 4 to 6: the contract's own screens
+      ['contract detail (instalments, history, document)', () => `contracts/${contractId}`],
+      ['contract edit form', () => `contracts/${contractId}/edit`],
+      ['new contract form', () => 'contracts/new'],
+      // M3 Slice 9
+      ['payments overview', () => 'payments'],
+      // M3 Slice 11
+      ['renewals', () => 'renewals'],
+      // M3 Slice 12
+      ['performance', () => 'performance'],
       ['settings → workspace', () => 'settings'],
       ['settings → team', () => 'settings/team'],
       ['settings → roles & permissions', () => 'settings/roles'],
       ['settings → audit log', () => 'settings/audit'],
       ['settings → statuses', () => 'settings/statuses'],
+      // M3 Slice 3
+      ['settings → contracts and payments', () => 'settings/contracts'],
       ...LISTS.map((list): [string, () => string] => [`settings → lists → ${list}`, () => `settings/lists/${list}`]),
       ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
       // M2 Slice 5

@@ -5,7 +5,7 @@ import { ContractStatus } from '../../../src/contracts/domain/Contract';
 import { ContractExpiryJob } from '../../../src/scheduler/jobs/ContractExpiryJob';
 import { PrismaSchedulerQueries } from '../../../src/scheduler/PrismaSchedulerQueries';
 import { ExpireContractUseCase } from '../../../src/contracts/application/use-cases/ExpireContractUseCase';
-import { ActivateContractUseCase } from '../../../src/contracts/application/use-cases/ActivateContractUseCase';
+import { ChangeContractStatusUseCase } from '../../../src/contracts/application/use-cases/ChangeContractStatusUseCase';
 import { PrismaContractWriteTransaction } from '../../../src/contracts/infrastructure/PrismaContractWriteTransaction';
 import { administrator, scopeResolver } from '../../support/access';
 
@@ -122,10 +122,10 @@ describe('Contract audit trail (Slice 2)', () => {
     const payment = detailRes.body.payments[0];
 
     const res = await api()
-      .post(`${base()}/${contract.id}/payments/${payment.id}/record`)
+      .post(`${base()}/${contract.id}/payments/${payment.id}/receipts`)
       .set('Authorization', `Bearer ${tokenOwner}`)
-      .send({ action: 'PAY', amount: payment.amount });
-    expect(res.status).toBe(200);
+      .send({ amount: payment.amount, receivedOn: '2026-01-02', method: 'CASH' });
+    expect(res.status).toBe(201);
 
     const entries = await prisma.auditEntry.findMany({
       where: { tenantId, entityType: 'ContractPayment', entityId: payment.id },
@@ -134,8 +134,8 @@ describe('Contract audit trail (Slice 2)', () => {
     const changes = entries[0].changes as Array<{ field: string; old: unknown; new: unknown }>;
     expect(changes).toEqual(
       expect.arrayContaining([
-        { field: 'status', old: 'PAYMENT_PENDING', new: 'PAID' },
-        { field: 'paidAmount', old: 0, new: payment.amount },
+        { field: 'status', old: 'NOT_INVOICED', new: 'PAID' },
+        { field: 'paidAmount', old: 0, new: Number(payment.amount) },
       ])
     );
   });
@@ -148,12 +148,14 @@ describe('Contract audit trail (Slice 2)', () => {
         throw new Error('audit write failed');
       },
     }));
-    const useCase = new ActivateContractUseCase(failingWriteTx, scopeResolver());
+    const tenants = { findById: async () => ({ runsSalesProcess: () => false, timezone: 'UTC' }) } as any;
+    const useCase = new ChangeContractStatusUseCase(failingWriteTx, scopeResolver(), tenants);
 
     await expect(
       useCase.execute({
         tenantId,
         contractId: contract.id,
+        status: ContractStatus.Active,
         actingUserId: ownerId,
         access: administrator({ userId: ownerId, tenantId }),
       })

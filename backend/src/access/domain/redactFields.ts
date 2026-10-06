@@ -21,6 +21,29 @@ export const COMMERCIAL_FIELDS: readonly string[] = [
   'totalNetMonthlyPrice',
   // Milestone 2 Slice 8: the deal's copy of its offer value (sent as netMonthlyPrice and annualValue)
   'offerNetMonthlyPrice', 'offerAnnualValue',
+  // Milestone 3 Slice 2: contract commercial fields (FR-RBAC-21). The keys that
+  // double as ordinary words in other responses (`document`, `dealId`,
+  // `renewalDate`) join this list in the slice that gives the contract its
+  // response shape (Slices 4 to 6), so no existing response loses them early.
+  'servicesSnapshot', 'termsText', 'packageId', 'packageName', 'quotationId', 'documents',
+  // Milestone 3 Slice 11: the agreed monthly price on the Renewals screen (FR-REN-05).
+  'monthlyPrice',
+  // Milestone 3 Slice 12: the value of won deals on the Performance screen (FR-PRF-10, FR-RBAC-21).
+  'totalValue',
+  // Milestone 3 Slice 13: a salesperson's sales value on the Sales Manager dashboard (FR-DSH-08).
+  'salesValue',
+];
+
+/**
+ * The payment field names `payments.view` guards (FR-RBAC-21). Every slice that
+ * adds a payment field to a response adds its name here. `amount` is money, so
+ * it is guarded by `commercial.view` as well.
+ */
+export const PAYMENT_FIELDS: readonly string[] = [
+  'paidAt', 'paidAmount', 'payments', 'paymentSummary', 'outstanding', 'overdueCount',
+  // Milestone 3 Slice 2: instalment invoice facts. Slice 8 adds the receipt shape and the flag.
+  'invoiceNumber', 'invoiceDate',
+  'method', 'receivedOn', 'amountReceived', 'dueNotInvoiced', 'overdueAmount', 'nextDueDate',
 ];
 
 /**
@@ -36,7 +59,7 @@ const GUARDED_FIELDS: ReadonlyArray<{ permission: string; keys: ReadonlySet<stri
   },
   {
     permission: 'payments.view',
-    keys: new Set(['paidAt', 'paidAmount', 'payments', 'paymentSummary', 'outstanding', 'overdueCount']),
+    keys: new Set(PAYMENT_FIELDS),
   },
 ];
 

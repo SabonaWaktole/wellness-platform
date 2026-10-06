@@ -15,6 +15,7 @@ import {
   Archive,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
+import { ValidityBadge } from '../../components/contracts/ValidityBadge';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Avatar } from '../../components/ui/Avatar/Avatar';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
@@ -253,6 +254,11 @@ export const ClientListContent: React.FC = () => {
           {statusLabel.client(client.status)}
         </Badge>
       ),
+    },
+    {
+      id: 'validity',
+      header: t('list.columnValidity'),
+      render: (client) => (client.validity ? <ValidityBadge validity={client.validity} /> : null),
     },
     {
       id: 'assigned',

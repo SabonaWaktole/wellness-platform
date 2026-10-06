@@ -114,3 +114,15 @@ describe('Scheduler', () => {
     expect(setIntervalFn).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Scheduler.runNamed (M3 Slice 15, scripts/run-jobs.ts)', () => {
+  it('runs only the named jobs, with the injected clock, and refuses a name it does not know', async () => {
+    const seen: string[] = [];
+    const at = new Date('2026-12-01T09:00:00Z');
+    const named = (name: string): ScheduledJob => ({ name, intervalMs: 1000, run: async (now) => { seen.push(`${name}@${now.toISOString()}`); } });
+    const scheduler = new Scheduler([named('a'), named('b'), named('c')], { now: () => at });
+    await scheduler.runNamed(['c', 'a']);
+    expect(seen).toEqual(['a@2026-12-01T09:00:00.000Z', 'c@2026-12-01T09:00:00.000Z']);
+    await expect(scheduler.runNamed(['nope'])).rejects.toThrow(/No job named nope/);
+  });
+});

@@ -1,0 +1,95 @@
+/* Settings → Contracts and payments (M3 Slice 3). One column on a phone,
+ * two from 640px. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.headerTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-headline-sm);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+@media (min-width: 640px) {
+  .form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--font-size-body-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--spacing-sm);
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--color-surface, transparent);
+  border: 1px solid var(--color-outline-variant, currentColor);
+  border-radius: var(--radius-md, 8px);
+  box-sizing: border-box;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.hint,
+.error,
+.status {
+  margin: 0;
+  font-size: var(--font-size-body-sm);
+}
+
+.hint,
+.status {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}

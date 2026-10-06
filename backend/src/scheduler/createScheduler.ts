@@ -1,4 +1,4 @@
-import { Scheduler, ScheduledJob } from './Scheduler';
+import { Scheduler, ScheduledJob, SchedulerOptions } from './Scheduler';
 import { RecordScopeResolver } from '../access/application/RecordScopeResolver';
 import { PrismaTeamRoster } from '../access/infrastructure/PrismaTeamRoster';
 import { PrismaDiscountApprovalStore } from '../discounts/infrastructure/PrismaDiscountApprovalStore';
@@ -13,6 +13,8 @@ import { QuotationFollowUpJob } from './jobs/QuotationFollowUpJob';
 import { QuotationExpiryJob } from './jobs/QuotationExpiryJob';
 import { InvoiceOverdueJob } from './jobs/InvoiceOverdueJob';
 import { ContractExpiryJob } from './jobs/ContractExpiryJob';
+import { MarkPaymentsOverdueJob } from './jobs/MarkPaymentsOverdueJob';
+import { MarkPaymentOverdueUseCase } from '../contracts/application/use-cases/MarkPaymentOverdueUseCase';
 import { ContractRenewalReminderJob } from './jobs/ContractRenewalReminderJob';
 
 import { PrismaUserRepository } from '../auth/infrastructure/repositories/PrismaUserRepository';
@@ -41,7 +43,7 @@ import { ExpireContractUseCase } from '../contracts/application/use-cases/Expire
  * whatever database the test happened to be pointed at. The web process and the
  * worker share repositories and use cases but not a composition root.
  */
-export function createScheduler(): Scheduler {
+export function createScheduler(options: SchedulerOptions = {}): Scheduler {
   const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   const userRepository = new PrismaUserRepository();
@@ -91,8 +93,9 @@ export function createScheduler(): Scheduler {
     new FollowUpDailySummaryJob(followUpQueries, settingsRepository, notifications),
     new InvoiceOverdueJob(queries, markInvoiceOverdue),
     new ContractExpiryJob(queries, expireContract, notifications),
+    new MarkPaymentsOverdueJob(queries, new MarkPaymentOverdueUseCase(new PrismaContractWriteTransaction()), notifications),
     new ContractRenewalReminderJob(queries, notifications),
   ];
 
-  return new Scheduler(jobs);
+  return new Scheduler(jobs, options);
 }

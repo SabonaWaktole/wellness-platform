@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../../store/useAuthStore';
-import { User, Building2, Sliders, UsersRound, ShieldCheck, Puzzle, PackageOpen, FolderTree, Bell, History, ListChecks, Palette, Calculator, ScrollText } from 'lucide-react';
+import { User, Building2, Sliders, UsersRound, ShieldCheck, Puzzle, PackageOpen, FolderTree, Bell, History, ListChecks, Palette, Calculator, ScrollText, FileText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import styles from './SettingsLayout.module.css';
 
@@ -38,6 +38,7 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
     // activityResults.manage reaches the activity results list (M2 Slice 7, FR-ACT-03).
     { id: 'lists', label: t('nav.lists'), icon: ListChecks, permission: ['settings.manage', 'activityResults.manage'] },
     { id: 'statuses', label: t('nav.statuses'), icon: Palette, permission: 'settings.manage' },
+    { id: 'contracts', label: t('nav.contracts'), icon: FileText, permission: 'settings.manage' },
     { id: 'pricing', label: t('nav.pricing'), icon: Calculator, permission: 'pricing.manage' },
     { id: 'sales-script', label: t('nav.salesScript'), icon: ScrollText, permission: 'script.edit' },
     // Next to Company because it is workspace-wide policy, not a personal

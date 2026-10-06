@@ -1,6 +1,14 @@
 import { IContractRepository } from '../../domain/IContractRepository';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
+import { IContractPaymentHistoryRepository } from '../../domain/IContractPaymentHistoryRepository';
 import { IContractStatusHistoryRepository } from '../../domain/IContractStatusHistoryRepository';
+import { IContractDocumentRepository } from '../../domain/IContractDocumentRepository';
+import { IContractCompanyStatus } from './IContractCompanyStatus';
+import { IContractSettingsStore } from './IContractSettingsStore';
+import { IContractNumbers } from './IContractNumbers';
+import { IContractDealSource } from './IContractDealSource';
+import { IContractRenewals } from './IContractRenewals';
+import { IDealWrites } from '../../../deals/application/ports/IDealWriteTransaction';
 import { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 
 /** The repositories a contract write goes through, all on one connection. */
@@ -8,6 +16,22 @@ export interface ContractWriteRepos {
   contractRepo: IContractRepository;
   paymentRepo: IContractPaymentRepository;
   historyRepo: IContractStatusHistoryRepository;
+  /** One row per change to an instalment, in the same transaction as the change (M3 Slice 8, FR-PAY-08). */
+  paymentHistoryRepo: IContractPaymentHistoryRepository;
+  /** The workspace's contract settings, written with their audit entry (M3 Slice 3). */
+  settingsStore: IContractSettingsStore;
+  /** The next contract number (M3 Slice 4, FR-CON-05), taken under a row lock in this transaction. */
+  numbers: IContractNumbers;
+  /** Reads the won deal and offer a contract is filled from (M3 Slice 4, FR-CON-03). */
+  deals: IContractDealSource;
+  /** The renewal link between a contract and its Renewal deal, and the lock that serialises starting one (M3 Slice 10). */
+  renewals: IContractRenewals;
+  /** Writes a Renewal deal and its stage history in the contract's transaction (M3 Slice 10, FR-REN-06). */
+  dealWrites: IDealWrites;
+  /** The signed document and its previous versions (M3 Slice 5, FR-CON-19). */
+  documentRepo: IContractDocumentRepository;
+  /** Sets the company to Client when a contract is activated (M3 Slice 5, FR-CON-13). */
+  companyStatus: IContractCompanyStatus;
   /** Same connection as the other three — see IAuditTrail for the pattern. */
   auditTrail: IAuditTrail;
 }

@@ -26,6 +26,8 @@ const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
       const offerId = typeof n.params?.offerId === 'string' ? n.params.offerId : null;
       return offerId ? `/${tenantSlug}/deals/${n.entityId}?offer=${offerId}` : `/${tenantSlug}/deals/${n.entityId}`;
     }
+    // M3 Slice 9 (FR-PAY-13): an overdue instalment opens its contract.
+    case 'CONTRACT': return `/${tenantSlug}/contracts/${n.entityId}`;
     // M2 Slice 11: "My follow-ups", on that follow-up.
     case 'FOLLOW_UP': return `/${tenantSlug}/follow-ups?open=${n.entityId}`;
     default: return null;

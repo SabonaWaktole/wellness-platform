@@ -36,6 +36,13 @@ export const PERMISSION_UPGRADES: readonly PermissionUpgrade[] = [
       'activityResults.manage',
     ],
   },
+  {
+    // `payments.view`, `payments.update` and `performance.view` were activated in
+    // Milestone 3 but seeded by Milestone 1, so every workspace already holds them;
+    // the only key existing workspaces lack is `contracts.terminate` (FR-RBAC-20).
+    key: 'm3-contracts-payments',
+    permissionKeys: ['contracts.terminate'],
+  },
 ];
 
 export function permissionUpgrade(key: string): PermissionUpgrade {

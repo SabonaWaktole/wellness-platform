@@ -74,12 +74,13 @@ const formatterFor = (locale: string, currency: string, precision: Precision): I
  * to distinguish "no price set" from "free", and they are not the same fact.
  */
 export function formatMoney(
-  value: number | null | undefined,
+  value: number | string | null | undefined,
   settings: MoneyFormatSettings = {}
 ): string {
   if (value === null || value === undefined) return '—';
   const { locale, currency } = resolve(settings);
-  return formatterFor(locale, currency, 'exact').format(value);
+  // The API sends money as a two-decimal string ("49.40"); it is shown, never calculated with.
+  return formatterFor(locale, currency, 'exact').format(Number(value));
 }
 
 /** Whole units, no cents. For aggregates: KPI tiles, chart tooltips. */

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { CalendarAgenda } from '../../components/calendar/CalendarAgenda';
 import { CalendarMonthView } from '../../components/calendar/CalendarMonthView';
@@ -48,6 +48,7 @@ const clock = (minutes: number): string => `${String(Math.floor(minutes / 60)).p
 export const CalendarContent: React.FC = () => {
   const { t } = useTranslation('appointments');
   const { tenantSlug } = useParams();
+  const navigate = useNavigate();
   const toast = useToast();
   const dates = useDateFormat();
   const rangeTitle = useRangeTitle();
@@ -126,6 +127,9 @@ export const CalendarContent: React.FC = () => {
   const colourOf = useMemo(() => personColours(staff.map((member) => member.id)), [staff]);
   const personColour = seesTeam ? colourOf : undefined;
   const items = feed?.items ?? [];
+  // Contract end and renewal dates: read-only, and they open the contract (FR-REN-11).
+  const contractItems = feed?.contractItems ?? [];
+  const openContract = (contractId: string) => navigate(`/${tenantSlug}/contracts/${contractId}`);
   const showOverdue = !!feed && showsToday(range.days, today) && (view === 'day' || view === 'agenda');
 
   const pickDay = (day: string) => update({ view: 'day', date: day });
@@ -188,17 +192,17 @@ export const CalendarContent: React.FC = () => {
           {t('calendar.loading')}
         </p>
       )}
-      {feed?.itemsTruncated && <p className={styles.notice}>{t('calendar.truncated')}</p>}
+      {(feed?.itemsTruncated || feed?.contractItemsTruncated) && <p className={styles.notice}>{t('calendar.truncated')}</p>}
 
       {feed && showOverdue && <OverdueSection items={feed.overdue} truncated={feed.overdueTruncated} onOpen={setSelected} personColour={personColour} />}
 
       {feed && grid && (
-        <CalendarTimeGrid days={range.days} items={items} today={today} onOpen={setSelected} onPickDay={pickDay} personColour={personColour} onMove={move} canMove={canMove} />
+        <CalendarTimeGrid days={range.days} items={items} today={today} onOpen={setSelected} onPickDay={pickDay} personColour={personColour} onMove={move} canMove={canMove} contractItems={contractItems} onOpenContract={openContract} />
       )}
       {feed && view === 'month' && (
-        <CalendarMonthView days={range.days} items={items} today={today} anchor={anchor} onOpen={setSelected} onPickDay={pickDay} personColour={personColour} />
+        <CalendarMonthView days={range.days} items={items} today={today} anchor={anchor} onOpen={setSelected} onPickDay={pickDay} personColour={personColour} contractItems={contractItems} onOpenContract={openContract} />
       )}
-      {feed && view === 'agenda' && <CalendarAgenda days={range.days} items={items} today={today} onOpen={setSelected} personColour={personColour} />}
+      {feed && view === 'agenda' && <CalendarAgenda days={range.days} items={items} today={today} onOpen={setSelected} personColour={personColour} contractItems={contractItems} onOpenContract={openContract} />}
 
       <AppointmentDetailPanel
         isOpen={!!selected}

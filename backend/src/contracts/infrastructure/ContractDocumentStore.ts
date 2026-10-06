@@ -68,6 +68,17 @@ export class ContractDocumentStore {
   }
 
   /**
+   * The stored bytes, for the download endpoint. The path is resolved under the
+   * uploads root and refused if it escapes it, like `remove`.
+   */
+  async read(url: string): Promise<Buffer | null> {
+    if (!url.startsWith(`${PUBLIC_PREFIX}/`)) return null;
+    const resolved = path.resolve(UPLOADS_DIR, url.slice(PUBLIC_PREFIX.length + 1));
+    if (!resolved.startsWith(path.resolve(UPLOADS_DIR) + path.sep)) return null;
+    return fs.readFile(resolved).catch(() => null);
+  }
+
+  /**
    * Best-effort removal, never throws — same contract as `MediaService.remove`
    * and for the same reason: a missing file must not fail the request that is
    * replacing it, and the database is the source of truth for what exists.

@@ -10,6 +10,7 @@ import { useContracts } from '../../hooks/useContracts';
 import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useDateFormat } from '../../hooks/useDateFormat';
+import { ValidityBadge } from '../contracts/ValidityBadge';
 import { contractReference } from '../../utils/contractReference';
 import type { ClientContracts } from '../../types/contract';
 import styles from './ClientContractsTab.module.css';
@@ -68,7 +69,9 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
           <div className={styles.summaryItem}>
             <FileSignature size={18} className={styles.summaryIcon} />
             <span className={styles.summaryPrimary}>
-              {summary.hasActiveContract && summary.activeEndsAt
+              {summary.validity ? (
+                <ValidityBadge validity={summary.validity} />
+              ) : summary.hasActiveContract && summary.activeEndsAt
                 ? t('clientTab.subscribedUntil', {
                     plan: summary.activePlanName,
                     date: dates.date(summary.activeEndsAt),
@@ -109,8 +112,8 @@ export const ClientContractsTab: React.FC<{ clientId: string }> = ({ clientId })
           >
             <div className={styles.rowMain}>
               <span className={styles.rowPlan}>
-                {contract.planName}{' '}
-                <span className={styles.rowReference}>{contractReference(contract.id)}</span>
+                {contract.planName ? `${contract.planName} ` : ''}
+                <span className={styles.rowReference}>{contract.number ?? contractReference(contract.id)}</span>
               </span>
               <span className={styles.rowTerm}>
                 {dates.date(contract.startsAt)} – {dates.date(contract.endsAt)}

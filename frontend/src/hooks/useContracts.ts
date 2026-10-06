@@ -10,6 +10,15 @@ export interface UseContractsOptions {
   assignedUserId?: string;
   /** Active contracts ending within this many days — the renewals worklist. */
   expiringWithinDays?: number;
+  /** Valid today, valid and ending soon, or not valid (FR-CON-08). */
+  validity?: 'VALID' | 'EXPIRING_SOON' | 'NOT_VALID';
+  /** `YYYY-MM-DD`, both ends included. */
+  endsFrom?: string;
+  endsTo?: string;
+  /** Any instalment Overdue. */
+  hasOverdue?: 'true';
+  areaId?: string;
+  cityId?: string;
   page?: number;
   limit?: number;
 }
@@ -93,23 +102,29 @@ export function useContractActions() {
 
   return {
     createContract: (data: any) => call((slug) => contractService.createContract(slug, data)),
+    createContractFromDeal: (dealId: string) => call((slug) => contractService.createContractFromDeal(slug, dealId)),
+    refreshFromDeal: (id: string) => call((slug) => contractService.performAction(slug, id, 'refresh-from-deal')),
     updateContract: (id: string, data: any) =>
       call((slug) => contractService.updateContract(slug, id, data)),
-    activateContract: (id: string) => call((slug) => contractService.performAction(slug, id, 'activate')),
-    cancelContract: (id: string, reason?: string) =>
-      call((slug) => contractService.performAction(slug, id, 'cancel', { reason })),
+    changeStatus: (id: string, status: string, reason?: string) =>
+      call((slug) => contractService.changeStatus(slug, id, status, reason)),
+    startRenewal: (id: string, ownerUserId?: string) => call((slug) => contractService.startRenewal(slug, id, ownerUserId)),
     renewContract: (id: string, data?: any) =>
       call((slug) => contractService.performAction(slug, id, 'renew', data)),
-    addPayment: (id: string, data: any) => call((slug) => contractService.addPayment(slug, id, data)),
-    updatePayment: (id: string, paymentId: string, data: any) =>
+    fetchPaymentHistory: (id: string, paymentId: string) =>
+      call((slug) => contractService.fetchPaymentHistory(slug, id, paymentId)),
+    addPayment: (id: string, data: Parameters<typeof contractService.addPayment>[2]) =>
+      call((slug) => contractService.addPayment(slug, id, data)),
+    updatePayment: (id: string, paymentId: string, data: Parameters<typeof contractService.updatePayment>[3]) =>
       call((slug) => contractService.updatePayment(slug, id, paymentId, data)),
-    recordPayment: (id: string, paymentId: string, data: any) =>
-      call((slug) => contractService.recordPayment(slug, id, paymentId, data)),
-    deletePayment: (id: string, paymentId: string) =>
-      call((slug) => contractService.deletePayment(slug, id, paymentId)),
+    deletePayment: (id: string, paymentId: string, reason: string) =>
+      call((slug) => contractService.deletePayment(slug, id, paymentId, reason)),
+    paymentAction: (id: string, paymentId: string, action: string, data?: object) =>
+      call((slug) => contractService.paymentAction(slug, id, paymentId, action, data)),
     uploadDocument: (id: string, file: File) =>
       call((slug) => contractService.uploadDocument(slug, id, file)),
-    removeDocument: (id: string) => call((slug) => contractService.removeDocument(slug, id)),
+    downloadDocument: (id: string, documentId: string) =>
+      call((slug) => contractService.downloadDocument(slug, id, documentId)),
     loading,
     error,
   };

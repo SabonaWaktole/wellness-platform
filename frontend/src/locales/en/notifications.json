@@ -28,8 +28,10 @@
     "INVITATION_ACCEPTED": "{{email}} accepted your invitation and joined the team",
     "APPOINTMENT_REMINDER": "Reminder: appointment with {{clientName}}",
     "QUOTATION_FOLLOW_UP": "Quotation {{reference}} has had no response from {{clientName}} for {{daysWaiting}} days",
-    "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract expires in {{daysRemaining}} days",
+    "CONTRACT_EXPIRING": "{{clientName}}'s {{planName}} contract {{number}} ends on {{endsAt}}, in {{daysRemaining}} days. Open it to start the renewal.",
     "CONTRACT_EXPIRED": "{{clientName}}'s {{planName}} contract has expired",
+    "CONTRACT_SUSPENDED": "{{actor}} suspended {{clientName}}'s {{planName}} contract. Reason: {{reason}}",
+    "CONTRACT_CANCELLED": "{{actor}} cancelled {{clientName}}'s {{planName}} contract. Reason: {{reason}}",
     "DISCOUNT_APPROVAL_REQUESTED": "{{actor}} requested a {{requestedPercent}}% discount on {{reference}} ({{clientName}}), list price {{listPrice}}. Reason: {{reason}}",
     "DISCOUNT_APPROVED": "{{actor}} approved the {{approvedPercent}}% discount on {{reference}}",
     "DISCOUNT_REJECTED": "{{actor}} rejected the discount above the cap on {{reference}}",
@@ -40,7 +42,8 @@
     "DISCOUNT_APPROVAL_REMINDER_manual": "Reminder: {{salespersonName}}'s manual price of {{requestedMonthlyPrice}} on {{reference}} ({{clientName}}) still waits for approval",
     "FOLLOW_UP_ASSIGNED": "{{actor}} gave you a follow-up ({{followUpType}}) with {{clientName}}, due {{scheduledAt}}",
     "FOLLOW_UP_DUE": "Follow-up due now: {{followUpType}} with {{clientName}}",
-    "FOLLOW_UP_DAILY_SUMMARY": "Today: {{today}} follow-up(s), and {{overdue}} overdue from earlier days"
+    "FOLLOW_UP_DAILY_SUMMARY": "Today: {{today}} follow-up(s), and {{overdue}} overdue from earlier days",
+    "PAYMENT_OVERDUE": "{{clientName}}'s instalment {{instalment}} of the {{planName}} contract was due on {{dueDate}} and is overdue"
   },
   "followUpType": {
     "CALL": "call",

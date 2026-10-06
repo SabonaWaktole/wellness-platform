@@ -15,7 +15,8 @@
     "categories": "Kategoritë",
     "audit": "Regjistri i auditimit",
     "pricing": "Çmimet",
-    "salesScript": "Skripti i shitjes"
+    "salesScript": "Skripti i shitjes",
+    "contracts": "Kontratat dhe pagesat"
   },
   "company": {
     "title": "Cilësimet e kompanisë",
@@ -277,6 +278,7 @@
       "calendar_view": "Shiko kalendarin dhe takimet",
       "contracts_validity_view": "Shiko vlefshmërinë e kontratave",
       "contracts_manage": "Menaxho kontratat",
+      "contracts_terminate": "Pezullo, anulo dhe rikthe kontratat",
       "quotations_manage": "Menaxho ofertat",
       "quotations_approve": "Mirato ofertat",
       "invoices_manage": "Menaxho faturat",
@@ -940,6 +942,38 @@
       "NO_SCRIPT_DRAFT": "Nuk ka draft për të publikuar.",
       "SALES_SCRIPT_CONFLICT": "Dikush tjetër e ndryshoi skriptin. U ngarkua versioni më i fundit; kontrollojeni dhe provoni përsëri.",
       "SALES_SCRIPT_NOT_FOUND": "Ky version nuk ekziston më."
+    }
+  },
+  "contractSettings": {
+    "breadcrumb": "Kontratat dhe pagesat",
+    "title": "Kontratat dhe pagesat",
+    "subtitle": "Caktoni kur dërgohen kujtesat e rinovimit, sa kohë një kontratë konsiderohet «skadon së shpejti», sa ditë shtyrje ka një këst para se të bëhet i vonuar dhe parashtesën e numrave të kontratave.",
+    "loading": "Duke u ngarkuar…",
+    "loadFailed": "Cilësimet nuk u ngarkuan.",
+    "saveFailed": "Cilësimet nuk u ruajtën. Provoni përsëri.",
+    "save": "Ruaj",
+    "saved": "U ruajt.",
+    "fields": {
+      "reminderLeadDays": {
+        "label": "Kujtesat e rinovimit (ditë para datës së mbarimit)",
+        "hint": "Ndani me presje, p.sh. 60, 30, 7. Deri në pesë vlera nga 1 deri në 365. Ndryshimi vlen për kontratat që nuk janë kujtuar ende në atë pikë.",
+        "invalid": "Shkruani 1 deri në 5 numra të plotë ditësh, të ndryshëm, nga 1 deri në 365."
+      },
+      "expiringSoonDays": {
+        "label": "Dritarja «skadon së shpejti» (ditë)",
+        "hint": "Një kontratë e vlefshme që mbaron brenda kaq ditësh merr shenjën «Skadon së shpejti».",
+        "invalid": "Shkruani një numër të plotë ditësh nga 1 deri në 365."
+      },
+      "paymentGraceDays": {
+        "label": "Ditët e shtyrjes së pagesës",
+        "hint": "Ditët pas afatit para se një këst i papaguar të bëhet i vonuar. 0 do të thotë një ditë pas afatit.",
+        "invalid": "Shkruani një numër të plotë ditësh nga 0 deri në 30."
+      },
+      "numberPrefix": {
+        "label": "Parashtesa e numrit të kontratës",
+        "hint": "2 deri në 6 shkronja të mëdha ose shifra, p.sh. CTR për CTR-2026-0001.",
+        "invalid": "Shkruani 2 deri në 6 shkronja të mëdha ose shifra."
+      }
     }
   }
 }

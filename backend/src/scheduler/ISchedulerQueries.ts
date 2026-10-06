@@ -96,40 +96,98 @@ export interface ISchedulerQueries {
    */
   findInvoicesPastDue(now: Date): Promise<PastDueInvoice[]>;
 
-  /**
-   * Every ACTIVE contract whose end date has passed, across all tenants.
-   *
-   * Cross-tenant and unconditional for the same reason as
-   * `findInvoicesPastDue`: a term running out is a fact about the calendar,
-   * not a destructive action a tenant needs to have switched on. The state
-   * change (Active -> Expired) is its own idempotency marker.
-   */
-  findContractsPastEnd(now: Date): Promise<ExpiringContract[]>;
+  /** Every workspace with its time zone, for the daily jobs (NFR-REL-01). */
+  listTenants(): Promise<{ id: string; timeZone: string }[]>;
 
   /**
-   * ACTIVE contracts ending within `days` that have not been warned about yet.
+   * One workspace's ACTIVE contracts whose end date is before `today`
+   * (a UTC-midnight date, the workspace's day).
    *
-   * Unlike the sweep above, this one DOES need a marker column
-   * (`expiryNotifiedAt`): warning about an upcoming expiry does not change the
-   * contract, so nothing about the row would stop the next hourly pass from
-   * warning again. Same mechanism as `Appointment.remindedAt`.
+   * Selected by state, not by "ended yesterday", so a run after a gap still
+   * finds everything it missed. The state change (Active -> Expired) is its own
+   * idempotency marker.
    */
-  findContractsNearingExpiry(now: Date, days: number): Promise<ExpiringContract[]>;
+  findContractsPastEnd(tenantId: string, today: Date): Promise<{ id: string; tenantId: string }[]>;
 
-  /** Idempotency marker. Set once the expiry warning has actually been emitted. */
-  markContractExpiryNotified(contractId: string, at: Date): Promise<void>;
+  /**
+   * Contracts the system expired since `since` that nobody has been told about
+   * and that have no renewal (FR-CON-16): the retry list for a notification
+   * that failed after the state change committed. A contract with a renewal
+   * contract or an open renewal deal never appears.
+   */
+  findExpiredAwaitingNotice(tenantId: string, since: Date): Promise<ExpiredContractNotice[]>;
+
+  /** The workspace's payment grace days (FR-PAY-09), 0 until the Administrator sets it. */
+  getPaymentGraceDays(tenantId: string): Promise<number>;
+
+  /**
+   * One workspace's instalments that are Invoice Issued, Payment Pending or
+   * Partially Paid and whose due date plus `graceDays` is before `today`
+   * (FR-PAY-09). Selected by state, so a run after a gap finds everything it
+   * missed; the change to Overdue is its own idempotency marker. Not Invoiced
+   * instalments never appear.
+   */
+  findPaymentsPastDue(tenantId: string, today: Date, graceDays: number): Promise<{ id: string; tenantId: string }[]>;
+
+  /**
+   * Overdue instalments nobody has been told about yet (FR-PAY-13): the
+   * notification's own list, which is also the retry list when sending failed
+   * after the state change committed.
+   */
+  findOverdueAwaitingNotice(tenantId: string): Promise<OverduePaymentNotice[]>;
+
+  /** Idempotency marker, set only once the overdue notification was emitted (`overdueNotifiedAt`). */
+  markPaymentOverdueNotified(paymentId: string, at: Date): Promise<void>;
+
+  /** The workspace's renewal reminder lead times, in days before the end date (FR-REN-01); 60, 30 and 7 until set. */
+  getReminderLeadDays(tenantId: string): Promise<number[]>;
+
+  /**
+   * One workspace's contracts that may be reminded now (FR-REN-02, 03): Active,
+   * ending between `today` and `today + withinDays`, not marked Not renewing
+   * and not renewed, with the lead times already recorded for each. Selected by
+   * state, so a run after a gap finds what it missed.
+   */
+  findContractsForReminder(tenantId: string, today: Date, withinDays: number): Promise<ReminderCandidate[]>;
+
+  /**
+   * Records lead times for a contract: the one sent (SENT) and the larger ones
+   * passed over (SKIPPED). Called only after the notification was emitted
+   * (FR-REN-03). A lead time that already has a row is left as it is.
+   */
+  recordContractReminders(
+    contract: { id: string; tenantId: string },
+    rows: { leadDays: number; state: 'SENT' | 'SKIPPED' }[],
+    at: Date
+  ): Promise<void>;
 }
 
-/** A contract at or near the end of its term, with enough context to write a notice. */
-export interface ExpiringContract {
+/** An Active contract inside the widest reminder window, with what the notice needs. */
+export interface ReminderCandidate {
   id: string;
   tenantId: string;
-  clientId: string;
   clientName: string;
   planName: string;
+  number: string | null;
   endsAt: Date;
-  /** Who to tell. NULL when nobody owns the account — see the job for the fallback. */
+  /** The contract's salesperson, else the company's, else whoever sold it. */
   assignedUserId: string | null;
+  clientAssignedUserId: string | null;
+  createdByUserId: string;
+  /** Lead times that already have a row (SENT or SKIPPED). */
+  recordedLeadDays: number[];
+}
+
+/** A contract the system expired, with what the notice needs. */
+export interface ExpiredContractNotice {
+  id: string;
+  tenantId: string;
+  clientName: string;
+  planName: string;
+  number: string | null;
+  endsAt: Date;
+  assignedUserId: string | null;
+  clientAssignedUserId: string | null;
   createdByUserId: string;
 }
 
@@ -138,4 +196,20 @@ export interface PastDueInvoice {
   id: string;
   tenantId: string;
   dueDate: Date;
+}
+
+/** An Overdue instalment that has not been announced, with what the notice needs. */
+export interface OverduePaymentNotice {
+  id: string;
+  tenantId: string;
+  contractId: string;
+  periodIndex: number;
+  dueDate: Date;
+  clientName: string;
+  planName: string;
+  number: string | null;
+  /** The contract's salesperson, else the company's, else whoever sold it. */
+  assignedUserId: string | null;
+  clientAssignedUserId: string | null;
+  createdByUserId: string;
 }

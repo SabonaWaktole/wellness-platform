@@ -150,6 +150,27 @@ describe('NotificationBell', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/acme/clients/client-9');
   });
 
+  it('FR-PAY-13 an overdue instalment opens its contract', async () => {
+    setup(
+      [
+        notification({
+          id: 'n9',
+          type: 'PAYMENT_OVERDUE',
+          params: { clientName: 'Alfa Wellness', planName: 'Gold', instalment: 2, dueDate: '2026-10-01' },
+          actorUserId: null,
+          entityType: 'CONTRACT' as const,
+          entityId: 'contract-7',
+        }),
+      ],
+      1
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    await userEvent.click(screen.getByText(/Alfa Wellness's instalment 2 of the Gold contract was due on 2026-10-01 and is overdue/));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/acme/contracts/contract-7');
+  });
+
   it('does not re-mark an already-read notification', async () => {
     setup([notification({ readAt: '2026-07-27T11:00:00.000Z' })], 0);
 

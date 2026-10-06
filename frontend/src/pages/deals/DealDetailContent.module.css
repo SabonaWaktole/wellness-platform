@@ -328,3 +328,9 @@
   margin: 0.5rem 0 0;
   white-space: pre-wrap;
 }
+
+.hint {
+  margin-left: var(--spacing-sm);
+  font-size: var(--font-size-label-md);
+  color: var(--text-secondary);
+}

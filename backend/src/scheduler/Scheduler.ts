@@ -123,4 +123,16 @@ export class Scheduler {
   async runAllOnce(): Promise<void> {
     for (const job of this.jobs) await this.runOnce(job);
   }
+
+  /** The names of the jobs, for `scripts/run-jobs.ts`. */
+  jobNames(): string[] {
+    return this.jobs.map((job) => job.name);
+  }
+
+  /** Runs only the named jobs once, in their usual order. An unknown name is an error, not a silent no-op. */
+  async runNamed(names: string[]): Promise<void> {
+    const unknown = names.filter((name) => !this.jobs.some((job) => job.name === name));
+    if (unknown.length > 0) throw new Error(`No job named ${unknown.join(', ')}. Jobs: ${this.jobNames().join(', ')}`);
+    for (const job of this.jobs.filter((candidate) => names.includes(candidate.name))) await this.runOnce(job);
+  }
 }

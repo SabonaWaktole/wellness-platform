@@ -1,4 +1,6 @@
+import { Money } from '../../pricing/domain/Money';
 import { daysBetween } from './calendarDay';
+import { ContractValidationError } from './contractErrors';
 
 /**
  * How often a contract's `amount` falls due.
@@ -51,6 +53,44 @@ export enum ContractStatus {
   Cancelled = 'CANCELLED',
 }
 
+/** A service of the contract's package, copied from the offer so the contract reads the same later (FR-CON-03, 04). */
+export interface ContractServiceLine {
+  nameSq: string;
+  nameEn: string | null;
+  descriptionSq: string | null;
+  descriptionEn: string | null;
+}
+
+/** The offer's terms as rich-text documents, one per language (M2 D10). */
+export interface ContractTerms {
+  sq: Record<string, unknown> | null;
+  en: Record<string, unknown> | null;
+}
+
+/** What a won deal and its offer hand to a contract (FR-CON-03). Read by the use case, never typed by the caller (FR-CON-04). */
+export interface ContractDealSource {
+  dealId: string;
+  quotationId: string;
+  packageId: string | null;
+  servicesSnapshot: ContractServiceLine[];
+  termsText: ContractTerms | null;
+  /** Agreed monthly price, a two-decimal string. */
+  amount: string;
+  agreedAnnualValue: string;
+  discountPercent: string | null;
+}
+
+/** Raised when an edit is not allowed on a contract in its state (FR-CON-04, FR-CON-10). Mapped to 400. */
+export class ContractEditRefusedError extends Error {
+  constructor(
+    message: string,
+    readonly field?: string
+  ) {
+    super(message);
+    this.name = 'ContractEditRefusedError';
+  }
+}
+
 export class Contract {
   id: string;
   tenantId: string;
@@ -68,10 +108,35 @@ export class Contract {
   renewedFromContractId: string | null;
   activatedAt: Date | null;
   cancelledAt: Date | null;
-  expiryNotifiedAt: Date | null;
   createdByUserId: string;
   createdAt: Date;
   updatedAt: Date;
+
+  /**
+   * M3 Slice 4 (D1): the won deal and offer this contract was made from, the
+   * package and services it sold, its terms, the agreed annual value and
+   * discount, its number and the date a renewal should be agreed. All null on
+   * a Legacy contract (no deal). Money is a two-decimal string (NFR-ACC-03).
+   */
+  dealId: string | null;
+  quotationId: string | null;
+  packageId: string | null;
+  servicesSnapshot: ContractServiceLine[] | null;
+  termsText: ContractTerms | null;
+  agreedAnnualValue: string | null;
+  discountPercent: string | null;
+  number: string | null;
+  renewalDate: Date | null;
+  lockedAt: Date | null;
+  suspendedAt: Date | null;
+  suspensionReason: string | null;
+  cancelReason: string | null;
+  notRenewingReasonId: string | null;
+  notRenewingNote: string | null;
+  /** Hydrated on read from the joined package, and the deal's and offer's references. */
+  packageName?: string | null;
+  dealTitle?: string | null;
+  quotationReference?: string | null;
 
   /**
    * Display name of the client, hydrated from the joined Client row on read.
@@ -118,10 +183,27 @@ export class Contract {
     renewedFromContractId: string | null;
     activatedAt: Date | null;
     cancelledAt: Date | null;
-    expiryNotifiedAt: Date | null;
     createdByUserId: string;
     createdAt: Date;
     updatedAt: Date;
+    dealId: string | null;
+    quotationId: string | null;
+    packageId: string | null;
+    servicesSnapshot: ContractServiceLine[] | null;
+    termsText: ContractTerms | null;
+    agreedAnnualValue: string | null;
+    discountPercent: string | null;
+    number: string | null;
+    renewalDate: Date | null;
+    lockedAt: Date | null;
+    suspendedAt: Date | null;
+    suspensionReason: string | null;
+    cancelReason: string | null;
+    notRenewingReasonId: string | null;
+    notRenewingNote: string | null;
+    packageName?: string | null;
+    dealTitle?: string | null;
+    quotationReference?: string | null;
     clientName?: string;
     clientAssignedUserId?: string | null;
     paymentSummary?: Contract['paymentSummary'];
@@ -142,10 +224,27 @@ export class Contract {
     this.renewedFromContractId = props.renewedFromContractId;
     this.activatedAt = props.activatedAt;
     this.cancelledAt = props.cancelledAt;
-    this.expiryNotifiedAt = props.expiryNotifiedAt;
     this.createdByUserId = props.createdByUserId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.dealId = props.dealId;
+    this.quotationId = props.quotationId;
+    this.packageId = props.packageId;
+    this.servicesSnapshot = props.servicesSnapshot;
+    this.termsText = props.termsText;
+    this.agreedAnnualValue = props.agreedAnnualValue;
+    this.discountPercent = props.discountPercent;
+    this.number = props.number;
+    this.renewalDate = props.renewalDate;
+    this.lockedAt = props.lockedAt;
+    this.suspendedAt = props.suspendedAt;
+    this.suspensionReason = props.suspensionReason;
+    this.cancelReason = props.cancelReason;
+    this.notRenewingReasonId = props.notRenewingReasonId;
+    this.notRenewingNote = props.notRenewingNote;
+    this.packageName = props.packageName;
+    this.dealTitle = props.dealTitle;
+    this.quotationReference = props.quotationReference;
     this.clientName = props.clientName;
     this.clientAssignedUserId = props.clientAssignedUserId;
     this.paymentSummary = props.paymentSummary;
@@ -169,9 +268,26 @@ export class Contract {
     renewedFromContractId?: string | null;
     activatedAt?: Date | null;
     cancelledAt?: Date | null;
-    expiryNotifiedAt?: Date | null;
     createdAt?: Date;
     updatedAt?: Date;
+    dealId?: string | null;
+    quotationId?: string | null;
+    packageId?: string | null;
+    servicesSnapshot?: ContractServiceLine[] | null;
+    termsText?: ContractTerms | null;
+    agreedAnnualValue?: string | null;
+    discountPercent?: string | null;
+    number?: string | null;
+    renewalDate?: Date | null;
+    lockedAt?: Date | null;
+    suspendedAt?: Date | null;
+    suspensionReason?: string | null;
+    cancelReason?: string | null;
+    notRenewingReasonId?: string | null;
+    notRenewingNote?: string | null;
+    packageName?: string | null;
+    dealTitle?: string | null;
+    quotationReference?: string | null;
     clientName?: string;
     clientAssignedUserId?: string | null;
     paymentSummary?: Contract['paymentSummary'];
@@ -210,10 +326,27 @@ export class Contract {
       renewedFromContractId: props.renewedFromContractId ?? null,
       activatedAt: props.activatedAt ?? null,
       cancelledAt: props.cancelledAt ?? null,
-      expiryNotifiedAt: props.expiryNotifiedAt ?? null,
       createdByUserId: props.createdByUserId,
       createdAt: props.createdAt ?? new Date(),
       updatedAt: props.updatedAt ?? new Date(),
+      dealId: props.dealId ?? null,
+      quotationId: props.quotationId ?? null,
+      packageId: props.packageId ?? null,
+      servicesSnapshot: props.servicesSnapshot ?? null,
+      termsText: props.termsText ?? null,
+      agreedAnnualValue: props.agreedAnnualValue ?? null,
+      discountPercent: props.discountPercent ?? null,
+      number: props.number ?? null,
+      renewalDate: props.renewalDate ?? null,
+      lockedAt: props.lockedAt ?? null,
+      suspendedAt: props.suspendedAt ?? null,
+      suspensionReason: props.suspensionReason ?? null,
+      cancelReason: props.cancelReason ?? null,
+      notRenewingReasonId: props.notRenewingReasonId ?? null,
+      notRenewingNote: props.notRenewingNote ?? null,
+      packageName: props.packageName,
+      dealTitle: props.dealTitle,
+      quotationReference: props.quotationReference,
       clientName: props.clientName,
       clientAssignedUserId: props.clientAssignedUserId,
       paymentSummary: props.paymentSummary,
@@ -234,11 +367,29 @@ export class Contract {
       assignedUserId: this.assignedUserId,
       planName: this.planName,
       status: this.status,
-      amount: this.amount,
+      // Money goes out as a two-decimal string (NFR-ACC-03): the frontend only formats it.
+      amount: Money.of(this.amount).toString(),
       billingPeriod: this.billingPeriod,
       startsAt: this.startsAt,
       endsAt: this.endsAt,
       notes: this.notes,
+      number: this.number,
+      /** True for a contract made before contracts needed a won deal (FR-CON-02). */
+      legacy: this.isLegacy,
+      dealId: this.dealId,
+      dealTitle: this.dealTitle ?? null,
+      quotationId: this.quotationId,
+      quotationReference: this.quotationReference ?? null,
+      packageId: this.packageId,
+      packageName: this.packageName ?? null,
+      servicesSnapshot: this.servicesSnapshot,
+      termsText: this.termsText,
+      agreedAnnualValue: this.agreedAnnualValue,
+      discountPercent: this.discountPercent,
+      renewalDate: this.renewalDate ? this.renewalDate.toISOString().slice(0, 10) : null,
+      suspendedAt: this.suspendedAt,
+      suspensionReason: this.suspensionReason,
+      cancelReason: this.cancelReason,
       documentUrl: this.documentUrl,
       documentName: this.documentName,
       renewedFromContractId: this.renewedFromContractId,
@@ -250,6 +401,34 @@ export class Contract {
       paymentSummary: this.paymentSummary,
       daysUntilExpiry: this.daysUntilExpiry(),
     };
+  }
+
+  /** No deal: made before contracts needed a won deal (FR-CON-02). */
+  get isLegacy(): boolean {
+    return this.dealId === null;
+  }
+
+  /**
+   * "Refresh from deal" (FR-CON-04): re-reads the agreed price, annual value,
+   * discount, package, services, offer and terms from the deal's won offer.
+   * Only while the contract is a Draft; from Pending Signature on they are
+   * locked.
+   */
+  refreshFromDeal(source: ContractDealSource): void {
+    if (this.isLegacy) {
+      throw new ContractEditRefusedError('A contract without a deal cannot be refreshed from a deal.');
+    }
+    if (this.status !== ContractStatus.Draft) {
+      throw new ContractEditRefusedError('The agreed values are locked once the contract has gone out for signature.');
+    }
+    this.amount = Number(Money.of(source.amount).toString());
+    this.agreedAnnualValue = Money.of(source.agreedAnnualValue).toString();
+    this.discountPercent = source.discountPercent;
+    this.quotationId = source.quotationId;
+    this.packageId = source.packageId;
+    this.servicesSnapshot = source.servicesSnapshot;
+    this.termsText = source.termsText;
+    this.updatedAt = new Date();
   }
 
   /**
@@ -277,12 +456,84 @@ export class Contract {
     return remaining >= 0 && remaining <= days;
   }
 
-  activate(): void {
-    if (this.status !== ContractStatus.Draft) {
-      throw new Error(`Invalid state transition from ${this.status} to Active`);
+  /**
+   * The one way a person moves a contract between statuses (FR-CON-11..15).
+   * The transition must be in the table, a reason is stored where the table
+   * asks for one, and the target's own conditions hold:
+   *
+   * - Pending Signature needs a start date, an end date, a billing period and
+   *   a price, and locks the commercial values (FR-CON-12);
+   * - Active needs the signed document where the workspace requires one
+   *   (FR-CON-13, `documentRequired`);
+   * - Suspended and Cancelled keep their reason on the contract (FR-CON-14, 15).
+   *
+   * Expired is the daily job's (`expire()`). Which permission the person needs
+   * for the move is the use case's to check, from the same table.
+   */
+  changeStatus(
+    to: ContractStatus,
+    options: { reason?: string | null; documentRequired: boolean; hasSignedDocument: boolean; now?: Date }
+  ): { from: ContractStatus; reason: string | null } {
+    const from = this.status;
+    const transition = findContractTransition(from, to);
+    if (!transition) {
+      throw new ContractValidationError('status', `A contract cannot go from ${from} to ${to}.`);
     }
-    this.status = ContractStatus.Active;
-    this.activatedAt = new Date();
+    if (transition.permission === 'system') {
+      throw new ContractValidationError('status', 'A contract expires on its own once its end date has passed.');
+    }
+
+    const reason = options.reason?.trim() || null;
+    if (transition.reasonRequired && !reason) {
+      throw new ContractValidationError('reason', 'A reason is required for this change.');
+    }
+
+    const now = options.now ?? new Date();
+    if (to === ContractStatus.PendingSignature) this.assertReadyForSignature();
+    if (to === ContractStatus.Active && from !== ContractStatus.Suspended) {
+      if (options.documentRequired && !options.hasSignedDocument) {
+        throw new ContractValidationError('document', 'Attach the signed contract before activating it.');
+      }
+    }
+
+    this.status = to;
+    switch (to) {
+      case ContractStatus.PendingSignature:
+        this.lockedAt = now;
+        break;
+      case ContractStatus.Active:
+        if (from === ContractStatus.Suspended) {
+          this.suspendedAt = null;
+          this.suspensionReason = null;
+        } else {
+          this.activatedAt = now;
+          this.lockedAt = this.lockedAt ?? now;
+        }
+        break;
+      case ContractStatus.Suspended:
+        this.suspendedAt = now;
+        this.suspensionReason = reason;
+        break;
+      case ContractStatus.Cancelled:
+        this.cancelledAt = now;
+        this.cancelReason = reason;
+        break;
+    }
+    this.updatedAt = now;
+    return { from, reason };
+  }
+
+  /** FR-CON-12: a contract goes out for signature only when its term and price are all there. */
+  private assertReadyForSignature(): void {
+    const isDate = (value: unknown): value is Date => value instanceof Date && !Number.isNaN(value.getTime());
+    if (!isDate(this.startsAt)) throw new ContractValidationError('startsAt', 'A start date is required before the contract can be sent for signature.');
+    if (!isDate(this.endsAt)) throw new ContractValidationError('endsAt', 'An end date is required before the contract can be sent for signature.');
+    if (!this.billingPeriod || !isBillingPeriod(this.billingPeriod)) {
+      throw new ContractValidationError('billingPeriod', 'A billing period is required before the contract can be sent for signature.');
+    }
+    if (!Number.isFinite(this.amount) || this.amount <= 0) {
+      throw new ContractValidationError('amount', 'A price is required before the contract can be sent for signature.');
+    }
   }
 
   /**
@@ -300,16 +551,24 @@ export class Contract {
   }
 
   /**
-   * Ending a term early. Allowed from Draft too — abandoning a contract that
-   * was drawn up but never signed is a real thing that happens, and deleting
-   * the row instead would lose the fact that it was ever quoted.
+   * Marks the contract "Not renewing" with a reason and a note, so no further
+   * reminders go out for it (FR-REN-08). Only a term a renewal could still be
+   * started from: Active, Suspended or Expired.
    */
-  cancel(): void {
-    if (this.status !== ContractStatus.Draft && this.status !== ContractStatus.Active) {
-      throw new Error(`Invalid state transition from ${this.status} to Cancelled`);
+  markNotRenewing(reasonId: string, note: string | null): void {
+    if (![ContractStatus.Active, ContractStatus.Suspended, ContractStatus.Expired].includes(this.status)) {
+      throw new ContractValidationError('status', `A ${this.status} contract cannot be marked as not renewing.`);
     }
-    this.status = ContractStatus.Cancelled;
-    this.cancelledAt = new Date();
+    this.notRenewingReasonId = reasonId;
+    this.notRenewingNote = note?.trim() || null;
+    this.updatedAt = new Date();
+  }
+
+  /** Takes the mark back: reminders and the renewal state follow the contract again (FR-REN-08). */
+  clearNotRenewing(): void {
+    this.notRenewingReasonId = null;
+    this.notRenewingNote = null;
+    this.updatedAt = new Date();
   }
 
   /**
@@ -333,7 +592,11 @@ export class Contract {
     endsAt?: Date;
     assignedUserId?: string | null;
     notes?: string | null;
+    renewalDate?: Date | null;
+    termsText?: ContractTerms | null;
   }): void {
+    if (!this.isLegacy) this.checkDealContractEdits(edits);
+
     const next = {
       planName: edits.planName ?? this.planName,
       amount: edits.amount ?? this.amount,
@@ -360,18 +623,69 @@ export class Contract {
     if (edits.billingPeriod !== undefined) this.billingPeriod = edits.billingPeriod;
     if (edits.assignedUserId !== undefined) this.assignedUserId = edits.assignedUserId;
     if (edits.notes !== undefined) this.notes = edits.notes;
+    if (edits.renewalDate !== undefined) this.renewalDate = edits.renewalDate;
+    if (edits.termsText !== undefined) this.termsText = edits.termsText;
     this.updatedAt = new Date();
+  }
+
+  /**
+   * The edit rules of a contract made from a deal (FR-CON-04, FR-CON-10). The
+   * agreed price and the plan name come from the deal and are never typed.
+   * While Draft the dates, billing period, terms, renewal date, notes and
+   * salesperson can change; after that only the notes and the renewal date
+   * (the signed document has its own action), and a changed term means a
+   * renewal instead.
+   */
+  private checkDealContractEdits(edits: {
+    planName?: string;
+    amount?: number;
+    billingPeriod?: BillingPeriod;
+    startsAt?: Date;
+    endsAt?: Date;
+    assignedUserId?: string | null;
+    termsText?: ContractTerms | null;
+  }): void {
+    if (edits.amount !== undefined) {
+      throw new ContractEditRefusedError('The price comes from the deal and cannot be changed.', 'amount');
+    }
+    if (edits.planName !== undefined) {
+      throw new ContractEditRefusedError('The plan comes from the deal and cannot be changed.', 'planName');
+    }
+    if (this.status === ContractStatus.Draft) return;
+
+    const termFields: Array<[keyof typeof edits, string]> = [
+      ['startsAt', 'The start date'],
+      ['endsAt', 'The end date'],
+      ['billingPeriod', 'The billing period'],
+      ['assignedUserId', 'The salesperson'],
+      ['termsText', 'The terms'],
+    ];
+    // A form sends every field back, so only a value that really differs is a change.
+    const current: Record<string, unknown> = {
+      startsAt: this.startsAt.getTime(),
+      endsAt: this.endsAt.getTime(),
+      billingPeriod: this.billingPeriod,
+      assignedUserId: this.assignedUserId,
+      termsText: JSON.stringify(this.termsText),
+    };
+    const proposed = (field: keyof typeof edits): unknown => {
+      const value = edits[field];
+      if (value instanceof Date) return value.getTime();
+      return field === 'termsText' ? JSON.stringify(value) : value;
+    };
+    for (const [field, label] of termFields) {
+      if (edits[field] !== undefined && proposed(field) !== current[field]) {
+        throw new ContractEditRefusedError(
+          `${label} can no longer be changed on a contract that has gone out for signature. Renew the contract instead.`,
+          field
+        );
+      }
+    }
   }
 
   attachDocument(url: string, name: string): void {
     this.documentUrl = url;
     this.documentName = name;
-    this.updatedAt = new Date();
-  }
-
-  clearDocument(): void {
-    this.documentUrl = null;
-    this.documentName = null;
     this.updatedAt = new Date();
   }
 }

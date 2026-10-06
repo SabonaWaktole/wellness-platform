@@ -454,3 +454,38 @@ tr:hover .actionButton,
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
+
+/* FR-CON-08: validity, salesperson, end-date range and overdue filters. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 0 16px 12px;
+}
+
+.filters > * {
+  min-width: 160px;
+  flex: 1 1 160px;
+}
+
+.filterCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+
+/* FR-CON-02: a contract made before contracts needed a won deal. */
+.legacyChip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #d0d5dd);
+  font-size: 12px;
+  color: var(--color-text-muted, #667085);
+  white-space: nowrap;
+}

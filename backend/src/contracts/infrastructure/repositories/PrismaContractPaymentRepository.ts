@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { IContractPaymentRepository } from '../../domain/IContractPaymentRepository';
+import { Money } from '../../../pricing/domain/Money';
 import { ContractPayment, PaymentStatus } from '../../domain/ContractPayment';
 
 export class PrismaContractPaymentRepository implements IContractPaymentRepository {
@@ -12,12 +13,15 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
       contractId: raw.contractId,
       periodIndex: raw.periodIndex,
       dueDate: raw.dueDate,
-      amount: raw.amount,
+      // Decimal(12,2) in the database (NFR-ACC-03); read through Money so the number is exact.
+      amount: Number(Money.of(String(raw.amount)).toString()),
       status: raw.status as PaymentStatus,
-      paidAmount: raw.paidAmount,
+      paidAmount: Number(Money.of(String(raw.paidAmount)).toString()),
       paidAt: raw.paidAt,
       method: raw.method,
       note: raw.note,
+      invoiceNumber: raw.invoiceNumber,
+      invoiceDate: raw.invoiceDate,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     });
@@ -49,6 +53,8 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
       paidAt: payment.paidAt,
       method: payment.method,
       note: payment.note,
+      invoiceNumber: payment.invoiceNumber,
+      invoiceDate: payment.invoiceDate,
     };
 
     await this.prisma.contractPayment.upsert({
@@ -82,6 +88,8 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
         paidAt: payment.paidAt,
         method: payment.method,
         note: payment.note,
+        invoiceNumber: payment.invoiceNumber,
+        invoiceDate: payment.invoiceDate,
       })),
     });
   }
@@ -91,5 +99,12 @@ export class PrismaContractPaymentRepository implements IContractPaymentReposito
     // caller in one workspace remove a row belonging to another if it ever
     // learned the id. The extra predicate costs nothing and closes that.
     await this.prisma.contractPayment.deleteMany({ where: { id, tenantId } });
+  }
+
+  async deleteNotInvoicedDueAfter(tenantId: string, contractId: string, day: Date): Promise<number> {
+    const result = await this.prisma.contractPayment.deleteMany({
+      where: { tenantId, contractId, status: PaymentStatus.NotInvoiced, dueDate: { gt: day } },
+    });
+    return result.count;
   }
 }

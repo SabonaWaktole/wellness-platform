@@ -50,6 +50,12 @@ const tenantNavItems: NavItemSpec[] = [
   // Subscriptions sold to clients. Sits after invoices because it reads as the
   // ongoing commitment behind them rather than a separate part of the product.
   { id: 'contracts', labelKey: 'nav.contracts', icon: 'contract', permission: 'contracts.validity.view' },
+  // The Payments overview (M3 Slice 9, FR-PAY-11): instalments in the viewer's scope, with totals.
+  { id: 'payments', labelKey: 'nav.payments', icon: 'payments', permission: 'payments.view' },
+  // The Renewals screen (M3 Slice 11, FR-REN-05): contracts about to end and just ended, with their renewal state.
+  { id: 'renewals', labelKey: 'nav.renewals', icon: 'autorenew', permission: 'contracts.validity.view' },
+  // The Performance screen (M3 Slice 12, FR-PRF-01): one row per salesperson, in the viewer's scope.
+  { id: 'performance', labelKey: 'nav.performance', icon: 'trending_up', permission: 'performance.view' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },
   // settings/profile carries no permission gate on the backend, so every
   // tenant user can reach their own profile.

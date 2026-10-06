@@ -6,8 +6,9 @@ const prismaDir = path.resolve(__dirname, '../../../prisma');
 /**
  * The Milestone 2 models that hold money or percentages. Every slice that
  * adds such a model adds it here, with the columns that must be Decimal.
- * Milestone 1's Float fields (Product.price, Contract.amount, ...) stay as
- * they are until Milestone 3 (plan D4) and are deliberately not listed.
+ * Milestone 1's other Float fields (Product.price, ...) stay as they are
+ * (plan D4); the contract and payment tables were converted in Milestone 3
+ * Slice 4 and are listed in M3_DECIMAL_COLUMNS below.
  */
 const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
   PricingSettings: ['discountCapPercent'],
@@ -46,6 +47,20 @@ const M2_DECIMAL_COLUMNS: Record<string, string[]> = {
   DocumentSequence: [],
 };
 
+/**
+ * The Milestone 3 models that hold money or percentages (NFR-ACC-03). Slice 4
+ * converted Contract and ContractPayment from Float, so no Float is left in
+ * the contract and payment tables. Every slice that adds such a model or
+ * column adds it here.
+ */
+const M3_DECIMAL_COLUMNS: Record<string, string[]> = {
+  Contract: ['amount', 'agreedAnnualValue', 'discountPercent'],
+  ContractPayment: ['amount', 'paidAmount'],
+  ContractStatusHistory: [],
+  ContractPaymentHistory: ['amountReceived'],
+  ContractSettings: [],
+};
+
 /** Field name → type, for one model block of a Prisma schema. */
 function fieldsOf(schema: string, model: string): Map<string, string> {
   const block = new RegExp(`^model ${model} \\{([\\s\\S]*?)^\\}`, 'm').exec(schema);
@@ -69,6 +84,25 @@ describe('Milestone 2 money columns (NFR-ACC-02)', () => {
 
     it.each(Object.entries(M2_DECIMAL_COLUMNS).filter(([, columns]) => columns.length > 0))(
       `NFR-ACC-02 ${file}: %s stores its money and percentages as Decimal`,
+      (model, columns) => {
+        const fields = fieldsOf(schema, model);
+        for (const column of columns) expect([column, fields.get(column)]).toEqual([column, 'Decimal']);
+      }
+    );
+  }
+});
+
+describe('Milestone 3 money columns (NFR-ACC-03)', () => {
+  for (const file of ['schema.prisma', 'schema.mysql.prisma']) {
+    const schema = readFileSync(path.join(prismaDir, file), 'utf8');
+
+    it.each(Object.keys(M3_DECIMAL_COLUMNS))(`NFR-ACC-03 ${file}: %s has no Float field`, (model) => {
+      const floats = [...fieldsOf(schema, model)].filter(([, type]) => type === 'Float').map(([name]) => name);
+      expect(floats).toEqual([]);
+    });
+
+    it.each(Object.entries(M3_DECIMAL_COLUMNS).filter(([, columns]) => columns.length > 0))(
+      `NFR-ACC-03 ${file}: %s stores its money and percentages as Decimal`,
       (model, columns) => {
         const fields = fieldsOf(schema, model);
         for (const column of columns) expect([column, fields.get(column)]).toEqual([column, 'Decimal']);

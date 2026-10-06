@@ -15,7 +15,8 @@
     "categories": "Categories",
     "audit": "Audit log",
     "pricing": "Pricing",
-    "salesScript": "Sales script"
+    "salesScript": "Sales script",
+    "contracts": "Contracts and payments"
   },
   "company": {
     "title": "Company Settings",
@@ -277,6 +278,7 @@
       "calendar_view": "View calendar and appointments",
       "contracts_validity_view": "View contract validity",
       "contracts_manage": "Manage contracts",
+      "contracts_terminate": "Suspend, cancel and reinstate contracts",
       "quotations_manage": "Manage quotations",
       "quotations_approve": "Approve quotations",
       "invoices_manage": "Manage invoices",
@@ -940,6 +942,38 @@
       "NO_SCRIPT_DRAFT": "There is no draft to publish.",
       "SALES_SCRIPT_CONFLICT": "Someone else changed the script. The latest version has been loaded; check it and try again.",
       "SALES_SCRIPT_NOT_FOUND": "That version no longer exists."
+    }
+  },
+  "contractSettings": {
+    "breadcrumb": "Contracts and payments",
+    "title": "Contracts and payments",
+    "subtitle": "Set when renewal reminders go out, how long a contract counts as expiring soon, how many grace days an instalment gets before it is overdue, and the prefix of contract numbers.",
+    "loading": "Loading…",
+    "loadFailed": "The settings did not load.",
+    "saveFailed": "The settings were not saved. Try again.",
+    "save": "Save",
+    "saved": "Saved.",
+    "fields": {
+      "reminderLeadDays": {
+        "label": "Renewal reminders (days before the end date)",
+        "hint": "Separate with commas, for example 60, 30, 7. Up to five values from 1 to 365. A change applies to contracts not yet reminded at that point.",
+        "invalid": "Enter 1 to 5 different whole numbers of days from 1 to 365."
+      },
+      "expiringSoonDays": {
+        "label": "Expiring soon window (days)",
+        "hint": "A valid contract ending within this many days shows the Expiring soon badge.",
+        "invalid": "Enter a whole number of days from 1 to 365."
+      },
+      "paymentGraceDays": {
+        "label": "Payment grace days",
+        "hint": "Days after the due date before an unpaid instalment becomes overdue. 0 means the day after.",
+        "invalid": "Enter a whole number of days from 0 to 30."
+      },
+      "numberPrefix": {
+        "label": "Contract number prefix",
+        "hint": "2 to 6 capital letters or digits, for example CTR for CTR-2026-0001.",
+        "invalid": "Enter 2 to 6 capital letters or digits."
+      }
     }
   }
 }

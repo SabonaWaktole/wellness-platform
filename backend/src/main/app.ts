@@ -236,6 +236,11 @@ import { PrismaInteractionWriteTransaction } from '../clients/infrastructure/rep
 import { PrismaSalesSettingsStore } from '../deals/infrastructure/PrismaSalesSettingsStore';
 import { GetSalesSettingsUseCase, UpdateSalesSettingsUseCase } from '../deals/application/use-cases/SalesSettingsUseCases';
 import { createSalesSettingsRouter } from '../deals/interfaces/http/salesSettingsRoutes';
+import { ContractValidityBadges } from '../contracts/application/ContractValidityBadges';
+import { PrismaContractValidityReader } from '../contracts/infrastructure/PrismaContractValidityReader';
+import { PrismaContractSettingsStore } from '../contracts/infrastructure/PrismaContractSettingsStore';
+import { GetContractSettingsUseCase, UpdateContractSettingsUseCase } from '../contracts/application/use-cases/ContractSettingsUseCases';
+import { createContractSettingsRouter } from '../contracts/interfaces/http/contractSettingsRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -1094,46 +1099,186 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const { ContractDocumentStore } = require('../contracts/infrastructure/ContractDocumentStore');
 
   const { CreateContractUseCase } = require('../contracts/application/use-cases/CreateContractUseCase');
+  const { CreateContractFromDealUseCase } = require('../contracts/application/use-cases/CreateContractFromDealUseCase');
+  const { RefreshContractFromDealUseCase } = require('../contracts/application/use-cases/RefreshContractFromDealUseCase');
   const { UpdateContractUseCase } = require('../contracts/application/use-cases/UpdateContractUseCase');
-  const { ActivateContractUseCase } = require('../contracts/application/use-cases/ActivateContractUseCase');
-  const { CancelContractUseCase } = require('../contracts/application/use-cases/CancelContractUseCase');
+  const { ChangeContractStatusUseCase } = require('../contracts/application/use-cases/ChangeContractStatusUseCase');
+  const { ContractDocumentsUseCases } = require('../contracts/application/use-cases/ContractDocumentsUseCases');
+  const { PrismaContractDocumentRepository } = require('../contracts/infrastructure/repositories/PrismaContractDocumentRepository');
   const { RenewContractUseCase } = require('../contracts/application/use-cases/RenewContractUseCase');
+  const { StartRenewalUseCase } = require('../contracts/application/use-cases/StartRenewalUseCase');
+  const { PrismaContractRenewals } = require('../contracts/infrastructure/PrismaContractRenewals');
   const { SearchContractsUseCase } = require('../contracts/application/use-cases/SearchContractsUseCase');
   const { GetContractDetailUseCase } = require('../contracts/application/use-cases/GetContractDetailUseCase');
   const { GetClientContractsUseCase } = require('../contracts/application/use-cases/GetClientContractsUseCase');
-  const { RecordContractPaymentUseCase } = require('../contracts/application/use-cases/RecordContractPaymentUseCase');
-  const { AddContractPaymentUseCase } = require('../contracts/application/use-cases/AddContractPaymentUseCase');
-  const { UpdateContractPaymentUseCase } = require('../contracts/application/use-cases/UpdateContractPaymentUseCase');
-  const { DeleteContractPaymentUseCase } = require('../contracts/application/use-cases/DeleteContractPaymentUseCase');
+  const instalments = require('../contracts/application/use-cases/InstalmentUseCases');
+  const { GetContractPaymentsUseCase } = require('../contracts/application/use-cases/GetContractPaymentsUseCase');
+  const { PrismaContractPaymentHistoryRepository } = require('../contracts/infrastructure/repositories/PrismaContractPaymentHistoryRepository');
   const { AttachContractDocumentUseCase } = require('../contracts/application/use-cases/AttachContractDocumentUseCase');
 
   const { ContractsController } = require('../contracts/interfaces/http/ContractsController');
-  const { createContractRouter } = require('../contracts/interfaces/http/contractRoutes');
+  const { createContractRouter, createPaymentsRouter, createRenewalsRouter } = require('../contracts/interfaces/http/contractRoutes');
+  const { RenewalsController } = require('../contracts/interfaces/http/RenewalsController');
+  const { SearchRenewalsUseCase } = require('../contracts/application/use-cases/SearchRenewalsUseCase');
+  const { MarkNotRenewingUseCase, ClearNotRenewingUseCase } = require('../contracts/application/use-cases/NotRenewingUseCases');
+  const { PrismaRenewalsReader } = require('../contracts/infrastructure/repositories/PrismaRenewalsReader');
+  const { PaymentsController } = require('../contracts/interfaces/http/PaymentsController');
+  const { SearchPaymentsUseCase, ExportPaymentsUseCase } = require('../contracts/application/use-cases/PaymentsOverviewUseCases');
+  const { PrismaPaymentOverviewReader } = require('../contracts/infrastructure/repositories/PrismaPaymentOverviewReader');
+  const { PrismaAuditTrail: PaymentExportAuditTrail } = require('../audit/infrastructure/PrismaAuditTrail');
 
   const contractRepo = new PrismaContractRepository(prisma);
   const contractPaymentRepo = new PrismaContractPaymentRepository(prisma);
   const contractHistoryRepo = new PrismaContractStatusHistoryRepository(prisma);
   const contractWriteTx = new PrismaContractWriteTransaction(prisma);
+  const contractDocumentRepo = new PrismaContractDocumentRepository(prisma);
   const contractDocumentStore = new ContractDocumentStore();
+  // Suspending or cancelling tells the people who hold contracts.terminate over the company (M3 Slice 5).
+  const contractNotifications = new NotificationService(notificationRepository, userRepository, notificationEmailDispatcher, permissionDirectory);
 
   const contractsController = new ContractsController(
-    new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes),
+    new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes, tenantRepository),
     new UpdateContractUseCase(contractWriteTx, recordScopes),
-    new ActivateContractUseCase(contractWriteTx, recordScopes),
-    new CancelContractUseCase(contractWriteTx, recordScopes),
-    new RenewContractUseCase(contractWriteTx, recordScopes),
-    new SearchContractsUseCase(contractRepo, recordScopes),
-    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, recordScopes),
+    new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications),
+    new RenewContractUseCase(contractWriteTx, recordScopes, tenantRepository),
+    new StartRenewalUseCase(contractWriteTx, recordScopes, tenantRepository),
+    new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
+    new GetContractDetailUseCase(contractRepo, contractPaymentRepo, contractHistoryRepo, contractDocumentRepo, recordScopes, new PrismaContractRenewals(prisma), tenantRepository),
     new GetClientContractsUseCase(contractRepo, recordScopes),
-    new RecordContractPaymentUseCase(contractWriteTx, recordScopes),
-    new AddContractPaymentUseCase(contractWriteTx, recordScopes),
-    new UpdateContractPaymentUseCase(contractWriteTx, recordScopes),
-    new DeleteContractPaymentUseCase(contractWriteTx, recordScopes),
-    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes)
+    {
+      recordInvoice: new instalments.RecordInvoiceUseCase(contractWriteTx, tenantRepository),
+      markPending: new instalments.MarkPaymentPendingUseCase(contractWriteTx, tenantRepository),
+      recordReceipt: new instalments.RecordReceiptUseCase(contractWriteTx, tenantRepository),
+      reverseReceipt: new instalments.ReverseReceiptUseCase(contractWriteTx, tenantRepository),
+      correctStatus: new instalments.CorrectPaymentStatusUseCase(contractWriteTx, tenantRepository),
+      add: new instalments.AddContractPaymentUseCase(contractWriteTx, tenantRepository),
+      update: new instalments.UpdateContractPaymentUseCase(contractWriteTx, tenantRepository),
+      remove: new instalments.DeleteContractPaymentUseCase(contractWriteTx, tenantRepository),
+    },
+    new GetContractPaymentsUseCase(contractRepo, contractPaymentRepo, new PrismaContractPaymentHistoryRepository(prisma), recordScopes, tenantRepository),
+    new AttachContractDocumentUseCase(contractWriteTx, contractDocumentStore, recordScopes),
+    new CreateContractFromDealUseCase(contractWriteTx, recordScopes, tenantRepository),
+    new RefreshContractFromDealUseCase(contractWriteTx, recordScopes),
+    new ContractDocumentsUseCases(contractRepo, contractDocumentRepo, contractDocumentStore, recordScopes),
+    new ContractValidityBadges(new PrismaContractValidityReader(prisma), new PrismaContractSettingsStore(prisma)),
+    { mark: new MarkNotRenewingUseCase(contractWriteTx, recordScopes), clear: new ClearNotRenewingUseCase(contractWriteTx, recordScopes) }
   );
 
   const contractRoutes = createContractRouter(contractsController, tokenService, tenantRepository, resolveAccessContext);
   app.use('/api/:tenantSlug/contracts', contractRoutes);
+
+  // The Renewals screen (M3 Slice 11, FR-REN-05, FR-REN-09).
+  app.use(
+    '/api/:tenantSlug/renewals',
+    createRenewalsRouter(
+      new RenewalsController(new SearchRenewalsUseCase(new PrismaRenewalsReader(prisma), recordScopes, tenantRepository)),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // The Performance screen (M3 Slice 12, FR-PRF-01 to 10, FR-RBAC-23, FR-AUD-13).
+  {
+    const { PrismaPerformanceReader } = require('../dashboard/infrastructure/PrismaPerformanceReader');
+    const { GetPerformanceUseCase } = require('../dashboard/application/wellness/GetPerformanceUseCase');
+    const { GetPerformanceRecordsUseCase } = require('../dashboard/application/wellness/GetPerformanceRecordsUseCase');
+    const { GetPerformanceSeriesUseCase } = require('../dashboard/application/wellness/GetPerformanceSeriesUseCase');
+    const { ExportPerformanceUseCase } = require('../dashboard/application/wellness/ExportPerformanceUseCase');
+    const { PerformanceController } = require('../dashboard/interfaces/http/PerformanceController');
+    const { createPerformanceRouter } = require('../dashboard/interfaces/http/performanceRoutes');
+    const performanceReader = new PrismaPerformanceReader(prisma);
+    const performanceRoster = new PrismaTeamRoster();
+    const getPerformance = new GetPerformanceUseCase(performanceReader, performanceRoster);
+    app.use(
+      '/api/:tenantSlug/performance',
+      createPerformanceRouter(
+        new PerformanceController(
+          getPerformance,
+          new GetPerformanceRecordsUseCase(performanceReader, performanceRoster),
+          new GetPerformanceSeriesUseCase(performanceReader, performanceRoster),
+          new ExportPerformanceUseCase(getPerformance, new PaymentExportAuditTrail(prisma)),
+          tenantRepository
+        ),
+        tokenService,
+        tenantRepository,
+        resolveAccessContext
+      )
+    );
+  }
+
+  // The role dashboards (M3 Slices 13 and 14, FR-DSH-01 to 13, FR-RBAC-23). Mounted beside the older metrics
+  // router; its paths are different, so each request reaches exactly one of them.
+  {
+    const { PrismaDashboardReader } = require('../dashboard/infrastructure/PrismaDashboardReader');
+    const { PrismaPerformanceReader } = require('../dashboard/infrastructure/PrismaPerformanceReader');
+    const { GetDashboardHomeUseCase } = require('../dashboard/application/wellness/GetDashboardHomeUseCase');
+    const { GetSalesUserDashboardUseCase } = require('../dashboard/application/wellness/GetSalesUserDashboardUseCase');
+    const { GetSalesManagerDashboardUseCase } = require('../dashboard/application/wellness/GetSalesManagerDashboardUseCase');
+    const { GetAdministratorDashboardUseCase } = require('../dashboard/application/wellness/GetAdministratorDashboardUseCase');
+    const { GetCeoDashboardUseCase } = require('../dashboard/application/wellness/GetCeoDashboardUseCase');
+    const { GetPerformanceUseCase: GetCeoPerformanceUseCase } = require('../dashboard/application/wellness/GetPerformanceUseCase');
+    const { PrismaAdministratorDashboardReader } = require('../dashboard/infrastructure/PrismaAdministratorDashboardReader');
+    const { PrismaCeoDashboardReader } = require('../dashboard/infrastructure/PrismaCeoDashboardReader');
+    const { DashboardController } = require('../dashboard/interfaces/http/DashboardController');
+    const { createRoleDashboardRouter } = require('../dashboard/interfaces/http/dashboardHomeRoutes');
+    const performanceReader = new PrismaPerformanceReader(prisma);
+    const dashboardReader = new PrismaDashboardReader(prisma, performanceReader);
+    const dashboardRoster = new PrismaTeamRoster();
+    const dashboardSettings = new PrismaContractSettingsStore(prisma);
+    app.use(
+      '/api/:tenantSlug/dashboard',
+      createRoleDashboardRouter(
+        new DashboardController(
+          new GetDashboardHomeUseCase(dashboardReader),
+          new GetSalesUserDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings),
+          new GetSalesManagerDashboardUseCase(performanceReader, dashboardReader, dashboardRoster, dashboardSettings),
+          new GetAdministratorDashboardUseCase(dashboardReader, new PrismaAdministratorDashboardReader(prisma), auditEntryReader),
+          new GetCeoDashboardUseCase(
+            performanceReader,
+            dashboardReader,
+            new PrismaCeoDashboardReader(prisma),
+            new PrismaPaymentOverviewReader(prisma),
+            new GetCeoPerformanceUseCase(performanceReader, dashboardRoster),
+            dashboardRoster,
+            dashboardSettings
+          )
+        ),
+        tokenService,
+        tenantRepository,
+        resolveAccessContext
+      )
+    );
+  }
+
+  // Payments overview and CSV export (M3 Slice 9, FR-PAY-11, 14, FR-AUD-13).
+  const paymentOverviewReader = new PrismaPaymentOverviewReader(prisma);
+  app.use(
+    '/api/:tenantSlug/payments',
+    createPaymentsRouter(
+      new PaymentsController(
+        new SearchPaymentsUseCase(paymentOverviewReader, recordScopes),
+        new ExportPaymentsUseCase(paymentOverviewReader, recordScopes, new PaymentExportAuditTrail(prisma))
+      ),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Contract settings (M3 Slice 3): reminder lead times, expiring-soon window,
+  // payment grace days and number prefix, under settings.manage.
+  const contractSettingsStore = new PrismaContractSettingsStore(prisma);
+  app.use(
+    '/api/:tenantSlug/settings/contracts',
+    createContractSettingsRouter(
+      new GetContractSettingsUseCase(contractSettingsStore),
+      new UpdateContractSettingsUseCase(contractSettingsStore, contractWriteTx),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
 
   // Media Routes (profile photos + workspace branding)
   const { MediaController } = require('../media/interfaces/http/MediaController');
@@ -1146,6 +1291,21 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
 
   // Serve stored images. Filenames contain a UUID and are never reused, so a
   // long immutable cache is safe — replacing an image yields a new URL.
+  // Signed contracts are not public files: they are read through the contract's
+  // document endpoint, which checks commercial.view and the contract's scope
+  // (FR-CON-19, NFR-SEC-06). The store names every one `contract-<uuid>.pdf`.
+  // The name is tested after the percent-decoding express.static applies, or `%63ontract-<uuid>.pdf`
+  // would slip past the check and be served (found in the M3 security review).
+  app.use('/uploads', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(req.path);
+    } catch {
+      return res.status(404).end();
+    }
+    if (/(^|[/\\])contract-[^/\\]*\.pdf$/i.test(decoded)) return res.status(404).end();
+    next();
+  });
   app.use(
     '/uploads',
     express.static(UPLOADS_DIR, {

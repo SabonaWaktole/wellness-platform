@@ -20,6 +20,7 @@ import { usePermission } from '../../hooks/usePermission';
 import { useStatusLabel } from '../../hooks/useStatusLabel';
 import { useTeam } from '../../hooks/useTeam';
 import { dealService } from '../../services/dealService';
+import { contractService } from '../../services/contractService';
 import { getStaffDisplayName } from '../../utils/userUtils';
 import { isOpenStage, OPEN_DEAL_STAGES } from '../../types/deal';
 import type { DealDetail, DealStage } from '../../types/deal';
@@ -105,6 +106,22 @@ export const DealDetailContent: React.FC = () => {
     }
   };
 
+  /** FR-CON-01: makes the contract from this won deal, then opens it. */
+  const createContract = async () => {
+    if (!tenantSlug) return;
+    try {
+      const created = await contractService.createContractFromDeal(tenantSlug, deal.id);
+      navigate(`/${tenantSlug}/contracts/${created.id}`);
+    } catch (error) {
+      const data = (error as { response?: { data?: { error?: string; contractId?: string } } })?.response?.data;
+      if (data?.contractId) {
+        navigate(`/${tenantSlug}/contracts/${data.contractId}`);
+        return;
+      }
+      toast.error(data?.error ?? dealErrorMessage(error, t));
+    }
+  };
+
   const reassign = async () => {
     if (!tenantSlug || !newOwner) return;
     setIsSaving(true);
@@ -149,6 +166,14 @@ export const DealDetailContent: React.FC = () => {
             <span>{statusLabel.dealType(deal.type)}</span>
             <StatusBadge domain="deal" status={deal.stage} />
           </div>
+          {/* M3 FR-REN-06: a Renewal deal says which contract it renews. */}
+          {deal.renewalOfContractId && (
+            <div className={styles.subtitle}>
+              <Link to={`/${tenantSlug}/contracts/${deal.renewalOfContractId}`}>
+                {t('renewal.of', { reference: deal.renewalOfContractNumber ?? '' })}
+              </Link>
+            </div>
+          )}
         </div>
         <div className={styles.headerActions}>
           <SalesScriptButton outline />
@@ -289,6 +314,27 @@ export const DealDetailContent: React.FC = () => {
                       <dt>{t('detail.salesperson')}</dt>
                       <dd>{deal.ownerName}</dd>
                     </div>
+                    {/* M3 FR-CON-01: "Create contract", replaced by a link once it exists. */}
+                    <Can permission="contracts.manage">
+                      <div className={styles.fact}>
+                        <dt>{t('contract.label')}</dt>
+                        <dd>
+                          {deal.contractId ? (
+                            <Link to={`/${tenantSlug}/contracts/${deal.contractId}`}>{t('contract.open')}</Link>
+                          ) : (
+                            <>
+                              <Button variant="primary" onClick={createContract}>
+                                {t('contract.create')}
+                              </Button>
+                              {/* M3 FR-REN-07: a renewal's next term starts the day after the old one ends. */}
+                              {deal.renewalStartsOn && (
+                                <span className={styles.hint}>{t('renewal.startsOn', { date: dates.date(deal.renewalStartsOn) })}</span>
+                              )}
+                            </>
+                          )}
+                        </dd>
+                      </div>
+                    </Can>
                   </>
                 ) : (
                   <>

@@ -5,6 +5,7 @@ import { Calculator, ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, C
 import { useClientDetail, useClientHistory, useClientSettings } from '../../hooks/useClients';
 import { useClientAppointments } from '../../hooks/useAppointments';
 import { Card } from '../../components/ui/Card/Card';
+import { ValidityBadge } from '../../components/contracts/ValidityBadge';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Avatar } from '../../components/ui/Avatar/Avatar';
 import { Button } from '../../components/ui/Button/Button';
@@ -199,6 +200,7 @@ export const ClientDetailContent: React.FC = () => {
               <div className={styles.companyTitleRow}>
                 <h1 className={styles.companyName}>{client.name}</h1>
                 <Badge variant="primary">{statusLabel.client(client.status)}</Badge>
+                {client.validity && <ValidityBadge validity={client.validity} />}
               </div>
               <p className={styles.companySubtitle}>
                 {client.contactInfo?.email} {client.contactInfo?.phone ? `· ${client.contactInfo.phone}` : ''}

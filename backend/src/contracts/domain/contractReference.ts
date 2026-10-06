@@ -9,3 +9,8 @@
 export function contractReference(contractId: string): string {
   return contractId.split('-')[0].toUpperCase();
 }
+
+/** CTR-2026-0001: the prefix, the year and at least four digits (FR-CON-05), as offer numbers are (M2 FR-OFR-08). */
+export function formatContractNumber(prefix: string, year: number, sequence: number): string {
+  return `${prefix}-${year}-${String(sequence).padStart(4, '0')}`;
+}

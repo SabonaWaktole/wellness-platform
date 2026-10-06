@@ -25,7 +25,8 @@ export class PrismaPermissionHolderDirectory implements IPermissionHolderDirecto
     tenantId: string,
     permissionKey: string,
     subjectOwnerId: string | null,
-    excludeUserId?: string
+    excludeUserId?: string,
+    onlyScope?: 'OWN' | 'TEAM' | 'ALL'
   ): Promise<string[]> {
     const users = await this.prisma.user.findMany({
       where: {
@@ -51,6 +52,7 @@ export class PrismaPermissionHolderDirectory implements IPermissionHolderDirecto
       if (user.id === excludeUserId) continue;
       const grant = user.assignedRole?.permissions.find((candidate) => candidate.permissionKey === permissionKey);
       const scope = toScope(grant?.scope ?? null);
+      if (onlyScope && (scope ?? PermissionScope.All) !== onlyScope) continue;
       const recordScope: RecordScope =
         scope === null || scope === PermissionScope.All
           ? { kind: 'all' }

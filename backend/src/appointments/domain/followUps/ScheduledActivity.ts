@@ -54,6 +54,8 @@ export interface ScheduledActivityProps {
   completedInteractionId: string | null;
   cancelReason: string | null;
   dueNotifiedAt: Date | null;
+  /** When the follow-up was completed (FR-PRF-05). NULL while it is open. */
+  completedAt: Date | null;
   history: RescheduleEntry[];
   createdAt: Date;
   updatedAt: Date;
@@ -103,6 +105,7 @@ export class ScheduledActivity {
       completedInteractionId: null,
       cancelReason: null,
       dueNotifiedAt: null,
+      completedAt: null,
       history: [],
       createdAt: now,
       updatedAt: now,
@@ -161,6 +164,7 @@ export class ScheduledActivity {
     this.assertOpen();
     this.props.status = AppointmentStatus.COMPLETED;
     this.props.completedInteractionId = interactionId;
+    this.props.completedAt = now;
     this.props.updatedAt = now;
   }
 
