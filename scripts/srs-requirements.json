@@ -1691,6 +1691,26 @@
       "id": "FR-VIP-05",
       "priority": "Should",
       "requirement": "A user with \"Members: approve VIP\" can end a VIP early with a reason. Requests, decisions and endings are shown on the member page and audited."
+    },
+    {
+      "id": "FR-TIR-07",
+      "priority": "Must",
+      "requirement": "A daily job shall record the changes in FR-TIR-06, in FR-EMP-10 and in FR-VIP-04: new terms, the tier history and a notification to the agents, in the workspace time zone, with \"system\" as the actor. Running it twice shall change nothing the second time, and after a missed run it shall catch up without duplicating anything."
+    },
+    {
+      "id": "FR-TIR-09",
+      "priority": "Should",
+      "requirement": "A user with \"Wellness+ settings: manage\" shall be able to correct the tier of a member with a required reason and an end date. The correction is a term of its own, recorded in the history with the reason Correction."
+    },
+    {
+      "id": "FR-TIR-11",
+      "priority": "Could",
+      "requirement": "Once per member and term, the users who can record payments shall get a notification when the term enters the expiring soon window, so the member can be contacted. A daily summary instead of one message per member is acceptable."
+    },
+    {
+      "id": "NFR-REL-02",
+      "priority": "Must",
+      "requirement": "The daily member job shall be idempotent, use the workspace time zone, record \"system\" as the actor and catch up after a missed run without duplicating any term, history entry or notification."
     }
   ]
 }
