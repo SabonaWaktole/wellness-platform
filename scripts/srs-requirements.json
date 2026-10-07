@@ -1711,6 +1711,51 @@
       "id": "NFR-REL-02",
       "priority": "Must",
       "requirement": "The daily member job shall be idempotent, use the workspace time zone, record \"system\" as the actor and catch up after a missed run without duplicating any term, history entry or notification."
+    },
+    {
+      "id": "FR-EMP-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: import employees\" shall upload an employee list for one company, from the Wellness+ tab of the company page and from the Wellness+ menu. The company must have a valid contract today (Milestone 3 FR-CON-20); otherwise the upload is refused with the reason."
+    },
+    {
+      "id": "FR-EMP-02",
+      "priority": "Must",
+      "requirement": "The platform shall offer a template to download with the columns First name*, Last name*, Date of birth, Phone, Email and Language (sq, en, el, it; empty means sq). Column names in Albanian and English are accepted. Each row needs a first name, a last name and at least one of date of birth, phone or email."
+    },
+    {
+      "id": "FR-EMP-03",
+      "priority": "Must",
+      "requirement": "The file shall be checked by content, not by name: an Excel .xlsx workbook, at most 2 MB and 1,000 data rows (the limits of the existing client import), first sheet only, blank rows ignored. Macro files are refused. Cell values are read as text; formulas are never evaluated by the platform."
+    },
+    {
+      "id": "FR-EMP-04",
+      "priority": "Must",
+      "requirement": "Before anything is created the platform shall show a preview that classifies each row: New member; Existing member to link (found by FR-MEM-04 and not linked to another company); Already linked to this company, or repeated in the file (skipped); Linked to another company (refused); Error (with the reason). It shows the counts. Nothing is created until the user confirms."
+    },
+    {
+      "id": "FR-EMP-05",
+      "priority": "Must",
+      "requirement": "On confirmation the platform shall create each new member with a unique member ID, the employer company, the language and a sponsored Silver term starting today, and link each existing member with a sponsored Silver term. Everything of one upload is created in one transaction: if anything fails, nothing is created. The tier history records the reason Import."
+    },
+    {
+      "id": "FR-EMP-06",
+      "priority": "Must",
+      "requirement": "After an upload the platform shall show the result (created, linked, skipped, errors) and offer an Excel file of the skipped and error rows with the row number and the reason. The upload is recorded with who, when, file name and counts, and listed on the Wellness+ tab of the company."
+    },
+    {
+      "id": "FR-EMP-07",
+      "priority": "Must",
+      "requirement": "Uploading the same file again shall create nothing new: every row is reported as Already linked."
+    },
+    {
+      "id": "FR-EMP-14",
+      "priority": "Must",
+      "requirement": "A member can be linked to one employer company at a time. Linking a second company is refused until the first link is removed."
+    },
+    {
+      "id": "NFR-SEC-09",
+      "priority": "Must",
+      "requirement": "Uploads shall be limited to .xlsx workbooks of at most 2 MB and 1,000 rows, checked by content; formulas and external links are never followed; exports protect against formula injection."
     }
   ]
 }
