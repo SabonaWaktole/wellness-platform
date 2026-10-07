@@ -31,6 +31,7 @@ import enDeals from '../locales/en/deals.json';
 import enPricing from '../locales/en/pricing.json';
 import enOffers from '../locales/en/offers.json';
 import enFollowUps from '../locales/en/followUps.json';
+import enMembers from '../locales/en/members.json';
 
 import sqCommon from '../locales/sq/common.json';
 import sqAuth from '../locales/sq/auth.json';
@@ -52,6 +53,7 @@ import sqDeals from '../locales/sq/deals.json';
 import sqPricing from '../locales/sq/pricing.json';
 import sqOffers from '../locales/sq/offers.json';
 import sqFollowUps from '../locales/sq/followUps.json';
+import sqMembers from '../locales/sq/members.json';
 
 import elCommon from '../locales/el/common.json';
 import elAuth from '../locales/el/auth.json';
@@ -120,6 +122,7 @@ export const resources = {
     pricing: enPricing,
     offers: enOffers,
     followUps: enFollowUps,
+    members: enMembers,
   },
   sq: {
     common: sqCommon,
@@ -142,6 +145,7 @@ export const resources = {
     pricing: sqPricing,
     offers: sqOffers,
     followUps: sqFollowUps,
+    members: sqMembers,
   },
   el: {
     common: elCommon,

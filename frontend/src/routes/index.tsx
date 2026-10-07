@@ -22,6 +22,9 @@ import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPa
 import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
 import { ContractSettingsPage } from '../pages/settings/contracts/ContractSettingsPage';
+import { MembersList } from '../pages/membership/MembersList';
+import { MemberFormPage } from '../pages/membership/MemberFormPage';
+import { MemberDetailPage } from '../pages/membership/MemberDetailPage';
 import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -542,6 +545,47 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ContractFormPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 4: the Wellness+ member record. Reading is "Members: view", writing "Members: manage" (FR-RBAC-28).
+        path: 'members',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.view">
+              <MembersList />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'members/new',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.manage">
+              <MemberFormPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'members/:memberId',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.view">
+              <MemberDetailPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'members/:memberId/edit',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.manage">
+              <MemberFormPage />
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

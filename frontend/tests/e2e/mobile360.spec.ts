@@ -66,6 +66,7 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
     let companyId: string;
     let dealId: string;
     let contractId: string;
+    let memberId: string;
 
     test.beforeEach(async ({ page }) => {
       if (!companyId) {
@@ -87,6 +88,21 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
         const contracts = await page.request.get(`/api/${TENANT}/contracts?search=${encodeURIComponent('UAT Kafe Blloku')}`);
         contractId = (await contracts.json()).data?.[0]?.id;
         expect(contractId, 'run seed:uat first — UAT Kafe Blloku has no contract').toBeTruthy();
+      }
+    });
+
+    // M4 Slice 4 (NFR-USE-04): the member screens open on a member of their own, registered once and found again by name.
+    test.beforeEach(async ({ page }) => {
+      if (!memberId) {
+        const found = await page.request.get(`/api/${TENANT}/membership/members?query=${encodeURIComponent('E2E Mobile')}`);
+        memberId = (await found.json()).data?.[0]?.id;
+        if (!memberId) {
+          const created = await page.request.post(`/api/${TENANT}/membership/members`, {
+            data: { firstName: 'E2E', lastName: 'Mobile', email: 'e2e.mobile@example.com', confirmDifferentPerson: true },
+          });
+          memberId = (await created.json()).data?.id;
+        }
+        expect(memberId, 'the Administrator could not register an E2E member').toBeTruthy();
       }
     });
 
@@ -140,6 +156,11 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['calendar (agenda)', () => 'appointments?view=agenda'],
       ['calendar (week)', () => 'appointments?view=week'],
       ['calendar (month)', () => 'appointments?view=month'],
+      // M4 Slice 4: the member list, the new-member form, a member page and its edit form
+      ['members', () => 'members'],
+      ['new member form', () => 'members/new'],
+      ['member detail (terms, history, note)', () => `members/${memberId}`],
+      ['member edit form', () => `members/${memberId}/edit`],
       // M2 Slice 6: the deal edit form
       ['deal edit form', () => `deals/${dealId}/edit`],
     ];

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Calendar, Package, FileText, BarChart3,
   Settings, Building, CreditCard, Search, ClipboardCheck, Plus,
-  HelpCircle, LogOut, Receipt, FileSignature, Columns3, CalendarClock, Banknote, RefreshCw, TrendingUp,
+  HelpCircle, LogOut, Receipt, FileSignature, Columns3, CalendarClock, Banknote, RefreshCw, TrendingUp, HeartPulse,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
@@ -40,6 +40,8 @@ const iconMap: Record<string, LucideIcon> = {
   pipeline: Columns3,
   // Follow-ups (M2 Slice 11): a clock on a calendar, apart from appointments.
   follow_up: CalendarClock,
+  // Wellness+ members (M4 Slice 4): a heart with a pulse, as in Settings → Wellness+.
+  wellness: HeartPulse,
 };
 
 export interface NavItem {

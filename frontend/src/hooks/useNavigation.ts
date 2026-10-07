@@ -54,6 +54,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'payments', labelKey: 'nav.payments', icon: 'payments', permission: 'payments.view' },
   // The Renewals screen (M3 Slice 11, FR-REN-05): contracts about to end and just ended, with their renewal state.
   { id: 'renewals', labelKey: 'nav.renewals', icon: 'autorenew', permission: 'contracts.validity.view' },
+  // The Wellness+ member list (M4 Slice 4, FR-MEM-07): members, their tier and status. Wellness Albania's workflow only (D1).
+  { id: 'members', labelKey: 'nav.members', icon: 'wellness', permission: 'members.view', workflow: 'SALES_PROCESS' },
   // The Performance screen (M3 Slice 12, FR-PRF-01): one row per salesperson, in the viewer's scope.
   { id: 'performance', labelKey: 'nav.performance', icon: 'trending_up', permission: 'performance.view' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },

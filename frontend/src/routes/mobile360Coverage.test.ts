@@ -53,4 +53,14 @@ describe('NFR-USE-04 the 360 px suite covers every Milestone 4 screen built so f
     for (const tab of ['tiers', 'rules', 'relationships', 'benefits']) expect(suite).toContain(`'${tab}'`);
     expect(suite).toContain('settings/wellness-plus/${tab}');
   });
+
+  it.each([
+    ['members', "() => 'members'"],
+    ['members/new', "() => 'members/new'"],
+    ['members/:memberId', 'members/${memberId}`'],
+    ['members/:memberId/edit', 'members/${memberId}/edit'],
+  ])('NFR-USE-04 the %s screen is a route and is opened by the suite', (route, opened) => {
+    expect(routes).toContain(`path: '${route}'`);
+    expect(suite).toContain(opened);
+  });
 });

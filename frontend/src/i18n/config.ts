@@ -70,6 +70,7 @@ export const NAMESPACES = [
   'pricing',
   'offers',
   'followUps',
+  'members',
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];
