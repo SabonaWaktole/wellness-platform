@@ -33,6 +33,7 @@ const EXEMPT_ROUTES: Record<string, string> = {
  */
 const PUBLIC_WELLNESS_ROUTES: Record<string, string> = {
   'GET /api/public/cards/:token': 'Public: the member card page opens from the QR or the home screen with no login; the 256-bit card token, the per-address rate limit and the allow-list response stand in for authentication (FR-CRD-01, FR-CRD-08).',
+  'GET /api/public/cards/:token/manifest.webmanifest': 'Public: the install manifest of one card, so a phone can add it to the home screen; it needs the same card token and the same per-address limit, and a replaced or unknown token gets the neutral not-found (FR-CRD-05, FR-CRD-10).',
 };
 
 const WELLNESS_PLUS_KEYS = [

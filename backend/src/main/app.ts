@@ -1428,7 +1428,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // The member's card page (M4 Slice 11, FR-CRD-01): public, no tenant in the path, found by the card token alone.
   app.use(
     '/api/public/cards',
-    createPublicCardRouter(new GetPublicCardUseCase(cardStore, memberStore, membershipSettingsStore, benefitStore, memberPaymentStore, new QrCodeSvg(), publicLink))
+    createPublicCardRouter(new GetPublicCardUseCase(cardStore, memberStore, membershipSettingsStore, benefitStore, memberPaymentStore, new QrCodeSvg(), publicLink), undefined, publicLink)
   );
 
   // Corporate employee upload (M4 Slice 9): template, preview, confirm, history

@@ -1,10 +1,13 @@
 import { Request, Response, Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { scrubCardTokens } from '../../domain/cardToken';
+import { cardPath, scrubCardTokens } from '../../domain/cardToken';
 import type { GetPublicCardUseCase } from '../../application/use-cases/CardUseCases';
 
 /** NFR-SEC-08: requests per hour from one address, unless the deployment sets another number. */
 export const DEFAULT_CARD_REQUESTS_PER_HOUR = 60;
+
+const MANIFEST_THEME_COLOUR = '#18988b';
+const MANIFEST_BACKGROUND_COLOUR = '#ffffff';
 
 export const cardRequestsPerHour = (env: NodeJS.ProcessEnv = process.env): number => {
   const value = Number(env.CARD_RATE_LIMIT_PER_HOUR);
@@ -22,7 +25,11 @@ export const cardRequestsPerHour = (env: NodeJS.ProcessEnv = process.env): numbe
  * without the token: the message is scrubbed and the request URL is never
  * logged here.
  */
-export const createPublicCardRouter = (getCard: GetPublicCardUseCase, requestsPerHour: number = cardRequestsPerHour()): Router => {
+export const createPublicCardRouter = (
+  getCard: GetPublicCardUseCase,
+  requestsPerHour: number = cardRequestsPerHour(),
+  link: (path: string) => string = (path) => path
+): Router => {
   const router = Router();
 
   router.use(
@@ -39,6 +46,43 @@ export const createPublicCardRouter = (getCard: GetPublicCardUseCase, requestsPe
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     next();
+  });
+
+  /**
+   * The install manifest of one card (M4 Slice 12, FR-CRD-05, D14). It is per
+   * card because `start_url` is the card link itself, so the home-screen icon
+   * opens this member's card. An unknown or replaced token gets the same
+   * neutral not-found as the card (a replaced card must not be installable).
+   * The scope is `/m/`, so the worker it goes with can never see the staff app.
+   */
+  router.get('/:token/manifest.webmanifest', async (req: Request, res: Response) => {
+    try {
+      const outcome = await getCard.execute(req.params.token);
+      if (outcome.kind !== 'card') return res.status(404).json({ error: 'Card not found.', code: 'CARD_NOT_FOUND' });
+      res.type('application/manifest+json');
+      return res.send(
+        JSON.stringify({
+          name: 'Wellness+',
+          short_name: 'Wellness+',
+          description: 'Wellness+ member card',
+          start_url: link(cardPath(String(req.params.token))),
+          scope: link('/m/'),
+          display: 'standalone',
+          orientation: 'portrait',
+          theme_color: MANIFEST_THEME_COLOUR,
+          background_color: MANIFEST_BACKGROUND_COLOUR,
+          icons: [
+            { src: link('/icons/wellness-plus-192.png'), sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: link('/icons/wellness-plus-512.png'), sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: link('/icons/wellness-plus-maskable-512.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: link('/apple-touch-icon.png'), sizes: '180x180', type: 'image/png', purpose: 'any' },
+          ],
+        })
+      );
+    } catch (error) {
+      console.error('CARD ERROR:', scrubCardTokens(error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error'));
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   });
 
   router.get('/:token', async (req: Request, res: Response) => {

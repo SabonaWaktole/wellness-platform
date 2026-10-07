@@ -1,4 +1,6 @@
 import request from 'supertest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import express from 'express';
 import ExcelJS from 'exceljs';
 import QRCode from 'qrcode';
@@ -229,6 +231,72 @@ describe('Digital member card (M4 Slice 11)', () => {
       }
       expect(logged.length).toBeGreaterThan(0);
       expect(logged.join('\n')).not.toContain(secret);
+    });
+  });
+
+  describe('the install manifest (M4 Slice 12)', () => {
+    const manifest = (token: string) => request(app).get(`/api/public/cards/${token}/manifest.webmanifest`);
+
+    it('FR-CRD-05 the manifest has the required fields, start_url holds the token, the scope is /m/ and the icons are on the public address', async () => {
+      const m = await register();
+      const res = await manifest(m.token).expect(200);
+
+      expect(res.headers['content-type']).toMatch(/application\/manifest\+json/);
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(res.headers['x-robots-tag']).toMatch(/noindex/);
+      const body = JSON.parse(res.text);
+      expect(body).toMatchObject({ name: 'Wellness+', short_name: 'Wellness+', display: 'standalone', start_url: `${BASE}/m/${m.token}`, scope: `${BASE}/m/` });
+      expect(body.theme_color).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(body.background_color).toMatch(/^#[0-9a-f]{6}$/i);
+      const sizes = body.icons.map((i: any) => `${i.sizes}:${i.purpose}`);
+      expect(sizes).toEqual(expect.arrayContaining(['192x192:any', '512x512:any', '512x512:maskable', '180x180:any']));
+      expect(body.start_url.startsWith(body.scope)).toBe(true);
+    });
+
+    it('FR-CRD-05 the icons the manifest names exist in the frontend, with the stated sizes', async () => {
+      const m = await register();
+      const body = JSON.parse((await manifest(m.token).expect(200)).text);
+      for (const icon of body.icons) {
+        const file = join(__dirname, '../../../../frontend/public', new URL(icon.src).pathname);
+        const png = readFileSync(file);
+        expect(png.subarray(1, 4).toString()).toBe('PNG');
+        expect(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`).toBe(icon.sizes);
+      }
+    });
+
+    it('FR-CRD-05 an unknown, malformed or replaced token has no manifest: the same neutral not-found, and no token in the answer', async () => {
+      const m = await register();
+      await members('agent').post(`/${m.id}/card-link/replace`).expect(200);
+      const unknown = await manifest('U'.repeat(43)).expect(404);
+      const malformed = await manifest('nope').expect(404);
+      const replaced = await manifest(m.token).expect(404);
+
+      expect(unknown.body).toEqual({ error: 'Card not found.', code: 'CARD_NOT_FOUND' });
+      expect(malformed.body).toEqual(unknown.body);
+      expect(replaced.body).toEqual(unknown.body);
+      expect(unknown.headers['cache-control']).toBe('no-store');
+    });
+
+    it('FR-CRD-05, NFR-SEC-08 the manifest counts against the same per-address limit as the card', async () => {
+      const bare = express();
+      bare.use('/cards', createPublicCardRouter({ execute: async () => ({ kind: 'not-found' as const }) } as any, 2));
+      await request(bare).get('/cards/x').expect(404);
+      await request(bare).get('/cards/x/manifest.webmanifest').expect(404);
+      await request(bare).get('/cards/x/manifest.webmanifest').expect(429);
+    });
+
+    it('FR-CRD-08 a manifest failure is logged without the token', async () => {
+      const secret = 'S'.repeat(43);
+      const bare = express();
+      bare.use('/cards', createPublicCardRouter({ execute: async () => { throw new Error(`Invalid invocation where: { cardToken: "${secret}" }`); } } as any, 100));
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        const res = await request(bare).get(`/cards/${secret}/manifest.webmanifest`).expect(500);
+        expect(res.text).not.toContain(secret);
+        expect(spy.mock.calls.flat().join(' ')).not.toContain(secret);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 

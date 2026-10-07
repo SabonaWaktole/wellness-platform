@@ -115,6 +115,11 @@ PUBLIC_BASE_URL="https://<the address printed on member cards>"
   is 60. The card page is `/m/<token>` on the public address and the QR holds
   `/v/<token>`; both are served by the frontend and need the same single-page
   fallback as every other frontend route.
+  The installable card (Slice 12) adds `/m/sw.js` and `/icons/*` to the frontend
+  build; the service worker must be served from `/m/sw.js` with no cache header
+  (`frontend/public/.htaccess` does this) and the manifest comes from the API at
+  `/api/public/cards/<token>/manifest.webmanifest`, so the API must allow the
+  frontend origin through CORS, as it already does for `FRONTEND_URL`.
 - **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
   also the longest a stolen token stays usable; deactivation and suspension are
   enforced on every request regardless.
