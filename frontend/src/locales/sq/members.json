@@ -1,10 +1,31 @@
 {
   "breadcrumb": "Wellness+",
-  "tiers": { "BRONZE": "Bronz", "SILVER": "Argjend", "GOLD": "Ar", "VIP": "VIP" },
-  "status": { "ACTIVE": "Aktiv", "SUSPENDED": "I pezulluar", "CLOSED": "I mbyllur" },
-  "validity": { "valid": "I vlefshëm", "notValid": "Jo i vlefshëm: {{reason}}" },
-  "source": { "CORPORATE": "Korporatë", "INDIVIDUAL": "Individual", "FAMILY": "Familje" },
-  "languages": { "sq": "Shqip", "en": "Anglisht", "el": "Greqisht", "it": "Italisht" },
+  "tiers": {
+    "BRONZE": "Bronz",
+    "SILVER": "Argjend",
+    "GOLD": "Ar",
+    "VIP": "VIP"
+  },
+  "status": {
+    "ACTIVE": "Aktiv",
+    "SUSPENDED": "I pezulluar",
+    "CLOSED": "I mbyllur"
+  },
+  "validity": {
+    "valid": "I vlefshëm",
+    "notValid": "Jo i vlefshëm: {{reason}}"
+  },
+  "source": {
+    "CORPORATE": "Korporatë",
+    "INDIVIDUAL": "Individual",
+    "FAMILY": "Familje"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "Anglisht",
+    "el": "Greqisht",
+    "it": "Italisht"
+  },
   "list": {
     "title": "Anëtarët",
     "subtitle": "Anëtarët e Wellness+, niveli dhe statusi i tyre.",
@@ -35,7 +56,12 @@
       "email": "Email"
     },
     "sortBy": "Rendit sipas",
-    "sort": { "name": "Emrit", "memberNumber": "ID e anëtarit", "tier": "Nivelit", "createdAt": "Më të rejat" },
+    "sort": {
+      "name": "Emrit",
+      "memberNumber": "ID e anëtarit",
+      "tier": "Nivelit",
+      "createdAt": "Më të rejat"
+    },
     "formerEmployee": "Ish-punonjës",
     "total_one": "{{count}} anëtar",
     "total_other": "{{count}} anëtarë",
@@ -85,7 +111,15 @@
     "edit": "Ndrysho të dhënat",
     "notFound": "Ky anëtar nuk ekziston.",
     "loadFailed": "Anëtari nuk u ngarkua.",
-    "tabs": { "overview": "Të dhënat", "terms": "Afatet", "payments": "Pagesat", "history": "Historiku", "note": "Shënimi i brendshëm", "label": "Pjesët e anëtarit" },
+    "tabs": {
+      "overview": "Të dhënat",
+      "terms": "Afatet",
+      "payments": "Pagesat",
+      "history": "Historiku",
+      "note": "Shënimi i brendshëm",
+      "label": "Pjesët e anëtarit",
+      "family": "Familja"
+    },
     "fields": {
       "memberNumber": "ID e anëtarit",
       "dateOfBirth": "Data e lindjes",
@@ -107,7 +141,13 @@
       "noEnd": "Afati nga {{from}}, pa datë përfundimi",
       "floor": "Bronzi është niveli falas që ka çdo anëtar aktiv."
     },
-    "termSource": { "PAID": "I paguar", "SPONSORED": "Punëdhënësi", "VIP": "VIP", "DOWNGRADE": "Nuk u rinovua", "CORRECTION": "Korrigjim" },
+    "termSource": {
+      "PAID": "I paguar",
+      "SPONSORED": "Punëdhënësi",
+      "VIP": "VIP",
+      "DOWNGRADE": "Nuk u rinovua",
+      "CORRECTION": "Korrigjim"
+    },
     "terms": {
       "title": "Historiku i afateve",
       "empty": "Ende nuk ka afat të paguar, nga punëdhënësi ose VIP. Anëtari është Bronz.",
@@ -140,7 +180,9 @@
       "Import": "Importim",
       "Correction": "Korrigjim"
     },
-    "notePanel": { "empty": "Nuk ka shënim të brendshëm." },
+    "notePanel": {
+      "empty": "Nuk ka shënim të brendshëm."
+    },
     "actions": {
       "SUSPEND": "Pezullo",
       "REINSTATE": "Rivendos",
@@ -222,7 +264,8 @@
         "NOTHING_TO_RENEW": "Nuk ka afat të paguar të këtij niveli për t'u rinovuar.",
         "NOTHING_TO_UPGRADE": "Nuk ka nivel të paguar për t'u përmirësuar. Bli nivelin si anëtarësim të ri.",
         "USE_UPGRADE": "Ky anëtar ka tashmë një nivel. Paguaj diferencën si përmirësim."
-      }
+      },
+      "familyReason": "Zbritja familjare, {{relationship}} ({{principal}})"
     },
     "tab": {
       "title": "Pagesat",
@@ -258,6 +301,64 @@
       "loadFailed": "Pagesat nuk u ngarkuan.",
       "empty": "Ende nuk është regjistruar asnjë pagesë anëtarësimi.",
       "emptyFiltered": "Asnjë pagesë nuk përputhet me këto filtra."
+    }
+  },
+  "family": {
+    "title": "Familja",
+    "principal": "Anëtari kryesor",
+    "relationship": "Lidhja",
+    "confirmation": "Konfirmimi",
+    "confirmedBy": "Konfirmuar nga {{name}} më {{date}}",
+    "confirmedOn": "Konfirmuar më {{date}}",
+    "relationshipUnknown": "Lidhja nuk është caktuar",
+    "empty": "Ky anëtar nuk ka ende anëtarë familjarë.",
+    "add": "Shto anëtar familjar",
+    "remove": "Hiq lidhjen familjare",
+    "columns": {
+      "member": "Anëtari",
+      "relationship": "Lidhja",
+      "tier": "Niveli",
+      "validity": "Vlefshmëria",
+      "confirmation": "Konfirmimi"
+    },
+    "history": {
+      "title": "Historiku i familjes",
+      "event": "Ngjarja",
+      "LINKED": "Lidhur me {{principal}} si {{relationship}}",
+      "REMOVED": "Lidhja me {{principal}} u hoq"
+    },
+    "addDialog": {
+      "title": "Shto një anëtar familjar",
+      "mode": "Anëtari familjar",
+      "modeNew": "Një person i ri",
+      "modeExisting": "Një anëtar ekzistues",
+      "search": "Kërko sipas emrit, ID-së, telefonit ose emailit",
+      "member": "Anëtari",
+      "choose": "Zgjidh…",
+      "relationship": "Lidhja",
+      "relationshipRequired": "Zgjidhni lidhjen.",
+      "confirmed": "Konfirmoj që lidhja u kontrollua.",
+      "confirmationRequired": "Vendosni shenjën e konfirmimit për të ruajtur.",
+      "memberRequired": "Zgjidhni anëtarin për t'u lidhur.",
+      "failed": "Anëtari familjar nuk u ruajt.",
+      "cancel": "Anulo",
+      "save": "Shto anëtar familjar"
+    },
+    "removeDialog": {
+      "title": "Hiq lidhjen familjare",
+      "help": "Anëtari mban anëtarësimin dhe të gjitha afatet. Pagesat e mëvonshme janë me çmimin e plotë. Ndryshimi regjistrohet.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Arsyeja është e detyrueshme.",
+      "failed": "Lidhja nuk u hoq.",
+      "cancel": "Anulo",
+      "confirm": "Hiq lidhjen"
+    },
+    "refused": {
+      "SELF_LINK": "Një anëtar nuk mund të lidhet me veten.",
+      "PRINCIPAL_IS_FAMILY_MEMBER": "Ky anëtar është anëtar familjar i dikujt tjetër, ndaj nuk mund të jetë kryesor.",
+      "ALREADY_HAS_PRINCIPAL": "Ky anëtar ka tashmë një anëtar kryesor.",
+      "MEMBER_IS_PRINCIPAL": "Ky anëtar ka tashmë anëtarë familjarë, ndaj nuk mund të bëhet anëtar familjar.",
+      "NOT_A_FAMILY_MEMBER": "Ky anëtar nuk ka lidhje familjare."
     }
   }
 }

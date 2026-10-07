@@ -41,6 +41,8 @@ export interface PaymentQuote {
   startsOn: string;
   endsOn: string;
   warnings: Array<'SPONSORED_SILVER_OWN_TERM'>;
+  /** Set when a family discount applies: the principal and the relationship for the reason line (FR-FAM-05). */
+  family?: { principalMemberId: string; principalName: string; relationshipNameSq: string | null; relationshipNameEn: string | null } | null;
 }
 
 export interface PaymentOption {

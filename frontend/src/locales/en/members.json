@@ -1,10 +1,31 @@
 {
   "breadcrumb": "Wellness+",
-  "tiers": { "BRONZE": "Bronze", "SILVER": "Silver", "GOLD": "Gold", "VIP": "VIP" },
-  "status": { "ACTIVE": "Active", "SUSPENDED": "Suspended", "CLOSED": "Closed" },
-  "validity": { "valid": "Valid", "notValid": "Not valid: {{reason}}" },
-  "source": { "CORPORATE": "Corporate", "INDIVIDUAL": "Individual", "FAMILY": "Family" },
-  "languages": { "sq": "Albanian", "en": "English", "el": "Greek", "it": "Italian" },
+  "tiers": {
+    "BRONZE": "Bronze",
+    "SILVER": "Silver",
+    "GOLD": "Gold",
+    "VIP": "VIP"
+  },
+  "status": {
+    "ACTIVE": "Active",
+    "SUSPENDED": "Suspended",
+    "CLOSED": "Closed"
+  },
+  "validity": {
+    "valid": "Valid",
+    "notValid": "Not valid: {{reason}}"
+  },
+  "source": {
+    "CORPORATE": "Corporate",
+    "INDIVIDUAL": "Individual",
+    "FAMILY": "Family"
+  },
+  "languages": {
+    "sq": "Albanian",
+    "en": "English",
+    "el": "Greek",
+    "it": "Italian"
+  },
   "list": {
     "title": "Members",
     "subtitle": "Wellness+ members, their tier and status.",
@@ -35,7 +56,12 @@
       "email": "Email"
     },
     "sortBy": "Sort by",
-    "sort": { "name": "Name", "memberNumber": "Member ID", "tier": "Tier", "createdAt": "Newest" },
+    "sort": {
+      "name": "Name",
+      "memberNumber": "Member ID",
+      "tier": "Tier",
+      "createdAt": "Newest"
+    },
     "formerEmployee": "Former employee",
     "total_one": "{{count}} member",
     "total_other": "{{count}} members",
@@ -85,7 +111,15 @@
     "edit": "Edit details",
     "notFound": "This member does not exist.",
     "loadFailed": "The member could not be loaded.",
-    "tabs": { "overview": "Details", "terms": "Terms", "payments": "Payments", "history": "History", "note": "Internal note", "label": "Member sections" },
+    "tabs": {
+      "overview": "Details",
+      "terms": "Terms",
+      "payments": "Payments",
+      "history": "History",
+      "note": "Internal note",
+      "label": "Member sections",
+      "family": "Family"
+    },
     "fields": {
       "memberNumber": "Member ID",
       "dateOfBirth": "Date of birth",
@@ -107,7 +141,13 @@
       "noEnd": "Term from {{from}}, no end date",
       "floor": "Bronze is the free level every active member has."
     },
-    "termSource": { "PAID": "Paid", "SPONSORED": "Employer", "VIP": "VIP", "DOWNGRADE": "Not renewed", "CORRECTION": "Correction" },
+    "termSource": {
+      "PAID": "Paid",
+      "SPONSORED": "Employer",
+      "VIP": "VIP",
+      "DOWNGRADE": "Not renewed",
+      "CORRECTION": "Correction"
+    },
     "terms": {
       "title": "Term history",
       "empty": "No paid, sponsored or VIP term yet. The member is Bronze.",
@@ -140,7 +180,9 @@
       "Import": "Import",
       "Correction": "Correction"
     },
-    "notePanel": { "empty": "No internal note." },
+    "notePanel": {
+      "empty": "No internal note."
+    },
     "actions": {
       "SUSPEND": "Suspend",
       "REINSTATE": "Reinstate",
@@ -222,7 +264,8 @@
         "NOTHING_TO_RENEW": "There is no paid term of this tier to renew.",
         "NOTHING_TO_UPGRADE": "There is no paid tier to upgrade. Buy the tier as a new membership.",
         "USE_UPGRADE": "This member already holds a tier. Pay the difference as an upgrade."
-      }
+      },
+      "familyReason": "Family discount, {{relationship}} ({{principal}})"
     },
     "tab": {
       "title": "Payments",
@@ -258,6 +301,64 @@
       "loadFailed": "The payments could not be loaded.",
       "empty": "No membership payment has been recorded yet.",
       "emptyFiltered": "No payment matches these filters."
+    }
+  },
+  "family": {
+    "title": "Family",
+    "principal": "Principal member",
+    "relationship": "Relationship",
+    "confirmation": "Confirmation",
+    "confirmedBy": "Confirmed by {{name}} on {{date}}",
+    "confirmedOn": "Confirmed on {{date}}",
+    "relationshipUnknown": "Relationship not set",
+    "empty": "This member has no family members yet.",
+    "add": "Add family member",
+    "remove": "Remove family link",
+    "columns": {
+      "member": "Member",
+      "relationship": "Relationship",
+      "tier": "Tier",
+      "validity": "Validity",
+      "confirmation": "Confirmation"
+    },
+    "history": {
+      "title": "Family history",
+      "event": "Event",
+      "LINKED": "Linked to {{principal}} as {{relationship}}",
+      "REMOVED": "Link to {{principal}} removed"
+    },
+    "addDialog": {
+      "title": "Add a family member",
+      "mode": "Family member",
+      "modeNew": "A new person",
+      "modeExisting": "An existing member",
+      "search": "Search by name, ID, phone or email",
+      "member": "Member",
+      "choose": "Choose…",
+      "relationship": "Relationship",
+      "relationshipRequired": "Choose the relationship.",
+      "confirmed": "I confirm that the relationship was checked.",
+      "confirmationRequired": "Tick the confirmation to save.",
+      "memberRequired": "Choose the member to link.",
+      "failed": "The family member could not be saved.",
+      "cancel": "Cancel",
+      "save": "Add family member"
+    },
+    "removeDialog": {
+      "title": "Remove the family link",
+      "help": "The member keeps the membership and all terms. Later payments are at the full price. The change is recorded.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required.",
+      "failed": "The link could not be removed.",
+      "cancel": "Cancel",
+      "confirm": "Remove link"
+    },
+    "refused": {
+      "SELF_LINK": "A member cannot be linked to themselves.",
+      "PRINCIPAL_IS_FAMILY_MEMBER": "This member is a family member of someone else, so cannot be a principal.",
+      "ALREADY_HAS_PRINCIPAL": "This member already has a principal.",
+      "MEMBER_IS_PRINCIPAL": "This member already has family members, so cannot become a family member.",
+      "NOT_A_FAMILY_MEMBER": "This member has no family link."
     }
   }
 }

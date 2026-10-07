@@ -34,6 +34,46 @@ export interface MemberTerm {
   endsOn: string | null;
 }
 
+export interface RelationshipLabel {
+  id: string;
+  nameSq: string;
+  nameEn: string;
+}
+
+/** The family group of FR-FAM-07: the principal of a family member, or the members of a principal. */
+export interface FamilyGroup {
+  principalMemberId: string | null;
+  relationshipId: string | null;
+  principal: {
+    id: string;
+    memberNumber: string;
+    name: string;
+    relationship: RelationshipLabel | null;
+    confirmedBy: string | null;
+    confirmedAt: string | null;
+  } | null;
+  dependants: Array<{
+    id: string;
+    memberNumber: string;
+    name: string;
+    relationship: RelationshipLabel | null;
+    tier: Tier;
+    status: MemberStatus;
+    valid: boolean;
+    confirmedBy: string | null;
+    confirmedAt: string | null;
+  }>;
+  history: Array<{ kind: 'LINKED' | 'REMOVED'; principal: string | null; relationship: RelationshipLabel | null; reason: string | null; by: string | null; at: string }>;
+}
+
+/** Adding a family member: an existing member, or the details of a new one (FR-FAM-01). */
+export interface AddFamilyInput {
+  relationshipId: string;
+  confirmed: boolean;
+  memberId?: string;
+  member?: Partial<MemberDetailsInput>;
+}
+
 export interface MemberDetail extends MemberSummary {
   language: MemberLanguage;
   cityId: string | null;
@@ -47,7 +87,7 @@ export interface MemberDetail extends MemberSummary {
   terms: MemberTerm[];
   tierHistory: Array<{ id: string; fromTier: Tier; toTier: Tier; reason: string; comment: string | null; createdAt: string; changedBy: string | null }>;
   statusHistory: Array<{ id: string; fromStatus: MemberStatus | null; toStatus: MemberStatus; reason: string | null; createdAt: string; changedBy: string | null }>;
-  family: { principalMemberId: string | null; relationshipId: string | null; dependants: unknown[] };
+  family: FamilyGroup;
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
   /** Only for a user who holds "Members: view payments" (FR-MPAY-08). */
@@ -107,6 +147,18 @@ export const memberService = {
     (await api.patch<{ data: MemberSummary }>(`${base(slug)}/${id}`, { ...body, ...(confirmDifferentPerson ? { confirmDifferentPerson } : {}) })).data.data,
   changeStatus: async (slug: string, id: string, action: StatusAction, reason?: string) =>
     (await api.post<{ data: MemberSummary }>(`${base(slug)}/${id}/status`, { action, ...(reason ? { reason } : {}) })).data.data,
+  /** The relationships a new family link can use, active ones only (FR-FAM-02). */
+  familyRelationships: async (slug: string) => (await api.get<{ data: RelationshipLabel[] }>(`${base(slug)}/family/relationships`)).data.data,
+  addFamilyMember: async (slug: string, principalId: string, body: AddFamilyInput, confirmDifferentPerson = false) =>
+    (await api.post<{ data: MemberSummary }>(`${base(slug)}/${principalId}/family`, { ...body, ...(confirmDifferentPerson ? { confirmDifferentPerson } : {}) })).data.data,
+  removeFamilyLink: async (slug: string, memberId: string, reason: string) =>
+    (await api.post<{ data: MemberSummary }>(`${base(slug)}/${memberId}/family/remove`, { reason })).data.data,
+};
+
+/** The code of a 409 about a family link (FAMILY_LINK_REFUSED) with its reason, if the error is one. */
+export const familyRefusalOf = (err: unknown): string | null => {
+  const response = (err as { response?: { status?: number; data?: { code?: string; reason?: string } } })?.response;
+  return response?.status === 409 && response.data?.code === 'FAMILY_LINK_REFUSED' ? (response.data.reason ?? null) : null;
 };
 
 /** The existing members a duplicate refusal names, when the error is one (FR-MEM-04). */

@@ -15,6 +15,7 @@ import {
   type PaymentMethod,
   type PaymentOption,
 } from '../../services/memberPaymentService';
+import { lookupLabel } from '../../utils/lookupLabel';
 import { refusedField } from '../../services/memberService';
 import { useTierLabels } from './useTierLabels';
 import styles from './Members.module.css';
@@ -36,7 +37,7 @@ const keyOf = (option: Pick<PaymentOption, 'kind' | 'targetTier'>) => `${option.
  * will calculate again when it saves (FR-MPAY-02).
  */
 export const RecordPaymentModal: React.FC<Props> = ({ tenantSlug, memberId, isOpen, onClose, onRecorded }) => {
-  const { t } = useTranslation('members');
+  const { t, i18n } = useTranslation('members');
   const dates = useDateFormat();
   const { format: formatMoney } = useMoneyFormat();
   const tier = useTierLabels(tenantSlug);
@@ -133,7 +134,19 @@ export const RecordPaymentModal: React.FC<Props> = ({ tenantSlug, memberId, isOp
               {Number(option.quote.discountPercent) > 0 && (
                 <div className={styles.fact}>
                   <dt>{t('payments.drawer.discount')}</dt>
-                  <dd>{option.quote.discountPercent}%</dd>
+                  <dd>
+                    {option.quote.discountPercent}%
+                    {option.quote.family && (
+                      <div className={styles.muted} data-testid="family-discount-reason">
+                        {t('payments.drawer.familyReason', {
+                          relationship: option.quote.family.relationshipNameSq
+                            ? lookupLabel({ nameSq: option.quote.family.relationshipNameSq, nameEn: option.quote.family.relationshipNameEn }, i18n.language)
+                            : t('family.relationshipUnknown'),
+                          principal: option.quote.family.principalName,
+                        })}
+                      </div>
+                    )}
+                  </dd>
                 </div>
               )}
               <div className={styles.fact}>

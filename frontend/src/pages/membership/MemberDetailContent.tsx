@@ -16,11 +16,12 @@ import { memberService, type MemberDetail, type StatusAction } from '../../servi
 import { memberPaymentService, voidRefusalOf } from '../../services/memberPaymentService';
 import { StatusBadge, TierBadge } from './MemberBadges';
 import { useTierLabels } from './useTierLabels';
+import { FamilyTab } from './FamilyTab';
 import { RecordPaymentModal } from './RecordPaymentModal';
 import { useReceipt } from './useReceipt';
 import styles from './Members.module.css';
 
-type TabId = 'overview' | 'terms' | 'payments' | 'history' | 'note';
+type TabId = 'overview' | 'terms' | 'payments' | 'family' | 'history' | 'note';
 
 /** The actions a status allows (FR-MEM-05). */
 const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
@@ -34,7 +35,7 @@ const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
  * history, the status history and the internal note. The tier shown is the one the server calculated for today
  * from the terms, never a stored value. No control edits the tier, an expiry date or the member ID (FR-MEM-09).
  * Payments (FR-MPAY-08) arrive only for a user who may view them; recording and voiding need "record payments".
- * The family group and the verification events fill in with Slices 6 and 13.
+ * The Family tab shows the group and the principal (FR-FAM-07); the verification events fill in with Slice 13.
  */
 export const MemberDetailContent: React.FC = () => {
   const { t, i18n } = useTranslation('members');
@@ -212,6 +213,7 @@ export const MemberDetailContent: React.FC = () => {
               { id: 'overview', label: t('detail.tabs.overview') },
               { id: 'terms', label: t('detail.tabs.terms'), count: member.terms.length },
               ...(member.payments ? [{ id: 'payments' as const, label: t('detail.tabs.payments'), count: member.payments.length }] : []),
+              { id: 'family', label: t('detail.tabs.family'), count: member.family.dependants.length || undefined },
               { id: 'history', label: t('detail.tabs.history') },
               { id: 'note', label: t('detail.tabs.note') },
             ]}
@@ -336,6 +338,10 @@ export const MemberDetailContent: React.FC = () => {
                 </div>
               )}
             </>
+          )}
+
+          {tab === 'family' && tenantSlug && memberId && (
+            <FamilyTab tenantSlug={tenantSlug} memberId={memberId} family={member.family} canManage={canManage} onChanged={() => void load()} />
           )}
 
           {tab === 'history' && (
