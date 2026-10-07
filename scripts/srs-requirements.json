@@ -1676,6 +1676,21 @@
       "id": "FR-FAM-08",
       "priority": "Must",
       "requirement": "Sponsored Silver covers the employee only. A family member of an employee does not get a sponsored term; the family discount applies when the employee is Silver or higher (FR-FAM-04)."
+    },
+    {
+      "id": "FR-VIP-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall request VIP for a member with a required reason (for example strategic client, PR relationship, key partner). The request has the status Pending."
+    },
+    {
+      "id": "FR-VIP-02",
+      "priority": "Must",
+      "requirement": "Only a user with \"Members: approve VIP\" shall approve or reject a request, and a rejection needs a reason. A user cannot approve a request they made themselves."
+    },
+    {
+      "id": "FR-VIP-05",
+      "priority": "Should",
+      "requirement": "A user with \"Members: approve VIP\" can end a VIP early with a reason. Requests, decisions and endings are shown on the member page and audited."
     }
   ]
 }
