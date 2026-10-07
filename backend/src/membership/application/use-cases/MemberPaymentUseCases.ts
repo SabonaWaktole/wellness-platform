@@ -18,7 +18,7 @@ import { effectiveTierAt, PaymentRefusedError, quoteFor, dayText } from '../memb
 import { MEMBERS_PAYMENTS_RECORD, MEMBERS_PAYMENTS_VIEW } from '../membershipPermissions';
 import type { IMemberPaymentStore, MemberPaymentRecord, PaymentFilters } from '../ports/IMemberPaymentStore';
 import type { IMemberStore, MemberRecord } from '../ports/IMemberStore';
-import type { IMembershipSettingsStore } from '../ports/IMembershipSettingsStore';
+import type { IMembershipSettingsStore, IRelationshipStore } from '../ports/IMembershipSettingsStore';
 import type { IMembershipWriteTransaction } from '../ports/IMembershipWriteTransaction';
 import {
   paymentUserIds,
@@ -76,11 +76,12 @@ export class QuotePaymentUseCase {
     private readonly memberStore: IMemberStore,
     private readonly paymentStore: IMemberPaymentStore,
     private readonly settingsStore: IMembershipSettingsStore,
+    private readonly relationshipStore: IRelationshipStore,
     private readonly now: () => Date = () => new Date()
   ) {}
 
   private get deps() {
-    return { paymentStore: this.paymentStore, settingsStore: this.settingsStore };
+    return { paymentStore: this.paymentStore, settingsStore: this.settingsStore, memberStore: this.memberStore, relationshipStore: this.relationshipStore };
   }
 
   private async load(input: { tenantId: string; memberId: string }) {
@@ -104,7 +105,7 @@ export class QuotePaymentUseCase {
     const { member, terms } = await this.load(input);
     const result = await quoteFor(this.deps, input.tenantId, member, terms, { kind: kindOf(input.kind), targetTier: tierOf(input.targetTier), receivedOn });
     if (!result.allowed) throw new PaymentRefusedError(result.reason);
-    return presentQuote(result.quote);
+    return presentQuote(result.quote, result.family);
   }
 
   /** Every payment the member can make on the date, with its quote, so the screen offers nothing refused (FR-MPAY-03). */
@@ -123,7 +124,7 @@ export class QuotePaymentUseCase {
     for (const kind of KINDS) {
       for (const targetTier of PURCHASABLE) {
         const result = await quoteFor(this.deps, input.tenantId, member, terms, { kind, targetTier, receivedOn });
-        if (result.allowed) options.push({ kind, targetTier, quote: presentQuote(result.quote) });
+        if (result.allowed) options.push({ kind, targetTier, quote: presentQuote(result.quote, result.family) });
       }
     }
     return { options };
@@ -161,10 +162,10 @@ export class RecordMemberPaymentUseCase {
     const receivedOn = receivedOnDate(input.body.receivedOn, today);
     const note = optionalPaymentText(input.body.note, 'note', PAYMENT_LIMITS.note);
 
-    return this.writeTx.run(async ({ memberStore, paymentStore, settingsStore, receiptNumbers, auditTrail }) => {
+    return this.writeTx.run(async ({ memberStore, paymentStore, settingsStore, relationshipStore, receiptNumbers, auditTrail }) => {
       if (!(await paymentStore.lockMember(input.tenantId, input.memberId))) throw new MemberNotFoundError();
       const member = (await memberStore.find(input.tenantId, input.memberId)) as MemberRecord;
-      const deps = { paymentStore, settingsStore };
+      const deps = { paymentStore, settingsStore, memberStore, relationshipStore };
       const termsBefore = await paymentStore.listTerms(member.id);
 
       const result = await quoteFor(deps, input.tenantId, member, termsBefore, { kind, targetTier, receivedOn });
@@ -262,7 +263,7 @@ export class VoidMemberPaymentUseCase {
     const reason = voidReason(input.reason);
     const today = dayKeyInZone(this.now(), input.timezone);
 
-    return this.writeTx.run(async ({ memberStore, paymentStore, settingsStore, auditTrail }) => {
+    return this.writeTx.run(async ({ memberStore, paymentStore, settingsStore, relationshipStore, auditTrail }) => {
       const found = await paymentStore.find(input.tenantId, input.paymentId);
       if (!found) throw new PaymentNotFoundError();
       await paymentStore.lockMember(input.tenantId, found.memberId);
@@ -273,7 +274,7 @@ export class VoidMemberPaymentUseCase {
       if (latest?.id !== payment.id) throw new PaymentNotLatestError();
 
       const member = (await memberStore.find(input.tenantId, payment.memberId)) as MemberRecord;
-      const deps = { paymentStore, settingsStore };
+      const deps = { paymentStore, settingsStore, memberStore, relationshipStore };
       const termsBefore = await paymentStore.listTerms(member.id);
       const tierBefore = await effectiveTierAt(deps, input.tenantId, member, termsBefore, today);
 

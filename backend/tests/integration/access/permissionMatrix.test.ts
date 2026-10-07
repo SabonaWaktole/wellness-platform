@@ -313,6 +313,22 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/status`).set('Authorization', `Bearer ${t}`).send({ action: 'CLOSE' }),
     },
     {
+      label: 'members.manage — GET /membership/members/family/relationships',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/family/relationships`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/family',
+      permissionKey: 'members.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/family`).set('Authorization', `Bearer ${t}`).send({ relationshipId: 'x', confirmed: true, memberId: 'y' }),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/family/remove',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/family/remove`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
       label: 'members.payments.record — GET /membership/members/:id/payments/options',
       permissionKey: 'members.payments.record',
       request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/nonexistent/payments/options`).set('Authorization', `Bearer ${t}`),

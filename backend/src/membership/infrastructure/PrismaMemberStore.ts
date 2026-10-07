@@ -7,6 +7,8 @@ import type { Tier } from '../domain/Tier';
 import type { TermSource } from '../domain/MemberTerm';
 import type {
   IMemberStore,
+  FamilyLinkData,
+  MemberFamilyEventRecord,
   MemberRecord,
   MemberSearchParams,
   MemberStatusHistoryRecord,
@@ -40,6 +42,8 @@ const MEMBER_SELECT = {
   leftCompanyAt: true,
   principalMemberId: true,
   relationshipId: true,
+  relationshipConfirmedBy: true,
+  relationshipConfirmedAt: true,
   note: true,
   createdBy: true,
   createdAt: true,
@@ -68,6 +72,8 @@ const toRecord = (row: MemberRow): MemberRecord => ({
   leftCompanyAt: day(row.leftCompanyAt),
   principalMemberId: row.principalMemberId,
   relationshipId: row.relationshipId,
+  relationshipConfirmedBy: row.relationshipConfirmedBy,
+  relationshipConfirmedAt: row.relationshipConfirmedAt,
   note: row.note,
   createdBy: row.createdBy,
   createdAt: row.createdAt,
@@ -245,6 +251,44 @@ export class PrismaMemberStore implements IMemberStore {
       reason: row.reason,
       changedByUserId: row.changedByUserId,
       createdAt: row.createdAt,
+    }));
+  }
+
+  async listDependants(tenantId: string, principalId: string): Promise<MemberRecord[]> {
+    const rows = await this.prisma.member.findMany({
+      where: { tenantId, principalMemberId: principalId },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      select: MEMBER_SELECT,
+    });
+    return rows.map(toRecord);
+  }
+
+  async setFamilyLink(tenantId: string, id: string, link: FamilyLinkData | null): Promise<void> {
+    await this.prisma.member.updateMany({
+      where: { id, tenantId },
+      data: {
+        principalMemberId: link?.principalMemberId ?? null,
+        relationshipId: link?.relationshipId ?? null,
+        relationshipConfirmedBy: link?.confirmedBy ?? null,
+        relationshipConfirmedAt: link?.confirmedAt ?? null,
+      },
+    });
+  }
+
+  async addFamilyEvent(event: Omit<MemberFamilyEventRecord, 'id' | 'at'> & { memberId: string }): Promise<void> {
+    await this.prisma.memberFamilyEvent.create({ data: { id: randomUUID(), ...event } });
+  }
+
+  async listFamilyEvents(memberId: string): Promise<MemberFamilyEventRecord[]> {
+    const rows = await this.prisma.memberFamilyEvent.findMany({ where: { memberId }, orderBy: { at: 'desc' } });
+    return rows.map((row) => ({
+      id: row.id,
+      kind: row.kind as 'LINKED' | 'REMOVED',
+      principalMemberId: row.principalMemberId,
+      relationshipId: row.relationshipId,
+      reason: row.reason,
+      byUserId: row.byUserId,
+      at: row.at,
     }));
   }
 

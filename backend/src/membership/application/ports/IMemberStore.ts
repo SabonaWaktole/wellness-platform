@@ -29,6 +29,8 @@ export interface MemberRecord {
   leftCompanyAt: string | null;
   principalMemberId: string | null;
   relationshipId: string | null;
+  relationshipConfirmedBy: string | null;
+  relationshipConfirmedAt: Date | null;
   note: string | null;
   createdBy: string;
   createdAt: Date;
@@ -61,6 +63,23 @@ export interface MemberStatusHistoryRecord {
   reason: string | null;
   changedByUserId: string | null;
   createdAt: Date;
+}
+
+export interface MemberFamilyEventRecord {
+  id: string;
+  kind: 'LINKED' | 'REMOVED';
+  principalMemberId: string | null;
+  relationshipId: string | null;
+  reason: string | null;
+  byUserId: string;
+  at: Date;
+}
+
+export interface FamilyLinkData {
+  principalMemberId: string;
+  relationshipId: string;
+  confirmedBy: string;
+  confirmedAt: Date;
 }
 
 export type MemberSource = 'CORPORATE' | 'INDIVIDUAL' | 'FAMILY';
@@ -121,6 +140,12 @@ export interface IMemberStore {
   listTerms(memberId: string): Promise<MemberTermRecord[]>;
   listTierHistory(memberId: string): Promise<MemberTierHistoryRecord[]>;
   listStatusHistory(memberId: string): Promise<MemberStatusHistoryRecord[]>;
+  /** The members whose principal is this member (FR-FAM-07). */
+  listDependants(tenantId: string, principalId: string): Promise<MemberRecord[]>;
+  /** Sets the family link, or clears it with null (FR-FAM-01, FR-FAM-06). */
+  setFamilyLink(tenantId: string, id: string, link: FamilyLinkData | null): Promise<void>;
+  addFamilyEvent(event: Omit<MemberFamilyEventRecord, 'id' | 'at'> & { memberId: string }): Promise<void>;
+  listFamilyEvents(memberId: string): Promise<MemberFamilyEventRecord[]>;
   /** Display names for the users who created or changed members, by user id. */
   userNames(tenantId: string, userIds: string[]): Promise<Record<string, string>>;
 }

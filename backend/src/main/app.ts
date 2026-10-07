@@ -269,6 +269,7 @@ import {
   SearchMembersUseCase,
   UpdateMemberUseCase,
 } from '../membership/application/use-cases/MemberUseCases';
+import { AddFamilyMemberUseCase, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../membership/application/use-cases/FamilyUseCases';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
 import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
 import { PrismaMemberPaymentStore } from '../membership/infrastructure/PrismaMemberPaymentStore';
@@ -1352,19 +1353,22 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // details, suspend and close. Members: view reads, Members: manage writes.
   const memberStore = new PrismaMemberStore(prisma);
   const memberPaymentStore = new PrismaMemberPaymentStore(prisma);
-  const quotePayment = new QuotePaymentUseCase(memberStore, memberPaymentStore, membershipSettingsStore);
+  const quotePayment = new QuotePaymentUseCase(memberStore, memberPaymentStore, membershipSettingsStore, relationshipStore);
   const searchMemberPayments = new SearchMemberPaymentsUseCase(memberPaymentStore, memberStore);
   app.use(
     '/api/:tenantSlug/membership/members',
     createMemberRouter(
       {
         search: new SearchMembersUseCase(memberStore, membershipSettingsStore),
-        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore),
+        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore, relationshipStore),
         register: new RegisterMemberUseCase(membershipWriteTx, generateShareToken),
         update: new UpdateMemberUseCase(membershipWriteTx),
         changeStatus: new ChangeMemberStatusUseCase(membershipWriteTx),
         quotePayment,
         recordPayment: new RecordMemberPaymentUseCase(membershipWriteTx),
+        addFamilyMember: new AddFamilyMemberUseCase(membershipWriteTx, generateShareToken),
+        removeFamilyLink: new RemoveFamilyLinkUseCase(membershipWriteTx),
+        familyRelationships: new ListFamilyRelationshipsUseCase(relationshipStore),
       },
       tokenService,
       tenantRepository,

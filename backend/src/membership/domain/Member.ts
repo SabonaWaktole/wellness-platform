@@ -6,7 +6,7 @@ export type MemberLanguage = (typeof MEMBER_LANGUAGES)[number];
 
 export const MEMBER_LIMITS = { name: 100, email: 191, phone: { min: 6, max: 20 }, note: 2000, reason: 500 } as const;
 
-export type MemberField = 'firstName' | 'lastName' | 'dateOfBirth' | 'phone' | 'email' | 'language' | 'cityId' | 'note' | 'identifier' | 'reason';
+export type MemberField = 'firstName' | 'lastName' | 'dateOfBirth' | 'phone' | 'email' | 'language' | 'cityId' | 'note' | 'identifier' | 'reason' | 'relationshipId' | 'confirmation' | 'memberId';
 
 /** A member's details are refused. Mapped to 400 with the field. */
 export class InvalidMemberError extends DomainError {

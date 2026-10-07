@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Prisma } from '@prisma/client';
-import { recordPaymentSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
+import { addFamilySchema, recordPaymentSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
 
 const prismaDir = path.join(__dirname, '../../../prisma');
 const read = (...parts: string[]) => fs.readFileSync(path.join(prismaDir, ...parts), 'utf8');
@@ -148,5 +148,16 @@ describe('the payment request schema', () => {
       expect(keys).not.toContain(forbidden);
     }
     expect(recordPaymentSchema.safeParse({ kind: 'NEW', targetTier: 'SILVER', method: 'CASH', receivedOn: '2027-03-15', amount: '1' }).success).toBe(false);
+  });
+});
+
+describe('the family request schema', () => {
+  it('FR-FAM-01, FR-MEM-09 carries no tier, term date, status, number or token, not even inside the new member', () => {
+    const ok = { relationshipId: 'r', confirmed: true, member: { firstName: 'A', lastName: 'B' } };
+    expect(addFamilySchema.safeParse(ok).success).toBe(true);
+    for (const extra of ['tier', 'currentTier', 'endsOn', 'status', 'memberNumber', 'cardToken']) {
+      expect(addFamilySchema.safeParse({ ...ok, [extra]: 'x' }).success).toBe(false);
+      expect(addFamilySchema.safeParse({ ...ok, member: { ...ok.member, [extra]: 'x' } }).success).toBe(false);
+    }
   });
 });

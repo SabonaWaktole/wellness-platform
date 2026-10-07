@@ -3741,6 +3741,64 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- M4 Slice 6: family members
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `MemberFamilyEvent` (
+    `id` VARCHAR(191) NOT NULL,
+    `memberId` VARCHAR(191) NOT NULL,
+    `principalMemberId` VARCHAR(191) NULL,
+    `relationshipId` VARCHAR(191) NULL,
+    `kind` VARCHAR(191) NOT NULL,
+    `reason` TEXT NULL,
+    `byUserId` VARCHAR(191) NOT NULL,
+    `at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `MemberFamilyEvent_memberId_at_idx`(`memberId`, `at`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'MemberFamilyEvent' AND CONSTRAINT_NAME = 'MemberFamilyEvent_memberId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed, 'ALTER TABLE `MemberFamilyEvent` ADD CONSTRAINT `MemberFamilyEvent_memberId_fkey` FOREIGN KEY (`memberId`) REFERENCES `Member`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: MemberFamilyEvent_memberId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261021100000_m4_member_family', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261021100000_m4_member_family'
+);
+
+-- ---------------------------------------------------------------
+-- M4 Slice 6: family members
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `MemberFamilyEvent` (
+    `id` VARCHAR(191) NOT NULL,
+    `memberId` VARCHAR(191) NOT NULL,
+    `principalMemberId` VARCHAR(191) NULL,
+    `relationshipId` VARCHAR(191) NULL,
+    `kind` VARCHAR(191) NOT NULL,
+    `reason` TEXT NULL,
+    `byUserId` VARCHAR(191) NOT NULL,
+    `at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `MemberFamilyEvent_memberId_at_idx`(`memberId`, `at`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'MemberFamilyEvent' AND CONSTRAINT_NAME = 'MemberFamilyEvent_memberId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed, 'ALTER TABLE `MemberFamilyEvent` ADD CONSTRAINT `MemberFamilyEvent_memberId_fkey` FOREIGN KEY (`memberId`) REFERENCES `Member`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: MemberFamilyEvent_memberId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261021100000_m4_member_family', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261021100000_m4_member_family'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -3890,6 +3948,10 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberStatusHistory'
   UNION ALL SELECT 'MemberPayment table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberPayment'
+  UNION ALL SELECT 'MemberFamilyEvent table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberFamilyEvent'
+  UNION ALL SELECT 'MemberFamilyEvent table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberFamilyEvent'
   UNION ALL SELECT 'ContractDocument table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
   UNION ALL SELECT 'ContractPayment_tenantId_paidAt_idx', COUNT(*) FROM information_schema.STATISTICS

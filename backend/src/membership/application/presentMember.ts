@@ -2,7 +2,7 @@ import type { Validity } from '../domain/memberValidity';
 import type { Tier } from '../domain/Tier';
 import type { TermSource } from '../domain/MemberTerm';
 import type { MemberPaymentView } from './presentMemberPayment';
-import type { MemberRecord, MemberStatusHistoryRecord, MemberTermRecord, MemberTierHistoryRecord } from './ports/IMemberStore';
+import type { MemberFamilyEventRecord, MemberRecord, MemberStatusHistoryRecord, MemberTermRecord, MemberTierHistoryRecord } from './ports/IMemberStore';
 
 /**
  * What the member routes send (FR-MEM-02, FR-MEM-08). This is the one place
@@ -47,6 +47,46 @@ export function presentMemberSummary(member: MemberRecord): MemberSummary {
   };
 }
 
+export interface RelationshipLabel {
+  id: string;
+  nameSq: string;
+  nameEn: string;
+}
+
+/** The family group of FR-FAM-07: the principal of a family member, or the members of a principal. */
+export interface FamilyGroup {
+  principalMemberId: string | null;
+  relationshipId: string | null;
+  principal: {
+    id: string;
+    memberNumber: string;
+    name: string;
+    relationship: RelationshipLabel | null;
+    confirmedBy: string | null;
+    confirmedAt: Date | null;
+  } | null;
+  dependants: Array<{
+    id: string;
+    memberNumber: string;
+    name: string;
+    relationship: RelationshipLabel | null;
+    tier: Tier;
+    status: MemberRecord['status'];
+    valid: boolean;
+    confirmedBy: string | null;
+    confirmedAt: Date | null;
+  }>;
+  /** Links and removals, newest first, so a removed link is still explainable (FR-FAM-06). */
+  history: Array<{
+    kind: MemberFamilyEventRecord['kind'];
+    principal: string | null;
+    relationship: RelationshipLabel | null;
+    reason: string | null;
+    by: string | null;
+    at: Date;
+  }>;
+}
+
 export interface MemberDetail extends MemberSummary {
   language: MemberRecord['language'];
   cityId: string | null;
@@ -61,7 +101,7 @@ export interface MemberDetail extends MemberSummary {
   terms: MemberTermRecord[];
   tierHistory: Array<MemberTierHistoryRecord & { changedBy: string | null }>;
   statusHistory: Array<MemberStatusHistoryRecord & { changedBy: string | null }>;
-  family: { principalMemberId: string | null; relationshipId: string | null; dependants: never[] };
+  family: FamilyGroup;
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
   /** Present only for a user who holds "Members: view payments" (FR-MPAY-08). */
@@ -77,6 +117,7 @@ export function presentMember(input: {
   current: { source: TermSource; startsOn: string; endsOn: string | null } | null;
   validity: Validity;
   userNames: Record<string, string>;
+  family: Omit<FamilyGroup, 'principalMemberId' | 'relationshipId'>;
 }): MemberDetail {
   const { member, userNames } = input;
   const nameOf = (id: string | null) => (id ? (userNames[id] ?? null) : null);
@@ -96,8 +137,7 @@ export function presentMember(input: {
     terms: input.terms,
     tierHistory: input.tierHistory.map((h) => ({ ...h, changedBy: nameOf(h.changedByUserId) })),
     statusHistory: input.statusHistory.map((h) => ({ ...h, changedBy: nameOf(h.changedByUserId) })),
-    // Slice 6 fills the family group.
-    family: { principalMemberId: member.principalMemberId, relationshipId: member.relationshipId, dependants: [] },
+    family: { principalMemberId: member.principalMemberId, relationshipId: member.relationshipId, ...input.family },
     formerEmployerClientId: member.formerEmployerClientId,
     leftCompanyAt: member.leftCompanyAt,
   };

@@ -18,6 +18,7 @@ import { PaymentRefusedError } from '../../application/memberPaymentQuote';
 import { InvalidPaymentError } from '../../domain/memberPayment';
 import { presentMemberPayment } from '../../application/presentMemberPayment';
 import { QuotePaymentUseCase, RecordMemberPaymentUseCase } from '../../application/use-cases/MemberPaymentUseCases';
+import { AddFamilyMemberUseCase, FamilyLinkRefusedError, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../../application/use-cases/FamilyUseCases';
 import {
   ChangeMemberStatusUseCase,
   DuplicateMemberError,
@@ -49,6 +50,18 @@ export const updateSchema = z.object(personalShape).strict();
 export const recordPaymentSchema = z
   .object({ kind: text, targetTier: text, method: text, receivedOn: text, note: text.nullable().optional() })
   .strict();
+const { confirmDifferentPerson: _unused, ...detailsShape } = personalShape;
+/** Adding a family member: the relationship, the confirmation tick, and an existing member or the details of a new one (FR-FAM-01). */
+export const addFamilySchema = z
+  .object({
+    relationshipId: text,
+    confirmed: z.boolean(),
+    memberId: text.optional(),
+    member: z.object(detailsShape).strict().optional(),
+    confirmDifferentPerson: z.boolean().optional(),
+  })
+  .strict();
+export const removeFamilySchema = z.object({ reason: text }).strict();
 export const statusSchema = z.object({ action: z.enum(STATUS_ACTIONS as [string, ...string[]]), reason: text.nullable().optional() }).strict();
 
 const flag = (value: unknown): boolean | undefined => (value === 'true' || value === '1' ? true : undefined);
@@ -65,6 +78,9 @@ export interface MemberUseCases {
   changeStatus: ChangeMemberStatusUseCase;
   quotePayment: QuotePaymentUseCase;
   recordPayment: RecordMemberPaymentUseCase;
+  addFamilyMember: AddFamilyMemberUseCase;
+  removeFamilyLink: RemoveFamilyLinkUseCase;
+  familyRelationships: ListFamilyRelationshipsUseCase;
 }
 
 /**
@@ -94,6 +110,7 @@ export const createMemberRouter = (
     if (error instanceof MemberNotFoundError) return res.status(404).json({ error: error.message, code: error.code });
     if (error instanceof InvalidPaymentError) return res.status(400).json({ error: error.message, code: error.code, field: error.field });
     if (error instanceof PaymentRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
+    if (error instanceof FamilyLinkRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
     if (error instanceof InvalidStatusChangeError) return res.status(409).json({ error: error.message, code: error.code });
     if (error instanceof DuplicateMemberError) {
       return res.status(409).json(redactMemberFields({ error: error.message, code: error.code, duplicates: error.duplicates }, req.access!));
@@ -159,6 +176,9 @@ export const createMemberRouter = (
     }, 201)
   );
 
+  // The active relationships a new family link can use (FR-FAM-02).
+  router.get('/family/relationships', manage, handle((_req, ctx) => uc.familyRelationships.execute(ctx)));
+
   router.get('/:id', view, handle((req, ctx) => uc.get.execute({ ...ctx, id: String(req.params.id) })));
 
   router.patch(
@@ -178,6 +198,21 @@ export const createMemberRouter = (
     handle(async (req, ctx) =>
       presentMemberSummary(await uc.changeStatus.execute({ ...ctx, id: String(req.params.id), action: req.body.action, reason: req.body.reason }))
     )
+  );
+
+  // M4 Slice 6: the family group. :id is the principal when adding and the family member when removing.
+  router.post(
+    '/:id/family',
+    manage,
+    validateRequest(addFamilySchema),
+    handle(async (req, ctx) => presentMemberSummary(await uc.addFamilyMember.execute({ ...ctx, principalId: String(req.params.id), body: req.body })), 201)
+  );
+
+  router.post(
+    '/:id/family/remove',
+    manage,
+    validateRequest(removeFamilySchema),
+    handle(async (req, ctx) => presentMemberSummary(await uc.removeFamilyLink.execute({ ...ctx, memberId: String(req.params.id), reason: req.body.reason })))
   );
 
   // M4 Slice 5: payments of one member. The amount is calculated here and cannot be sent (FR-MPAY-01).

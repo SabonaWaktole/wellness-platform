@@ -2381,6 +2381,7 @@ model Member {
   tierHistory    MemberTierHistory[]
   statusHistory  MemberStatusHistory[]
   payments       MemberPayment[]
+  familyEvents   MemberFamilyEvent[]
 
   @@unique([tenantId, memberNumber])
   @@index([tenantId, lastName, firstName])
@@ -2475,4 +2476,23 @@ model MemberPayment {
   @@unique([tenantId, receiptNumber])
   @@index([tenantId, receivedOn])
   @@index([memberId, createdAt])
+}
+
+/// The history of family links and removals (M4 Slice 6, FR-FAM-06, FR-FAM-07),
+/// so a removed link is still explainable. `principalMemberId` and
+/// `relationshipId` are plain copies, not keys: the history outlives the link.
+model MemberFamilyEvent {
+  id                String   @id
+  memberId          String
+  principalMemberId String?
+  relationshipId    String?
+  /// LINKED or REMOVED.
+  kind              String
+  reason            String?  @db.Text
+  byUserId          String
+  at                DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, at])
 }

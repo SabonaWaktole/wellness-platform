@@ -1,6 +1,6 @@
 import type { MemberPaymentRecord } from './ports/IMemberPaymentStore';
 import type { PaymentQuote } from '../domain/paymentQuote';
-import { dayText } from './memberPaymentQuote';
+import { dayText, type FamilyLine } from './memberPaymentQuote';
 
 /**
  * What the payment routes send (FR-MPAY-07, FR-MPAY-08). Money is a string and
@@ -70,9 +70,11 @@ export interface PaymentQuoteView {
   endsOn: string;
   closesTerms: Array<{ termId: string; endsOn: string }>;
   warnings: PaymentQuote['warnings'];
+  /** Set when the member has a principal: the line "Family discount, relationship (name)" (FR-FAM-05). */
+  family: FamilyLine | null;
 }
 
-export const presentQuote = (quote: PaymentQuote): PaymentQuoteView => ({
+export const presentQuote = (quote: PaymentQuote, family: FamilyLine | null = null): PaymentQuoteView => ({
   kind: quote.kind,
   fromTier: quote.fromTier,
   toTier: quote.toTier,
@@ -83,4 +85,5 @@ export const presentQuote = (quote: PaymentQuote): PaymentQuoteView => ({
   endsOn: dayText(quote.endsOn),
   closesTerms: quote.closes.map((c) => ({ termId: c.termId, endsOn: dayText(c.newEndsOn) })),
   warnings: quote.warnings,
+  family: family && quote.discountPercent.toString() !== '0.00' ? family : null,
 });

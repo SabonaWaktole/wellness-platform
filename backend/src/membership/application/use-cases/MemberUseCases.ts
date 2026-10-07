@@ -12,14 +12,15 @@ import {
   type StatusAction,
 } from '../../domain/Member';
 import { effectiveTierOn, validTermsOn, type MemberTermValue } from '../../domain/MemberTerm';
+import type { Tier } from '../../domain/Tier';
 import { validityOn } from '../../domain/memberValidity';
 import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_VIEW, MEMBERS_VIEW } from '../membershipPermissions';
 import type { IMemberPaymentStore } from '../ports/IMemberPaymentStore';
 import { paymentUserIds, presentMemberPayment } from '../presentMemberPayment';
 import type { IMemberStore, MemberRecord, MemberSearchParams, CardTokenGenerator } from '../ports/IMemberStore';
-import type { IMembershipSettingsStore } from '../ports/IMembershipSettingsStore';
-import type { IMembershipWriteTransaction } from '../ports/IMembershipWriteTransaction';
-import { presentMember, presentMemberSummary, type MemberDetail, type MemberSummary } from '../presentMember';
+import type { IMembershipSettingsStore, IRelationshipStore } from '../ports/IMembershipSettingsStore';
+import type { IMembershipWriteTransaction, MembershipWriteRepos } from '../ports/IMembershipWriteTransaction';
+import { presentMember, presentMemberSummary, type FamilyGroup, type MemberDetail, type MemberSummary } from '../presentMember';
 import { addDays } from '../../../contracts/domain/calendarDay';
 
 export class MemberNotFoundError extends Error {
@@ -88,47 +89,68 @@ export class RegisterMemberUseCase {
     const today = dayKeyInZone(this.now(), input.timezone);
     const details = normalisePersonalDetails(input.body, today);
 
-    return this.writeTx.run(async ({ memberStore, memberNumbers, auditTrail }) => {
-      await requireCity(memberStore, input.tenantId, details.cityId);
-      if (!input.confirmDifferentPerson) {
-        const duplicates = await memberStore.findDuplicates(input.tenantId, details);
-        if (duplicates.length > 0) throw new DuplicateMemberError(duplicates.map(presentMemberSummary));
-      }
-
-      const member = await memberStore.create({
-        id: randomUUID(),
-        tenantId: input.tenantId,
-        memberNumber: await memberNumbers.next(input.tenantId),
-        cardToken: this.newCardToken(),
-        createdBy: input.access.userId,
-        startsOn: today,
-        details,
-      });
-      await memberStore.addStatusHistory({
-        memberId: member.id,
-        fromStatus: null,
-        toStatus: 'ACTIVE',
-        reason: null,
-        changedByUserId: input.access.userId,
-      });
-      await auditTrail.record({
-        tenantId: input.tenantId,
-        userId: input.access.userId,
-        userRole: input.access.auditRole,
-        action: AuditAction.Create,
-        entityType: 'Member',
-        entityId: member.id,
-        entityLabel: label(member),
-        changes: [
-          { field: 'memberNumber', old: null, new: member.memberNumber },
-          ...PERSONAL_FIELDS.map((field) => ({ field, old: null, new: field === 'note' && member.note ? 'changed' : member[field] })),
-          { field: 'status', old: null, new: member.status },
-          { field: 'tier', old: null, new: member.currentTier },
-        ],
-      });
-      return member;
-    });
+    return this.writeTx.run((repos) =>
+      registerMemberIn(repos, { ...input, today, details, newCardToken: this.newCardToken })
+    );
   }
+}
+
+/**
+ * The creation of one member inside an open write transaction: the city and
+ * duplicate checks, the row, the first status-history row and the audit entry.
+ * Shared by the member form and by "add a new family member" (FR-FAM-01), so
+ * both are one transaction with their audit entry.
+ */
+export async function registerMemberIn(
+  { memberStore, memberNumbers, auditTrail }: Pick<MembershipWriteRepos, 'memberStore' | 'memberNumbers' | 'auditTrail'>,
+  input: {
+    access: AccessContext;
+    tenantId: string;
+    today: string;
+    details: PersonalDetails;
+    confirmDifferentPerson?: boolean;
+    newCardToken: CardTokenGenerator;
+  }
+): Promise<MemberRecord> {
+  const { details } = input;
+  await requireCity(memberStore, input.tenantId, details.cityId);
+  if (!input.confirmDifferentPerson) {
+    const duplicates = await memberStore.findDuplicates(input.tenantId, details);
+    if (duplicates.length > 0) throw new DuplicateMemberError(duplicates.map(presentMemberSummary));
+  }
+
+  const member = await memberStore.create({
+    id: randomUUID(),
+    tenantId: input.tenantId,
+    memberNumber: await memberNumbers.next(input.tenantId),
+    cardToken: input.newCardToken(),
+    createdBy: input.access.userId,
+    startsOn: input.today,
+    details,
+  });
+  await memberStore.addStatusHistory({
+    memberId: member.id,
+    fromStatus: null,
+    toStatus: 'ACTIVE',
+    reason: null,
+    changedByUserId: input.access.userId,
+  });
+  await auditTrail.record({
+    tenantId: input.tenantId,
+    userId: input.access.userId,
+    userRole: input.access.auditRole,
+    action: AuditAction.Create,
+    entityType: 'Member',
+    entityId: member.id,
+    entityLabel: label(member),
+    changes: [
+      { field: 'memberNumber', old: null, new: member.memberNumber },
+      ...PERSONAL_FIELDS.map((field) => ({ field, old: null, new: field === 'note' && member.note ? 'changed' : member[field] })),
+      { field: 'status', old: null, new: member.status },
+      { field: 'tier', old: null, new: member.currentTier },
+    ],
+  });
+  return member;
 }
 
 /**
@@ -290,6 +312,7 @@ export class GetMemberUseCase {
     private readonly store: IMemberStore,
     private readonly settings: IMembershipSettingsStore,
     private readonly paymentStore: IMemberPaymentStore,
+    private readonly relationshipStore: IRelationshipStore,
     private readonly now: () => Date = () => new Date()
   ) {}
 
@@ -326,14 +349,89 @@ export class GetMemberUseCase {
     // Payments only for a user who may see them (FR-MPAY-08): the rows are not even read otherwise.
     const payments = input.access.can(MEMBERS_PAYMENTS_VIEW) ? await this.paymentStore.listForMember(input.tenantId, member.id) : null;
 
+    const family = await this.family(input.tenantId, member, graceDays, today);
+
     const names = await this.store.userNames(input.tenantId, [
       member.createdBy,
+      ...family.userIds,
       ...(payments ? paymentUserIds(payments) : []),
       ...tierHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
       ...statusHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
     ]);
 
-    const detail = presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names });
+    const detail = presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names) });
     return payments ? { ...detail, payments: payments.map((p) => presentMemberPayment(p, names)) } : detail;
+  }
+
+  /**
+   * FR-FAM-07: the principal of a family member, and the group of a principal
+   * with each member's tier and validity calculated today (FR-MEM-06). Names of
+   * the users who confirmed or removed links are filled in once they are read.
+   */
+  private async family(tenantId: string, member: MemberRecord, graceDays: number, today: Date) {
+    const [dependants, events, relationships] = await Promise.all([
+      this.store.listDependants(tenantId, member.id),
+      this.store.listFamilyEvents(member.id),
+      this.relationshipStore.list(tenantId),
+    ]);
+    const principal = member.principalMemberId ? await this.store.find(tenantId, member.principalMemberId) : null;
+    const relationshipOf = (id: string | null) => {
+      const found = relationships.find((r) => r.id === id);
+      return found ? { id: found.id, nameSq: found.nameSq, nameEn: found.nameEn } : null;
+    };
+    const principalOf = new Map<string, MemberRecord | null>([[member.principalMemberId ?? '', principal]]);
+    const eventPrincipals = [...new Set(events.map((e) => e.principalMemberId).filter((id): id is string => !!id))];
+    for (const id of eventPrincipals) if (!principalOf.has(id)) principalOf.set(id, await this.store.find(tenantId, id));
+
+    const stateOf = async (m: MemberRecord) => {
+      const values = (await this.store.listTerms(m.id)).map((t) => ({
+        tier: t.tier,
+        source: t.source,
+        startsOn: new Date(`${t.startsOn}T00:00:00.000Z`),
+        endsOn: t.endsOn ? new Date(`${t.endsOn}T00:00:00.000Z`) : null,
+      }));
+      const sponsorValid = m.employerClientId ? await this.paymentStore.employerContractValid(tenantId, m.employerClientId, day(today)) : false;
+      const tier = effectiveTierOn(values, sponsorValid, graceDays, today);
+      const term = validTermsOn(values, sponsorValid, graceDays, today).filter((v) => v.tier === tier).sort((a, b) => (b.endsOn?.getTime() ?? Infinity) - (a.endsOn?.getTime() ?? Infinity))[0];
+      return { tier, valid: validityOn(m.status, tier, term?.endsOn ?? null).valid };
+    };
+    const states = new Map<string, { tier: Tier; valid: boolean }>();
+    for (const d of dependants) states.set(d.id, await stateOf(d));
+
+    const nameOf = (m: { firstName: string; lastName: string }) => `${m.firstName} ${m.lastName}`;
+    return {
+      userIds: [
+        ...(member.relationshipConfirmedBy ? [member.relationshipConfirmedBy] : []),
+        ...dependants.map((d) => d.relationshipConfirmedBy).filter((id): id is string => !!id),
+        ...events.map((e) => e.byUserId),
+      ],
+      present: (names: Record<string, string>): Omit<FamilyGroup, 'principalMemberId' | 'relationshipId'> => ({
+        principal: principal
+          ? {
+              id: principal.id,
+              memberNumber: principal.memberNumber,
+              name: nameOf(principal),
+              relationship: relationshipOf(member.relationshipId),
+              confirmedBy: member.relationshipConfirmedBy ? (names[member.relationshipConfirmedBy] ?? null) : null,
+              confirmedAt: member.relationshipConfirmedAt,
+            }
+          : null,
+        dependants: dependants.map((d) => ({
+          id: d.id,
+          memberNumber: d.memberNumber,
+          name: nameOf(d),
+          relationship: relationshipOf(d.relationshipId),
+          tier: states.get(d.id)!.tier,
+          status: d.status,
+          valid: states.get(d.id)!.valid,
+          confirmedBy: d.relationshipConfirmedBy ? (names[d.relationshipConfirmedBy] ?? null) : null,
+          confirmedAt: d.relationshipConfirmedAt,
+        })),
+        history: events.map((e) => {
+          const p = e.principalMemberId ? principalOf.get(e.principalMemberId) : null;
+          return { kind: e.kind, principal: p ? `${p.memberNumber} ${nameOf(p)}` : null, relationship: relationshipOf(e.relationshipId), reason: e.reason, by: names[e.byUserId] ?? null, at: e.at };
+        }),
+      }),
+    };
   }
 }
