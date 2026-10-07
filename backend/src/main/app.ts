@@ -279,6 +279,10 @@ import { DecideVipRequestUseCase, EndVipUseCase, ListVipRequestsUseCase, Request
 import { PrismaVipRequestStore } from '../membership/infrastructure/PrismaVipRequestStore';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
 import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
+import { createMembershipReportRouter } from '../membership/interfaces/http/membershipReportRoutes';
+import { PrismaMembershipReportReader } from '../membership/infrastructure/PrismaMembershipReportReader';
+import { GetMembershipReportUseCase } from '../membership/application/reports/GetMembershipReportUseCase';
+import { ExportMembershipReportUseCase } from '../membership/application/reports/ExportMembershipReportUseCase';
 import { createEmployeeImportRouter } from '../membership/interfaces/http/employeeImportRoutes';
 import { PrismaEmployeeImportStore } from '../membership/infrastructure/PrismaEmployeeImportStore';
 import { PrismaCardStore } from '../membership/infrastructure/PrismaCardStore';
@@ -1487,6 +1491,19 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         receipt: new GetPaymentReceiptUseCase(memberPaymentStore, memberStore, new MemberReceiptPdfRenderer()),
         void: new VoidMemberPaymentUseCase(membershipWriteTx),
       },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Wellness+ reports (M4 Slice 14): the figures of SRS 9.3, the working lists
+  // and the audited CSV export. Members: view reports.
+  const getMembershipReport = new GetMembershipReportUseCase(new PrismaMembershipReportReader(prisma), membershipSettingsStore);
+  app.use(
+    '/api/:tenantSlug/membership/reports',
+    createMembershipReportRouter(
+      { get: getMembershipReport, export: new ExportMembershipReportUseCase(getMembershipReport, membershipWriteTx) },
       tokenService,
       tenantRepository,
       resolveAccessContext
