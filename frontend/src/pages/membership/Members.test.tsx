@@ -40,7 +40,7 @@ const detail = (extra: Partial<MemberDetail> = {}): MemberDetail => ({
   terms: [{ id: 't1', tier: 'SILVER', source: 'PAID', startsOn: '2026-01-01', endsOn: '2026-12-31' }],
   tierHistory: [{ id: 'h1', fromTier: 'BRONZE', toTier: 'SILVER', reason: 'Purchase', comment: null, createdAt: '2026-01-01T09:00:00.000Z', changedBy: 'Ana Admin' }],
   statusHistory: [{ id: 's1', fromStatus: null, toStatus: 'ACTIVE', reason: null, createdAt: '2026-10-01T09:00:00.000Z', changedBy: 'Ana Admin' }],
-  family: { principalMemberId: null, relationshipId: null, dependants: [] }, formerEmployerClientId: null, leftCompanyAt: null, ...extra,
+  family: { principalMemberId: null, relationshipId: null, dependants: [] }, vip: { requests: [], reviewDate: null }, formerEmployerClientId: null, leftCompanyAt: null, ...extra,
 });
 
 const signInWith = (...keys: string[]) => useAuthStore.setState({ user: { permissions: Object.fromEntries(keys.map((k) => [k, true])) } as never });

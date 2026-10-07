@@ -74,6 +74,24 @@ export interface AddFamilyInput {
   member?: Partial<MemberDetailsInput>;
 }
 
+export type VipRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+
+/** A VIP request, its decision and its early ending (FR-VIP-01, 02, 05). */
+export interface VipRequest {
+  id: string;
+  member: { id: string; memberNumber: string; name: string };
+  status: VipRequestStatus;
+  reason: string;
+  requestedBy: { id: string; name: string | null };
+  createdAt: string;
+  decidedBy: { id: string; name: string | null } | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  endedBy: { id: string; name: string | null } | null;
+  endedAt: string | null;
+  endReason: string | null;
+}
+
 export interface MemberDetail extends MemberSummary {
   language: MemberLanguage;
   cityId: string | null;
@@ -88,6 +106,8 @@ export interface MemberDetail extends MemberSummary {
   tierHistory: Array<{ id: string; fromTier: Tier; toTier: Tier; reason: string; comment: string | null; createdAt: string; changedBy: string | null }>;
   statusHistory: Array<{ id: string; fromStatus: MemberStatus | null; toStatus: MemberStatus; reason: string | null; createdAt: string; changedBy: string | null }>;
   family: FamilyGroup;
+  /** Requests newest first, and the end date of the VIP term running today, which is also its review date (FR-VIP-03). */
+  vip: { requests: VipRequest[]; reviewDate: string | null };
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
   /** Only for a user who holds "Members: view payments" (FR-MPAY-08). */

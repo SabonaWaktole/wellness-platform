@@ -118,7 +118,8 @@
       "history": "History",
       "note": "Internal note",
       "label": "Member sections",
-      "family": "Family"
+      "family": "Family",
+      "vip": "VIP"
     },
     "fields": {
       "memberNumber": "Member ID",
@@ -359,6 +360,72 @@
       "ALREADY_HAS_PRINCIPAL": "This member already has a principal.",
       "MEMBER_IS_PRINCIPAL": "This member already has family members, so cannot become a family member.",
       "NOT_A_FAMILY_MEMBER": "This member has no family link."
+    }
+  },
+  "vip": {
+    "title": "VIP",
+    "reviewDate": "VIP review date: {{date}}",
+    "request": "Request VIP",
+    "end": "End VIP",
+    "empty": "No VIP requests for this member.",
+    "reason": "Reason",
+    "reasonRequired": "A reason is required.",
+    "failed": "The action could not be completed.",
+    "cancel": "Cancel",
+    "ownRequest": "You made this request; another approver decides it.",
+    "decidedBy": "{{name}} on {{date}}",
+    "endedOn": "VIP ended on {{date}} by {{name}}",
+    "endReason": "Ending reason: {{reason}}",
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "columns": {
+      "member": "Member",
+      "date": "Requested",
+      "status": "Status",
+      "reason": "Reason",
+      "requestedBy": "Requested by",
+      "decision": "Decision"
+    },
+    "requestDialog": {
+      "title": "Request VIP",
+      "help": "Say why this member should be VIP, for example strategic client, PR relationship or key partner. Another user with the approval permission decides.",
+      "confirm": "Send request"
+    },
+    "endDialog": {
+      "title": "End VIP",
+      "help": "The member returns today to the highest other valid tier, Bronze if none. The reason is kept in the history.",
+      "confirm": "End VIP"
+    },
+    "decide": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "approveTitle": "Approve VIP for {{name}}",
+      "rejectTitle": "Reject VIP for {{name}}",
+      "approveHelp": "Approving gives a free VIP term from today for the VIP length, with a review date equal to its end. If the member is already VIP, it continues from the next day.",
+      "rejectHelp": "The requester sees the reason.",
+      "requestedWith": "Reason given: {{reason}}",
+      "note": "Note (optional)",
+      "rejectReason": "Reason for rejecting",
+      "reasonRequired": "A reason is required to reject.",
+      "failed": "The decision could not be saved."
+    },
+    "list": {
+      "title": "VIP requests",
+      "subtitle": "Requests waiting for a decision, and past decisions.",
+      "empty": "No VIP requests.",
+      "loadFailed": "The VIP requests could not be loaded."
+    },
+    "refused": {
+      "MEMBER_CLOSED": "A closed member cannot be given VIP.",
+      "OPEN_REQUEST": "This member already has an open VIP request.",
+      "OWN_REQUEST": "You cannot decide a request you made yourself.",
+      "NOT_PENDING": "This request has already been decided.",
+      "NOT_VIP": "This member is not VIP."
     }
   }
 }

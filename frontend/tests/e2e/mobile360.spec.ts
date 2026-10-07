@@ -163,6 +163,8 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['member edit form', () => `members/${memberId}/edit`],
       // M4 Slice 5: the Membership payments list (the Payments tab and the record-payment dialog are on the member page)
       ['membership payments', () => 'members/payments'],
+      // M4 Slice 7: the VIP requests list (the VIP tab and its dialogs are on the member page)
+      ['VIP requests', () => 'members/vip-requests'],
       // M2 Slice 6: the deal edit form
       ['deal edit form', () => `deals/${dealId}/edit`],
     ];

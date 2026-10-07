@@ -26,6 +26,7 @@ import { MembersList } from '../pages/membership/MembersList';
 import { MemberFormPage } from '../pages/membership/MemberFormPage';
 import { MemberDetailPage } from '../pages/membership/MemberDetailPage';
 import { MemberPaymentsPage } from '../pages/membership/MemberPaymentsPage';
+import { VipRequestsPage } from '../pages/membership/VipRequestsPage';
 import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -577,6 +578,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="members.payments.view">
               <MemberPaymentsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 7: the VIP requests list for approvers (FR-VIP-02).
+        path: 'members/vip-requests',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.vip.approve">
+              <VipRequestsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

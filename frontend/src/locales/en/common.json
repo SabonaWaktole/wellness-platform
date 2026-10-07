@@ -111,7 +111,8 @@
     "renewals": "Renewals",
     "members": "Members",
     "membershipPayments": "Membership payments",
-    "performance": "Performance"
+    "performance": "Performance",
+    "vipRequests": "VIP requests"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

@@ -118,7 +118,8 @@
       "history": "Historiku",
       "note": "Shënimi i brendshëm",
       "label": "Pjesët e anëtarit",
-      "family": "Familja"
+      "family": "Familja",
+      "vip": "VIP"
     },
     "fields": {
       "memberNumber": "ID e anëtarit",
@@ -359,6 +360,72 @@
       "ALREADY_HAS_PRINCIPAL": "Ky anëtar ka tashmë një anëtar kryesor.",
       "MEMBER_IS_PRINCIPAL": "Ky anëtar ka tashmë anëtarë familjarë, ndaj nuk mund të bëhet anëtar familjar.",
       "NOT_A_FAMILY_MEMBER": "Ky anëtar nuk ka lidhje familjare."
+    }
+  },
+  "vip": {
+    "title": "VIP",
+    "reviewDate": "Data e rishikimit të VIP: {{date}}",
+    "request": "Kërko VIP",
+    "end": "Përfundo VIP",
+    "empty": "Ky anëtar nuk ka kërkesa VIP.",
+    "reason": "Arsyeja",
+    "reasonRequired": "Arsyeja është e detyrueshme.",
+    "failed": "Veprimi nuk u krye.",
+    "cancel": "Anulo",
+    "ownRequest": "Këtë kërkesë e keni bërë ju; vendos një miratues tjetër.",
+    "decidedBy": "{{name}} më {{date}}",
+    "endedOn": "VIP përfundoi më {{date}} nga {{name}}",
+    "endReason": "Arsyeja e përfundimit: {{reason}}",
+    "status": {
+      "PENDING": "Në pritje",
+      "APPROVED": "E miratuar",
+      "REJECTED": "E refuzuar",
+      "WITHDRAWN": "E tërhequr"
+    },
+    "columns": {
+      "member": "Anëtari",
+      "date": "Kërkuar më",
+      "status": "Statusi",
+      "reason": "Arsyeja",
+      "requestedBy": "Kërkuar nga",
+      "decision": "Vendimi"
+    },
+    "requestDialog": {
+      "title": "Kërko VIP",
+      "help": "Shkruani pse ky anëtar duhet të jetë VIP, për shembull klient strategjik, marrëdhënie PR ose partner kyç. Vendos një përdorues tjetër me të drejtën e miratimit.",
+      "confirm": "Dërgo kërkesën"
+    },
+    "endDialog": {
+      "title": "Përfundo VIP",
+      "help": "Anëtari kthehet sot në nivelin më të lartë tjetër të vlefshëm, Bronz nëse nuk ka. Arsyeja ruhet në histori.",
+      "confirm": "Përfundo VIP"
+    },
+    "decide": {
+      "approve": "Mirato",
+      "reject": "Refuzo",
+      "cancel": "Anulo",
+      "approveTitle": "Mirato VIP për {{name}}",
+      "rejectTitle": "Refuzo VIP për {{name}}",
+      "approveHelp": "Miratimi jep një afat VIP falas nga sot për kohëzgjatjen e VIP, me datë rishikimi të barabartë me përfundimin. Nëse anëtari është tashmë VIP, vazhdon nga dita tjetër.",
+      "rejectHelp": "Kërkuesi e sheh arsyen.",
+      "requestedWith": "Arsyeja e dhënë: {{reason}}",
+      "note": "Shënim (opsional)",
+      "rejectReason": "Arsyeja e refuzimit",
+      "reasonRequired": "Për të refuzuar nevojitet një arsye.",
+      "failed": "Vendimi nuk u ruajt."
+    },
+    "list": {
+      "title": "Kërkesat VIP",
+      "subtitle": "Kërkesat që presin vendim dhe vendimet e kaluara.",
+      "empty": "Nuk ka kërkesa VIP.",
+      "loadFailed": "Kërkesat VIP nuk u ngarkuan."
+    },
+    "refused": {
+      "MEMBER_CLOSED": "Një anëtar i mbyllur nuk mund të bëhet VIP.",
+      "OPEN_REQUEST": "Ky anëtar ka tashmë një kërkesë VIP të hapur.",
+      "OWN_REQUEST": "Nuk mund të vendosni për një kërkesë që e keni bërë vetë.",
+      "NOT_PENDING": "Kjo kërkesë është vendosur tashmë.",
+      "NOT_VIP": "Ky anëtar nuk është VIP."
     }
   }
 }

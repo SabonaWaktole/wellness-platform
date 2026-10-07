@@ -17,11 +17,12 @@ import { memberPaymentService, voidRefusalOf } from '../../services/memberPaymen
 import { StatusBadge, TierBadge } from './MemberBadges';
 import { useTierLabels } from './useTierLabels';
 import { FamilyTab } from './FamilyTab';
+import { VipTab } from './VipTab';
 import { RecordPaymentModal } from './RecordPaymentModal';
 import { useReceipt } from './useReceipt';
 import styles from './Members.module.css';
 
-type TabId = 'overview' | 'terms' | 'payments' | 'family' | 'history' | 'note';
+type TabId = 'overview' | 'terms' | 'payments' | 'family' | 'vip' | 'history' | 'note';
 
 /** The actions a status allows (FR-MEM-05). */
 const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
@@ -35,7 +36,7 @@ const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
  * history, the status history and the internal note. The tier shown is the one the server calculated for today
  * from the terms, never a stored value. No control edits the tier, an expiry date or the member ID (FR-MEM-09).
  * Payments (FR-MPAY-08) arrive only for a user who may view them; recording and voiding need "record payments".
- * The Family tab shows the group and the principal (FR-FAM-07); the verification events fill in with Slice 13.
+ * The Family tab shows the group and the principal (FR-FAM-07); the VIP tab the requests and decisions (FR-VIP-05); the verification events fill in with Slice 13.
  */
 export const MemberDetailContent: React.FC = () => {
   const { t, i18n } = useTranslation('members');
@@ -43,6 +44,7 @@ export const MemberDetailContent: React.FC = () => {
   const navigate = useNavigate();
   const dates = useDateFormat();
   const canManage = useAuthStore((s) => s.user?.permissions?.['members.manage'] !== undefined);
+  const canApproveVip = useAuthStore((s) => s.user?.permissions?.['members.vip.approve'] !== undefined);
   const canRecord = useAuthStore((s) => s.user?.permissions?.['members.payments.record'] !== undefined);
   const { format: formatMoney } = useMoneyFormat();
   const tier = useTierLabels(tenantSlug);
@@ -214,6 +216,7 @@ export const MemberDetailContent: React.FC = () => {
               { id: 'terms', label: t('detail.tabs.terms'), count: member.terms.length },
               ...(member.payments ? [{ id: 'payments' as const, label: t('detail.tabs.payments'), count: member.payments.length }] : []),
               { id: 'family', label: t('detail.tabs.family'), count: member.family.dependants.length || undefined },
+              { id: 'vip', label: t('detail.tabs.vip'), count: member.vip.requests.filter((r) => r.status === 'PENDING').length || undefined },
               { id: 'history', label: t('detail.tabs.history') },
               { id: 'note', label: t('detail.tabs.note') },
             ]}
@@ -342,6 +345,10 @@ export const MemberDetailContent: React.FC = () => {
 
           {tab === 'family' && tenantSlug && memberId && (
             <FamilyTab tenantSlug={tenantSlug} memberId={memberId} family={member.family} canManage={canManage} onChanged={() => void load()} />
+          )}
+
+          {tab === 'vip' && tenantSlug && (
+            <VipTab tenantSlug={tenantSlug} member={member} canManage={canManage} canApprove={canApproveVip} onChanged={() => void load()} />
           )}
 
           {tab === 'history' && (

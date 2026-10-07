@@ -58,6 +58,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'members', labelKey: 'nav.members', icon: 'wellness', permission: 'members.view', workflow: 'SALES_PROCESS' },
   // The Membership payments list (M4 Slice 5, FR-MPAY-07): every payment with filters, totals, CSV and receipts.
   { id: 'members/payments', labelKey: 'nav.membershipPayments', icon: 'receipt_long', permission: 'members.payments.view', workflow: 'SALES_PROCESS' },
+  // The VIP requests list for approvers (M4 Slice 7, FR-VIP-02).
+  { id: 'members/vip-requests', labelKey: 'nav.vipRequests', icon: 'workspace_premium', permission: 'members.vip.approve', workflow: 'SALES_PROCESS' },
   // The Performance screen (M3 Slice 12, FR-PRF-01): one row per salesperson, in the viewer's scope.
   { id: 'performance', labelKey: 'nav.performance', icon: 'trending_up', permission: 'performance.view' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },

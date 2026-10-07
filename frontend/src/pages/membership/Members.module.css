@@ -420,3 +420,9 @@
 .checkRow input {
   margin-top: 3px;
 }
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

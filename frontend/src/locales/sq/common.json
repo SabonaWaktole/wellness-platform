@@ -111,7 +111,8 @@
     "members": "Anëtarët",
     "membershipPayments": "Pagesat e anëtarësimit",
     "performance": "Performanca",
-    "renewals": "Rinovimet"
+    "renewals": "Rinovimet",
+    "vipRequests": "Kërkesat VIP"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

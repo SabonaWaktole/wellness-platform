@@ -46,7 +46,7 @@ const detail = (extra: Partial<MemberDetail> = {}): MemberDetail => ({
   valid: true, source: 'INDIVIDUAL', startsOn: '2026-10-01', employer: null, formerEmployee: false, language: 'sq', cityId: null, note: null,
   createdBy: { id: 'u1', name: 'Ana Admin' }, createdAt: '2026-10-01T09:00:00.000Z', closedAt: null, effectiveTier: 'SILVER', validity: { valid: true, reason: null },
   currentTerm: { source: 'PAID', startsOn: '2026-10-01', endsOn: '2027-09-30' }, terms: [], tierHistory: [], statusHistory: [],
-  family: { principalMemberId: null, relationshipId: null, dependants: [] }, formerEmployerClientId: null, leftCompanyAt: null, ...extra,
+  family: { principalMemberId: null, relationshipId: null, dependants: [] }, vip: { requests: [], reviewDate: null }, formerEmployerClientId: null, leftCompanyAt: null, ...extra,
 });
 
 const option = (kind: PaymentOption['kind'], targetTier: PaymentOption['targetTier'], amount: string, extra: Partial<PaymentOption['quote']> = {}): PaymentOption => ({
