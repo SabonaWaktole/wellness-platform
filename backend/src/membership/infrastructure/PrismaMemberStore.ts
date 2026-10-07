@@ -103,6 +103,7 @@ export class PrismaMemberStore implements IMemberStore {
         startsOn: dateOnly(data.startsOn)!,
         status: 'ACTIVE',
         currentTier: 'BRONZE',
+        employerClientId: data.employerClientId ?? null,
         firstName: details.firstName,
         lastName: details.lastName,
         dateOfBirth: dateOnly(details.dateOfBirth),
@@ -165,6 +166,10 @@ export class PrismaMemberStore implements IMemberStore {
 
   async addStatusHistory(entry: StatusHistoryEntry): Promise<void> {
     await this.prisma.memberStatusHistory.create({ data: { id: randomUUID(), ...entry } });
+  }
+
+  async setEmployer(tenantId: string, id: string, clientId: string): Promise<void> {
+    await this.prisma.member.updateMany({ where: { id, tenantId }, data: { employerClientId: clientId } });
   }
 
   async cityExists(tenantId: string, cityId: string): Promise<boolean> {

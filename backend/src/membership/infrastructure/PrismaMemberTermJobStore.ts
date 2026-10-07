@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 import type { ExpiringTermRow, IMemberTermJobStore, VipReviewRow } from '../application/ports/IMemberTermJobStore';
 
@@ -82,5 +82,13 @@ export class PrismaMemberTermJobStore implements IMemberTermJobStore {
 
   async markVipReviewAnnounced(requestId: string, at: Date): Promise<void> {
     await this.prisma.vipRequest.updateMany({ where: { id: requestId, reviewNotifiedAt: null }, data: { reviewNotifiedAt: at } });
+  }
+
+  async expireStaleImports(tenantId: string, cutoff: Date): Promise<number> {
+    const { count } = await this.prisma.employeeImport.updateMany({
+      where: { tenantId, status: 'PREVIEWED', createdAt: { lt: cutoff } },
+      data: { status: 'EXPIRED', rows: Prisma.DbNull },
+    });
+    return count;
   }
 }

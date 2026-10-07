@@ -113,6 +113,8 @@ export interface NewMemberData {
   createdBy: string;
   startsOn: string;
   details: PersonalDetails;
+  /** The employer company, for a member created by an employee upload (FR-EMP-05). */
+  employerClientId?: string | null;
 }
 
 export interface StatusHistoryEntry {
@@ -135,6 +137,8 @@ export interface IMemberStore {
   updateDetails(tenantId: string, id: string, details: PersonalDetails): Promise<void>;
   setStatus(tenantId: string, id: string, status: MemberStatus, closedAt: Date | null): Promise<void>;
   addStatusHistory(entry: StatusHistoryEntry): Promise<void>;
+  /** Links the member to an employer company (FR-EMP-05, FR-EMP-14). */
+  setEmployer(tenantId: string, id: string, clientId: string): Promise<void>;
   /** True when the id is a city of this workspace's predefined list (FR-MEM-02). */
   cityExists(tenantId: string, cityId: string): Promise<boolean>;
   search(tenantId: string, params: MemberSearchParams): Promise<{ data: MemberRecord[]; total: number }>;

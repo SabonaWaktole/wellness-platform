@@ -38,4 +38,10 @@ export interface IMemberTermJobStore {
   /** Approved VIPs whose review date is from `today` to `windowEnd`, not extended and not yet announced (FR-VIP-04). */
   vipReviewsToAnnounce(tenantId: string, today: string, windowEnd: string): Promise<VipReviewRow[]>;
   markVipReviewAnnounced(requestId: string, at: Date): Promise<void>;
+  /**
+   * Employee uploads still PREVIEWED after `cutoff`: marked EXPIRED with their
+   * parsed rows cleared, so personal data is not kept past 24 hours (M4 Slice 9,
+   * D10, FR-DPR-03). Returns how many were cleared; a second run finds none.
+   */
+  expireStaleImports(tenantId: string, cutoff: Date): Promise<number>;
 }

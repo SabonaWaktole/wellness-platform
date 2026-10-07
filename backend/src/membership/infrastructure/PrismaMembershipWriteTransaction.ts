@@ -11,6 +11,7 @@ import { PrismaMemberStore } from './PrismaMemberStore';
 import { PrismaMembershipSettingsStore } from './PrismaMembershipSettingsStore';
 import { PrismaRelationshipStore } from './PrismaRelationshipStore';
 import { PrismaVipRequestStore } from './PrismaVipRequestStore';
+import { PrismaEmployeeImportStore } from './PrismaEmployeeImportStore';
 
 export class PrismaMembershipWriteTransaction implements IMembershipWriteTransaction {
   constructor(
@@ -19,7 +20,7 @@ export class PrismaMembershipWriteTransaction implements IMembershipWriteTransac
     private readonly auditTrailFor: (client: PrismaClient) => IAuditTrail = (client) => new PrismaAuditTrail(client)
   ) {}
 
-  async run<T>(work: (repos: MembershipWriteRepos) => Promise<T>): Promise<T> {
+  async run<T>(work: (repos: MembershipWriteRepos) => Promise<T>, options: { timeoutMs?: number } = {}): Promise<T> {
     return this.prisma.$transaction(async (tx) => {
       const client = tx as unknown as PrismaClient;
       return work({
@@ -31,8 +32,9 @@ export class PrismaMembershipWriteTransaction implements IMembershipWriteTransac
         paymentStore: new PrismaMemberPaymentStore(client),
         receiptNumbers: new PrismaReceiptNumbers(client),
         vipStore: new PrismaVipRequestStore(client),
+        importStore: new PrismaEmployeeImportStore(client),
         auditTrail: this.auditTrailFor(client),
       });
-    });
+    }, options.timeoutMs ? { timeout: options.timeoutMs, maxWait: 10_000 } : undefined);
   }
 }

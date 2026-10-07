@@ -25,7 +25,7 @@ export interface ParsedSheet {
  * the sheet was authored. Everything is normalised to a trimmed string so the
  * callers can validate uniformly; dates keep their ISO form.
  */
-const cellToString = (value: ExcelJS.CellValue): string => {
+export const cellToString = (value: ExcelJS.CellValue): string => {
   if (value === null || value === undefined) return '';
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'object') {

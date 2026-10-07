@@ -2,6 +2,7 @@ import { ScheduledJob } from '../Scheduler';
 import { ISchedulerQueries } from '../ISchedulerQueries';
 import { NotificationService } from '../../notifications/application/NotificationService';
 import { addDays } from '../../contracts/domain/calendarDay';
+import { PREVIEW_LIFETIME_HOURS } from '../../membership/domain/employeeImport';
 import type { IMemberTermJobStore } from '../../membership/application/ports/IMemberTermJobStore';
 import type { IMembershipSettingsStore } from '../../membership/application/ports/IMembershipSettingsStore';
 import { MEMBERS_PAYMENTS_RECORD, MEMBERS_VIP_APPROVE } from '../../membership/application/membershipPermissions';
@@ -15,7 +16,8 @@ const dayText = (value: Date): string => value.toISOString().slice(0, 10);
  * FR-VIP-04, NFR-REL-02). Steps 1, 2 and 4: paid terms past their end plus the
  * grace days get their downgrade term, ended VIP terms fall back, and the stored
  * tier is brought up to date, member by member in one transaction each. Step 5:
- * the notifications. (Step 3, the sponsored sync, joins in Slice 10.)
+ * the notifications, and the clearing of employee uploads nobody confirmed in 24 hours
+ * (Slice 9). (Step 3, the sponsored sync, joins in Slice 10.)
  *
  * Built on `runDailyJob`: each workspace's own "today", and members selected by
  * state against it, so a run after a gap catches up and a second run finds
@@ -56,6 +58,14 @@ export class MemberTermJob implements ScheduledJob {
         }
       }
       changed += work;
+
+      // M4 Slice 9 (D10): an employee upload nobody confirmed does not keep its personal data past 24 hours.
+      const staleBefore = new Date(now.getTime() - PREVIEW_LIFETIME_HOURS * 3_600_000);
+      try {
+        work += await this.store.expireStaleImports(tenant.id, staleBefore);
+      } catch (error) {
+        console.error(`Scheduler: could not clear the stale employee uploads of tenant ${tenant.id}; retrying next run`, error);
+      }
 
       const { expiringSoonDays, vipReviewNoticeDays } = (await this.settings.getSettings(tenant.id)).toJSON();
       const sent = (await this.announceExpiring(tenant.id, today, expiringSoonDays, now)) + (await this.announceVipReviews(tenant.id, today, vipReviewNoticeDays, now));

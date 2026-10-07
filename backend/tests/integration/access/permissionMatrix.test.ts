@@ -345,6 +345,26 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).post(`/api/${tenantSlug}/membership/members/vip/requests/nonexistent/decision`).set('Authorization', `Bearer ${t}`).send({ decision: 'APPROVE' }),
     },
     {
+      label: 'members.import — GET /membership/employee-template.xlsx',
+      permissionKey: 'members.import',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/employee-template.xlsx`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.import — POST /membership/employee-imports',
+      permissionKey: 'members.import',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/employee-imports`).set('Authorization', `Bearer ${t}`).field('clientId', 'nonexistent'),
+    },
+    {
+      label: 'members.import — POST /membership/employee-imports/:id/confirm',
+      permissionKey: 'members.import',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/employee-imports/nonexistent/confirm`).set('Authorization', `Bearer ${t}`).send({ confirmToken: 'x' }),
+    },
+    {
+      label: 'members.import — GET /membership/employee-imports/:id/result.xlsx',
+      permissionKey: 'members.import',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/employee-imports/nonexistent/result.xlsx`).set('Authorization', `Bearer ${t}`),
+    },
+    {
       label: 'members.vip.approve — POST /membership/members/:id/vip/end',
       permissionKey: 'members.vip.approve',
       request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/vip/end`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),

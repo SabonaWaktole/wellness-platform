@@ -177,6 +177,7 @@ model Tenant {
   familyRelationships FamilyRelationship[]
   benefitServices     BenefitService[]
   members             Member[]
+  employeeImports     EmployeeImport[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -544,6 +545,7 @@ model Client {
   @@index([tenantId, areaId, cityId])
   employedMembers       Member[] @relation("MemberEmployer")
   formerEmployedMembers Member[] @relation("MemberFormerEmployer")
+  employeeImports       EmployeeImport[]
 }
 
 /// A named person at a company (FR-CMP-04, Slice 12): name, position, phone
@@ -2527,4 +2529,35 @@ model VipRequest {
 
   @@index([tenantId, status, createdAt])
   @@index([memberId, createdAt])
+}
+
+/// One corporate employee upload (M4 Slice 9, D10, FR-EMP-03..07). `rows` holds
+/// the parsed rows and their classification from the preview until the upload
+/// is confirmed or 24 hours pass, then is cleared (FR-DPR-03). `result` keeps
+/// only row numbers, outcomes and reasons, never a personal value, so the
+/// result file and the history survive the clearing.
+model EmployeeImport {
+  id           String    @id
+  tenantId     String
+  clientId     String
+  fileName     String
+  uploadedBy   String
+  /// PREVIEWED, CONFIRMED or EXPIRED.
+  status       String    @default("PREVIEWED")
+  rows         Json?
+  result       Json?
+  confirmToken String
+  created      Int       @default(0)
+  linked       Int       @default(0)
+  skipped      Int       @default(0)
+  refused      Int       @default(0)
+  errors       Int       @default(0)
+  createdAt    DateTime  @default(now())
+  confirmedAt  DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, clientId, createdAt])
+  @@index([tenantId, status, createdAt])
 }

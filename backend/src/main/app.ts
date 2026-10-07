@@ -275,6 +275,16 @@ import { DecideVipRequestUseCase, EndVipUseCase, ListVipRequestsUseCase, Request
 import { PrismaVipRequestStore } from '../membership/infrastructure/PrismaVipRequestStore';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
 import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
+import { createEmployeeImportRouter } from '../membership/interfaces/http/employeeImportRoutes';
+import { PrismaEmployeeImportStore } from '../membership/infrastructure/PrismaEmployeeImportStore';
+import { XlsxEmployeeSheets } from '../membership/infrastructure/excel/XlsxEmployeeSheets';
+import {
+  ConfirmEmployeeImportUseCase,
+  GetEmployeeImportResultUseCase,
+  GetEmployeeTemplateUseCase,
+  ListEmployeeImportsUseCase,
+  PreviewEmployeeImportUseCase,
+} from '../membership/application/use-cases/EmployeeImportUseCases';
 import { PrismaMemberPaymentStore } from '../membership/infrastructure/PrismaMemberPaymentStore';
 import { MemberReceiptPdfRenderer } from '../membership/infrastructure/MemberReceiptPdfRenderer';
 import {
@@ -1378,6 +1388,26 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         endVip: new EndVipUseCase(membershipWriteTx),
         listVipRequests: new ListVipRequestsUseCase(vipRequestStore, memberStore),
         correctTier: new CorrectMemberTierUseCase(membershipWriteTx),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Corporate employee upload (M4 Slice 9): template, preview, confirm, history
+  // and the result file. Members: import employees.
+  const employeeImportStore = new PrismaEmployeeImportStore(prisma);
+  const employeeSheets = new XlsxEmployeeSheets();
+  app.use(
+    '/api/:tenantSlug/membership',
+    createEmployeeImportRouter(
+      {
+        template: new GetEmployeeTemplateUseCase(employeeSheets),
+        preview: new PreviewEmployeeImportUseCase(employeeImportStore, memberStore, memberPaymentStore, employeeSheets, generateShareToken),
+        confirm: new ConfirmEmployeeImportUseCase(membershipWriteTx, employeeImportStore, generateShareToken),
+        list: new ListEmployeeImportsUseCase(employeeImportStore, memberStore),
+        result: new GetEmployeeImportResultUseCase(employeeImportStore, employeeSheets),
       },
       tokenService,
       tenantRepository,

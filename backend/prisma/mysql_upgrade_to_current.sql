@@ -3850,6 +3850,48 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- M4 Slice 9: corporate employee upload
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `EmployeeImport` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `fileName` VARCHAR(191) NOT NULL,
+    `uploadedBy` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PREVIEWED',
+    `rows` JSON NULL,
+    `result` JSON NULL,
+    `confirmToken` VARCHAR(191) NOT NULL,
+    `created` INTEGER NOT NULL DEFAULT 0,
+    `linked` INTEGER NOT NULL DEFAULT 0,
+    `skipped` INTEGER NOT NULL DEFAULT 0,
+    `refused` INTEGER NOT NULL DEFAULT 0,
+    `errors` INTEGER NOT NULL DEFAULT 0,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `confirmedAt` DATETIME(3) NULL,
+
+    INDEX `EmployeeImport_tenantId_clientId_createdAt_idx`(`tenantId`, `clientId`, `createdAt`),
+    INDEX `EmployeeImport_tenantId_status_createdAt_idx`(`tenantId`, `status`, `createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'EmployeeImport' AND CONSTRAINT_NAME = 'EmployeeImport_tenantId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed, 'ALTER TABLE `EmployeeImport` ADD CONSTRAINT `EmployeeImport_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: EmployeeImport_tenantId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'EmployeeImport' AND CONSTRAINT_NAME = 'EmployeeImport_clientId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed, 'ALTER TABLE `EmployeeImport` ADD CONSTRAINT `EmployeeImport_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `Client`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: EmployeeImport_clientId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261024100000_m4_employee_imports', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261024100000_m4_employee_imports'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -4007,6 +4049,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='VipRequest'
   UNION ALL SELECT 'MemberTerm.expiringNotifiedAt', COUNT(*) FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberTerm' AND COLUMN_NAME='expiringNotifiedAt'
+  UNION ALL SELECT 'EmployeeImport table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='EmployeeImport'
   UNION ALL SELECT 'ContractDocument table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
   UNION ALL SELECT 'ContractPayment_tenantId_paidAt_idx', COUNT(*) FROM information_schema.STATISTICS

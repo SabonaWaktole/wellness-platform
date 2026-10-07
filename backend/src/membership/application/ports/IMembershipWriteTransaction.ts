@@ -3,6 +3,7 @@ import type { IBenefitStore, IMembershipSettingsStore, IRelationshipStore } from
 import type { IMemberPaymentStore, IReceiptNumbers } from './IMemberPaymentStore';
 import type { IMemberNumbers, IMemberStore } from './IMemberStore';
 import type { IVipRequestStore } from './IVipRequestStore';
+import type { IEmployeeImportStore } from './IEmployeeImportStore';
 
 /** The stores a Wellness+ settings write goes through, all on one connection. */
 export interface MembershipWriteRepos {
@@ -14,10 +15,12 @@ export interface MembershipWriteRepos {
   paymentStore: IMemberPaymentStore;
   receiptNumbers: IReceiptNumbers;
   vipStore: IVipRequestStore;
+  importStore: IEmployeeImportStore;
   /** Same connection as the stores: a failed audit write rolls the change back (FR-AUD-14). */
   auditTrail: IAuditTrail;
 }
 
 export interface IMembershipWriteTransaction {
-  run<T>(work: (repos: MembershipWriteRepos) => Promise<T>): Promise<T>;
+  /** `timeoutMs` lifts the database's default limit for a transaction that writes a thousand rows (NFR-PERF-05). */
+  run<T>(work: (repos: MembershipWriteRepos) => Promise<T>, options?: { timeoutMs?: number }): Promise<T>;
 }
