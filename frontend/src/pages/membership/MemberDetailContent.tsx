@@ -128,7 +128,7 @@ export const MemberDetailContent: React.FC = () => {
     }
   };
 
-  if (state === 'loading') return <div className={styles.container}><p role="status">…</p></div>;
+  if (state === 'loading') return <div className={styles.container}><p role="status">{'…'}</p></div>;
   if (state !== 'ready' || !member) {
     return (
       <div className={styles.container}>
