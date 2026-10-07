@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import { Button } from '../../../components/ui/Button/Button';
 import { SelectInput } from '../../../components/ui/SelectInput/SelectInput';
@@ -175,10 +175,20 @@ export const MembershipReportsContent: React.FC = () => {
   const tierOf = useTierLabels(tenantSlug);
   const areas = useActiveLookups('areas');
 
-  const [preset, setPreset] = useState<ReportPreset>('THIS_MONTH');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [filters, setFilters] = useState<ReportFilters>(NO_FILTERS);
+  // A link from the CEO dashboard opens this page with its period and filters already set (FR-DSH-15).
+  const [linked] = useSearchParams();
+  const linkedPreset = linked.get('preset') as ReportPreset | null;
+  const linkedSegment = linked.get('segment');
+  const linkedTier = linked.get('tier');
+  const [preset, setPreset] = useState<ReportPreset>(linkedPreset && ['THIS_WEEK', 'THIS_MONTH', 'LAST_MONTH', 'THIS_QUARTER', 'THIS_YEAR', 'CUSTOM'].includes(linkedPreset) ? linkedPreset : 'THIS_MONTH');
+  const [from, setFrom] = useState(linked.get('from') ?? '');
+  const [to, setTo] = useState(linked.get('to') ?? '');
+  const [filters, setFilters] = useState<ReportFilters>({
+    ...NO_FILTERS,
+    ...(linkedSegment === 'CORPORATE' || linkedSegment === 'INDIVIDUAL' ? { segment: linkedSegment } : {}),
+    ...(linkedTier && (TIERS as readonly string[]).includes(linkedTier) ? { tier: linkedTier as ReportFilters['tier'] } : {}),
+  });
+  const linkedSection = linked.get('section');
   const cities = useActiveLookups('cities', filters.areaId ? { areaId: filters.areaId } : undefined);
   const [report, setReport] = useState<MembershipReport | null>(null);
   const [employerOptions, setEmployerOptions] = useState<EmployerRow[]>([]);
@@ -210,6 +220,12 @@ export const MembershipReportsContent: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Bring the linked section into view once its report has arrived.
+  useEffect(() => {
+    if (!report || !linkedSection) return;
+    document.querySelector(`[data-report="${CSS.escape(linkedSection)}"]`)?.scrollIntoView?.({ block: 'start' });
+  }, [report, linkedSection]);
 
   const exportCsv = async (name: ReportName) => {
     setExporting(true);

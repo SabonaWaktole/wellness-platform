@@ -6,7 +6,7 @@ export function linkPath(tenantSlug: string, link: DashboardLink): string {
   for (const [key, value] of Object.entries(link.filters)) {
     for (const item of Array.isArray(value) ? value : [value]) query.append(key, item);
   }
-  const base = { FOLLOW_UPS: 'follow-ups', DEALS: 'pipeline/list', OFFERS: 'offers', PAYMENTS: 'payments', RENEWALS: 'renewals' }[link.target];
+  const base = { FOLLOW_UPS: 'follow-ups', DEALS: 'pipeline/list', OFFERS: 'offers', PAYMENTS: 'payments', RENEWALS: 'renewals', MEMBERSHIP_REPORTS: 'members/reports' }[link.target];
   const search = query.toString();
   return `/${tenantSlug}/${base}${search ? `?${search}` : ''}`;
 }

@@ -71,9 +71,9 @@ const report = (extra: Partial<MembershipReport> = {}): MembershipReport => ({
   ...extra,
 });
 
-const renderPage = () =>
+const renderPage = (search = '') =>
   render(
-    <MemoryRouter initialEntries={['/acme/members/reports']}>
+    <MemoryRouter initialEntries={[`/acme/members/reports${search}`]}>
       <Routes>
         <Route path="/:tenantSlug/members/reports" element={<MembershipReportsContent />} />
       </Routes>
@@ -108,6 +108,12 @@ describe('Wellness+ reports page (M4 Slice 14)', () => {
     expect(within(tile).getByText('This month')).toBeInTheDocument();
     expect(within(screen.getByText('Active members').closest('li')!).getByText('As of now')).toBeInTheDocument();
     expect(within(screen.getByText('Membership revenue', { selector: 'span' }).closest('li')!).getByText('€1,140.00')).toBeInTheDocument();
+  });
+
+  it('FR-DSH-15 opens with the period and filters of a link from the CEO dashboard', async () => {
+    renderPage('?section=segments&preset=CUSTOM&from=2025-03-01&to=2025-03-31&segment=CORPORATE');
+    await screen.findByText('Renewal rate');
+    expect(reports.get).toHaveBeenCalledWith('acme', expect.objectContaining({ preset: 'CUSTOM', from: '2025-03-01', to: '2025-03-31', segment: 'CORPORATE' }));
   });
 
   it('FR-RPT-01 sends the filters to the server and clears them', async () => {

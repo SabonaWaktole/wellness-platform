@@ -290,7 +290,17 @@
       "paymentsOutstanding": "Outstanding payments",
       "paymentsOverdue": "Overdue instalments",
       "paymentsOverdueAmount": "Overdue amount",
-      "offersWaiting": "Offers waiting for an answer"
+      "offersWaiting": "Offers waiting for an answer",
+      "membersActive": "Active members",
+      "membersCorporate": "Corporate members",
+      "membersIndividual": "Individual members",
+      "membersNew": "New members",
+      "membershipsNewPaid": "New paid memberships",
+      "membershipUpgrades": "Upgrades",
+      "membershipDowngrades": "Downgrades",
+      "membershipRenewalRate": "Renewal rate",
+      "membershipsExpiring": "Expiring memberships",
+      "membershipRevenue": "Membership revenue"
     },
     "asOfNow": "As of now",
     "openList": "{{label}}: {{value}}. Open the list.",
@@ -367,7 +377,16 @@
       "amount": "Amount",
       "outstanding": "Outstanding",
       "companies": "Companies by status",
-      "noStatus": "No status"
+      "noStatus": "No status",
+      "wellnessPlus": "Wellness+ members",
+      "wellnessPlusActive": "Active members per tier",
+      "wellnessPlusRenewals": "Renewals per tier",
+      "tier": "Tier",
+      "due": "Due",
+      "renewed": "Renewed",
+      "notRenewed": "Not renewed",
+      "rate": "Rate",
+      "openReports": "Open the Wellness+ reports"
     }
   }
 }
