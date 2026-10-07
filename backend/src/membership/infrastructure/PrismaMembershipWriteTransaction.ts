@@ -5,6 +5,8 @@ import { PrismaAuditTrail } from '../../audit/infrastructure/PrismaAuditTrail';
 import type { IMembershipWriteTransaction, MembershipWriteRepos } from '../application/ports/IMembershipWriteTransaction';
 import { PrismaBenefitStore } from './PrismaBenefitStore';
 import { PrismaMemberNumbers } from './PrismaMemberNumbers';
+import { PrismaMemberPaymentStore } from './PrismaMemberPaymentStore';
+import { PrismaReceiptNumbers } from './PrismaReceiptNumbers';
 import { PrismaMemberStore } from './PrismaMemberStore';
 import { PrismaMembershipSettingsStore } from './PrismaMembershipSettingsStore';
 import { PrismaRelationshipStore } from './PrismaRelationshipStore';
@@ -25,6 +27,8 @@ export class PrismaMembershipWriteTransaction implements IMembershipWriteTransac
         benefitStore: new PrismaBenefitStore(client),
         memberStore: new PrismaMemberStore(client),
         memberNumbers: new PrismaMemberNumbers(client),
+        paymentStore: new PrismaMemberPaymentStore(client),
+        receiptNumbers: new PrismaReceiptNumbers(client),
         auditTrail: this.auditTrailFor(client),
       });
     });

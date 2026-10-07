@@ -270,6 +270,17 @@ import {
   UpdateMemberUseCase,
 } from '../membership/application/use-cases/MemberUseCases';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
+import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
+import { PrismaMemberPaymentStore } from '../membership/infrastructure/PrismaMemberPaymentStore';
+import { MemberReceiptPdfRenderer } from '../membership/infrastructure/MemberReceiptPdfRenderer';
+import {
+  ExportMemberPaymentsUseCase,
+  GetPaymentReceiptUseCase,
+  QuotePaymentUseCase,
+  RecordMemberPaymentUseCase,
+  SearchMemberPaymentsUseCase,
+  VoidMemberPaymentUseCase,
+} from '../membership/application/use-cases/MemberPaymentUseCases';
 import { generateShareToken } from '../quotations/domain/shareToken';
 
 export interface AppDependencies {
@@ -1340,15 +1351,37 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // The Wellness+ member record (M4 Slice 4): register, search, edit personal
   // details, suspend and close. Members: view reads, Members: manage writes.
   const memberStore = new PrismaMemberStore(prisma);
+  const memberPaymentStore = new PrismaMemberPaymentStore(prisma);
+  const quotePayment = new QuotePaymentUseCase(memberStore, memberPaymentStore, membershipSettingsStore);
+  const searchMemberPayments = new SearchMemberPaymentsUseCase(memberPaymentStore, memberStore);
   app.use(
     '/api/:tenantSlug/membership/members',
     createMemberRouter(
       {
         search: new SearchMembersUseCase(memberStore, membershipSettingsStore),
-        get: new GetMemberUseCase(memberStore, membershipSettingsStore),
+        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore),
         register: new RegisterMemberUseCase(membershipWriteTx, generateShareToken),
         update: new UpdateMemberUseCase(membershipWriteTx),
         changeStatus: new ChangeMemberStatusUseCase(membershipWriteTx),
+        quotePayment,
+        recordPayment: new RecordMemberPaymentUseCase(membershipWriteTx),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Membership payments (M4 Slice 5): the list with totals, the CSV export, the
+  // PDF receipt and the void. Members: view payments reads, record payments voids.
+  app.use(
+    '/api/:tenantSlug/membership/payments',
+    createMemberPaymentRouter(
+      {
+        search: searchMemberPayments,
+        export: new ExportMemberPaymentsUseCase(searchMemberPayments, membershipWriteTx),
+        receipt: new GetPaymentReceiptUseCase(memberPaymentStore, memberStore, new MemberReceiptPdfRenderer()),
+        void: new VoidMemberPaymentUseCase(membershipWriteTx),
       },
       tokenService,
       tenantRepository,

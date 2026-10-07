@@ -1,5 +1,6 @@
 import type { IAuditTrail } from '../../../audit/application/ports/IAuditTrail';
 import type { IBenefitStore, IMembershipSettingsStore, IRelationshipStore } from './IMembershipSettingsStore';
+import type { IMemberPaymentStore, IReceiptNumbers } from './IMemberPaymentStore';
 import type { IMemberNumbers, IMemberStore } from './IMemberStore';
 
 /** The stores a Wellness+ settings write goes through, all on one connection. */
@@ -9,6 +10,8 @@ export interface MembershipWriteRepos {
   benefitStore: IBenefitStore;
   memberStore: IMemberStore;
   memberNumbers: IMemberNumbers;
+  paymentStore: IMemberPaymentStore;
+  receiptNumbers: IReceiptNumbers;
   /** Same connection as the stores: a failed audit write rolls the change back (FR-AUD-14). */
   auditTrail: IAuditTrail;
 }

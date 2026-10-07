@@ -13,7 +13,9 @@ import {
 } from '../../domain/Member';
 import { effectiveTierOn, validTermsOn, type MemberTermValue } from '../../domain/MemberTerm';
 import { validityOn } from '../../domain/memberValidity';
-import { MEMBERS_MANAGE, MEMBERS_VIEW } from '../membershipPermissions';
+import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_VIEW, MEMBERS_VIEW } from '../membershipPermissions';
+import type { IMemberPaymentStore } from '../ports/IMemberPaymentStore';
+import { paymentUserIds, presentMemberPayment } from '../presentMemberPayment';
 import type { IMemberStore, MemberRecord, MemberSearchParams, CardTokenGenerator } from '../ports/IMemberStore';
 import type { IMembershipSettingsStore } from '../ports/IMembershipSettingsStore';
 import type { IMembershipWriteTransaction } from '../ports/IMembershipWriteTransaction';
@@ -287,6 +289,7 @@ export class GetMemberUseCase {
   constructor(
     private readonly store: IMemberStore,
     private readonly settings: IMembershipSettingsStore,
+    private readonly paymentStore: IMemberPaymentStore,
     private readonly now: () => Date = () => new Date()
   ) {}
 
@@ -303,15 +306,16 @@ export class GetMemberUseCase {
     ]);
 
     const today = new Date(`${dayKeyInZone(this.now(), input.timezone)}T00:00:00.000Z`);
+    // A sponsored term counts while the employer's contract is valid (D8).
+    const sponsorValid = member.employerClientId ? await this.paymentStore.employerContractValid(input.tenantId, member.employerClientId, day(today)) : false;
     const values: MemberTermValue[] = terms.map((t) => ({
       tier: t.tier,
       source: t.source,
       startsOn: new Date(`${t.startsOn}T00:00:00.000Z`),
       endsOn: t.endsOn ? new Date(`${t.endsOn}T00:00:00.000Z`) : null,
     }));
-    // A sponsored term counts only while the employer's contract is valid; Slice 10 supplies that.
-    const effectiveTier = effectiveTierOn(values, false, graceDays, today);
-    const currentValue = validTermsOn(values, false, graceDays, today)
+    const effectiveTier = effectiveTierOn(values, sponsorValid, graceDays, today);
+    const currentValue = validTermsOn(values, sponsorValid, graceDays, today)
       .filter((v) => v.tier === effectiveTier)
       .sort((a, b) => (b.endsOn?.getTime() ?? Infinity) - (a.endsOn?.getTime() ?? Infinity))[0];
     const current = currentValue
@@ -319,12 +323,17 @@ export class GetMemberUseCase {
       : null;
     const validity = validityOn(member.status, effectiveTier, currentValue?.endsOn ?? null);
 
+    // Payments only for a user who may see them (FR-MPAY-08): the rows are not even read otherwise.
+    const payments = input.access.can(MEMBERS_PAYMENTS_VIEW) ? await this.paymentStore.listForMember(input.tenantId, member.id) : null;
+
     const names = await this.store.userNames(input.tenantId, [
       member.createdBy,
+      ...(payments ? paymentUserIds(payments) : []),
       ...tierHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
       ...statusHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
     ]);
 
-    return presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names });
+    const detail = presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names });
+    return payments ? { ...detail, payments: payments.map((p) => presentMemberPayment(p, names)) } : detail;
   }
 }

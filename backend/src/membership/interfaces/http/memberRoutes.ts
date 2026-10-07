@@ -13,7 +13,11 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactMemberFields } from '../../../access/domain/redactFields';
 import { InvalidMemberError, InvalidStatusChangeError, STATUS_ACTIONS } from '../../domain/Member';
 import { TIERS } from '../../domain/Tier';
-import { MEMBERS_MANAGE, MEMBERS_VIEW } from '../../application/membershipPermissions';
+import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_RECORD, MEMBERS_VIEW } from '../../application/membershipPermissions';
+import { PaymentRefusedError } from '../../application/memberPaymentQuote';
+import { InvalidPaymentError } from '../../domain/memberPayment';
+import { presentMemberPayment } from '../../application/presentMemberPayment';
+import { QuotePaymentUseCase, RecordMemberPaymentUseCase } from '../../application/use-cases/MemberPaymentUseCases';
 import {
   ChangeMemberStatusUseCase,
   DuplicateMemberError,
@@ -41,6 +45,10 @@ const personalShape = {
 
 export const registerSchema = z.object(personalShape).strict();
 export const updateSchema = z.object(personalShape).strict();
+/** What a payment request may carry: no amount, fee, discount, receipt number or term date (FR-MPAY-01, NFR-SEC-07). */
+export const recordPaymentSchema = z
+  .object({ kind: text, targetTier: text, method: text, receivedOn: text, note: text.nullable().optional() })
+  .strict();
 export const statusSchema = z.object({ action: z.enum(STATUS_ACTIONS as [string, ...string[]]), reason: text.nullable().optional() }).strict();
 
 const flag = (value: unknown): boolean | undefined => (value === 'true' || value === '1' ? true : undefined);
@@ -55,6 +63,8 @@ export interface MemberUseCases {
   register: RegisterMemberUseCase;
   update: UpdateMemberUseCase;
   changeStatus: ChangeMemberStatusUseCase;
+  quotePayment: QuotePaymentUseCase;
+  recordPayment: RecordMemberPaymentUseCase;
 }
 
 /**
@@ -82,6 +92,8 @@ export const createMemberRouter = (
     if (error instanceof PermissionDeniedError) return res.status(403).json({ error: error.message });
     if (error instanceof InvalidMemberError) return res.status(400).json({ error: error.message, code: error.code, field: error.field });
     if (error instanceof MemberNotFoundError) return res.status(404).json({ error: error.message, code: error.code });
+    if (error instanceof InvalidPaymentError) return res.status(400).json({ error: error.message, code: error.code, field: error.field });
+    if (error instanceof PaymentRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
     if (error instanceof InvalidStatusChangeError) return res.status(409).json({ error: error.message, code: error.code });
     if (error instanceof DuplicateMemberError) {
       return res.status(409).json(redactMemberFields({ error: error.message, code: error.code, duplicates: error.duplicates }, req.access!));
@@ -166,6 +178,31 @@ export const createMemberRouter = (
     handle(async (req, ctx) =>
       presentMemberSummary(await uc.changeStatus.execute({ ...ctx, id: String(req.params.id), action: req.body.action, reason: req.body.reason }))
     )
+  );
+
+  // M4 Slice 5: payments of one member. The amount is calculated here and cannot be sent (FR-MPAY-01).
+  const record = requirePermission(MEMBERS_PAYMENTS_RECORD);
+  const receivedOn = (value: unknown) => (typeof value === 'string' ? value : undefined);
+
+  router.get(
+    '/:id/payments/options',
+    record,
+    handle((req, ctx) => uc.quotePayment.options({ ...ctx, memberId: String(req.params.id), receivedOn: receivedOn(req.query.receivedOn) }))
+  );
+
+  router.get(
+    '/:id/payments/quote',
+    record,
+    handle((req, ctx) =>
+      uc.quotePayment.execute({ ...ctx, memberId: String(req.params.id), kind: req.query.kind, targetTier: req.query.targetTier, receivedOn: receivedOn(req.query.receivedOn) })
+    )
+  );
+
+  router.post(
+    '/:id/payments',
+    record,
+    validateRequest(recordPaymentSchema),
+    handle(async (req, ctx) => presentMemberPayment(await uc.recordPayment.execute({ ...ctx, memberId: String(req.params.id), body: req.body }), {}), 201)
   );
 
   return router;

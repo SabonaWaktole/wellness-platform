@@ -3700,6 +3700,47 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- M4 Slice 5: membership payments
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `MemberPayment` (
+    `id` VARCHAR(191) NOT NULL,
+    `tenantId` VARCHAR(191) NOT NULL,
+    `memberId` VARCHAR(191) NOT NULL,
+    `kind` VARCHAR(191) NOT NULL,
+    `fromTier` VARCHAR(191) NOT NULL,
+    `toTier` VARCHAR(191) NOT NULL,
+    `listFee` DECIMAL(12, 2) NOT NULL,
+    `discountPercent` DECIMAL(7, 2) NOT NULL,
+    `amount` DECIMAL(12, 2) NOT NULL,
+    `method` VARCHAR(191) NOT NULL,
+    `receivedOn` DATE NOT NULL,
+    `receiptNumber` VARCHAR(191) NOT NULL,
+    `note` TEXT NULL,
+    `recordedBy` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `voidedAt` DATETIME(3) NULL,
+    `voidedBy` VARCHAR(191) NULL,
+    `voidReason` TEXT NULL,
+
+    UNIQUE INDEX `MemberPayment_tenantId_receiptNumber_key`(`tenantId`, `receiptNumber`),
+    INDEX `MemberPayment_tenantId_receivedOn_idx`(`tenantId`, `receivedOn`),
+    INDEX `MemberPayment_memberId_createdAt_idx`(`memberId`, `createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'MemberPayment' AND CONSTRAINT_NAME = 'MemberPayment_memberId_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@needed, 'ALTER TABLE `MemberPayment` ADD CONSTRAINT `MemberPayment_memberId_fkey` FOREIGN KEY (`memberId`) REFERENCES `Member`(`id`) ON DELETE CASCADE ON UPDATE CASCADE', 'SELECT ''skip: MemberPayment_memberId_fkey'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261020100000_m4_member_payments', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261020100000_m4_member_payments'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -3847,6 +3888,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='BenefitService'
   UNION ALL SELECT 'MemberStatusHistory table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberStatusHistory'
+  UNION ALL SELECT 'MemberPayment table', COUNT(*) FROM information_schema.TABLES
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberPayment'
   UNION ALL SELECT 'ContractDocument table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
   UNION ALL SELECT 'ContractPayment_tenantId_paidAt_idx', COUNT(*) FROM information_schema.STATISTICS

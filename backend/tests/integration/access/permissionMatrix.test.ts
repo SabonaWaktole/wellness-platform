@@ -313,6 +313,37 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/status`).set('Authorization', `Bearer ${t}`).send({ action: 'CLOSE' }),
     },
     {
+      label: 'members.payments.record — GET /membership/members/:id/payments/options',
+      permissionKey: 'members.payments.record',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/nonexistent/payments/options`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.payments.record — POST /membership/members/:id/payments',
+      permissionKey: 'members.payments.record',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/payments`).set('Authorization', `Bearer ${t}`).send({ kind: 'NEW', targetTier: 'SILVER', method: 'CASH', receivedOn: '2020-01-01' }),
+    },
+    {
+      label: 'members.payments.record — POST /membership/payments/:id/void',
+      permissionKey: 'members.payments.record',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/payments/nonexistent/void`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
+      label: 'members.payments.view — GET /membership/payments',
+      permissionKey: 'members.payments.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/payments`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.payments.view — GET /membership/payments/export.csv',
+      permissionKey: 'members.payments.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/payments/export.csv`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.payments.view — GET /membership/payments/:id/receipt.pdf',
+      permissionKey: 'members.payments.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/payments/nonexistent/receipt.pdf`).set('Authorization', `Bearer ${t}`),
+    },
+    {
       label: 'settings.manage — PATCH /settings/contracts',
       permissionKey: 'settings.manage',
       request: (t) =>

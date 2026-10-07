@@ -124,6 +124,15 @@ describe('checkPurchase', () => {
     expect(check({ effectiveTier: 'VIP', targetTier: 'GOLD' })).toEqual({ allowed: false, reason: 'NOT_A_HIGHER_TIER' });
   });
 
+  it('FR-MPAY-03: an upgrade from Bronze is refused, since Bronze to Gold is a New purchase at the full price', () => {
+    expect(check({ kind: 'UPGRADE', targetTier: 'GOLD' })).toEqual({ allowed: false, reason: 'NOTHING_TO_UPGRADE' });
+  });
+
+  it('FR-MPAY-03: a member who holds Silver pays the difference to Gold, never a New Gold purchase', () => {
+    expect(check({ effectiveTier: 'SILVER', hasSponsoredTerm: true, targetTier: 'GOLD' })).toEqual({ allowed: false, reason: 'USE_UPGRADE' });
+    expect(check({ effectiveTier: 'SILVER', targetTier: 'GOLD' })).toEqual({ allowed: false, reason: 'USE_UPGRADE' });
+  });
+
   it('FR-MPAY-04: a new purchase while a paid term is running is refused (at most one paid term)', () => {
     expect(check({ effectiveTier: 'SILVER', paidTier: 'SILVER', targetTier: 'SILVER' })).toEqual({ allowed: false, reason: 'PAID_TERM_RUNNING' });
   });

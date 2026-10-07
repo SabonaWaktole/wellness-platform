@@ -1,6 +1,7 @@
 import type { Validity } from '../domain/memberValidity';
 import type { Tier } from '../domain/Tier';
 import type { TermSource } from '../domain/MemberTerm';
+import type { MemberPaymentView } from './presentMemberPayment';
 import type { MemberRecord, MemberStatusHistoryRecord, MemberTermRecord, MemberTierHistoryRecord } from './ports/IMemberStore';
 
 /**
@@ -63,6 +64,8 @@ export interface MemberDetail extends MemberSummary {
   family: { principalMemberId: string | null; relationshipId: string | null; dependants: never[] };
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
+  /** Present only for a user who holds "Members: view payments" (FR-MPAY-08). */
+  payments?: MemberPaymentView[];
 }
 
 export function presentMember(input: {

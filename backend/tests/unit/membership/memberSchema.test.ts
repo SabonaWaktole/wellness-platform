@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Prisma } from '@prisma/client';
-import { registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
+import { recordPaymentSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
 
 const prismaDir = path.join(__dirname, '../../../prisma');
 const read = (...parts: string[]) => fs.readFileSync(path.join(prismaDir, ...parts), 'utf8');
@@ -97,5 +97,56 @@ describe('the member request schemas', () => {
     expect(registerSchema.safeParse({ firstName: 'A', lastName: 'B', tier: 'GOLD' }).success).toBe(false);
     expect(updateSchema.safeParse({ firstName: 'A', memberNumber: 'WP-1' }).success).toBe(false);
     expect(registerSchema.safeParse({ firstName: 'A', lastName: 'B' }).success).toBe(true);
+  });
+});
+
+describe('the payment table (M4 Slice 5)', () => {
+  const model = Prisma.dmmf.datamodel.models.find((m) => m.name === 'MemberPayment')!;
+  const field = (name: string) => model.fields.find((f) => f.name === name)!;
+
+  it('NFR-ACC-05 money is Decimal and the discount is Decimal, never a float', () => {
+    for (const name of ['listFee', 'amount', 'discountPercent']) expect(field(name).type).toBe('Decimal');
+    const postgres = read('schema.prisma');
+    expect(modelBlock(postgres, 'MemberPayment')).toMatch(/listFee\s+Decimal\s+@db\.Decimal\(12, 2\)/);
+    expect(modelBlock(postgres, 'MemberPayment')).toMatch(/amount\s+Decimal\s+@db\.Decimal\(12, 2\)/);
+    expect(modelBlock(postgres, 'MemberPayment')).toMatch(/discountPercent\s+Decimal\s+@db\.Decimal\(7, 2\)/);
+  });
+
+  it('FR-MPAY-10 a payment stores the list fee, the discount and the amount, and is voided by three columns only', () => {
+    const columns = model.fields.filter((f) => f.kind !== 'object').map((f) => f.name);
+    for (const name of ['listFee', 'discountPercent', 'amount', 'receiptNumber', 'voidedAt', 'voidedBy', 'voidReason']) expect(columns).toContain(name);
+  });
+
+  it('NFR-DAT-02 one receipt number per workspace', () => {
+    expect(model.uniqueIndexes.map((i) => i.fields.join('+'))).toEqual(['tenantId+receiptNumber']);
+  });
+
+  it('NFR-OPS-04 the two Prisma schemas hold the same model, apart from the @db.Text annotations', () => {
+    const normal = (block: string) => block.replace(/\s+/g, ' ');
+    expect(normal(modelBlock(read('schema.mysql.prisma'), 'MemberPayment'))).toEqual(normal(modelBlock(read('schema.prisma'), 'MemberPayment')));
+  });
+
+  it('NFR-OPS-04 the Postgres migration, the MySQL script and the combined upgrade each create the table, guarded and empty', () => {
+    const postgres = read('migrations', '20261020100000_m4_member_payments', 'migration.sql');
+    const mysql = read('mysql_migration_m4_member_payments.sql');
+    const upgrade = read('mysql_upgrade_to_current.sql');
+    expect(postgres).toContain('CREATE TABLE "MemberPayment"');
+    expect(postgres).toContain('"amount" DECIMAL(12,2) NOT NULL');
+    expect(mysql).toContain('CREATE TABLE IF NOT EXISTS `MemberPayment`');
+    expect(upgrade).toContain('CREATE TABLE IF NOT EXISTS `MemberPayment`');
+    for (const sql of [postgres, mysql]) expect(sql).not.toMatch(/INSERT INTO "?`?MemberPayment/);
+    expect((mysql.match(/ADD CONSTRAINT/g) ?? []).length).toBe((mysql.match(/information_schema\.TABLE_CONSTRAINTS/g) ?? []).length);
+    expect(upgrade).toContain("'20261020100000_m4_member_payments'");
+    expect(upgrade).toContain("'MemberPayment table'");
+  });
+});
+
+describe('the payment request schema', () => {
+  it('FR-MPAY-01, NFR-SEC-07 has no key for an amount, a fee, a discount, a receipt number, a term date or a from-tier', () => {
+    const keys = Object.keys(recordPaymentSchema.shape);
+    for (const forbidden of ['amount', 'listFee', 'discountPercent', 'receiptNumber', 'startsOn', 'endsOn', 'fromTier', 'recordedBy', 'memberId']) {
+      expect(keys).not.toContain(forbidden);
+    }
+    expect(recordPaymentSchema.safeParse({ kind: 'NEW', targetTier: 'SILVER', method: 'CASH', receivedOn: '2027-03-15', amount: '1' }).success).toBe(false);
   });
 });

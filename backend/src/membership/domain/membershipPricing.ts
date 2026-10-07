@@ -37,7 +37,9 @@ export type PurchaseRefusal =
   | 'TIER_NOT_PURCHASABLE'
   | 'NOT_A_HIGHER_TIER'
   | 'PAID_TERM_RUNNING'
-  | 'NOTHING_TO_RENEW';
+  | 'NOTHING_TO_RENEW'
+  | 'NOTHING_TO_UPGRADE'
+  | 'USE_UPGRADE';
 
 export type PurchaseResult =
   | { allowed: true; warnings: Array<'SPONSORED_SILVER_OWN_TERM'> }
@@ -55,11 +57,15 @@ export function checkPurchase(ctx: PurchaseContext): PurchaseResult {
   }
 
   if (ctx.kind === 'UPGRADE') {
+    // Bronze to Gold is a New purchase at the full price (FR-MPAY-03): there is no paid tier to pay the difference to.
+    if (ctx.effectiveTier === 'BRONZE') return refuse('NOTHING_TO_UPGRADE');
     return tierRank(ctx.targetTier) > tierRank(ctx.effectiveTier) ? { allowed: true, warnings: [] } : refuse('NOT_A_HIGHER_TIER');
   }
 
   if (ctx.paidTier !== null) return refuse('PAID_TERM_RUNNING');
   if (tierRank(ctx.targetTier) < tierRank(ctx.effectiveTier)) return refuse('NOT_A_HIGHER_TIER');
+  // A member who already holds Silver pays the difference to Gold, not the full price again.
+  if (tierRank(ctx.targetTier) > tierRank(ctx.effectiveTier) && ctx.effectiveTier !== 'BRONZE') return refuse('USE_UPGRADE');
   return {
     allowed: true,
     warnings: ctx.targetTier === ctx.effectiveTier && ctx.hasSponsoredTerm ? ['SPONSORED_SILVER_OWN_TERM'] : [],
