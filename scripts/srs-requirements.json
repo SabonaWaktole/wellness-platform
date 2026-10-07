@@ -1646,6 +1646,36 @@
       "id": "FR-AUD-16",
       "priority": "Should",
       "requirement": "Exports (FR-RPT-10, FR-MPAY-10), the card links sheet (FR-EMP-08) and card link replacement shall be recorded with who, when and the filters used, never with a token. Verifications are kept in their own log (FR-VER-06, FR-VER-10), not in the audit log. Viewing a report or dashboard is not audited."
+    },
+    {
+      "id": "FR-FAM-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall add a family member to a principal member, by creating a new member or linking an existing one. The user must choose the relationship from the relationship list and tick that the relationship was confirmed. The platform stores who confirmed it and when."
+    },
+    {
+      "id": "FR-FAM-03",
+      "priority": "Must",
+      "requirement": "A family member is a full member with an own ID, card, tier and terms. A family member has one principal; a principal cannot be a family member of another; nobody is linked to themselves."
+    },
+    {
+      "id": "FR-FAM-05",
+      "priority": "Must",
+      "requirement": "The payment screen shall show the list fee, the discount and the reason \"Family discount, relationship (name)\", and the payment shall store them."
+    },
+    {
+      "id": "FR-FAM-06",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" can remove a family link with a reason. The family member keeps the membership and all terms; later payments are at the full price. The change is recorded."
+    },
+    {
+      "id": "FR-FAM-07",
+      "priority": "Must",
+      "requirement": "The principal's page shall list the family group with relationship, tier and validity, and each member's page shall show the principal. All links, confirmations and removals are audited."
+    },
+    {
+      "id": "FR-FAM-08",
+      "priority": "Must",
+      "requirement": "Sponsored Silver covers the employee only. A family member of an employee does not get a sponsored term; the family discount applies when the employee is Silver or higher (FR-FAM-04)."
     }
   ]
 }
