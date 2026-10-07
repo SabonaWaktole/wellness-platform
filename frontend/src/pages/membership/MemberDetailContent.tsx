@@ -39,7 +39,7 @@ const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
  * history, the status history and the internal note. The tier shown is the one the server calculated for today
  * from the terms, never a stored value. No control edits the tier, an expiry date or the member ID (FR-MEM-09).
  * Payments (FR-MPAY-08) arrive only for a user who may view them; recording and voiding need "record payments".
- * The Family tab shows the group and the principal (FR-FAM-07); the VIP tab the requests and decisions (FR-VIP-05); the verification events fill in with Slice 13.
+ * The Family tab shows the group and the principal (FR-FAM-07); the VIP tab the requests and decisions (FR-VIP-05); the History tab lists the verification log for a user who may open the record (FR-VER-06).
  */
 export const MemberDetailContent: React.FC = () => {
   const { t, i18n } = useTranslation('members');
@@ -435,6 +435,40 @@ export const MemberDetailContent: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+
+              {member.verificationEvents && (
+                <>
+                  <h2 className={styles.sectionTitle}>{t('verify.log.title')}</h2>
+                  {member.verificationEvents.length === 0 ? (
+                    <p>{t('verify.log.empty')}</p>
+                  ) : (
+                    <div className={styles.tableContainer}>
+                      <table className={styles.table}>
+                        <thead>
+                          <tr>
+                            <th scope="col">{t('verify.log.when')}</th>
+                            <th scope="col">{t('verify.log.channel')}</th>
+                            <th scope="col">{t('verify.log.result')}</th>
+                            <th scope="col">{t('verify.log.identity')}</th>
+                            <th scope="col">{t('verify.log.by')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {member.verificationEvents.map((e) => (
+                            <tr key={e.id}>
+                              <td>{dates.dateTime(new Date(e.at))}</td>
+                              <td>{t(`verify.log.channelValue.${e.channel}`)}</td>
+                              <td>{t(`verify.log.resultValue.${e.result}`)}</td>
+                              <td className={e.identityChoice === 'MISMATCH' ? styles.warning : undefined}>{t(`verify.log.identityValue.${e.identityChoice}`)}</td>
+                              <td>{e.by ?? (e.channel === 'PARTNER_SCAN' ? t('verify.log.partner') : historyBy(null))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
 

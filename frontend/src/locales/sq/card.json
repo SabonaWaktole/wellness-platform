@@ -38,5 +38,13 @@
     "title": "Shtoje këtë kartë në ekranin kryesor",
     "ios": "Në Safari, trokit Share, pastaj Add to Home Screen.",
     "android": "Në Chrome, trokit menunë, pastaj Install app ose Add to Home screen."
+  },
+  "verify": {
+    "pageTitle": "Kontrolli i anëtarësimit Wellness+",
+    "loading": "Po kontrollohet karta…",
+    "failed": "Karta nuk u kontrollua. Kontrolloni lidhjen dhe provoni përsëri.",
+    "valid": "E vlefshme",
+    "notValid": "Jo e vlefshme",
+    "validUntilLabel": "E vlefshme deri më"
   }
 }

@@ -38,5 +38,13 @@
     "title": "Add this card to your home screen",
     "ios": "In Safari, tap Share, then Add to Home Screen.",
     "android": "In Chrome, tap the menu, then Install app or Add to Home screen."
+  },
+  "verify": {
+    "pageTitle": "Wellness+ membership check",
+    "loading": "Checking the card…",
+    "failed": "The card could not be checked. Check your connection and try again.",
+    "valid": "Valid",
+    "notValid": "Not valid",
+    "validUntilLabel": "Valid until"
   }
 }

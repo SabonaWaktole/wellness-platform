@@ -603,5 +603,68 @@
       "cancel": "Anulo",
       "confirm": "Zëvendëso linkun"
     }
+  },
+  "verify": {
+    "title": "Verifiko anëtarin",
+    "subtitle": "Skanoni kodin QR të anëtarit ose kërkoni për të kontrolluar nëse anëtarësimi është i vlefshëm.",
+    "scan": "Skano",
+    "stopScan": "Ndalo skanimin",
+    "scanning": "Drejtoni kamerën nga kodi QR i anëtarit.",
+    "cameraLabel": "Pamja e kamerës",
+    "cameraDenied": "Qasja në kamerë u bllokua. Lejoni kamerën për këtë faqe në cilësimet e shfletuesit, ose kërkoni më poshtë.",
+    "cameraUnavailable": "Kamera nuk mund të përdoret në këtë pajisje ose shfletues. Kërkoni me ID e anëtarit, emër, telefon ose email.",
+    "notACard": "Ky kod nuk është kartë Wellness+. Provoni përsëri kartën e anëtarit.",
+    "searchLabel": "ID e anëtarit, emri, telefoni ose emaili",
+    "search": "Kërko",
+    "checking": "Po kontrollohet…",
+    "failed": "Kontrolli nuk u krye. Provoni përsëri.",
+    "noMatches": "Nuk u gjet asnjë anëtar.",
+    "choose": "Zgjidhni anëtarin",
+    "valid": "E vlefshme",
+    "notValid": "Jo e vlefshme",
+    "notValidReason": "Jo e vlefshme: {{reason}}",
+    "notFound": "Anëtari nuk u gjet",
+    "memberId": "ID e anëtarit",
+    "tier": "Niveli",
+    "validUntil": "E vlefshme deri më",
+    "noExpiry": "Pa skadencë",
+    "status": "Statusi",
+    "dateOfBirth": "Data e lindjes",
+    "discounts": "Zbritjet",
+    "noDiscounts": "Për këtë nivel nuk ka zbritje të listuara.",
+    "percent": "{{percent}}%",
+    "identityTitle": "Kontrolloni identitetin",
+    "identityHelp": "Krahasoni emrin dhe datëlindjen me dokumentin e identitetit të personit.",
+    "identityConfirmed": "Identiteti u konfirmua",
+    "identityMismatch": "Nuk përputhet",
+    "recordedConfirmed": "U regjistrua: identiteti u konfirmua.",
+    "recordedMismatch": "U regjistrua: nuk përputhet.",
+    "identityFailed": "Përgjigjja nuk u ruajt. Provoni përsëri.",
+    "another": "Verifiko anëtar tjetër",
+    "log": {
+      "title": "Verifikimet",
+      "empty": "Kjo kartë nuk është kontrolluar ende.",
+      "when": "Kur",
+      "channel": "Si",
+      "result": "Rezultati",
+      "identity": "Kontrolli i identitetit",
+      "by": "Nga",
+      "channelValue": {
+        "RECEPTION_SCAN": "Skanim në recepsion",
+        "RECEPTION_SEARCH": "Kërkim në recepsion",
+        "PARTNER_SCAN": "Skanim nga klinika partnere"
+      },
+      "resultValue": {
+        "VALID": "E vlefshme",
+        "NOT_VALID": "Jo e vlefshme",
+        "NOT_FOUND": "Nuk u gjet"
+      },
+      "identityValue": {
+        "NONE": "Pa regjistrim",
+        "CONFIRMED": "Identiteti u konfirmua",
+        "MISMATCH": "Nuk përputhet"
+      },
+      "partner": "Klinikë partnere"
+    }
   }
 }

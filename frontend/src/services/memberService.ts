@@ -114,6 +114,17 @@ export interface MemberDetail extends MemberSummary {
   leftCompanyAt: string | null;
   /** Only for a user who holds "Members: view payments" (FR-MPAY-08). */
   payments?: MemberPayment[];
+  /** The checks of this card by Reception and partner clinics, newest first (FR-VER-06). Absent without "Members: view". */
+  verificationEvents?: VerificationLogEntry[];
+}
+
+export interface VerificationLogEntry {
+  id: string;
+  channel: 'RECEPTION_SCAN' | 'RECEPTION_SEARCH' | 'PARTNER_SCAN';
+  result: 'VALID' | 'NOT_VALID' | 'NOT_FOUND';
+  identityChoice: 'NONE' | 'CONFIRMED' | 'MISMATCH';
+  by: string | null;
+  at: string;
 }
 
 /** The personal details of FR-MEM-09: the only fields a member form can send. */

@@ -603,5 +603,68 @@
       "cancel": "Cancel",
       "confirm": "Replace link"
     }
+  },
+  "verify": {
+    "title": "Verify member",
+    "subtitle": "Scan the member's QR code or search to check that the membership is valid.",
+    "scan": "Scan",
+    "stopScan": "Stop scanning",
+    "scanning": "Point the camera at the member's QR code.",
+    "cameraLabel": "Camera view",
+    "cameraDenied": "Camera access was blocked. Allow the camera for this site in your browser settings, or search below.",
+    "cameraUnavailable": "The camera cannot be used on this device or in this browser. Search by member ID, name, phone or email instead.",
+    "notACard": "That code is not a Wellness+ card. Try the member's card again.",
+    "searchLabel": "Member ID, name, phone or email",
+    "search": "Search",
+    "checking": "Checking…",
+    "failed": "The check could not be completed. Try again.",
+    "noMatches": "No member found.",
+    "choose": "Choose the member",
+    "valid": "Valid",
+    "notValid": "Not valid",
+    "notValidReason": "Not valid: {{reason}}",
+    "notFound": "Member not found",
+    "memberId": "Member ID",
+    "tier": "Tier",
+    "validUntil": "Valid until",
+    "noExpiry": "No expiry",
+    "status": "Status",
+    "dateOfBirth": "Date of birth",
+    "discounts": "Discounts",
+    "noDiscounts": "No discounts are listed for this tier.",
+    "percent": "{{percent}}%",
+    "identityTitle": "Check the identity",
+    "identityHelp": "Compare the name and date of birth with the person's identity document.",
+    "identityConfirmed": "Identity confirmed",
+    "identityMismatch": "Does not match",
+    "recordedConfirmed": "Recorded: identity confirmed.",
+    "recordedMismatch": "Recorded: does not match.",
+    "identityFailed": "The answer could not be saved. Try again.",
+    "another": "Verify another member",
+    "log": {
+      "title": "Verifications",
+      "empty": "This card has not been checked yet.",
+      "when": "When",
+      "channel": "How",
+      "result": "Result",
+      "identity": "Identity check",
+      "by": "By",
+      "channelValue": {
+        "RECEPTION_SCAN": "Reception scan",
+        "RECEPTION_SEARCH": "Reception search",
+        "PARTNER_SCAN": "Partner clinic scan"
+      },
+      "resultValue": {
+        "VALID": "Valid",
+        "NOT_VALID": "Not valid",
+        "NOT_FOUND": "Not found"
+      },
+      "identityValue": {
+        "NONE": "Not recorded",
+        "CONFIRMED": "Identity confirmed",
+        "MISMATCH": "Does not match"
+      },
+      "partner": "Partner clinic"
+    }
   }
 }

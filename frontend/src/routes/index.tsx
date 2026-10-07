@@ -29,6 +29,7 @@ import { MemberDetailPage } from '../pages/membership/MemberDetailPage';
 import { MemberPaymentsPage } from '../pages/membership/MemberPaymentsPage';
 import { VipRequestsPage } from '../pages/membership/VipRequestsPage';
 import { EmployeeUploadPage } from '../pages/membership/EmployeeUploadPage';
+import { VerifyMemberPage } from '../pages/membership/VerifyMemberPage';
 import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -81,6 +82,8 @@ import { DashboardLanding } from '../pages/dashboard/DashboardLanding';
 
 /** Loaded on demand: a member opening a card does not download the staff application (M4 Slice 11). */
 const PublicCardPage = lazy(() => import('../pages/card/PublicCardPage').then((m) => ({ default: m.PublicCardPage })));
+/** The card's QR link: the Reception screen for a signed-in user with Members: verify, the public page for anyone else (M4 Slice 13). */
+const VerifyLinkPage = lazy(() => import('../pages/verify/VerifyLinkPage').then((m) => ({ default: m.VerifyLinkPage })));
 
 const LegacyDashboardSelector = () => {
   const scope = usePermissionScope('companies.view');
@@ -154,6 +157,14 @@ export const routes: RouteObject[] = [
     element: (
       <Suspense fallback={null}>
         <PublicCardPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/v/:token',
+    element: (
+      <Suspense fallback={null}>
+        <VerifyLinkPage />
       </Suspense>
     ),
   },
@@ -595,6 +606,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="members.payments.view">
               <MemberPaymentsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 13: Reception scans or searches and sees Valid / Not valid (FR-VER-01). Needs only "Members: verify".
+        path: 'members/verify',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.verify">
+              <VerifyMemberPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

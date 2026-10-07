@@ -248,3 +248,39 @@ describe('The card links of an upload (M4 Slice 11)', () => {
     expect(screen.queryByRole('button', { name: 'Card links' })).toBeNull();
   });
 });
+
+describe('The verification log on the member page (M4 Slice 13, FR-VER-06)', () => {
+  const events = [
+    { id: 'e2', channel: 'RECEPTION_SEARCH' as const, result: 'VALID' as const, identityChoice: 'MISMATCH' as const, by: 'Gent Test', at: '2026-10-07T10:30:00.000Z' },
+    { id: 'e1', channel: 'PARTNER_SCAN' as const, result: 'NOT_VALID' as const, identityChoice: 'NONE' as const, by: null, at: '2026-10-06T09:00:00.000Z' },
+  ];
+
+  it('FR-VER-06 lists each check with how, the result, the identity answer and who, and shows "Does not match"', async () => {
+    signInWith('members.view');
+    members.get.mockResolvedValue(detail({ verificationEvents: events }));
+    renderMember();
+    fireEvent.click(await screen.findByRole('tab', { name: 'History' }));
+
+    expect(await screen.findByRole('heading', { name: 'Verifications' })).toBeInTheDocument();
+    expect(screen.getByText('Reception search')).toBeInTheDocument();
+    expect(screen.getByText('Does not match')).toBeInTheDocument();
+    expect(screen.getByText('Gent Test')).toBeInTheDocument();
+    expect(screen.getByText('Partner clinic scan')).toBeInTheDocument();
+    expect(screen.getByText('Partner clinic')).toBeInTheDocument();
+  });
+
+  it('FR-VER-06 says so when the card has not been checked, and shows no log when the server sent none', async () => {
+    signInWith('members.view');
+    members.get.mockResolvedValue(detail({ verificationEvents: [] }));
+    const first = renderMember();
+    fireEvent.click(await screen.findByRole('tab', { name: 'History' }));
+    expect(await screen.findByText('This card has not been checked yet.')).toBeInTheDocument();
+    first.unmount();
+
+    members.get.mockResolvedValue(detail());
+    renderMember();
+    fireEvent.click(await screen.findByRole('tab', { name: 'History' }));
+    await screen.findByRole('heading', { name: 'Status history' });
+    expect(screen.queryByRole('heading', { name: 'Verifications' })).toBeNull();
+  });
+});

@@ -113,7 +113,8 @@
     "membershipPayments": "Membership payments",
     "performance": "Performance",
     "vipRequests": "VIP requests",
-    "employeeUpload": "Employee upload"
+    "employeeUpload": "Employee upload",
+    "verifyMember": "Verify member"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

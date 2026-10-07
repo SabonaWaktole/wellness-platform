@@ -59,11 +59,17 @@ describe('NFR-USE-04 the 360 px suite covers every Milestone 4 screen built so f
     ['members/new', "() => 'members/new'"],
     ['members/payments', "() => 'members/payments'"],
     ['members/vip-requests', "() => 'members/vip-requests'"],
+    ['members/verify', "() => 'members/verify'"],
     ['members/employee-upload', "() => 'members/employee-upload'"],
     ['members/:memberId', 'members/${memberId}`'],
     ['members/:memberId/edit', 'members/${memberId}/edit'],
   ])('NFR-USE-04 the %s screen is a route and is opened by the suite', (route, opened) => {
     expect(routes).toContain(`path: '${route}'`);
     expect(suite).toContain(opened);
+  });
+
+  it('NFR-USE-04 the public verification page (/v/:token) is a route and has its own 360 px test', () => {
+    expect(routes).toContain("path: '/v/:token'");
+    expect(suite).toContain('public verification page');
   });
 });

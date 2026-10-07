@@ -113,7 +113,8 @@
     "performance": "Performanca",
     "renewals": "Rinovimet",
     "vipRequests": "Kërkesat VIP",
-    "employeeUpload": "Ngarkimi i punonjësve"
+    "employeeUpload": "Ngarkimi i punonjësve",
+    "verifyMember": "Verifiko anëtarin"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

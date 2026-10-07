@@ -58,6 +58,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'members', labelKey: 'nav.members', icon: 'wellness', permission: 'members.view', workflow: 'SALES_PROCESS' },
   // The Membership payments list (M4 Slice 5, FR-MPAY-07): every payment with filters, totals, CSV and receipts.
   { id: 'members/payments', labelKey: 'nav.membershipPayments', icon: 'receipt_long', permission: 'members.payments.view', workflow: 'SALES_PROCESS' },
+  // The Verify member screen (M4 Slice 13, FR-VER-01): Reception scans a card or searches, and sees Valid / Not valid.
+  { id: 'members/verify', labelKey: 'nav.verifyMember', icon: 'qr_code_scanner', permission: 'members.verify', workflow: 'SALES_PROCESS' },
   // The VIP requests list for approvers (M4 Slice 7, FR-VIP-02).
   { id: 'members/vip-requests', labelKey: 'nav.vipRequests', icon: 'workspace_premium', permission: 'members.vip.approve', workflow: 'SALES_PROCESS' },
   // The corporate employee upload (M4 Slice 9, FR-EMP-01).

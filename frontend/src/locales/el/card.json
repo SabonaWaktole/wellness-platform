@@ -38,5 +38,13 @@
     "title": "Προσθέστε την κάρτα στην αρχική οθόνη",
     "ios": "Στο Safari, πατήστε Share και μετά Add to Home Screen.",
     "android": "Στο Chrome, πατήστε το μενού και μετά Install app ή Add to Home screen."
+  },
+  "verify": {
+    "pageTitle": "Έλεγχος συνδρομής Wellness+",
+    "loading": "Έλεγχος κάρτας…",
+    "failed": "Η κάρτα δεν ελέγχθηκε. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.",
+    "valid": "Έγκυρη",
+    "notValid": "Μη έγκυρη",
+    "validUntilLabel": "Ισχύει έως"
   }
 }

@@ -165,6 +165,8 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['membership payments', () => 'members/payments'],
       // M4 Slice 7: the VIP requests list (the VIP tab and its dialogs are on the member page)
       ['VIP requests', () => 'members/vip-requests'],
+      // M4 Slice 13: the Verify member screen (the result and the identity buttons are on the same page)
+      ['Verify member', () => 'members/verify'],
       // M4 Slice 9: the corporate employee upload
       ['Employee upload', () => 'members/employee-upload'],
       // M2 Slice 6: the deal edit form
@@ -235,6 +237,17 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await expect(qr).toBeVisible();
       expect((await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
       await expectNoHorizontalOverflow(page, 'public member card');
+    });
+
+    // M4 Slice 13 (NFR-USE-04): the same QR link, opened with no session as a partner clinic's phone does. Valid and Not valid look alike in width.
+    test('public verification page (/v/:token)', async ({ page }) => {
+      const link = await page.request.get(`/api/${TENANT}/membership/members/${memberId}/card-link`);
+      expect(link.ok()).toBe(true);
+      const { qrPayload } = (await link.json()).data as { qrPayload: string };
+      await page.context().clearCookies();
+      await page.goto(new URL(qrPayload).pathname);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expectNoHorizontalOverflow(page, 'public verification page');
     });
 
     for (const [screen, path] of screens) {

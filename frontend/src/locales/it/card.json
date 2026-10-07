@@ -38,5 +38,13 @@
     "title": "Aggiungi questa tessera alla schermata Home",
     "ios": "In Safari, tocca Condividi, poi Aggiungi alla schermata Home.",
     "android": "In Chrome, tocca il menu, poi Installa app o Aggiungi a schermata Home."
+  },
+  "verify": {
+    "pageTitle": "Verifica dell'abbonamento Wellness+",
+    "loading": "Verifica della tessera…",
+    "failed": "Non è stato possibile verificare la tessera. Controlla la connessione e riprova.",
+    "valid": "Valida",
+    "notValid": "Non valida",
+    "validUntilLabel": "Valida fino al"
   }
 }
