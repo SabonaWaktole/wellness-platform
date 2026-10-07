@@ -49,7 +49,7 @@ export interface IEmployeeSheetWriter {
 
 export interface IEmployeeImportStore {
   /** The company's id and name when it belongs to the workspace and is not archived. */
-  findCompany(tenantId: string, clientId: string): Promise<{ id: string; name: string } | null>;
+  findCompany(tenantId: string, clientId: string): Promise<{ id: string; name: string; employeeCount: number | null } | null>;
   create(data: NewEmployeeImport): Promise<EmployeeImportRecord>;
   find(tenantId: string, id: string): Promise<EmployeeImportRecord | null>;
   /** The company's uploads, newest first, without rows (FR-EMP-06). */

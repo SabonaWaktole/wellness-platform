@@ -26,9 +26,9 @@ const toRecord = (row: Row): EmployeeImportRecord => ({
 export class PrismaEmployeeImportStore implements IEmployeeImportStore {
   constructor(private readonly prisma: PrismaClient = defaultPrisma) {}
 
-  async findCompany(tenantId: string, clientId: string): Promise<{ id: string; name: string } | null> {
-    const client = await this.prisma.client.findFirst({ where: { id: clientId, tenantId, deletedAt: null }, select: { id: true, name: true } });
-    return client ? { id: client.id, name: client.name ?? '' } : null;
+  async findCompany(tenantId: string, clientId: string): Promise<{ id: string; name: string; employeeCount: number | null } | null> {
+    const client = await this.prisma.client.findFirst({ where: { id: clientId, tenantId, deletedAt: null }, select: { id: true, name: true, employeeCount: true } });
+    return client ? { id: client.id, name: client.name ?? '', employeeCount: client.employeeCount } : null;
   }
 
   async create(data: NewEmployeeImport): Promise<EmployeeImportRecord> {

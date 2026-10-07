@@ -121,6 +121,13 @@ export interface IMemberPaymentStore {
   search(tenantId: string, filters: PaymentFilters, page: number, limit: number): Promise<{ data: MemberPaymentRecord[]; total: number; totalAmount: string }>;
   setCurrentTier(tenantId: string, memberId: string, tier: Tier): Promise<void>;
   addTierHistory(entry: TierHistoryEntry): Promise<void>;
+  /**
+   * Ends the member's open sponsored terms on the last day they counted (FR-EMP-12). A term that
+   * would end before it began is removed instead, so no term has a negative length.
+   */
+  endSponsoredTerms(memberId: string, lastDay: string): Promise<void>;
+  /** The Active contracts of each company, as day spans, for the displayed expiry of a sponsored term (D8, FR-EMP-09). One query for any number of companies. */
+  employerContractSpans(tenantId: string, clientIds: string[]): Promise<Record<string, Array<{ startsOn: string; endsOn: string }>>>;
   /** Whether the employer company holds a contract valid on the day (D8). A sponsored term follows it. */
   employerContractValid(tenantId: string, clientId: string, day: string): Promise<boolean>;
 }

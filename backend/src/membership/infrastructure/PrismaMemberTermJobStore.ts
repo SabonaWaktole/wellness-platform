@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { validityWhere } from '../../contracts/infrastructure/repositories/contractValidityWhere';
 import { prisma as defaultPrisma } from '../../shared/infrastructure/prisma/client';
 import type { ExpiringTermRow, IMemberTermJobStore, VipReviewRow } from '../application/ports/IMemberTermJobStore';
 
@@ -14,7 +15,36 @@ export class PrismaMemberTermJobStore implements IMemberTermJobStore {
       select: { id: true },
       orderBy: { id: 'asc' },
     });
-    return rows.map((row) => row.id);
+    const stale = rows.map((row) => row.id);
+
+    // Step 3 (D9, FR-EMP-10, FR-EMP-11): a linked employee whose stored tier disagrees with the employer's
+    // contract today. Judged per company in two queries, never per member.
+    const linked = await this.prisma.member.findMany({
+      where: { tenantId, employerClientId: { not: null }, terms: { some: { source: 'SPONSORED' } } },
+      select: { employerClientId: true },
+      distinct: ['employerClientId'],
+    });
+    const companies = linked.map((row) => row.employerClientId!);
+    if (companies.length === 0) return stale;
+    const validRows = await this.prisma.contract.findMany({
+      where: { tenantId, clientId: { in: companies }, ...(validityWhere('VALID', dateOnly(today), 0) as Prisma.ContractWhereInput) },
+      select: { clientId: true },
+      distinct: ['clientId'],
+    });
+    const valid = validRows.map((row) => row.clientId);
+    const invalid = companies.filter((id) => !valid.includes(id));
+    const drifted = await this.prisma.member.findMany({
+      where: {
+        tenantId,
+        terms: { some: { source: 'SPONSORED' } },
+        OR: [
+          ...(valid.length > 0 ? [{ employerClientId: { in: valid }, currentTier: 'BRONZE' }] : []),
+          ...(invalid.length > 0 ? [{ employerClientId: { in: invalid }, currentTier: { not: 'BRONZE' } }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    return [...new Set([...stale, ...drifted.map((row) => row.id)])].sort();
   }
 
   async termsToAnnounce(tenantId: string, today: string, windowEnd: string): Promise<ExpiringTermRow[]> {

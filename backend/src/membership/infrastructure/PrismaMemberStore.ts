@@ -169,7 +169,26 @@ export class PrismaMemberStore implements IMemberStore {
   }
 
   async setEmployer(tenantId: string, id: string, clientId: string): Promise<void> {
-    await this.prisma.member.updateMany({ where: { id, tenantId }, data: { employerClientId: clientId } });
+    await this.prisma.member.updateMany({ where: { id, tenantId }, data: { employerClientId: clientId, formerEmployerClientId: null, leftCompanyAt: null } });
+  }
+
+  async removeEmployer(tenantId: string, id: string, formerClientId: string, leftOn: string): Promise<void> {
+    await this.prisma.member.updateMany({ where: { id, tenantId }, data: { employerClientId: null, formerEmployerClientId: formerClientId, leftCompanyAt: dateOnly(leftOn) } });
+  }
+
+  async listByEmployer(tenantId: string, clientId: string): Promise<MemberRecord[]> {
+    const rows = await this.prisma.member.findMany({ where: { tenantId, employerClientId: clientId }, select: MEMBER_SELECT, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { memberNumber: 'asc' }] });
+    return rows.map(toRecord);
+  }
+
+  async listFormerEmployees(tenantId: string, clientId: string): Promise<MemberRecord[]> {
+    const rows = await this.prisma.member.findMany({ where: { tenantId, formerEmployerClientId: clientId }, select: MEMBER_SELECT, orderBy: [{ leftCompanyAt: 'desc' }, { lastName: 'asc' }, { firstName: 'asc' }] });
+    return rows.map(toRecord);
+  }
+
+  async employeeIds(tenantId: string, clientId: string): Promise<string[]> {
+    const rows = await this.prisma.member.findMany({ where: { tenantId, employerClientId: clientId }, select: { id: true }, orderBy: { id: 'asc' } });
+    return rows.map((row) => row.id);
   }
 
   async cityExists(tenantId: string, cityId: string): Promise<boolean> {
@@ -198,7 +217,9 @@ export class PrismaMemberStore implements IMemberStore {
     if (params.source === 'FAMILY') and.push({ principalMemberId: { not: null } });
     if (params.source === 'INDIVIDUAL') and.push({ employerClientId: null, principalMemberId: null });
     if (params.employerClientId) and.push({ employerClientId: params.employerClientId });
-    if (params.formerEmployee) and.push({ formerEmployerClientId: { not: null } });
+    if (params.formerEmployee || params.formerEmployerClientId) and.push({ formerEmployerClientId: params.formerEmployerClientId ?? { not: null } });
+    if (params.leftFrom) and.push({ leftCompanyAt: { gte: dateOnly(params.leftFrom)! } });
+    if (params.leftTo) and.push({ leftCompanyAt: { lte: dateOnly(params.leftTo)! } });
     if (params.vipReviewDue) {
       const { from, to } = params.vipReviewDue;
       and.push({ terms: { some: { source: 'VIP', endsOn: { gte: dateOnly(from)!, lte: dateOnly(to)! } } } });

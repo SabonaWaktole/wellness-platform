@@ -25,6 +25,7 @@ import type { IMembershipSettingsStore, IRelationshipStore } from '../ports/IMem
 import type { IMembershipWriteTransaction, MembershipWriteRepos } from '../ports/IMembershipWriteTransaction';
 import { presentMember, presentMemberSummary, type FamilyGroup, type MemberDetail, type MemberSummary } from '../presentMember';
 import { addDays } from '../../../contracts/domain/calendarDay';
+import { SponsorValidity } from '../SponsorValidity';
 
 export class MemberNotFoundError extends Error {
   readonly code = 'MEMBER_NOT_FOUND';
@@ -343,8 +344,9 @@ export class GetMemberUseCase {
     ]);
 
     const today = new Date(`${dayKeyInZone(this.now(), input.timezone)}T00:00:00.000Z`);
-    // A sponsored term counts while the employer's contract is valid (D8).
-    const sponsorValid = member.employerClientId ? await this.paymentStore.employerContractValid(input.tenantId, member.employerClientId, day(today)) : false;
+    // A sponsored term counts while the employer's contract is valid, and shows the end of the contract chain (D8, FR-EMP-09).
+    const sponsorState = member.employerClientId ? (await new SponsorValidity(this.paymentStore).forCompanies(input.tenantId, [member.employerClientId], day(today))).get(member.employerClientId) : undefined;
+    const sponsorValid = sponsorState?.valid ?? false;
     const values: MemberTermValue[] = terms.map((t) => ({
       tier: t.tier,
       source: t.source,
@@ -356,9 +358,9 @@ export class GetMemberUseCase {
       .filter((v) => v.tier === effectiveTier)
       .sort((a, b) => (b.endsOn?.getTime() ?? Infinity) - (a.endsOn?.getTime() ?? Infinity))[0];
     const current = currentValue
-      ? { source: currentValue.source, startsOn: day(currentValue.startsOn), endsOn: currentValue.endsOn ? day(currentValue.endsOn) : null }
+      ? { source: currentValue.source, startsOn: day(currentValue.startsOn), endsOn: currentValue.source === 'SPONSORED' ? (sponsorState?.endsOn ?? null) : currentValue.endsOn ? day(currentValue.endsOn) : null }
       : null;
-    const validity = validityOn(member.status, effectiveTier, currentValue?.endsOn ?? null);
+    const validity = validityOn(member.status, effectiveTier, current?.endsOn ? new Date(`${current.endsOn}T00:00:00.000Z`) : null);
 
     // Payments only for a user who may see them (FR-MPAY-08): the rows are not even read otherwise.
     const payments = input.access.can(MEMBERS_PAYMENTS_VIEW) ? await this.paymentStore.listForMember(input.tenantId, member.id) : null;

@@ -96,6 +96,10 @@ export interface MemberSearchParams {
   /** A VIP term ending in the window, with no later VIP term (FR-VIP-04). */
   vipReviewDue?: { from: string; to: string };
   formerEmployee?: boolean;
+  /** Former employees of this company only, with the leaving date inside the range (FR-EMP-13). */
+  formerEmployerClientId?: string;
+  leftFrom?: string;
+  leftTo?: string;
   /** The Area and City of the employer company (FR-MEM-07). */
   areaId?: string;
   cityId?: string;
@@ -139,6 +143,13 @@ export interface IMemberStore {
   addStatusHistory(entry: StatusHistoryEntry): Promise<void>;
   /** Links the member to an employer company (FR-EMP-05, FR-EMP-14). */
   setEmployer(tenantId: string, id: string, clientId: string): Promise<void>;
+  /** Clears the employer link and records the company as the former employer with the leaving day (FR-EMP-12). */
+  removeEmployer(tenantId: string, id: string, formerClientId: string, leftOn: string): Promise<void>;
+  /** Everyone linked to the company now, or everyone removed from it, in two bounded queries (FR-MEM-11). */
+  listByEmployer(tenantId: string, clientId: string): Promise<MemberRecord[]>;
+  listFormerEmployees(tenantId: string, clientId: string): Promise<MemberRecord[]>;
+  /** The ids of the company's linked employees, for the sync after a contract change (D8). */
+  employeeIds(tenantId: string, clientId: string): Promise<string[]>;
   /** True when the id is a city of this workspace's predefined list (FR-MEM-02). */
   cityExists(tenantId: string, cityId: string): Promise<boolean>;
   search(tenantId: string, params: MemberSearchParams): Promise<{ data: MemberRecord[]; total: number }>;

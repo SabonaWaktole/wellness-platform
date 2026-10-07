@@ -38,6 +38,7 @@ import {
   UpdateMemberUseCase,
 } from '../../application/use-cases/MemberUseCases';
 import { presentMemberSummary } from '../../application/presentMember';
+import { EmployeeRemovalRefusedError, RemoveEmployeesUseCase, RemoveEmployeeUseCase } from '../../application/use-cases/EmployerUseCases';
 
 const text = z.string();
 /** The personal details of FR-MEM-09 and nothing else: the tier, number, status, dates and token have no key here (FR-MEM-09, NFR-SEC-07). */
@@ -77,12 +78,16 @@ export const vipDecisionSchema = z.object({ decision: text, note: text.nullable(
 export const vipEndSchema = z.object({ reason: text }).strict();
 /** A tier correction carries the tier, the end date and the reason, nothing else (FR-TIR-09). */
 export const correctTierSchema = z.object({ tier: text, endsOn: text, reason: text }).strict();
+/** Removing from a company carries the leaving date and a reason, both optional (FR-EMP-12). */
+export const removeEmployeeSchema = z.object({ leftOn: text.nullable().optional(), reason: text.nullable().optional() }).strict();
+export const removeEmployeesSchema = z.object({ memberIds: z.array(text), leftOn: text.nullable().optional(), reason: text.nullable().optional() }).strict();
 export const statusSchema = z.object({ action: z.enum(STATUS_ACTIONS as [string, ...string[]]), reason: text.nullable().optional() }).strict();
 
 const flag = (value: unknown): boolean | undefined => (value === 'true' || value === '1' ? true : undefined);
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined =>
   typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
 const whole = (value: unknown): number | undefined => (typeof value === 'string' && /^\d{1,6}$/.test(value) ? Number(value) : undefined);
+const day = (value: unknown): string | undefined => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined);
 const id = (value: unknown): string | undefined => (typeof value === 'string' && value.length > 0 && value.length <= 191 ? value : undefined);
 
 export interface MemberUseCases {
@@ -101,6 +106,8 @@ export interface MemberUseCases {
   endVip: EndVipUseCase;
   listVipRequests: ListVipRequestsUseCase;
   correctTier: CorrectMemberTierUseCase;
+  removeEmployee: RemoveEmployeeUseCase;
+  removeEmployees: RemoveEmployeesUseCase;
 }
 
 /**
@@ -133,6 +140,7 @@ export const createMemberRouter = (
     if (error instanceof FamilyLinkRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
     if (error instanceof VipRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
     if (error instanceof VipRequestNotFoundError) return res.status(404).json({ error: error.message, code: error.code });
+    if (error instanceof EmployeeRemovalRefusedError) return res.status(409).json({ error: error.message, code: error.code });
     if (error instanceof InvalidStatusChangeError) return res.status(409).json({ error: error.message, code: error.code });
     if (error instanceof DuplicateMemberError) {
       return res.status(409).json(redactMemberFields({ error: error.message, code: error.code, duplicates: error.duplicates }, req.access!));
@@ -173,6 +181,9 @@ export const createMemberRouter = (
             expiringSoon: flag(q.expiringSoon),
             vipReviewDue: flag(q.vipReviewDue),
             formerEmployee: flag(q.formerEmployee),
+            formerEmployerClientId: id(q.formerEmployerClientId),
+            leftFrom: day(q.leftFrom),
+            leftTo: day(q.leftTo),
             areaId: id(q.areaId),
             cityId: id(q.cityId),
             sortBy: oneOf(q.sortBy, ['name', 'memberNumber', 'tier', 'createdAt'] as const),
@@ -229,6 +240,14 @@ export const createMemberRouter = (
     handle((req, ctx) => uc.decideVip.execute({ ...ctx, requestId: String(req.params.requestId), decision: req.body.decision, note: req.body.note }))
   );
 
+  // M4 Slice 10 (FR-EMP-15): several employees at once. Registered before '/:id'.
+  router.post(
+    '/remove-employees',
+    manage,
+    validateRequest(removeEmployeesSchema),
+    handle((req, ctx) => uc.removeEmployees.execute({ ...ctx, memberIds: req.body.memberIds, leftOn: req.body.leftOn, reason: req.body.reason }))
+  );
+
   router.get('/:id', view, handle((req, ctx) => uc.get.execute({ ...ctx, id: String(req.params.id) })));
 
   router.patch(
@@ -263,6 +282,14 @@ export const createMemberRouter = (
     manage,
     validateRequest(removeFamilySchema),
     handle(async (req, ctx) => presentMemberSummary(await uc.removeFamilyLink.execute({ ...ctx, memberId: String(req.params.id), reason: req.body.reason })))
+  );
+
+  // M4 Slice 10 (FR-EMP-12): leaves the company; the member is kept as a former employee.
+  router.post(
+    '/:id/remove-employer',
+    manage,
+    validateRequest(removeEmployeeSchema),
+    handle((req, ctx) => uc.removeEmployee.execute({ ...ctx, memberId: String(req.params.id), leftOn: req.body.leftOn, reason: req.body.reason }))
   );
 
   // M4 Slice 7: a VIP request needs "manage"; ending a VIP needs the approval permission.

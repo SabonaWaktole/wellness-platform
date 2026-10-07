@@ -190,6 +190,24 @@ export class PrismaMemberPaymentStore implements IMemberPaymentStore {
     await this.prisma.memberTierHistory.create({ data: { id: randomUUID(), ...rest, ...(effectiveOn ? { createdAt: dateOnly(effectiveOn)! } : {}) } });
   }
 
+  async endSponsoredTerms(memberId: string, lastDay: string): Promise<void> {
+    const last = dateOnly(lastDay)!;
+    const open = await this.prisma.memberTerm.findMany({ where: { memberId, source: 'SPONSORED', endsOn: null }, select: { id: true, startsOn: true } });
+    for (const term of open) {
+      if (term.startsOn > last) await this.prisma.memberTerm.delete({ where: { id: term.id } });
+      else await this.prisma.memberTerm.update({ where: { id: term.id }, data: { endsOn: last } });
+    }
+  }
+
+  async employerContractSpans(tenantId: string, clientIds: string[]): Promise<Record<string, Array<{ startsOn: string; endsOn: string }>>> {
+    const ids = [...new Set(clientIds)];
+    const spans: Record<string, Array<{ startsOn: string; endsOn: string }>> = Object.fromEntries(ids.map((id) => [id, []]));
+    if (ids.length === 0) return spans;
+    const rows = await this.prisma.contract.findMany({ where: { tenantId, clientId: { in: ids }, status: 'ACTIVE' }, select: { clientId: true, startsAt: true, endsAt: true }, orderBy: { startsAt: 'asc' } });
+    for (const row of rows) spans[row.clientId].push({ startsOn: day(row.startsAt)!, endsOn: day(row.endsAt)! });
+    return spans;
+  }
+
   async employerContractValid(tenantId: string, clientId: string, dayKey: string): Promise<boolean> {
     const today = dateOnly(dayKey)!;
     const count = await this.prisma.contract.count({ where: { tenantId, clientId, ...(validityWhere('VALID', today, 0) as Prisma.ContractWhereInput) } });

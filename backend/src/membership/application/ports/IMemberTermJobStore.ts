@@ -24,8 +24,9 @@ export interface VipReviewRow {
 export interface IMemberTermJobStore {
   /**
    * Members whose stored tier may be out of date: not Bronze, with a term that
-   * has an end date before `today`. Selecting on the stored tier keeps a member
-   * who is already Bronze out of every later run.
+   * has an end date before `today`; and linked employees whose stored tier
+   * disagrees with their employer's contract today (D9 step 3). Selecting on the
+   * stored tier keeps a member who is already Bronze out of every later run.
    */
   membersToReview(tenantId: string, today: string): Promise<string[]>;
   /**

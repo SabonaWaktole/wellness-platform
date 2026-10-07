@@ -6,7 +6,7 @@ import { dayKeyInZone } from '../../../shared/domain/time/tenantDay';
 import { InvalidMemberError, MEMBER_LIMITS } from '../../domain/Member';
 import { effectiveTierOn } from '../../domain/MemberTerm';
 import { planDowngrades, tierTransitions } from '../../domain/memberTermExpiry';
-import type { Tier } from '../../domain/Tier';
+import { tierRank, type Tier } from '../../domain/Tier';
 import { dayDate, dayText, effectiveTierAt, termValues } from '../memberPaymentQuote';
 import { MANAGE_WELLNESS_SETTINGS } from '../membershipPermissions';
 import type { IMemberStore, MemberRecord } from '../ports/IMemberStore';
@@ -14,6 +14,10 @@ import type { IMembershipWriteTransaction } from '../ports/IMembershipWriteTrans
 import { MemberNotFoundError } from './MemberUseCases';
 
 const label = (member: { memberNumber: string; firstName: string; lastName: string }) => `${member.memberNumber} ${member.firstName} ${member.lastName}`;
+
+/** The tier-history reasons of the sponsor sync (FR-TIR-08, FR-EMP-10, FR-EMP-11). */
+export const SPONSOR_ENDED = 'Company contract ended';
+export const SPONSOR_RESUMED = 'Company contract valid again';
 
 export interface TermExpiryResult {
   /** Downgrade terms created. */
@@ -24,7 +28,7 @@ export interface TermExpiryResult {
 
 /**
  * FR-TIR-05, 06, 07, FR-VIP-04, NFR-REL-02: brings one member's terms and tier
- * up to `today` (steps 1, 2 and 4 of the daily job, D9).
+ * up to `today` (steps 1 to 4 of the daily job, D9: the sponsored sync is step 3, and the contract-change hook runs this same code).
  *
  * Everything happens in one transaction after the member's row is locked, and
  * the member is read AFTER the lock, so two runs at once are served one after
@@ -66,7 +70,7 @@ export class ExpireMemberTermsUseCase {
       }
       const terms = planned.length > 0 ? await paymentStore.listTerms(member.id) : before;
 
-      // A sponsored term counts while the employer's contract is valid (D8); Slice 10 adds its own sync.
+      // A sponsored term counts while the employer's contract is valid (D8).
       const sponsorValid = member.employerClientId ? await paymentStore.employerContractValid(input.tenantId, member.employerClientId, todayKey) : false;
       const history = await memberStore.listTierHistory(member.id);
       const lastRecorded = history.reduce<string>((latest, h) => (dayText(h.createdAt) > latest ? dayText(h.createdAt) : latest), member.startsOn);
@@ -91,9 +95,18 @@ export class ExpireMemberTermsUseCase {
       }
 
       const tierNow = effectiveTierOn(termValues(terms), sponsorValid, graceDays, input.today);
+
+      // Step 3 (D9, FR-EMP-10, FR-EMP-11): what the walk above could not see is the employer's contract, which
+      // has no dates on the term. If the tier the history ends on is not the tier today, the contract moved it:
+      // recorded once, today, by the system. A renewal with no gap changes nothing, so it writes nothing (FR-EMP-09).
+      const recordedTier = transitions.length > 0 ? transitions[transitions.length - 1].to : member.currentTier;
+      const sponsorStep = tierNow !== recordedTier ? { from: recordedTier, to: tierNow, reason: tierRank(tierNow) < tierRank(recordedTier) ? SPONSOR_ENDED : SPONSOR_RESUMED } : null;
+      if (sponsorStep) {
+        await paymentStore.addTierHistory({ memberId: member.id, fromTier: sponsorStep.from, toTier: sponsorStep.to, reason: sponsorStep.reason, comment: null, changedByUserId: null, effectiveOn: todayKey });
+      }
       if (tierNow !== member.currentTier) await paymentStore.setCurrentTier(input.tenantId, member.id, tierNow);
 
-      if (planned.length > 0 || transitions.length > 0) {
+      if (planned.length > 0 || transitions.length > 0 || sponsorStep) {
         await auditTrail.record({
           tenantId: input.tenantId,
           userId: SYSTEM_ACTOR.userId,
@@ -106,10 +119,11 @@ export class ExpireMemberTermsUseCase {
             { field: 'tier', old: member.currentTier, new: tierNow },
             ...planned.map((p) => ({ field: 'downgradeTerm', old: null, new: `${p.tier} ${dayText(p.startsOn)} to ${dayText(p.endsOn)}` })),
             ...transitions.map((t) => ({ field: 'tierChange', old: `${t.from} (${dayText(t.on)})`, new: `${t.to}: ${t.reason}` })),
+            ...(sponsorStep ? [{ field: 'tierChange', old: `${sponsorStep.from} (${todayKey})`, new: `${sponsorStep.to}: ${sponsorStep.reason}` }] : []),
           ],
         });
       }
-      return { terms: planned.length, transitions: transitions.length };
+      return { terms: planned.length, transitions: transitions.length + (sponsorStep ? 1 : 0) };
     });
   }
 }

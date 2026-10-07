@@ -270,7 +270,11 @@ import {
   UpdateMemberUseCase,
 } from '../membership/application/use-cases/MemberUseCases';
 import { AddFamilyMemberUseCase, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../membership/application/use-cases/FamilyUseCases';
-import { CorrectMemberTierUseCase } from '../membership/application/use-cases/MemberTermUseCases';
+import { CorrectMemberTierUseCase, ExpireMemberTermsUseCase } from '../membership/application/use-cases/MemberTermUseCases';
+import { GetCompanyMembershipUseCase, RemoveEmployeesUseCase, RemoveEmployeeUseCase, SyncEmployerMembersUseCase } from '../membership/application/use-cases/EmployerUseCases';
+import { ContractValidityListener } from '../membership/application/ContractValidityListener';
+import { SponsorValidity } from '../membership/application/SponsorValidity';
+import { createCompanyMembershipRouter } from '../membership/interfaces/http/companyMembershipRoutes';
 import { DecideVipRequestUseCase, EndVipUseCase, ListVipRequestsUseCase, RequestVipUseCase } from '../membership/application/use-cases/VipUseCases';
 import { PrismaVipRequestStore } from '../membership/infrastructure/PrismaVipRequestStore';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
@@ -770,6 +774,16 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');
   const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService, resolveAccessContext);
+  // The Wellness+ tab of the company page (M4 Slice 10): one path, the rest falls through to the clients routes.
+  app.use(
+    '/api/:tenantSlug/clients',
+    createCompanyMembershipRouter(
+      new GetCompanyMembershipUseCase(new PrismaMemberStore(prisma), new PrismaEmployeeImportStore(prisma), new SponsorValidity(new PrismaMemberPaymentStore(prisma))),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
   app.use('/api/:tenantSlug/clients', clientRoutes);
 
   // The client-facing form (§24) — no tenant prefix, no auth. Mounted BEFORE
@@ -1191,10 +1205,14 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Suspending or cancelling tells the people who hold contracts.terminate over the company (M3 Slice 5).
   const contractNotifications = new NotificationService(notificationRepository, userRepository, notificationEmailDispatcher, permissionDirectory);
 
+  // M4 Slice 10 (D8): a contract change tells Wellness+ so employees follow the employer at once.
+  const contractValidityListener = new ContractValidityListener(
+    new SyncEmployerMembersUseCase(new PrismaMemberStore(prisma), new ExpireMemberTermsUseCase(new PrismaMembershipWriteTransaction(prisma)))
+  );
   const contractsController = new ContractsController(
     new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes, tenantRepository),
     new UpdateContractUseCase(contractWriteTx, recordScopes),
-    new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications),
+    new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications, undefined, contractValidityListener),
     new RenewContractUseCase(contractWriteTx, recordScopes, tenantRepository),
     new StartRenewalUseCase(contractWriteTx, recordScopes, tenantRepository),
     new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
@@ -1388,6 +1406,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         endVip: new EndVipUseCase(membershipWriteTx),
         listVipRequests: new ListVipRequestsUseCase(vipRequestStore, memberStore),
         correctTier: new CorrectMemberTierUseCase(membershipWriteTx),
+        removeEmployee: new RemoveEmployeeUseCase(membershipWriteTx, memberStore),
+        removeEmployees: new RemoveEmployeesUseCase(membershipWriteTx),
       },
       tokenService,
       tenantRepository,
