@@ -122,7 +122,7 @@ const WorkingList: React.FC<{
     <section className={`${dashboard.panel} ${styles.listPanel}`} aria-label={title} data-report={name}>
       <div className={dashboard.panelHeader}>
         <h2 className={dashboard.panelTitle}>
-          {title} <span className={members.muted}>({rows.length})</span>
+          {title}{' '}<span className={members.muted}>{`(${rows.length})`}</span>
         </h2>
         <Button variant="outline" size="sm" icon={<Download size={14} />} onClick={() => onExport(name)} disabled={exporting || rows.length === 0} aria-label={t('reports.exportSection', { title })}>
           {t('reports.exportCsv')}
