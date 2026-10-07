@@ -1476,6 +1476,71 @@
       "id": "NFR-SEC-07",
       "priority": "Must",
       "requirement": "Tier rules, permissions, field removal, the card and verification rules and the import limits shall be enforced on the server for every request. Card tokens shall come from a cryptographically secure generator, be unique in the database and be at least 128 bits."
+    },
+    {
+      "id": "FR-MEM-03",
+      "priority": "Must",
+      "requirement": "Each member shall get a unique member ID made of a prefix and a six-digit sequential number, for example WP-000123, using the same numbering mechanism as offers and contracts but without a yearly restart. The prefix is a setting of the Administrator. An ID is never changed or reused, even after the member is closed."
+    },
+    {
+      "id": "FR-TIR-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the labels (Albanian and English) and colour of the four tiers, the fee and term length in months of Silver and Gold (defaults €60 and €100, 12 months) and the term length of VIP (default 12 months). Bronze and VIP are free and cannot be given a fee. A new fee applies to payments recorded after the change; recorded payments never change."
+    },
+    {
+      "id": "FR-MPAY-05",
+      "priority": "Must",
+      "requirement": "Each payment shall get a sequential receipt number per year, for example RCP-2027-000045, using the same numbering mechanism as offers (Milestone 2 FR-OFR-08). The receipt is a record, not a legal invoice. The Administrator can set the prefix."
+    },
+    {
+      "id": "FR-FAM-02",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the relationship list (Albanian and English labels, order, active or not). The seed list is Spouse or partner, Child and Parent, as in the strategy. A deactivated relationship is not offered for new links and stays on existing ones."
+    },
+    {
+      "id": "FR-BEN-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the list of services (Albanian and English name, order, active or not) and, for each service and each tier (Bronze, Silver, Gold, VIP), a discount percentage from 0 to 100 with up to two decimals. An empty value means no discount."
+    },
+    {
+      "id": "FR-BEN-02",
+      "priority": "Must",
+      "requirement": "A new installation shall be seeded with the table in 6.1, with VIP equal to Gold, so the module is usable before Wellness Albania sends its final numbers. Every value is editable."
+    },
+    {
+      "id": "FR-BEN-04",
+      "priority": "Should",
+      "requirement": "All users with \"Members: view\" or \"Members: verify\" can open the benefit table read only, with the tiers as columns."
+    },
+    {
+      "id": "FR-BEN-05",
+      "priority": "Must",
+      "requirement": "A change in the table shall apply at once to the card and the verification screen and is audited with the old and new value. There is no per-member exception and no history of past tables."
+    },
+    {
+      "id": "FR-BEN-06",
+      "priority": "Must",
+      "requirement": "The platform shows the discount that applies. It does not apply the discount to bills or bookings and does not record which services a member used (out of scope, section 1.2)."
+    },
+    {
+      "id": "FR-AUD-14",
+      "priority": "Must",
+      "requirement": "In Milestone 4 the following shall be audited with old and new values, using the Milestone 1 audit mechanism: creation and every change of a member, status change with reason, tier correction, payment recorded or voided, VIP request, decision and ending, family link, confirmation and removal, employee upload (company, counts, file name), removal from a company, card link replaced, anonymisation or export of a member, and every change of the settings (fees, terms, grace days, expiring-soon window, numbering prefixes, relationship list, benefit services and percentages)."
+    },
+    {
+      "id": "NFR-I18N-04",
+      "priority": "Must",
+      "requirement": "All Milestone 4 staff screens, messages, notifications and tier and benefit labels shall be translated in Albanian and English. The card and the public verification page shall be in Albanian and English; Greek and Italian are Should."
+    },
+    {
+      "id": "NFR-OPS-04",
+      "priority": "Must",
+      "requirement": "Migrations shall run on PostgreSQL and MySQL, add the new permissions through the upgrade ledger, seed the tier settings, the relationship list and the benefit table, and be reversible or backed up."
+    },
+    {
+      "id": "NFR-OPS-05",
+      "priority": "Must",
+      "requirement": "Card links and QR codes shall be built from one configured public base URL. The production address is fixed before the first card is issued; if it ever changes, the old address redirects to the new one so issued cards keep working."
     }
   ]
 }
