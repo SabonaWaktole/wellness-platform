@@ -16,7 +16,8 @@
     "audit": "Audit log",
     "pricing": "Pricing",
     "salesScript": "Sales script",
-    "contracts": "Contracts and payments"
+    "contracts": "Contracts and payments",
+    "wellnessPlus": "Wellness+"
   },
   "company": {
     "title": "Company Settings",
@@ -985,6 +986,105 @@
         "hint": "2 to 6 capital letters or digits, for example CTR for CTR-2026-0001.",
         "invalid": "Enter 2 to 6 capital letters or digits."
       }
+    }
+  },
+  "wellnessPlus": {
+    "breadcrumb": "Wellness+",
+    "title": "Wellness+",
+    "subtitle": "Set the tier names and fees, the rules for family discounts, grace days and numbering, the relationship list and the discounts each tier gets.",
+    "subtitleReadOnly": "The discounts each tier gets. Only an Administrator can change them.",
+    "loading": "Loading…",
+    "loadFailed": "The settings did not load.",
+    "saveFailed": "The change was not saved. Try again.",
+    "save": "Save",
+    "saved": "Saved.",
+    "nameSq": "Name (Albanian)",
+    "nameEn": "Name (English)",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "tabs": {
+      "tiers": "Tiers and fees",
+      "rules": "Rules",
+      "relationships": "Relationships",
+      "benefits": "Benefits"
+    },
+    "tiers": {
+      "hint": {
+        "BRONZE": "Free, no end date. Every member starts here.",
+        "SILVER": "Paid for a term, or sponsored by the employer's contract.",
+        "GOLD": "Paid for a term.",
+        "VIP": "Free. Approved by management for a term."
+      },
+      "fields": {
+        "labelSq": {
+          "label": "Label (Albanian)",
+          "invalid": "Enter a label in Albanian, up to 40 characters."
+        },
+        "labelEn": {
+          "label": "Label (English)",
+          "invalid": "Enter a label in English, up to 40 characters."
+        },
+        "colour": {
+          "label": "Colour",
+          "invalid": "Choose a colour."
+        },
+        "fee": {
+          "label": "Fee (EUR)",
+          "invalid": "Enter an amount of at least 0.01 with at most two decimals. A new fee applies to payments recorded from now on."
+        },
+        "termMonths": {
+          "label": "Term (months)",
+          "invalid": "Enter a whole number of months from 1 to 60."
+        }
+      }
+    },
+    "rules": {
+      "familyDiscountPercent": {
+        "label": "Family discount (%)",
+        "hint": "Taken off Silver and Gold for a family member whose principal is Active and Silver or higher.",
+        "invalid": "Enter a percentage from 0 to 100 with at most two decimals."
+      },
+      "graceDays": {
+        "label": "Grace days",
+        "hint": "Days a member keeps the tier after the term ends. 0 means none.",
+        "invalid": "Enter a whole number of days from 0 to 60."
+      },
+      "expiringSoonDays": {
+        "label": "Expiring soon window (days)",
+        "hint": "A paid term ending within this many days shows the Expiring soon badge.",
+        "invalid": "Enter a whole number of days from 1 to 365."
+      },
+      "vipReviewNoticeDays": {
+        "label": "VIP review notice (days)",
+        "hint": "How many days before the VIP review date the approvers are notified.",
+        "invalid": "Enter a whole number of days from 1 to 365."
+      },
+      "memberPrefix": {
+        "label": "Member number prefix",
+        "hint": "2 to 6 capital letters or digits, for example WP for WP-000123. A new prefix applies to new members only.",
+        "invalid": "Enter 2 to 6 capital letters or digits."
+      },
+      "receiptPrefix": {
+        "label": "Receipt number prefix",
+        "hint": "2 to 6 capital letters or digits, for example RCP for RCP-2027-000045.",
+        "invalid": "Enter 2 to 6 capital letters or digits."
+      }
+    },
+    "relationships": {
+      "name": "Relationship",
+      "status": "Status",
+      "action": "Action",
+      "add": "Add relationship",
+      "invalid": "Enter the name in both Albanian and English."
+    },
+    "benefits": {
+      "service": "Service",
+      "addTitle": "Add a service",
+      "add": "Add service",
+      "invalid": "Enter a percentage from 0 to 100 with at most two decimals, or leave it empty for no discount.",
+      "invalidName": "Enter the name in both Albanian and English."
     }
   }
 }

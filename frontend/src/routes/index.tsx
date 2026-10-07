@@ -22,6 +22,7 @@ import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPa
 import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
 import { ContractSettingsPage } from '../pages/settings/contracts/ContractSettingsPage';
+import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
 import { InventoryList } from '../pages/inventory/InventoryList';
@@ -232,6 +233,18 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="settings.manage">
               <StatusesSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 3: the Administrator edits everything; members.view and
+        // members.verify reach the read-only benefit table (FR-BEN-04).
+        path: 'settings/wellness-plus/:tab?',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission={['wellnessplus.settings.manage', 'members.view', 'members.verify']}>
+              <WellnessPlusSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

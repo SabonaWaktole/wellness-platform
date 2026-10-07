@@ -15,6 +15,9 @@ const TENANT = process.env.E2E_TENANT ?? 'wellness-albania';
 const LISTS = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons', 'activity-results'];
 
 /** Settings → Pricing's tabs (M2 Slices 3 and 4; NFR-USE-02). */
+/** Settings → Wellness+'s tabs (M4 Slice 3; NFR-USE-04). */
+const WELLNESS_PLUS_TABS = ['tiers', 'rules', 'relationships', 'benefits'];
+
 const PRICING_TABS = ['bands', 'risk', 'frequencies', 'zones', 'cap', 'services', 'packages', 'offer', 'calculator'];
 
 async function expectNoHorizontalOverflow(page: Page, screen: string) {
@@ -112,6 +115,8 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['settings → statuses', () => 'settings/statuses'],
       // M3 Slice 3
       ['settings → contracts and payments', () => 'settings/contracts'],
+      // M4 Slice 3
+      ...WELLNESS_PLUS_TABS.map((tab): [string, () => string] => [`settings → wellness+ → ${tab}`, () => `settings/wellness-plus/${tab}`]),
       ...LISTS.map((list): [string, () => string] => [`settings → lists → ${list}`, () => `settings/lists/${list}`]),
       ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
       // M2 Slice 5
