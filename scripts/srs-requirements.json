@@ -1606,6 +1606,46 @@
       "id": "NFR-PERF-05",
       "priority": "Should",
       "requirement": "The member list and search shall return in under 1 second with 50,000 members; Reception verification and the public verification page in under 1 second; the card page shall be usable in under 2 seconds on a mid-range phone on 4G; the preview of a 1,000-row upload in under 15 seconds and its confirmation in under 30 seconds; the reports and the dashboard block in under 2 seconds with 50,000 members and 20,000 payments."
+    },
+    {
+      "id": "FR-MPAY-01",
+      "priority": "Must",
+      "requirement": "Only users with \"Members: record payments\" shall record a membership payment. The user chooses the member, the kind (New, Renewal, Upgrade), the target tier, the method (Cash, Bank transfer, Card, Other) and the date received (not in the future) and may add a note. The amount is calculated by the platform and shown; it cannot be typed."
+    },
+    {
+      "id": "FR-MPAY-06",
+      "priority": "Should",
+      "requirement": "A user with \"Members: record payments\" shall be able to void the latest payment of a member with a required reason. Voiding reverses its effect (the earlier tier and term are restored), keeps the receipt number marked Voided and is written to the history. An earlier payment cannot be voided while a later one exists."
+    },
+    {
+      "id": "FR-MPAY-07",
+      "priority": "Must",
+      "requirement": "A Membership payments list shall show payments with filters by date range, tier, kind, method, agent and status (Recorded or Voided), with totals of the filtered list that exclude voided payments. It is open to users with \"Members: view payments\"."
+    },
+    {
+      "id": "FR-MPAY-08",
+      "priority": "Must",
+      "requirement": "Users without \"Members: view payments\" shall see no fee, amount, receipt or revenue field. These fields are removed from API responses, not only hidden. Reception sees tier and validity only."
+    },
+    {
+      "id": "FR-MPAY-09",
+      "priority": "Must",
+      "requirement": "A sponsored Silver membership shall not create a payment: the company pays under its contract. No fee is recorded for the employee."
+    },
+    {
+      "id": "FR-MPAY-10",
+      "priority": "Should",
+      "requirement": "Each payment shall store the list fee, the family discount percentage and the amount, so a later change of fee or discount never changes it. The list of payments and one member's payments can be exported to CSV by users who can view them; the export is audited."
+    },
+    {
+      "id": "FR-MPAY-11",
+      "priority": "Should",
+      "requirement": "A printable receipt (PDF) with the Wellness+ logo, member name and ID, tier, period, amount, method, receipt number and the agent shall be available from the payment, stating that it is not an invoice."
+    },
+    {
+      "id": "FR-AUD-16",
+      "priority": "Should",
+      "requirement": "Exports (FR-RPT-10, FR-MPAY-10), the card links sheet (FR-EMP-08) and card link replacement shall be recorded with who, when and the filters used, never with a token. Verifications are kept in their own log (FR-VER-06, FR-VER-10), not in the audit log. Viewing a report or dashboard is not audited."
     }
   ]
 }
