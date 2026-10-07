@@ -12,6 +12,7 @@ import {
   type StatusAction,
 } from '../../domain/Member';
 import { effectiveTierOn, validTermsOn, type MemberTermValue } from '../../domain/MemberTerm';
+import { expiringSoon as expiringSoonOn } from '../../domain/expiringSoon';
 import type { Tier } from '../../domain/Tier';
 import { validityOn } from '../../domain/memberValidity';
 import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_VIEW, MEMBERS_VIEW } from '../membershipPermissions';
@@ -118,7 +119,7 @@ export async function registerMemberIn(
   await requireCity(memberStore, input.tenantId, details.cityId);
   if (!input.confirmDifferentPerson) {
     const duplicates = await memberStore.findDuplicates(input.tenantId, details);
-    if (duplicates.length > 0) throw new DuplicateMemberError(duplicates.map(presentMemberSummary));
+    if (duplicates.length > 0) throw new DuplicateMemberError(duplicates.map((m) => presentMemberSummary(m)));
   }
 
   const member = await memberStore.create({
@@ -190,7 +191,7 @@ export class UpdateMemberUseCase {
       const identityChanged = changes.some((c) => ['firstName', 'lastName', 'dateOfBirth', 'phone', 'email'].includes(c.field));
       if (identityChanged && !input.confirmDifferentPerson) {
         const duplicates = await memberStore.findDuplicates(input.tenantId, next, current.id);
-        if (duplicates.length > 0) throw new DuplicateMemberError(duplicates.map(presentMemberSummary));
+        if (duplicates.length > 0) throw new DuplicateMemberError(duplicates.map((m) => presentMemberSummary(m)));
       }
 
       await memberStore.updateDetails(input.tenantId, current.id, next);
@@ -304,7 +305,12 @@ export class SearchMembersUseCase {
       page,
       limit,
     });
-    return { data: result.data.map(presentMemberSummary), total: result.total, page, limit };
+    // The badge (FR-TIR-10): the latest paid term of each listed member, against the same window as the filter.
+    const { expiringSoonDays } = (await this.settings.getSettings(input.tenantId)).toJSON();
+    const today = new Date(`${dayKeyInZone(this.now(), input.timezone)}T00:00:00.000Z`);
+    const ends = await this.store.latestPaidEnds(result.data.map((m) => m.id));
+    const badge = (id: string) => (ends[id] ? expiringSoonOn(new Date(`${ends[id]}T00:00:00.000Z`), today, expiringSoonDays) : false);
+    return { data: result.data.map((m) => presentMemberSummary(m, badge(m.id))), total: result.total, page, limit };
   }
 }
 
@@ -329,7 +335,7 @@ export class GetMemberUseCase {
     const member = await this.store.find(input.tenantId, input.id);
     if (!member) throw new MemberNotFoundError();
 
-    const [terms, tierHistory, statusHistory, { graceDays }] = await Promise.all([
+    const [terms, tierHistory, statusHistory, { graceDays, expiringSoonDays }] = await Promise.all([
       this.store.listTerms(member.id),
       this.store.listTierHistory(member.id),
       this.store.listStatusHistory(member.id),
@@ -374,7 +380,11 @@ export class GetMemberUseCase {
       ...statusHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
     ]);
 
-    const detail = presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names), vip: { requests: vipRequests.map((r) => presentVipRequest(r, names)), reviewDate: vipEnd ?? null } });
+    // FR-TIR-10: the latest paid term ends within the window.
+    const latestPaidEnd = terms.filter((t) => t.source === 'PAID' && t.endsOn).map((t) => t.endsOn!).sort().pop();
+    const expiringSoon = latestPaidEnd ? expiringSoonOn(new Date(`${latestPaidEnd}T00:00:00.000Z`), today, expiringSoonDays) : false;
+
+    const detail = presentMember({ expiringSoon, member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names), vip: { requests: vipRequests.map((r) => presentVipRequest(r, names)), reviewDate: vipEnd ?? null } });
     return payments ? { ...detail, payments: payments.map((p) => presentMemberPayment(p, names)) } : detail;
   }
 

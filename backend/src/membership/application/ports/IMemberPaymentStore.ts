@@ -13,6 +13,8 @@ export interface PaymentTermRecord {
   paymentId: string | null;
   closedEarlyByPaymentId: string | null;
   originalEndsOn: string | null;
+  /** The ended term this downgrade term follows (D3, M4 Slice 8). */
+  followsTermId: string | null;
 }
 
 /** A payment as stored. Money is a two-decimal string, never a number (NFR-ACC-05). */
@@ -65,6 +67,8 @@ export interface NewPaymentTerm {
   endsOn: string | null;
   /** Null for a term no payment created: a VIP term is free (FR-VIP-03). */
   paymentId: string | null;
+  /** Set only on a downgrade term the daily job creates: unique, so one downgrade per ended term (D3). */
+  followsTermId?: string | null;
 }
 
 export interface PaymentFilters {
@@ -85,6 +89,8 @@ export interface TierHistoryEntry {
   reason: string;
   comment: string | null;
   changedByUserId: string | null;
+  /** The day the tier really changed, when the job records a step-down it found late (D4). Defaults to now. */
+  effectiveOn?: string;
 }
 
 /** Payments, and the terms and tier history a payment changes, on one connection. */

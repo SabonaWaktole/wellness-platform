@@ -13,12 +13,13 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactMemberFields } from '../../../access/domain/redactFields';
 import { InvalidMemberError, InvalidStatusChangeError, STATUS_ACTIONS } from '../../domain/Member';
 import { TIERS } from '../../domain/Tier';
-import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_RECORD, MEMBERS_VIEW, MEMBERS_VIP_APPROVE } from '../../application/membershipPermissions';
+import { MANAGE_WELLNESS_SETTINGS, MEMBERS_MANAGE, MEMBERS_PAYMENTS_RECORD, MEMBERS_VIEW, MEMBERS_VIP_APPROVE } from '../../application/membershipPermissions';
 import { PaymentRefusedError } from '../../application/memberPaymentQuote';
 import { InvalidPaymentError } from '../../domain/memberPayment';
 import { presentMemberPayment } from '../../application/presentMemberPayment';
 import { QuotePaymentUseCase, RecordMemberPaymentUseCase } from '../../application/use-cases/MemberPaymentUseCases';
 import { AddFamilyMemberUseCase, FamilyLinkRefusedError, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../../application/use-cases/FamilyUseCases';
+import { CorrectMemberTierUseCase } from '../../application/use-cases/MemberTermUseCases';
 import {
   DecideVipRequestUseCase,
   EndVipUseCase,
@@ -74,6 +75,8 @@ export const removeFamilySchema = z.object({ reason: text }).strict();
 export const vipRequestSchema = z.object({ reason: text }).strict();
 export const vipDecisionSchema = z.object({ decision: text, note: text.nullable().optional() }).strict();
 export const vipEndSchema = z.object({ reason: text }).strict();
+/** A tier correction carries the tier, the end date and the reason, nothing else (FR-TIR-09). */
+export const correctTierSchema = z.object({ tier: text, endsOn: text, reason: text }).strict();
 export const statusSchema = z.object({ action: z.enum(STATUS_ACTIONS as [string, ...string[]]), reason: text.nullable().optional() }).strict();
 
 const flag = (value: unknown): boolean | undefined => (value === 'true' || value === '1' ? true : undefined);
@@ -97,6 +100,7 @@ export interface MemberUseCases {
   decideVip: DecideVipRequestUseCase;
   endVip: EndVipUseCase;
   listVipRequests: ListVipRequestsUseCase;
+  correctTier: CorrectMemberTierUseCase;
 }
 
 /**
@@ -274,6 +278,14 @@ export const createMemberRouter = (
     approveVip,
     validateRequest(vipEndSchema),
     handle((req, ctx) => uc.endVip.execute({ ...ctx, memberId: String(req.params.id), reason: req.body.reason }))
+  );
+
+  // M4 Slice 8 (FR-TIR-09): the Administrator corrects a tier, with a required reason and an end date.
+  router.post(
+    '/:id/correct-tier',
+    requirePermission(MANAGE_WELLNESS_SETTINGS),
+    validateRequest(correctTierSchema),
+    handle((req, ctx) => uc.correctTier.execute({ ...ctx, memberId: String(req.params.id), tier: req.body.tier, endsOn: req.body.endsOn, reason: req.body.reason }))
   );
 
   // M4 Slice 5: payments of one member. The amount is calculated here and cannot be sent (FR-MPAY-01).

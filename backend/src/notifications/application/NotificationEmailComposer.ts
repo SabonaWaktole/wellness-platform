@@ -303,6 +303,16 @@ export class NotificationEmailComposer {
           subject: `A payment from ${client} is overdue`,
           body: `Instalment <strong>${esc(String(p.instalment ?? ''))}</strong> of the <strong>${esc(String(p.planName ?? 'subscription'))}</strong> contract for <strong>${esc(client)}</strong> was due on <strong>${esc(String(p.dueDate ?? ''))}</strong> and is overdue. Contact the client to settle it.`,
         };
+      case 'MEMBERSHIP_EXPIRING':
+        return {
+          subject: `${String(p.count ?? '')} Wellness+ membership(s) expire within ${String(p.windowDays ?? '')} days`,
+          body: `<strong>${esc(String(p.count ?? ''))}</strong> paid Wellness+ membership(s) end within the next <strong>${esc(String(p.windowDays ?? ''))}</strong> days. Open the member list filtered to Expiring soon and contact the members so they can renew.`,
+        };
+      case 'VIP_REVIEW_DUE':
+        return {
+          subject: `VIP review due for ${String(p.memberName ?? 'a member')}`,
+          body: `The VIP term of <strong>${esc(String(p.memberName ?? 'a member'))}</strong>${p.memberNumber ? ` (${esc(String(p.memberNumber))})` : ''} ends on <strong>${esc(String(p.reviewDate ?? ''))}</strong>. Approve it again before then, or the member falls back to the next tier.`,
+        };
       case 'FOLLOW_UP_ASSIGNED':
       case 'FOLLOW_UP_DUE':
       case 'FOLLOW_UP_DAILY_SUMMARY':
@@ -335,6 +345,8 @@ export class NotificationEmailComposer {
     if (type === 'FOLLOW_UP_DAILY_SUMMARY') {
       return `${this.appUrl}/${tenantSlug}/follow-ups`;
     }
+    // FR-TIR-11: the expiring summary opens the member list on the Expiring soon filter.
+    if (type === 'MEMBERSHIP_EXPIRING') return `${this.appUrl}/${tenantSlug}/members?expiringSoon=true`;
     if (!entityType || !entityId) return null;
     // A follow-up opens "My follow-ups" on it.
     if (entityType === 'FOLLOW_UP') return `${this.appUrl}/${tenantSlug}/follow-ups?open=${encodeURIComponent(entityId)}`;
@@ -355,7 +367,9 @@ export class NotificationEmailComposer {
                 ? `settings/client-management/forms/${entityId}/submissions`
                 : entityType === 'CONTRACT'
                   ? `contracts/${entityId}`
-                  : null;
+                  : entityType === 'MEMBER'
+                    ? `members/${entityId}`
+                    : null;
     return path ? `${this.appUrl}/${tenantSlug}/${path}` : null;
   }
 
@@ -398,6 +412,8 @@ export class NotificationEmailComposer {
         return 'Contract';
       case 'FOLLOW_UP':
         return 'Follow-up';
+      case 'MEMBER':
+        return 'Member';
       default:
         return 'Notification';
     }

@@ -141,6 +141,8 @@ export interface IMemberStore {
   listTerms(memberId: string): Promise<MemberTermRecord[]>;
   listTierHistory(memberId: string): Promise<MemberTierHistoryRecord[]>;
   listStatusHistory(memberId: string): Promise<MemberStatusHistoryRecord[]>;
+  /** The latest end date of each member's paid terms, for the Expiring soon badge (FR-TIR-10). Members with none are left out. */
+  latestPaidEnds(memberIds: string[]): Promise<Record<string, string>>;
   /** The members whose principal is this member (FR-FAM-07). */
   listDependants(tenantId: string, principalId: string): Promise<MemberRecord[]>;
   /** Sets the family link, or clears it with null (FR-FAM-01, FR-FAM-06). */

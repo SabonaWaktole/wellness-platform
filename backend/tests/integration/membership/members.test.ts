@@ -99,7 +99,7 @@ describe('Wellness+ member record (M4 Slice 4)', () => {
       });
       expect(created).toEqual({
         id: expect.any(String), memberNumber: 'WP-000001', firstName: 'Ana', lastName: 'Hoxha', dateOfBirth: '1990-05-17', phone: '+355691234567',
-        email: 'ana.hoxha@example.com', tier: 'BRONZE', status: 'ACTIVE', valid: true, source: 'INDIVIDUAL', startsOn: today(), employer: null, formerEmployee: false,
+        email: 'ana.hoxha@example.com', tier: 'BRONZE', status: 'ACTIVE', valid: true, source: 'INDIVIDUAL', startsOn: today(), employer: null, formerEmployee: false, expiringSoon: false,
       });
       const row = await prisma.member.findUniqueOrThrow({ where: { id: created.id } });
       expect(row).toMatchObject({ language: 'en', cityId, note: 'Prefers mornings', createdBy: users.admin, currentTier: 'BRONZE', status: 'ACTIVE' });

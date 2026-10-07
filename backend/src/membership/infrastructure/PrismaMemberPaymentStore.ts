@@ -69,12 +69,13 @@ export class PrismaMemberPaymentStore implements IMemberPaymentStore {
       paymentId: row.paymentId,
       closedEarlyByPaymentId: row.closedEarlyByPaymentId,
       originalEndsOn: day(row.originalEndsOn),
+      followsTermId: row.followsTermId,
     }));
   }
 
   async insertTerm(term: NewPaymentTerm): Promise<void> {
     await this.prisma.memberTerm.create({
-      data: { id: term.id, memberId: term.memberId, tier: term.tier, source: term.source, startsOn: dateOnly(term.startsOn)!, endsOn: dateOnly(term.endsOn), paymentId: term.paymentId },
+      data: { id: term.id, memberId: term.memberId, tier: term.tier, source: term.source, startsOn: dateOnly(term.startsOn)!, endsOn: dateOnly(term.endsOn), paymentId: term.paymentId, followsTermId: term.followsTermId ?? null },
     });
   }
 
@@ -185,7 +186,8 @@ export class PrismaMemberPaymentStore implements IMemberPaymentStore {
   }
 
   async addTierHistory(entry: TierHistoryEntry): Promise<void> {
-    await this.prisma.memberTierHistory.create({ data: { id: randomUUID(), ...entry } });
+    const { effectiveOn, ...rest } = entry;
+    await this.prisma.memberTierHistory.create({ data: { id: randomUUID(), ...rest, ...(effectiveOn ? { createdAt: dateOnly(effectiveOn)! } : {}) } });
   }
 
   async employerContractValid(tenantId: string, clientId: string, dayKey: string): Promise<boolean> {

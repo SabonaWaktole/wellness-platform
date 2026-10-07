@@ -3835,6 +3835,21 @@ WHERE NOT EXISTS (
 );
 
 -- ---------------------------------------------------------------
+-- M4 Slice 8: the daily member job
+-- ---------------------------------------------------------------
+SET @needed := (SELECT COUNT(*) = 0 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'MemberTerm' AND COLUMN_NAME = 'expiringNotifiedAt');
+SET @sql := IF(@needed, 'ALTER TABLE `MemberTerm` ADD COLUMN `expiringNotifiedAt` DATETIME(3) NULL', 'SELECT ''skip: MemberTerm.expiringNotifiedAt'' AS note');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+INSERT INTO `_prisma_migrations`
+  (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`)
+SELECT
+  UUID(), '', NOW(3), '20261023100000_m4_member_term_job', NULL, NULL, NOW(3), 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM `_prisma_migrations` WHERE `migration_name` = '20261023100000_m4_member_term_job'
+);
+
+-- ---------------------------------------------------------------
 SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
   SELECT 'Client.deletedAt' AS item, COUNT(*) AS present FROM information_schema.COLUMNS
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Client' AND COLUMN_NAME='deletedAt'
@@ -3990,6 +4005,8 @@ SELECT item, IF(present > 0, 'OK', 'STILL MISSING') AS state FROM (
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberFamilyEvent'
   UNION ALL SELECT 'VipRequest table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='VipRequest'
+  UNION ALL SELECT 'MemberTerm.expiringNotifiedAt', COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='MemberTerm' AND COLUMN_NAME='expiringNotifiedAt'
   UNION ALL SELECT 'ContractDocument table', COUNT(*) FROM information_schema.TABLES
    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ContractDocument'
   UNION ALL SELECT 'ContractPayment_tenantId_paidAt_idx', COUNT(*) FROM information_schema.STATISTICS

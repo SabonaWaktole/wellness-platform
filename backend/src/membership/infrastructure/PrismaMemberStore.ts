@@ -233,6 +233,12 @@ export class PrismaMemberStore implements IMemberStore {
     }));
   }
 
+  async latestPaidEnds(memberIds: string[]): Promise<Record<string, string>> {
+    if (memberIds.length === 0) return {};
+    const rows = await this.prisma.memberTerm.groupBy({ by: ['memberId'], where: { memberId: { in: memberIds }, source: 'PAID', endsOn: { not: null } }, _max: { endsOn: true } });
+    return Object.fromEntries(rows.filter((row) => row._max.endsOn).map((row) => [row.memberId, row._max.endsOn!.toISOString().slice(0, 10)]));
+  }
+
   async listTierHistory(memberId: string): Promise<MemberTierHistoryRecord[]> {
     const rows = await this.prisma.memberTierHistory.findMany({ where: { memberId }, orderBy: { createdAt: 'desc' } });
     return rows.map((row) => ({

@@ -2499,6 +2499,8 @@ model MemberTerm {
   followsTermId          String?   @unique
   closedEarlyByPaymentId String?
   originalEndsOn         DateTime? @db.Date
+  /// Set after the expiring-soon notice for this paid term was sent (M4 Slice 8, FR-TIR-11, D9).
+  expiringNotifiedAt     DateTime?
   createdAt              DateTime  @default(now())
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)

@@ -27,9 +27,11 @@ export interface MemberSummary {
   startsOn: string;
   employer: { id: string; name: string | null } | null;
   formerEmployee: boolean;
+  /** A paid term ends within the Expiring soon window (FR-TIR-10). */
+  expiringSoon: boolean;
 }
 
-export function presentMemberSummary(member: MemberRecord): MemberSummary {
+export function presentMemberSummary(member: MemberRecord, expiringSoon = false): MemberSummary {
   return {
     id: member.id,
     memberNumber: member.memberNumber,
@@ -45,6 +47,7 @@ export function presentMemberSummary(member: MemberRecord): MemberSummary {
     startsOn: member.startsOn,
     employer: member.employerClientId ? { id: member.employerClientId, name: member.employerName } : null,
     formerEmployee: member.formerEmployerClientId !== null,
+    expiringSoon,
   };
 }
 
@@ -122,11 +125,12 @@ export function presentMember(input: {
   userNames: Record<string, string>;
   family: Omit<FamilyGroup, 'principalMemberId' | 'relationshipId'>;
   vip: MemberDetail['vip'];
+  expiringSoon: boolean;
 }): MemberDetail {
   const { member, userNames } = input;
   const nameOf = (id: string | null) => (id ? (userNames[id] ?? null) : null);
   return {
-    ...presentMemberSummary(member),
+    ...presentMemberSummary(member, input.expiringSoon),
     // The member page shows the calculated tier; `tier` of the summary is the stored copy.
     tier: input.effectiveTier,
     language: member.language,

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Prisma } from '@prisma/client';
-import { addFamilySchema, recordPaymentSchema, vipDecisionSchema, vipEndSchema, vipRequestSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
+import { addFamilySchema, correctTierSchema, recordPaymentSchema, vipDecisionSchema, vipEndSchema, vipRequestSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
 
 const prismaDir = path.join(__dirname, '../../../prisma');
 const read = (...parts: string[]) => fs.readFileSync(path.join(prismaDir, ...parts), 'utf8');
@@ -81,6 +81,28 @@ describe('the member tables', () => {
   });
 });
 
+describe('the daily member job column (M4 Slice 8)', () => {
+  const column = Prisma.dmmf.datamodel.models.find((m) => m.name === 'MemberTerm')!.fields.find((f) => f.name === 'expiringNotifiedAt');
+
+  it('FR-TIR-11 MemberTerm.expiringNotifiedAt is an optional date in both schemas, so existing rows keep NULL', () => {
+    expect(column).toMatchObject({ type: 'DateTime', isRequired: false });
+    expect(modelBlock(read('schema.mysql.prisma'), 'MemberTerm')).toContain('expiringNotifiedAt     DateTime?');
+  });
+
+  it('NFR-OPS-04 the Postgres migration, the MySQL script and the combined upgrade add it, guarded and without touching a row', () => {
+    const postgres = read('migrations', '20261023100000_m4_member_term_job', 'migration.sql');
+    const mysql = read('mysql_migration_m4_member_term_job.sql');
+    const upgrade = read('mysql_upgrade_to_current.sql');
+    expect(postgres).toContain('ALTER TABLE "MemberTerm" ADD COLUMN "expiringNotifiedAt" TIMESTAMP(3);');
+    for (const sql of [mysql, upgrade]) {
+      expect(sql).toContain('ALTER TABLE `MemberTerm` ADD COLUMN `expiringNotifiedAt` DATETIME(3) NULL');
+      expect(sql).toContain("COLUMN_NAME = 'expiringNotifiedAt'");
+      expect(sql).toContain("'20261023100000_m4_member_term_job'");
+    }
+    for (const sql of [postgres, mysql]) expect(sql).not.toMatch(/\b(UPDATE|DELETE|INSERT INTO "?`?Member)/);
+  });
+});
+
 describe('the member request schemas', () => {
   const keysOf = (schema: { shape: Record<string, unknown> }) => Object.keys(schema.shape);
   const FORBIDDEN_KEYS = ['tier', 'currentTier', 'expiresOn', 'endsOn', 'startsOn', 'memberNumber', 'status', 'cardToken', 'createdBy', 'id', 'tenantId', 'principalMemberId', 'employerClientId'];
@@ -91,6 +113,11 @@ describe('the member request schemas', () => {
     }
     // The status route takes an action and a reason, never a status.
     expect(keysOf(statusSchema).sort()).toEqual(['action', 'reason']);
+  });
+
+  it('FR-TIR-09 the one request that carries a tier is the Administrator correction, and it carries only the tier, the end date and the reason', () => {
+    expect(keysOf(correctTierSchema).sort()).toEqual(['endsOn', 'reason', 'tier']);
+    expect(correctTierSchema.safeParse({ tier: 'GOLD', endsOn: '2999-01-01', reason: 'x', memberNumber: 'WP-1' }).success).toBe(false);
   });
 
   it('FR-MEM-09 the schemas are strict, so an unknown key is refused rather than dropped', () => {

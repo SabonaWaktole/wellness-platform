@@ -270,6 +270,7 @@ import {
   UpdateMemberUseCase,
 } from '../membership/application/use-cases/MemberUseCases';
 import { AddFamilyMemberUseCase, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../membership/application/use-cases/FamilyUseCases';
+import { CorrectMemberTierUseCase } from '../membership/application/use-cases/MemberTermUseCases';
 import { DecideVipRequestUseCase, EndVipUseCase, ListVipRequestsUseCase, RequestVipUseCase } from '../membership/application/use-cases/VipUseCases';
 import { PrismaVipRequestStore } from '../membership/infrastructure/PrismaVipRequestStore';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
@@ -1376,6 +1377,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         decideVip: new DecideVipRequestUseCase(membershipWriteTx),
         endVip: new EndVipUseCase(membershipWriteTx),
         listVipRequests: new ListVipRequestsUseCase(vipRequestStore, memberStore),
+        correctTier: new CorrectMemberTierUseCase(membershipWriteTx),
       },
       tokenService,
       tenantRepository,

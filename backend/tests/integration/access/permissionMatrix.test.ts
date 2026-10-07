@@ -350,6 +350,12 @@ describe('Permission matrix (SRS §4.2)', () => {
       request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/vip/end`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
     },
     {
+      label: 'wellnessplus.settings.manage — POST /membership/members/:id/correct-tier',
+      permissionKey: 'wellnessplus.settings.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/correct-tier`).set('Authorization', `Bearer ${t}`).send({ tier: 'GOLD', endsOn: '2999-01-01', reason: 'x' }),
+    },
+    {
       label: 'members.payments.record — GET /membership/members/:id/payments/options',
       permissionKey: 'members.payments.record',
       request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/nonexistent/payments/options`).set('Authorization', `Bearer ${t}`),

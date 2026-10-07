@@ -16,6 +16,11 @@ import { ContractExpiryJob } from './jobs/ContractExpiryJob';
 import { MarkPaymentsOverdueJob } from './jobs/MarkPaymentsOverdueJob';
 import { MarkPaymentOverdueUseCase } from '../contracts/application/use-cases/MarkPaymentOverdueUseCase';
 import { ContractRenewalReminderJob } from './jobs/ContractRenewalReminderJob';
+import { MemberTermJob } from './jobs/MemberTermJob';
+import { ExpireMemberTermsUseCase } from '../membership/application/use-cases/MemberTermUseCases';
+import { PrismaMemberTermJobStore } from '../membership/infrastructure/PrismaMemberTermJobStore';
+import { PrismaMembershipSettingsStore } from '../membership/infrastructure/PrismaMembershipSettingsStore';
+import { PrismaMembershipWriteTransaction } from '../membership/infrastructure/PrismaMembershipWriteTransaction';
 
 import { PrismaUserRepository } from '../auth/infrastructure/repositories/PrismaUserRepository';
 import { PrismaTenantRepository } from '../tenant/infrastructure/repositories/PrismaTenantRepository';
@@ -95,6 +100,13 @@ export function createScheduler(options: SchedulerOptions = {}): Scheduler {
     new ContractExpiryJob(queries, expireContract, notifications),
     new MarkPaymentsOverdueJob(queries, new MarkPaymentOverdueUseCase(new PrismaContractWriteTransaction()), notifications),
     new ContractRenewalReminderJob(queries, notifications),
+    new MemberTermJob(
+      queries,
+      new PrismaMemberTermJobStore(),
+      new PrismaMembershipSettingsStore(),
+      new ExpireMemberTermsUseCase(new PrismaMembershipWriteTransaction()),
+      notifications
+    ),
   ];
 
   return new Scheduler(jobs, options);
