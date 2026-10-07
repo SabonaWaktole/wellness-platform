@@ -317,8 +317,8 @@ describe('Administrator and CEO dashboards (M3 Slice 14)', () => {
       expect(Object.fromEntries(ceo.tables.companiesPerStatus.map((row: any) => [row.key, row.count]))).toEqual({ CLIENT: 1, FORMER_CLIENT: 1, LEAD: 1 });
     });
 
-    it('FR-DSH-12: the Wellness+ place is in the response and empty, and the figures are as of now or by the period', async () => {
-      expect(ceo.wellnessPlus).toEqual([]);
+    it('FR-DSH-12: the figures are as of now or by the period, and the Wellness+ block is the one of Slice 15', async () => {
+      expect(ceo.wellnessPlus.figures.find((item: any) => item.key === 'membersActive').basis).toBe('asOfNow');
       expect(figure(ceo, 'salesValue').basis).toBe('period');
       expect(figure(ceo, 'revenue').basis).toBe('period');
       expect(figure(ceo, 'pipelineValue').basis).toBe('asOfNow');

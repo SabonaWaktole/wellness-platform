@@ -1313,6 +1313,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     const dashboardReader = new PrismaDashboardReader(prisma, performanceReader);
     const dashboardRoster = new PrismaTeamRoster();
     const dashboardSettings = new PrismaContractSettingsStore(prisma);
+    // The CEO's Wellness+ block calls the reports page's own use case (M4 Slice 15, FR-DSH-14).
+    const dashboardMembershipReport = new GetMembershipReportUseCase(new PrismaMembershipReportReader(prisma), new PrismaMembershipSettingsStore(prisma));
     app.use(
       '/api/:tenantSlug/dashboard',
       createRoleDashboardRouter(
@@ -1328,7 +1330,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
             new PrismaPaymentOverviewReader(prisma),
             new GetCeoPerformanceUseCase(performanceReader, dashboardRoster),
             dashboardRoster,
-            dashboardSettings
+            dashboardSettings,
+            dashboardMembershipReport
           )
         ),
         tokenService,
