@@ -1846,6 +1846,61 @@
       "id": "NFR-USE-05",
       "priority": "Must",
       "requirement": "The QR code shall stay scannable in dark mode and at low screen brightness: the card page always shows the code on a white square with a quiet zone."
+    },
+    {
+      "id": "FR-VER-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: verify\" shall find a member by scanning the QR code with the camera of the device in the browser, or by searching member ID, name, phone or email. The \"Verify member\" screen is in the main menu and works on a phone, a tablet and a desktop with a webcam."
+    },
+    {
+      "id": "FR-VER-02",
+      "priority": "Must",
+      "requirement": "The result shall show, large, Valid or Not valid; the name, member ID, tier, valid until, status and date of birth (for the identity check); and the discounts of the tier. For a suspended or closed member it shows Not valid with the status and no discounts. It shows no payment, fee, phone, email or employer."
+    },
+    {
+      "id": "FR-VER-03",
+      "priority": "Must",
+      "requirement": "Reception shall confirm the identity by comparing the name and date of birth with the person's identity document and press \"Identity confirmed\" or \"Does not match\". The choice is stored with the verification."
+    },
+    {
+      "id": "FR-VER-04",
+      "priority": "Must",
+      "requirement": "A scanned code that is unknown or replaced shall show \"Member not found\" with no other information."
+    },
+    {
+      "id": "FR-VER-05",
+      "priority": "Must",
+      "requirement": "The result shall always come from the server at that moment; nothing is cached on the device."
+    },
+    {
+      "id": "FR-VER-06",
+      "priority": "Should",
+      "requirement": "Every verification at Reception shall be recorded with the member, the user, the time, scan or search, the result and the identity choice, and shown on the member page for users with \"Members: view\"."
+    },
+    {
+      "id": "FR-VER-07",
+      "priority": "Must",
+      "requirement": "A partner clinic shall scan the QR code with an ordinary phone camera. The link opens a public verification page, without login, that shows Valid or Not valid and, for a valid member, the full name, the member ID, the tier and the valid-until date. It shows no date of birth, contact details, employer, payment or discounts."
+    },
+    {
+      "id": "FR-VER-08",
+      "priority": "Must",
+      "requirement": "The QR code shall carry one link per member. The same link opened by a logged-in user with \"Members: verify\" shall show the Reception screen of FR-VER-02, and opened by anyone else the public page of FR-VER-07."
+    },
+    {
+      "id": "FR-VER-09",
+      "priority": "Must",
+      "requirement": "The public page shall give the same neutral answer for every reason a member is not valid (Not valid), and the same \"Member not found\" for an unknown token, so nothing is learned about suspended or closed members."
+    },
+    {
+      "id": "FR-VER-10",
+      "priority": "Should",
+      "requirement": "Each public verification shall be recorded with the time, the result and a hashed IP address, without identifying the clinic. Whether partner clinics must be registered and identified is open (Q15)."
+    },
+    {
+      "id": "NFR-USE-04",
+      "priority": "Must",
+      "requirement": "All Milestone 4 staff screens shall work on desktop and on mobile from 360 px wide, and the card, the QR scan and the add-to-home-screen steps shall be tested on a real iPhone (Safari) and a real Android phone (Chrome)."
     }
   ]
 }
