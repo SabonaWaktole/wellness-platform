@@ -2,6 +2,7 @@ import type { Validity } from '../domain/memberValidity';
 import type { Tier } from '../domain/Tier';
 import type { TermSource } from '../domain/MemberTerm';
 import type { MemberPaymentView } from './presentMemberPayment';
+import type { VipRequestView } from './presentVip';
 import type { MemberFamilyEventRecord, MemberRecord, MemberStatusHistoryRecord, MemberTermRecord, MemberTierHistoryRecord } from './ports/IMemberStore';
 
 /**
@@ -102,6 +103,8 @@ export interface MemberDetail extends MemberSummary {
   tierHistory: Array<MemberTierHistoryRecord & { changedBy: string | null }>;
   statusHistory: Array<MemberStatusHistoryRecord & { changedBy: string | null }>;
   family: FamilyGroup;
+  /** Requests, decisions and endings, newest first, and the review date of the VIP term running today (FR-VIP-05). */
+  vip: { requests: VipRequestView[]; reviewDate: string | null };
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
   /** Present only for a user who holds "Members: view payments" (FR-MPAY-08). */
@@ -118,6 +121,7 @@ export function presentMember(input: {
   validity: Validity;
   userNames: Record<string, string>;
   family: Omit<FamilyGroup, 'principalMemberId' | 'relationshipId'>;
+  vip: MemberDetail['vip'];
 }): MemberDetail {
   const { member, userNames } = input;
   const nameOf = (id: string | null) => (id ? (userNames[id] ?? null) : null);
@@ -138,6 +142,7 @@ export function presentMember(input: {
     tierHistory: input.tierHistory.map((h) => ({ ...h, changedBy: nameOf(h.changedByUserId) })),
     statusHistory: input.statusHistory.map((h) => ({ ...h, changedBy: nameOf(h.changedByUserId) })),
     family: { principalMemberId: member.principalMemberId, relationshipId: member.relationshipId, ...input.family },
+    vip: input.vip,
     formerEmployerClientId: member.formerEmployerClientId,
     leftCompanyAt: member.leftCompanyAt,
   };

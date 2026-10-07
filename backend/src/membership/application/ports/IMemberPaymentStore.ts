@@ -63,7 +63,8 @@ export interface NewPaymentTerm {
   source: TermSource;
   startsOn: string;
   endsOn: string | null;
-  paymentId: string;
+  /** Null for a term no payment created: a VIP term is free (FR-VIP-03). */
+  paymentId: string | null;
 }
 
 export interface PaymentFilters {
@@ -101,6 +102,9 @@ export interface IMemberPaymentStore {
   /** Puts back what `closeTermEarly` took away. */
   restoreTerm(termId: string, endsOn: string): Promise<void>;
   deleteTermsOfPayment(paymentId: string): Promise<void>;
+  /** Ends a VIP term early, keeping the end date it had (FR-VIP-05). */
+  endTermEarly(termId: string, endsOn: string, originalEndsOn: string): Promise<void>;
+  deleteTerm(termId: string): Promise<void>;
   create(payment: NewMemberPayment): Promise<MemberPaymentRecord>;
   find(tenantId: string, id: string): Promise<MemberPaymentRecord | null>;
   /** The member's newest payment that is not voided. */

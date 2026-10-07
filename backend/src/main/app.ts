@@ -270,6 +270,8 @@ import {
   UpdateMemberUseCase,
 } from '../membership/application/use-cases/MemberUseCases';
 import { AddFamilyMemberUseCase, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../membership/application/use-cases/FamilyUseCases';
+import { DecideVipRequestUseCase, EndVipUseCase, ListVipRequestsUseCase, RequestVipUseCase } from '../membership/application/use-cases/VipUseCases';
+import { PrismaVipRequestStore } from '../membership/infrastructure/PrismaVipRequestStore';
 import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
 import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
 import { PrismaMemberPaymentStore } from '../membership/infrastructure/PrismaMemberPaymentStore';
@@ -1353,6 +1355,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // details, suspend and close. Members: view reads, Members: manage writes.
   const memberStore = new PrismaMemberStore(prisma);
   const memberPaymentStore = new PrismaMemberPaymentStore(prisma);
+  const vipRequestStore = new PrismaVipRequestStore(prisma);
   const quotePayment = new QuotePaymentUseCase(memberStore, memberPaymentStore, membershipSettingsStore, relationshipStore);
   const searchMemberPayments = new SearchMemberPaymentsUseCase(memberPaymentStore, memberStore);
   app.use(
@@ -1360,7 +1363,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     createMemberRouter(
       {
         search: new SearchMembersUseCase(memberStore, membershipSettingsStore),
-        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore, relationshipStore),
+        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore, relationshipStore, vipRequestStore),
         register: new RegisterMemberUseCase(membershipWriteTx, generateShareToken),
         update: new UpdateMemberUseCase(membershipWriteTx),
         changeStatus: new ChangeMemberStatusUseCase(membershipWriteTx),
@@ -1369,6 +1372,10 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         addFamilyMember: new AddFamilyMemberUseCase(membershipWriteTx, generateShareToken),
         removeFamilyLink: new RemoveFamilyLinkUseCase(membershipWriteTx),
         familyRelationships: new ListFamilyRelationshipsUseCase(relationshipStore),
+        requestVip: new RequestVipUseCase(membershipWriteTx),
+        decideVip: new DecideVipRequestUseCase(membershipWriteTx),
+        endVip: new EndVipUseCase(membershipWriteTx),
+        listVipRequests: new ListVipRequestsUseCase(vipRequestStore, memberStore),
       },
       tokenService,
       tenantRepository,

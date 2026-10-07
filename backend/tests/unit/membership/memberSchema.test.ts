@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Prisma } from '@prisma/client';
-import { addFamilySchema, recordPaymentSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
+import { addFamilySchema, recordPaymentSchema, vipDecisionSchema, vipEndSchema, vipRequestSchema, registerSchema, statusSchema, updateSchema } from '../../../src/membership/interfaces/http/memberRoutes';
 
 const prismaDir = path.join(__dirname, '../../../prisma');
 const read = (...parts: string[]) => fs.readFileSync(path.join(prismaDir, ...parts), 'utf8');
@@ -158,6 +158,21 @@ describe('the family request schema', () => {
     for (const extra of ['tier', 'currentTier', 'endsOn', 'status', 'memberNumber', 'cardToken']) {
       expect(addFamilySchema.safeParse({ ...ok, [extra]: 'x' }).success).toBe(false);
       expect(addFamilySchema.safeParse({ ...ok, member: { ...ok.member, [extra]: 'x' } }).success).toBe(false);
+    }
+  });
+});
+
+describe('the VIP request schemas', () => {
+  it('FR-VIP-01, FR-VIP-03, FR-MEM-09 carry no tier, term date, status, amount or requester', () => {
+    for (const [schema, ok] of [
+      [vipRequestSchema, { reason: 'key partner' }],
+      [vipDecisionSchema, { decision: 'APPROVE', note: 'ok' }],
+      [vipEndSchema, { reason: 'left' }],
+    ] as const) {
+      expect(schema.safeParse(ok).success).toBe(true);
+      for (const extra of ['tier', 'currentTier', 'endsOn', 'startsOn', 'status', 'amount', 'requestedBy', 'decidedBy']) {
+        expect(schema.safeParse({ ...ok, [extra]: 'x' }).success).toBe(false);
+      }
     }
   });
 });

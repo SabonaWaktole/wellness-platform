@@ -329,6 +329,27 @@ describe('Permission matrix (SRS §4.2)', () => {
       request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/family/remove`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
     },
     {
+      label: 'members.manage — POST /membership/members/:id/vip/request',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/vip/request`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
+      label: 'members.vip.approve — GET /membership/members/vip/requests',
+      permissionKey: 'members.vip.approve',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/vip/requests`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.vip.approve — POST /membership/members/vip/requests/:requestId/decision',
+      permissionKey: 'members.vip.approve',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/vip/requests/nonexistent/decision`).set('Authorization', `Bearer ${t}`).send({ decision: 'APPROVE' }),
+    },
+    {
+      label: 'members.vip.approve — POST /membership/members/:id/vip/end',
+      permissionKey: 'members.vip.approve',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/vip/end`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
       label: 'members.payments.record — GET /membership/members/:id/payments/options',
       permissionKey: 'members.payments.record',
       request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/nonexistent/payments/options`).set('Authorization', `Bearer ${t}`),

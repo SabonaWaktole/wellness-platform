@@ -13,12 +13,20 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactMemberFields } from '../../../access/domain/redactFields';
 import { InvalidMemberError, InvalidStatusChangeError, STATUS_ACTIONS } from '../../domain/Member';
 import { TIERS } from '../../domain/Tier';
-import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_RECORD, MEMBERS_VIEW } from '../../application/membershipPermissions';
+import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_RECORD, MEMBERS_VIEW, MEMBERS_VIP_APPROVE } from '../../application/membershipPermissions';
 import { PaymentRefusedError } from '../../application/memberPaymentQuote';
 import { InvalidPaymentError } from '../../domain/memberPayment';
 import { presentMemberPayment } from '../../application/presentMemberPayment';
 import { QuotePaymentUseCase, RecordMemberPaymentUseCase } from '../../application/use-cases/MemberPaymentUseCases';
 import { AddFamilyMemberUseCase, FamilyLinkRefusedError, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../../application/use-cases/FamilyUseCases';
+import {
+  DecideVipRequestUseCase,
+  EndVipUseCase,
+  ListVipRequestsUseCase,
+  RequestVipUseCase,
+  VipRefusedError,
+  VipRequestNotFoundError,
+} from '../../application/use-cases/VipUseCases';
 import {
   ChangeMemberStatusUseCase,
   DuplicateMemberError,
@@ -62,6 +70,10 @@ export const addFamilySchema = z
   })
   .strict();
 export const removeFamilySchema = z.object({ reason: text }).strict();
+/** A VIP request carries a reason; a decision carries the choice and a note; an ending carries a reason (FR-VIP-01, 02, 05). */
+export const vipRequestSchema = z.object({ reason: text }).strict();
+export const vipDecisionSchema = z.object({ decision: text, note: text.nullable().optional() }).strict();
+export const vipEndSchema = z.object({ reason: text }).strict();
 export const statusSchema = z.object({ action: z.enum(STATUS_ACTIONS as [string, ...string[]]), reason: text.nullable().optional() }).strict();
 
 const flag = (value: unknown): boolean | undefined => (value === 'true' || value === '1' ? true : undefined);
@@ -81,6 +93,10 @@ export interface MemberUseCases {
   addFamilyMember: AddFamilyMemberUseCase;
   removeFamilyLink: RemoveFamilyLinkUseCase;
   familyRelationships: ListFamilyRelationshipsUseCase;
+  requestVip: RequestVipUseCase;
+  decideVip: DecideVipRequestUseCase;
+  endVip: EndVipUseCase;
+  listVipRequests: ListVipRequestsUseCase;
 }
 
 /**
@@ -111,6 +127,8 @@ export const createMemberRouter = (
     if (error instanceof InvalidPaymentError) return res.status(400).json({ error: error.message, code: error.code, field: error.field });
     if (error instanceof PaymentRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
     if (error instanceof FamilyLinkRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
+    if (error instanceof VipRefusedError) return res.status(409).json({ error: error.message, code: error.code, reason: error.reason });
+    if (error instanceof VipRequestNotFoundError) return res.status(404).json({ error: error.message, code: error.code });
     if (error instanceof InvalidStatusChangeError) return res.status(409).json({ error: error.message, code: error.code });
     if (error instanceof DuplicateMemberError) {
       return res.status(409).json(redactMemberFields({ error: error.message, code: error.code, duplicates: error.duplicates }, req.access!));
@@ -179,6 +197,34 @@ export const createMemberRouter = (
   // The active relationships a new family link can use (FR-FAM-02).
   router.get('/family/relationships', manage, handle((_req, ctx) => uc.familyRelationships.execute(ctx)));
 
+  // M4 Slice 7: the approvers' list of VIP requests. Registered before '/:id'.
+  const approveVip = requirePermission(MEMBERS_VIP_APPROVE);
+  router.get(
+    '/vip/requests',
+    approveVip,
+    async (req, res, next) => {
+      try {
+        const result = await uc.listVipRequests.execute({
+          access: req.access!,
+          tenantId: requireTenant(req).id,
+          status: req.query.status,
+          page: whole(req.query.page),
+          limit: whole(req.query.limit),
+        });
+        res.json(redactMemberFields(result, req.access!));
+      } catch (error) {
+        fail(req, res, next, error);
+      }
+    }
+  );
+
+  router.post(
+    '/vip/requests/:requestId/decision',
+    approveVip,
+    validateRequest(vipDecisionSchema),
+    handle((req, ctx) => uc.decideVip.execute({ ...ctx, requestId: String(req.params.requestId), decision: req.body.decision, note: req.body.note }))
+  );
+
   router.get('/:id', view, handle((req, ctx) => uc.get.execute({ ...ctx, id: String(req.params.id) })));
 
   router.patch(
@@ -213,6 +259,21 @@ export const createMemberRouter = (
     manage,
     validateRequest(removeFamilySchema),
     handle(async (req, ctx) => presentMemberSummary(await uc.removeFamilyLink.execute({ ...ctx, memberId: String(req.params.id), reason: req.body.reason })))
+  );
+
+  // M4 Slice 7: a VIP request needs "manage"; ending a VIP needs the approval permission.
+  router.post(
+    '/:id/vip/request',
+    manage,
+    validateRequest(vipRequestSchema),
+    handle((req, ctx) => uc.requestVip.execute({ access: ctx.access, tenantId: ctx.tenantId, memberId: String(req.params.id), reason: req.body.reason }), 201)
+  );
+
+  router.post(
+    '/:id/vip/end',
+    approveVip,
+    validateRequest(vipEndSchema),
+    handle((req, ctx) => uc.endVip.execute({ ...ctx, memberId: String(req.params.id), reason: req.body.reason }))
   );
 
   // M4 Slice 5: payments of one member. The amount is calculated here and cannot be sent (FR-MPAY-01).

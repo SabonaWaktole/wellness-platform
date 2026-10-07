@@ -194,8 +194,12 @@ export class PrismaMemberStore implements IMemberStore {
     if (params.source === 'INDIVIDUAL') and.push({ employerClientId: null, principalMemberId: null });
     if (params.employerClientId) and.push({ employerClientId: params.employerClientId });
     if (params.formerEmployee) and.push({ formerEmployerClientId: { not: null } });
-    // The VIP request table arrives with Slice 7: until then no member has a review due.
-    if (params.vipReviewDue) and.push({ id: { in: [] } });
+    if (params.vipReviewDue) {
+      const { from, to } = params.vipReviewDue;
+      and.push({ terms: { some: { source: 'VIP', endsOn: { gte: dateOnly(from)!, lte: dateOnly(to)! } } } });
+      // A later approval extends VIP, so the review is not due yet.
+      and.push({ NOT: { terms: { some: { source: 'VIP', endsOn: { gt: dateOnly(to)! } } } } });
+    }
     if (params.expiringSoon) {
       and.push({
         terms: { some: { source: 'PAID', endsOn: { gte: dateOnly(params.expiringSoon.from)!, lte: dateOnly(params.expiringSoon.to)! } } },

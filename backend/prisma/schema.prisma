@@ -2472,6 +2472,7 @@ model Member {
   statusHistory  MemberStatusHistory[]
   payments       MemberPayment[]
   familyEvents   MemberFamilyEvent[]
+  vipRequests    VipRequest[]
 
   @@unique([tenantId, memberNumber])
   @@index([tenantId, lastName, firstName])
@@ -2585,4 +2586,33 @@ model MemberFamilyEvent {
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId, at])
+}
+
+/// A request to make a member VIP and the decision on it (M4 Slice 7, FR-VIP-01,
+/// 02, 04, 05). One PENDING request per member (NFR-DAT-02): PostgreSQL enforces
+/// it with a partial unique index that lives in the migration only (Prisma
+/// cannot declare one); MySQL relies on the use case, which checks inside the
+/// transaction after taking the member's row lock. `endedAt`, `endedBy` and
+/// `endReason` record an early ending of the VIP the request created.
+model VipRequest {
+  id               String    @id
+  tenantId         String
+  memberId         String
+  requestedBy      String
+  reason           String    @db.Text
+  /// PENDING, APPROVED, REJECTED or WITHDRAWN.
+  status           String    @default("PENDING")
+  decidedBy        String?
+  decidedAt        DateTime?
+  decisionNote     String?   @db.Text
+  reviewNotifiedAt DateTime?
+  endedAt          DateTime?
+  endedBy          String?
+  endReason        String?   @db.Text
+  createdAt        DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([memberId, createdAt])
 }

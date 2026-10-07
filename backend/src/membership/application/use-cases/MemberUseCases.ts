@@ -17,6 +17,8 @@ import { validityOn } from '../../domain/memberValidity';
 import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_VIEW, MEMBERS_VIEW } from '../membershipPermissions';
 import type { IMemberPaymentStore } from '../ports/IMemberPaymentStore';
 import { paymentUserIds, presentMemberPayment } from '../presentMemberPayment';
+import type { IVipRequestStore } from '../ports/IVipRequestStore';
+import { presentVipRequest, vipUserIds } from '../presentVip';
 import type { IMemberStore, MemberRecord, MemberSearchParams, CardTokenGenerator } from '../ports/IMemberStore';
 import type { IMembershipSettingsStore, IRelationshipStore } from '../ports/IMembershipSettingsStore';
 import type { IMembershipWriteTransaction, MembershipWriteRepos } from '../ports/IMembershipWriteTransaction';
@@ -259,7 +261,7 @@ export interface SearchMembersInput {
   access: AccessContext;
   tenantId: string;
   timezone: string;
-  params: Partial<Omit<MemberSearchParams, 'expiringSoon'>> & { expiringSoon?: boolean };
+  params: Partial<Omit<MemberSearchParams, 'expiringSoon' | 'vipReviewDue'>> & { expiringSoon?: boolean; vipReviewDue?: boolean };
 }
 
 const MAX_LIMIT = 100;
@@ -278,20 +280,25 @@ export class SearchMembersUseCase {
 
   async execute(input: SearchMembersInput): Promise<{ data: MemberSummary[]; total: number; page: number; limit: number }> {
     input.access.ensure(MEMBERS_VIEW);
-    const { expiringSoon, ...rest } = input.params;
+    const { expiringSoon, vipReviewDue, ...rest } = input.params;
     const page = Math.max(1, Math.floor(rest.page ?? 1));
     const limit = Math.min(MAX_LIMIT, Math.max(1, Math.floor(rest.limit ?? 25)));
 
     let window: MemberSearchParams['expiringSoon'];
-    if (expiringSoon) {
-      const { expiringSoonDays } = (await this.settings.getSettings(input.tenantId)).toJSON();
+    let vipWindow: MemberSearchParams['vipReviewDue'];
+    if (expiringSoon || vipReviewDue) {
+      const { expiringSoonDays, vipReviewNoticeDays } = (await this.settings.getSettings(input.tenantId)).toJSON();
       const today = new Date(`${dayKeyInZone(this.now(), input.timezone)}T00:00:00.000Z`);
-      window = { from: today.toISOString().slice(0, 10), to: addDays(today, expiringSoonDays).toISOString().slice(0, 10) };
+      const windowOf = (days: number) => ({ from: today.toISOString().slice(0, 10), to: addDays(today, days).toISOString().slice(0, 10) });
+      if (expiringSoon) window = windowOf(expiringSoonDays);
+      // FR-VIP-04: a VIP term ending within the notice days.
+      if (vipReviewDue) vipWindow = windowOf(vipReviewNoticeDays);
     }
 
     const result = await this.store.search(input.tenantId, {
       ...rest,
       expiringSoon: window,
+      vipReviewDue: vipWindow,
       sortBy: rest.sortBy ?? 'name',
       sortDir: rest.sortDir ?? 'asc',
       page,
@@ -313,6 +320,7 @@ export class GetMemberUseCase {
     private readonly settings: IMembershipSettingsStore,
     private readonly paymentStore: IMemberPaymentStore,
     private readonly relationshipStore: IRelationshipStore,
+    private readonly vipStore: IVipRequestStore,
     private readonly now: () => Date = () => new Date()
   ) {}
 
@@ -350,16 +358,23 @@ export class GetMemberUseCase {
     const payments = input.access.can(MEMBERS_PAYMENTS_VIEW) ? await this.paymentStore.listForMember(input.tenantId, member.id) : null;
 
     const family = await this.family(input.tenantId, member, graceDays, today);
+    const vipRequests = await this.vipStore.listForMember(input.tenantId, member.id);
+    const vipEnd = values
+      .filter((v) => v.source === 'VIP' && v.endsOn && day(v.endsOn) >= day(today))
+      .map((v) => day(v.endsOn!))
+      .sort()
+      .pop();
 
     const names = await this.store.userNames(input.tenantId, [
       member.createdBy,
       ...family.userIds,
+      ...vipUserIds(vipRequests),
       ...(payments ? paymentUserIds(payments) : []),
       ...tierHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
       ...statusHistory.map((h) => h.changedByUserId).filter((id): id is string => !!id),
     ]);
 
-    const detail = presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names) });
+    const detail = presentMember({ member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names), vip: { requests: vipRequests.map((r) => presentVipRequest(r, names)), reviewDate: vipEnd ?? null } });
     return payments ? { ...detail, payments: payments.map((p) => presentMemberPayment(p, names)) } : detail;
   }
 

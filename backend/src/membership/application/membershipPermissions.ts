@@ -5,3 +5,4 @@ export const MEMBERS_VERIFY = 'members.verify';
 export const MANAGE_WELLNESS_SETTINGS = 'wellnessplus.settings.manage';
 export const MEMBERS_PAYMENTS_VIEW = 'members.payments.view';
 export const MEMBERS_PAYMENTS_RECORD = 'members.payments.record';
+export const MEMBERS_VIP_APPROVE = 'members.vip.approve';

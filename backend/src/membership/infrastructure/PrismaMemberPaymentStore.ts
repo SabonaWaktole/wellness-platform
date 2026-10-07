@@ -96,6 +96,14 @@ export class PrismaMemberPaymentStore implements IMemberPaymentStore {
     await this.prisma.memberTerm.deleteMany({ where: { paymentId } });
   }
 
+  async endTermEarly(termId: string, endsOn: string, originalEndsOn: string): Promise<void> {
+    await this.prisma.memberTerm.update({ where: { id: termId }, data: { endsOn: dateOnly(endsOn), originalEndsOn: dateOnly(originalEndsOn) } });
+  }
+
+  async deleteTerm(termId: string): Promise<void> {
+    await this.prisma.memberTerm.delete({ where: { id: termId } });
+  }
+
   async create(payment: NewMemberPayment): Promise<MemberPaymentRecord> {
     const row = await this.prisma.memberPayment.create({
       data: {

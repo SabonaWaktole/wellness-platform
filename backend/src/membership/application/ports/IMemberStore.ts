@@ -93,7 +93,8 @@ export interface MemberSearchParams {
   source?: MemberSource;
   employerClientId?: string;
   expiringSoon?: { from: string; to: string };
-  vipReviewDue?: boolean;
+  /** A VIP term ending in the window, with no later VIP term (FR-VIP-04). */
+  vipReviewDue?: { from: string; to: string };
   formerEmployee?: boolean;
   /** The Area and City of the employer company (FR-MEM-07). */
   areaId?: string;
