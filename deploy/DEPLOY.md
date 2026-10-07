@@ -128,6 +128,13 @@ PUBLIC_BASE_URL="https://<the address printed on member cards>"
   used. Changing either secret only means old and new rows can no longer be matched
   by address. The migration `mysql_migration_m4_verification.sql` creates the
   `VerificationEvent` table; `mysql_upgrade_to_current.sql` carries it too.
+- **MySQL 8 or newer** (Wellness+ reports, M4 Slice 14, D15). "Active members at
+  the end of each month" replays the tier and status histories with
+  `ROW_NUMBER() OVER (PARTITION BY ...)` and a `WITH` clause. MySQL 5.7 and MariaDB
+  older than 10.2 do not have them, and then the monthly series fails while the
+  other figures still work. Run `SELECT VERSION();` on the Hostinger database
+  before the first deployment of Slice 14. The slice has no schema change, so there
+  is no migration.
 - **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
   also the longest a stolen token stays usable; deactivation and suspension are
   enforced on every request regardless.
