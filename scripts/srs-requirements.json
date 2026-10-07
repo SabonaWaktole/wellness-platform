@@ -1951,6 +1951,21 @@
       "id": "FR-RPT-10",
       "priority": "Should",
       "requirement": "Every report shall have a table view and a CSV export. Exports are audited, cells that begin with =, +, - or @ are protected against formula injection, and an export contains contact details only for users with \"Members: view\"."
+    },
+    {
+      "id": "FR-DSH-14",
+      "priority": "Must",
+      "requirement": "The CEO dashboard shall show the Wellness+ block that Milestone 3 reserved (FR-DSH-12): active members and members per tier, corporate versus individual, new members, new paid memberships, upgrades, downgrades, renewal rate, memberships expiring in the window and, if the user can view payments, the membership revenue."
+    },
+    {
+      "id": "FR-DSH-15",
+      "priority": "Must",
+      "requirement": "The block shall follow the rules of Milestone 3 FR-DSH-03 and FR-DSH-05: period figures follow the period, \"as of now\" figures are labelled, and a click opens the report or list already filtered. Money is hidden and removed from the response for users without \"Members: view payments\"."
+    },
+    {
+      "id": "FR-DSH-16",
+      "priority": "Must",
+      "requirement": "The block shall be shown only to users with \"Members: view reports\". Other dashboards are unchanged. Reception keeps its landing page and gets \"Verify member\" in the menu."
     }
   ]
 }
