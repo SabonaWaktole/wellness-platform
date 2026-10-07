@@ -39,7 +39,7 @@ const request = (extra: Partial<VipRequest> = {}): VipRequest => ({
 
 const detail = (extra: Partial<MemberDetail> = {}): MemberDetail => ({
   id: 'm1', memberNumber: 'WP-000001', firstName: 'Ana', lastName: 'Hoxha', dateOfBirth: null, phone: null, email: 'ana@example.com', tier: 'BRONZE', status: 'ACTIVE',
-  valid: true, source: 'INDIVIDUAL', startsOn: '2026-10-01', employer: null, formerEmployee: false, language: 'sq', cityId: null, note: null,
+  valid: true, source: 'INDIVIDUAL', startsOn: '2026-10-01', employer: null, formerEmployee: false, expiringSoon: false, language: 'sq', cityId: null, note: null,
   createdBy: { id: 'u1', name: 'Ana Admin' }, createdAt: '2026-10-01T09:00:00.000Z', closedAt: null, effectiveTier: 'BRONZE', validity: { valid: true, reason: null },
   currentTerm: null, terms: [], tierHistory: [], statusHistory: [],
   family: { principalMemberId: null, relationshipId: null, principal: null, dependants: [], history: [] },

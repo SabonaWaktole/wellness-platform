@@ -30,7 +30,7 @@ const lookups = vi.mocked(lookupService);
 
 const row = (extra: Partial<MemberSummary> = {}): MemberSummary => ({
   id: 'm1', memberNumber: 'WP-000001', firstName: 'Ana', lastName: 'Hoxha', dateOfBirth: '1990-05-17', phone: '+355691234567', email: 'ana@example.com',
-  tier: 'GOLD', status: 'ACTIVE', valid: true, source: 'INDIVIDUAL', startsOn: '2026-10-01', employer: null, formerEmployee: false, ...extra,
+  tier: 'GOLD', status: 'ACTIVE', valid: true, source: 'INDIVIDUAL', startsOn: '2026-10-01', employer: null, formerEmployee: false, expiringSoon: false, ...extra,
 });
 
 const detail = (extra: Partial<MemberDetail> = {}): MemberDetail => ({

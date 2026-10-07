@@ -1,4 +1,5 @@
 {
+  "expiringBadge": "Skadon së shpejti",
   "breadcrumb": "Wellness+",
   "tiers": {
     "BRONZE": "Bronz",
@@ -169,6 +170,19 @@
       "system": "Sistemi",
       "registered": "Regjistruar"
     },
+    "correctTier": {
+      "button": "Korrigjo nivelin",
+      "title": "Korrigjo nivelin",
+      "help": "I jep anëtarit një afat të korrigjuar nga sot deri në datën e fundit. Regjistrohet në historikun e nivelit si korrigjim dhe në regjistrin e auditimit.",
+      "tier": "Niveli i korrigjuar",
+      "endsOn": "Vlen deri më",
+      "endsOnInvalid": "Zgjidhni një datë mbarimi që është sot ose më vonë.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Arsyeja është e detyrueshme.",
+      "failed": "Niveli nuk u korrigjua. Kontrolloni të dhënat dhe provoni sërish.",
+      "cancel": "Anulo",
+      "confirm": "Korrigjo nivelin"
+    },
     "tierReason": {
       "Purchase": "Blerje",
       "Renewal": "Rinovim",
@@ -179,6 +193,9 @@
       "VIP approved": "VIP u miratua",
       "VIP ended": "VIP përfundoi",
       "Import": "Importim",
+      "Correction ended": "Korrigjimi përfundoi",
+      "Term ended": "Afati përfundoi",
+      "Term started": "Afati nisi",
       "Correction": "Korrigjim"
     },
     "notePanel": {

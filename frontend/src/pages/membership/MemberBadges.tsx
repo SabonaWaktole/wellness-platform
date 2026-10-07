@@ -23,3 +23,9 @@ export const StatusBadge: React.FC<{ status: MemberStatus }> = ({ status }) => {
   const { t } = useTranslation('members');
   return <span className={`${styles.status} ${STATUS_CLASS[status]}`}>{t(`status.${status}`)}</span>;
 };
+
+/** FR-TIR-10: a paid term ends within the Expiring soon window. */
+export const ExpiringBadge: React.FC = () => {
+  const { t } = useTranslation('members');
+  return <span className={`${styles.status} ${styles.statusSuspended}`}>{t('expiringBadge')}</span>;
+};

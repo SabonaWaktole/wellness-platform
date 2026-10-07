@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Users } from 'lucide-react';
 import { TextInput } from '../../components/ui/TextInput/TextInput';
 import { SelectInput } from '../../components/ui/SelectInput/SelectInput';
@@ -10,7 +10,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { useAuthStore } from '../../store/useAuthStore';
 import { TIERS } from '../../services/membershipSettingsService';
 import { memberService, type MemberPage, type MemberQuery } from '../../services/memberService';
-import { StatusBadge, TierBadge } from './MemberBadges';
+import { ExpiringBadge, StatusBadge, TierBadge } from './MemberBadges';
 import { useTierLabels } from './useTierLabels';
 import styles from './Members.module.css';
 
@@ -37,11 +37,13 @@ export const MembersContent: React.FC = () => {
   const { t } = useTranslation('members');
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  // The expiring-memberships notification links here with ?expiringSoon=true (FR-TIR-11).
+  const [searchParams] = useSearchParams();
   const canManage = useAuthStore((s) => s.user?.permissions?.['members.manage'] !== undefined);
   const tier = useTierLabels(tenantSlug);
 
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [filters, setFilters] = useState<Filters>({ ...NO_FILTERS, expiringSoon: searchParams.get('expiringSoon') === 'true' });
   const [sortBy, setSortBy] = useState<NonNullable<MemberQuery['sortBy']>>('name');
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<MemberPage | null>(null);
@@ -219,7 +221,7 @@ export const MembersContent: React.FC = () => {
                         {member.formerEmployee && <div className={styles.muted}>{t('list.formerEmployee')}</div>}
                       </td>
                       <td><TierBadge tier={member.tier} label={style.label} colour={style.colour} /></td>
-                      <td><StatusBadge status={member.status} /></td>
+                      <td><StatusBadge status={member.status} />{member.expiringSoon && <> <ExpiringBadge /></>}</td>
                       <td>{t(`source.${member.source}`)}</td>
                       {showPhone && <td>{member.phone ?? <span className={styles.muted}>—</span>}</td>}
                       {showEmail && <td>{member.email ?? <span className={styles.muted}>—</span>}</td>}

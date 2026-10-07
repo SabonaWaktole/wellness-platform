@@ -1,4 +1,5 @@
 {
+  "expiringBadge": "Expiring soon",
   "breadcrumb": "Wellness+",
   "tiers": {
     "BRONZE": "Bronze",
@@ -169,6 +170,19 @@
       "system": "System",
       "registered": "Registered"
     },
+    "correctTier": {
+      "button": "Correct tier",
+      "title": "Correct the tier",
+      "help": "Gives the member a corrected term from today to the end date. It is recorded in the tier history as a correction and in the audit log.",
+      "tier": "Corrected tier",
+      "endsOn": "Valid until",
+      "endsOnInvalid": "Choose an end date that is today or later.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required.",
+      "failed": "The tier could not be corrected. Check the details and try again.",
+      "cancel": "Cancel",
+      "confirm": "Correct tier"
+    },
     "tierReason": {
       "Purchase": "Purchase",
       "Renewal": "Renewal",
@@ -179,6 +193,9 @@
       "VIP approved": "VIP approved",
       "VIP ended": "VIP ended",
       "Import": "Import",
+      "Correction ended": "Correction ended",
+      "Term ended": "Term ended",
+      "Term started": "Term started",
       "Correction": "Correction"
     },
     "notePanel": {

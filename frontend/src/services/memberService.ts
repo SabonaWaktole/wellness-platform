@@ -24,6 +24,8 @@ export interface MemberSummary {
   startsOn: string;
   employer: { id: string; name: string | null } | null;
   formerEmployee: boolean;
+  /** A paid term ends within the Expiring soon window (FR-TIR-10). */
+  expiringSoon: boolean;
 }
 
 export interface MemberTerm {
@@ -171,6 +173,9 @@ export const memberService = {
   familyRelationships: async (slug: string) => (await api.get<{ data: RelationshipLabel[] }>(`${base(slug)}/family/relationships`)).data.data,
   addFamilyMember: async (slug: string, principalId: string, body: AddFamilyInput, confirmDifferentPerson = false) =>
     (await api.post<{ data: MemberSummary }>(`${base(slug)}/${principalId}/family`, { ...body, ...(confirmDifferentPerson ? { confirmDifferentPerson } : {}) })).data.data,
+  /** The Administrator corrects a tier with an end date and a required reason (FR-TIR-09). */
+  correctTier: async (slug: string, memberId: string, body: { tier: 'SILVER' | 'GOLD'; endsOn: string; reason: string }) =>
+    (await api.post<{ data: { memberId: string; tier: Tier; endsOn: string } }>(`${base(slug)}/${memberId}/correct-tier`, body)).data.data,
   removeFamilyLink: async (slug: string, memberId: string, reason: string) =>
     (await api.post<{ data: MemberSummary }>(`${base(slug)}/${memberId}/family/remove`, { reason })).data.data,
 };

@@ -14,7 +14,8 @@ import { lookupService, type City } from '../../services/lookupService';
 import { lookupLabel } from '../../utils/lookupLabel';
 import { memberService, type MemberDetail, type StatusAction } from '../../services/memberService';
 import { memberPaymentService, voidRefusalOf } from '../../services/memberPaymentService';
-import { StatusBadge, TierBadge } from './MemberBadges';
+import { ExpiringBadge, StatusBadge, TierBadge } from './MemberBadges';
+import { CorrectTierDialog } from './CorrectTierDialog';
 import { useTierLabels } from './useTierLabels';
 import { FamilyTab } from './FamilyTab';
 import { VipTab } from './VipTab';
@@ -46,6 +47,7 @@ export const MemberDetailContent: React.FC = () => {
   const canManage = useAuthStore((s) => s.user?.permissions?.['members.manage'] !== undefined);
   const canApproveVip = useAuthStore((s) => s.user?.permissions?.['members.vip.approve'] !== undefined);
   const canRecord = useAuthStore((s) => s.user?.permissions?.['members.payments.record'] !== undefined);
+  const canCorrect = useAuthStore((s) => s.user?.permissions?.['wellnessplus.settings.manage'] !== undefined);
   const { format: formatMoney } = useMoneyFormat();
   const tier = useTierLabels(tenantSlug);
   const openReceipt = useReceipt(tenantSlug);
@@ -59,6 +61,7 @@ export const MemberDetailContent: React.FC = () => {
   const [statusError, setStatusError] = useState<'reason' | 'failed' | null>(null);
   const [changing, setChanging] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<'reason' | 'notLatest' | 'alreadyVoided' | 'failed' | null>(null);
@@ -168,13 +171,19 @@ export const MemberDetailContent: React.FC = () => {
             <TierBadge tier={member.effectiveTier} label={style.label} colour={style.colour} />
             <StatusBadge status={member.status} />
             <span className={styles.chip}>{validityText}</span>
+            {member.expiringSoon && <ExpiringBadge />}
           </div>
         </div>
-        {(canManage || canRecord) && (
+        {(canManage || canRecord || canCorrect) && (
           <div className={styles.headerActions}>
             {canRecord && member.status === 'ACTIVE' && (
               <Button icon={<Plus size={16} />} onClick={() => setRecording(true)}>
                 {t('payments.record')}
+              </Button>
+            )}
+            {canCorrect && member.status !== 'CLOSED' && (
+              <Button variant="outline" onClick={() => setCorrecting(true)}>
+                {t('detail.correctTier.button')}
               </Button>
             )}
             {canManage && <Button variant="outline" icon={<Pencil size={16} />} onClick={() => navigate(`/${tenantSlug}/members/${member.id}/edit`)}>
@@ -426,6 +435,20 @@ export const MemberDetailContent: React.FC = () => {
           onRecorded={() => {
             setRecording(false);
             setTab('payments');
+            void load();
+          }}
+        />
+      )}
+
+      {correcting && tenantSlug && memberId && (
+        <CorrectTierDialog
+          tenantSlug={tenantSlug}
+          memberId={memberId}
+          tierLabel={(value) => tier(value).label}
+          onClose={() => setCorrecting(false)}
+          onDone={() => {
+            setCorrecting(false);
+            setTab('history');
             void load();
           }}
         />
