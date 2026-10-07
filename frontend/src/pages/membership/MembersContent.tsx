@@ -24,8 +24,12 @@ type Filters = {
   expiringSoon: boolean;
   vipReviewDue: boolean;
   formerEmployee: boolean;
+  /** The company the former employees left, from the company tab's link (FR-EMP-13). */
+  formerEmployerClientId: string;
+  leftFrom: string;
+  leftTo: string;
 };
-const NO_FILTERS: Filters = { tier: '', status: '', validity: '', source: '', expiringSoon: false, vipReviewDue: false, formerEmployee: false };
+const NO_FILTERS: Filters = { tier: '', status: '', validity: '', source: '', expiringSoon: false, vipReviewDue: false, formerEmployee: false, formerEmployerClientId: '', leftFrom: '', leftTo: '' };
 
 /**
  * The member list (FR-MEM-07): search by name, member ID, phone and email; filter by tier, status, validity,
@@ -43,7 +47,12 @@ export const MembersContent: React.FC = () => {
   const tier = useTierLabels(tenantSlug);
 
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<Filters>({ ...NO_FILTERS, expiringSoon: searchParams.get('expiringSoon') === 'true' });
+  const [filters, setFilters] = useState<Filters>({
+    ...NO_FILTERS,
+    expiringSoon: searchParams.get('expiringSoon') === 'true',
+    formerEmployee: searchParams.get('formerEmployee') === 'true' || searchParams.has('formerEmployerClientId'),
+    formerEmployerClientId: searchParams.get('formerEmployerClientId') ?? '',
+  });
   const [sortBy, setSortBy] = useState<NonNullable<MemberQuery['sortBy']>>('name');
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<MemberPage | null>(null);
@@ -144,9 +153,15 @@ export const MembersContent: React.FC = () => {
             {t('list.filters.vipReviewDue')}
           </label>
           <label className={styles.filterCheck}>
-            <input type="checkbox" checked={filters.formerEmployee} onChange={(e) => set('formerEmployee', e.target.checked)} />
+            <input type="checkbox" checked={filters.formerEmployee} onChange={(e) => setFilters((f) => ({ ...f, formerEmployee: e.target.checked, ...(e.target.checked ? {} : { formerEmployerClientId: '', leftFrom: '', leftTo: '' }) }))} />
             {t('list.filters.formerEmployee')}
           </label>
+          {filters.formerEmployee && (
+            <>
+              <TextInput label={t('list.filters.leftFrom')} type="date" value={filters.leftFrom} onChange={(e) => set('leftFrom', e.target.value)} />
+              <TextInput label={t('list.filters.leftTo')} type="date" value={filters.leftTo} onChange={(e) => set('leftTo', e.target.value)} />
+            </>
+          )}
           <SelectInput label={t('list.sortBy')} value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
             {(['name', 'memberNumber', 'tier', 'createdAt'] as const).map((value) => (
               <option key={value} value={value}>{t(`list.sort.${value}`)}</option>

@@ -15,6 +15,7 @@ import { Tabs } from '../../components/ui/Tabs';
 import { usePermission } from '../../hooks/usePermission';
 import { ClientContractsTab } from '../../components/clients/ClientContractsTab';
 import { ClientDealsTab } from '../../components/clients/ClientDealsTab';
+import { CompanyWellnessTab } from '../membership/CompanyWellnessTab';
 import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { PlanActivityDialog } from '../../components/calendar/PlanActivityDialog';
@@ -94,7 +95,7 @@ export const ClientDetailContent: React.FC = () => {
   // pending invitations are a Business-Owner-only endpoint.
   const { staff, fetchStaff } = useTeam();
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts' | 'deals'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'appointments' | 'contracts' | 'deals' | 'wellness'>('timeline');
   // FR-RBAC-07: a role without contract validity (Reception, once UAT-3 removes
   // it) gets no tab, rather than one whose request is refused. Likewise deals,
   // which Reception never sees (FR-DEAL-04).
@@ -102,8 +103,12 @@ export const ClientDetailContent: React.FC = () => {
   const canSeeDeals = usePermission('deals.view');
   const canPrice = usePermission('offers.edit');
   const canImportEmployees = usePermission('members.import');
+  // M4 Slice 10 (FR-MEM-11): the Wellness+ tab is for "Members: view".
+  const canSeeMembers = usePermission('members.view');
   const shownTab =
-    (activeTab === 'contracts' && !canSeeContracts) || (activeTab === 'deals' && !canSeeDeals) ? 'timeline' : activeTab;
+    (activeTab === 'contracts' && !canSeeContracts) || (activeTab === 'deals' && !canSeeDeals) || (activeTab === 'wellness' && !canSeeMembers)
+      ? 'timeline'
+      : activeTab;
   const canAddActivities = usePermission('activities.add');
   const canAddNotes = usePermission('notes.add');
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
@@ -459,10 +464,14 @@ export const ClientDetailContent: React.FC = () => {
               ...(canSeeContracts ? [{ id: 'contracts' as const, label: t('detail.tabContracts') }] : []),
               // No count, for the same reason as contracts (M2 Slice 6).
               ...(canSeeDeals ? [{ id: 'deals' as const, label: t('detail.tabDeals') }] : []),
+              // No count either: the tab loads its own data when it is opened.
+              ...(canSeeMembers ? [{ id: 'wellness' as const, label: t('detail.tabWellness') }] : []),
             ]}
           />
 
-          {shownTab === 'deals' ? (
+          {shownTab === 'wellness' ? (
+            <CompanyWellnessTab clientId={clientId || ''} />
+          ) : shownTab === 'deals' ? (
             <ClientDealsTab clientId={clientId || ''} />
           ) : shownTab === 'contracts' ? (
             <ClientContractsTab clientId={clientId || ''} />

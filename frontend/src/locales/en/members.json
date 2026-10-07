@@ -44,7 +44,9 @@
       "expiringSoon": "Expiring soon",
       "vipReviewDue": "VIP review due",
       "formerEmployee": "Former employee",
-      "clear": "Clear filters"
+      "clear": "Clear filters",
+      "leftFrom": "Left company from",
+      "leftTo": "Left company until"
     },
     "columns": {
       "number": "Member ID",
@@ -134,7 +136,8 @@
       "family": "Family group",
       "createdBy": "Created by",
       "createdAt": "Created",
-      "closedAt": "Closed"
+      "closedAt": "Closed",
+      "formerEmployer": "Former employer"
     },
     "none": "None",
     "tierCard": {
@@ -196,7 +199,8 @@
       "Correction ended": "Correction ended",
       "Term ended": "Term ended",
       "Term started": "Term started",
-      "Correction": "Correction"
+      "Correction": "Correction",
+      "Company contract valid again": "Company contract valid again"
     },
     "notePanel": {
       "empty": "No internal note."
@@ -219,7 +223,9 @@
       "confirm": "Confirm",
       "cancel": "Cancel",
       "failed": "The status could not be changed."
-    }
+    },
+    "formerEmployee": "Former employee",
+    "formerEmployerSince": "Left on {{date}}"
   },
   "payments": {
     "record": "Record payment",
@@ -524,6 +530,53 @@
       "ALREADY_CONFIRMED": "This upload was already confirmed.",
       "EXPIRED": "The preview expired after 24 hours. Upload the file again.",
       "BAD_TOKEN": "This confirmation does not match the preview. Upload the file again."
+    }
+  },
+  "removeEmployer": {
+    "button": "Remove from company",
+    "title": "Remove from company",
+    "titleMany": "Remove employees from the company",
+    "help": "{{company}} will no longer sponsor this member's Silver. Any tier they paid for stays, and they are kept as a former employee.",
+    "helpMany": "{{count}} selected members will be removed together. Any tier they paid for stays, and they are kept as former employees.",
+    "leftOn": "Leaving date",
+    "leftOnInvalid": "Choose a day that is not in the future.",
+    "reason": "Reason (optional)",
+    "reasonInvalid": "The reason is too long.",
+    "notEmployee": "This member is not linked to a company any more.",
+    "failed": "The removal could not be saved. Try again.",
+    "cancel": "Cancel",
+    "confirm": "Remove"
+  },
+  "companyTab": {
+    "title": "Wellness+ members",
+    "loadFailed": "The Wellness+ members could not be loaded.",
+    "membersOfEmployees": "{{members}} members of {{employees}} employees",
+    "membersOnly": "{{members}} members",
+    "sponsorValid": "The company contract sponsors Silver until {{date}}.",
+    "sponsorNone": "The company has no valid contract, so sponsored Silver is not active.",
+    "perTier": "Members per tier",
+    "tierCount": "{{tier}}: {{count}}",
+    "members": "Members",
+    "noMembers": "No employees are linked to this company yet.",
+    "selectAll": "Select all members",
+    "select": "Select {{name}}",
+    "removeSelected": "Remove {{count}} selected from the company",
+    "former_one": "Former employee ({{count}})",
+    "former_other": "Former employees ({{count}})",
+    "noFormer": "Nobody has left this company.",
+    "leftOn": "Left on",
+    "openInList": "Open in the member list",
+    "upload": "Upload employees",
+    "uploads": "Upload history",
+    "noUploads": "No employee list was uploaded for this company.",
+    "uploadFile": "File",
+    "uploadBy": "By",
+    "uploadWhen": "When",
+    "uploadCounts": "Result",
+    "counts": "{{created}} created, {{linked}} linked, {{skipped}} not added",
+    "uploadStatus": {
+      "PREVIEWED": "Waiting for confirmation",
+      "EXPIRED": "Expired"
     }
   }
 }

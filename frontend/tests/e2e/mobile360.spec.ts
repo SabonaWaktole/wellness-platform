@@ -208,6 +208,14 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await page.keyboard.press('Escape');
     });
 
+    // M4 Slice 10 (NFR-USE-04): the Wellness+ tab of the company page, with its tables scrolling inside their own containers.
+    test('company detail → Wellness+ tab', async ({ page }) => {
+      await page.goto(`/${TENANT}/clients/${companyId}`);
+      await page.getByRole('tab', { name: 'Wellness+' }).click();
+      await expect(page.getByRole('heading', { name: /Wellness\+ members|Anëtarët Wellness\+/ })).toBeVisible();
+      await expectNoHorizontalOverflow(page, 'company detail → Wellness+ tab');
+    });
+
     for (const [screen, path] of screens) {
       test(screen, async ({ page }) => {
         await page.goto(`/${TENANT}/${path(companyId)}`);

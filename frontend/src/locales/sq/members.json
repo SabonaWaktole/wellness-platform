@@ -44,7 +44,9 @@
       "expiringSoon": "Skadon së shpejti",
       "vipReviewDue": "Rishikim VIP i afërt",
       "formerEmployee": "Ish-punonjës",
-      "clear": "Pastro filtrat"
+      "clear": "Pastro filtrat",
+      "leftFrom": "U largua nga data",
+      "leftTo": "U largua deri më"
     },
     "columns": {
       "number": "ID e anëtarit",
@@ -134,7 +136,8 @@
       "family": "Grupi familjar",
       "createdBy": "Krijuar nga",
       "createdAt": "Krijuar më",
-      "closedAt": "Mbyllur më"
+      "closedAt": "Mbyllur më",
+      "formerEmployer": "Ish-punonjësi i"
     },
     "none": "Asnjë",
     "tierCard": {
@@ -196,7 +199,8 @@
       "Correction ended": "Korrigjimi përfundoi",
       "Term ended": "Afati përfundoi",
       "Term started": "Afati nisi",
-      "Correction": "Korrigjim"
+      "Correction": "Korrigjim",
+      "Company contract valid again": "Kontrata e kompanisë u bë sërish e vlefshme"
     },
     "notePanel": {
       "empty": "Nuk ka shënim të brendshëm."
@@ -219,7 +223,9 @@
       "confirm": "Konfirmo",
       "cancel": "Anulo",
       "failed": "Statusi nuk u ndryshua."
-    }
+    },
+    "formerEmployee": "Ish-punonjës",
+    "formerEmployerSince": "U largua më {{date}}"
   },
   "payments": {
     "record": "Regjistro pagesë",
@@ -524,6 +530,53 @@
       "ALREADY_CONFIRMED": "Ky ngarkim është konfirmuar tashmë.",
       "EXPIRED": "Pamja paraprake skadoi pas 24 orësh. Ngarkoni skedarin përsëri.",
       "BAD_TOKEN": "Ky konfirmim nuk përputhet me pamjen paraprake. Ngarkoni skedarin përsëri."
+    }
+  },
+  "removeEmployer": {
+    "button": "Hiq nga kompania",
+    "title": "Hiq nga kompania",
+    "titleMany": "Hiq punonjësit nga kompania",
+    "help": "{{company}} nuk do ta sponsorizojë më Silver-in e këtij anëtari. Niveli që ka paguar vetë mbetet dhe anëtari ruhet si ish-punonjës.",
+    "helpMany": "{{count}} anëtarët e zgjedhur do të hiqen së bashku. Niveli që kanë paguar vetë mbetet dhe ruhen si ish-punonjës.",
+    "leftOn": "Data e largimit",
+    "leftOnInvalid": "Zgjidh një ditë që nuk është në të ardhmen.",
+    "reason": "Arsyeja (opsionale)",
+    "reasonInvalid": "Arsyeja është shumë e gjatë.",
+    "notEmployee": "Ky anëtar nuk është më i lidhur me asnjë kompani.",
+    "failed": "Heqja nuk u ruajt. Provo përsëri.",
+    "cancel": "Anulo",
+    "confirm": "Hiq"
+  },
+  "companyTab": {
+    "title": "Anëtarët Wellness+",
+    "loadFailed": "Anëtarët Wellness+ nuk u ngarkuan.",
+    "membersOfEmployees": "{{members}} anëtarë nga {{employees}} punonjës",
+    "membersOnly": "{{members}} anëtarë",
+    "sponsorValid": "Kontrata e kompanisë sponsorizon Silver deri më {{date}}.",
+    "sponsorNone": "Kompania nuk ka kontratë të vlefshme, ndaj Silver i sponsorizuar nuk është aktiv.",
+    "perTier": "Anëtarë sipas nivelit",
+    "tierCount": "{{tier}}: {{count}}",
+    "members": "Anëtarët",
+    "noMembers": "Asnjë punonjës nuk është lidhur ende me këtë kompani.",
+    "selectAll": "Zgjidh të gjithë anëtarët",
+    "select": "Zgjidh {{name}}",
+    "removeSelected": "Hiq {{count}} të zgjedhur nga kompania",
+    "former_one": "Ish-punonjës ({{count}})",
+    "former_other": "Ish-punonjës ({{count}})",
+    "noFormer": "Askush nuk ka lënë këtë kompani.",
+    "leftOn": "U largua më",
+    "openInList": "Hape në listën e anëtarëve",
+    "upload": "Ngarko punonjësit",
+    "uploads": "Historiku i ngarkimeve",
+    "noUploads": "Për këtë kompani nuk është ngarkuar asnjë listë punonjësish.",
+    "uploadFile": "Skedari",
+    "uploadBy": "Nga",
+    "uploadWhen": "Kur",
+    "uploadCounts": "Rezultati",
+    "counts": "{{created}} të krijuar, {{linked}} të lidhur, {{skipped}} të pashtuar",
+    "uploadStatus": {
+      "PREVIEWED": "Pret konfirmimin",
+      "EXPIRED": "Skadoi"
     }
   }
 }

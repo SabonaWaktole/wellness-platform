@@ -138,6 +138,10 @@ export interface MemberQuery {
   expiringSoon?: boolean;
   vipReviewDue?: boolean;
   formerEmployee?: boolean;
+  /** Former employees of this company only, with the leaving date inside the range (FR-EMP-13). */
+  formerEmployerClientId?: string;
+  leftFrom?: string;
+  leftTo?: string;
   areaId?: string;
   cityId?: string;
   sortBy?: 'name' | 'memberNumber' | 'tier' | 'createdAt';
@@ -176,6 +180,12 @@ export const memberService = {
   /** The Administrator corrects a tier with an end date and a required reason (FR-TIR-09). */
   correctTier: async (slug: string, memberId: string, body: { tier: 'SILVER' | 'GOLD'; endsOn: string; reason: string }) =>
     (await api.post<{ data: { memberId: string; tier: Tier; endsOn: string } }>(`${base(slug)}/${memberId}/correct-tier`, body)).data.data,
+  /** Removes an employee from the company; the member is kept as a former employee (FR-EMP-12). `leftOn` defaults to today on the server. */
+  removeEmployer: async (slug: string, id: string, body: { leftOn?: string; reason?: string }) =>
+    (await api.post<{ data: MemberSummary }>(`${base(slug)}/${id}/remove-employer`, body)).data.data,
+  /** Removes several selected employees in one transaction (FR-EMP-15). Members no longer linked come back in `skipped`. */
+  removeEmployees: async (slug: string, memberIds: string[], body: { leftOn?: string; reason?: string }) =>
+    (await api.post<{ data: { removed: number; skipped: string[] } }>(`${base(slug)}/remove-employees`, { memberIds, ...body })).data.data,
   removeFamilyLink: async (slug: string, memberId: string, reason: string) =>
     (await api.post<{ data: MemberSummary }>(`${base(slug)}/${memberId}/family/remove`, { reason })).data.data,
 };

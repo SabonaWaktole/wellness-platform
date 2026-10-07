@@ -16,6 +16,7 @@ import { memberService, type MemberDetail, type StatusAction } from '../../servi
 import { memberPaymentService, voidRefusalOf } from '../../services/memberPaymentService';
 import { ExpiringBadge, StatusBadge, TierBadge } from './MemberBadges';
 import { CorrectTierDialog } from './CorrectTierDialog';
+import { RemoveFromCompanyDialog } from './RemoveFromCompanyDialog';
 import { useTierLabels } from './useTierLabels';
 import { FamilyTab } from './FamilyTab';
 import { VipTab } from './VipTab';
@@ -62,6 +63,7 @@ export const MemberDetailContent: React.FC = () => {
   const [changing, setChanging] = useState(false);
   const [recording, setRecording] = useState(false);
   const [correcting, setCorrecting] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<'reason' | 'notLatest' | 'alreadyVoided' | 'failed' | null>(null);
@@ -172,6 +174,7 @@ export const MemberDetailContent: React.FC = () => {
             <StatusBadge status={member.status} />
             <span className={styles.chip}>{validityText}</span>
             {member.expiringSoon && <ExpiringBadge />}
+            {member.formerEmployee && <span className={styles.chip}>{t('detail.formerEmployee')}</span>}
           </div>
         </div>
         {(canManage || canRecord || canCorrect) && (
@@ -184,6 +187,11 @@ export const MemberDetailContent: React.FC = () => {
             {canCorrect && member.status !== 'CLOSED' && (
               <Button variant="outline" onClick={() => setCorrecting(true)}>
                 {t('detail.correctTier.button')}
+              </Button>
+            )}
+            {canManage && member.employer && member.status !== 'CLOSED' && (
+              <Button variant="outline" onClick={() => setLeaving(true)}>
+                {t('removeEmployer.button')}
               </Button>
             )}
             {canManage && <Button variant="outline" icon={<Pencil size={16} />} onClick={() => navigate(`/${tenantSlug}/members/${member.id}/edit`)}>
@@ -243,6 +251,13 @@ export const MemberDetailContent: React.FC = () => {
               {fact(t('detail.fields.city'), city ? lookupLabel(city, i18n.language) : none)}
               {fact(t('detail.fields.startsOn'), day(member.startsOn))}
               {fact(t('detail.fields.employer'), member.employer?.name ?? none)}
+              {member.formerEmployerClientId && member.leftCompanyAt &&
+                fact(
+                  t('detail.fields.formerEmployer'),
+                  <a href={`/${tenantSlug}/clients/${member.formerEmployerClientId}`} onClick={(e) => { e.preventDefault(); navigate(`/${tenantSlug}/clients/${member.formerEmployerClientId}`); }}>
+                    {t('detail.formerEmployerSince', { date: day(member.leftCompanyAt) })}
+                  </a>
+                )}
               {fact(t('detail.fields.family'), member.family.principalMemberId ? t(`source.FAMILY`) : none)}
               {fact(t('detail.fields.createdBy'), member.createdBy.name ?? none)}
               {fact(t('detail.fields.createdAt'), stamp(member.createdAt))}
@@ -435,6 +450,20 @@ export const MemberDetailContent: React.FC = () => {
           onRecorded={() => {
             setRecording(false);
             setTab('payments');
+            void load();
+          }}
+        />
+      )}
+
+      {leaving && tenantSlug && memberId && (
+        <RemoveFromCompanyDialog
+          tenantSlug={tenantSlug}
+          memberIds={[memberId]}
+          companyName={member.employer?.name ?? null}
+          onClose={() => setLeaving(false)}
+          onDone={() => {
+            setLeaving(false);
+            setTab('history');
             void load();
           }}
         />
