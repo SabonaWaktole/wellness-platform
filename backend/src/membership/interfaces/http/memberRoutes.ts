@@ -38,6 +38,7 @@ import {
   UpdateMemberUseCase,
 } from '../../application/use-cases/MemberUseCases';
 import { presentMemberSummary } from '../../application/presentMember';
+import { GetCardLinkUseCase, ReplaceCardLinkUseCase } from '../../application/use-cases/CardUseCases';
 import { EmployeeRemovalRefusedError, RemoveEmployeesUseCase, RemoveEmployeeUseCase } from '../../application/use-cases/EmployerUseCases';
 
 const text = z.string();
@@ -108,6 +109,8 @@ export interface MemberUseCases {
   correctTier: CorrectMemberTierUseCase;
   removeEmployee: RemoveEmployeeUseCase;
   removeEmployees: RemoveEmployeesUseCase;
+  cardLink: GetCardLinkUseCase;
+  replaceCardLink: ReplaceCardLinkUseCase;
 }
 
 /**
@@ -290,6 +293,15 @@ export const createMemberRouter = (
     manage,
     validateRequest(removeEmployeeSchema),
     handle((req, ctx) => uc.removeEmployee.execute({ ...ctx, memberId: String(req.params.id), leftOn: req.body.leftOn, reason: req.body.reason }))
+  );
+
+  // M4 Slice 11 (FR-CRD-09, FR-CRD-10): the card link staff show, copy and print, and a new link. The token is in the link and nowhere else.
+  router.get('/:id/card-link', manage, handle((req, ctx) => uc.cardLink.execute({ access: ctx.access, tenantId: ctx.tenantId, memberId: String(req.params.id) })));
+
+  router.post(
+    '/:id/card-link/replace',
+    manage,
+    handle((req, ctx) => uc.replaceCardLink.execute({ access: ctx.access, tenantId: ctx.tenantId, memberId: String(req.params.id) }))
   );
 
   // M4 Slice 7: a VIP request needs "manage"; ending a VIP needs the approval permission.

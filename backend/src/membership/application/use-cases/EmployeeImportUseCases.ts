@@ -193,6 +193,7 @@ export class ConfirmEmployeeImportUseCase {
       const find = async (details: Parameters<typeof memberStore.findDuplicates>[1]) => knownFrom(await memberStore.findDuplicates(input.tenantId, details));
 
       const final: ImportRow[] = [];
+      const memberIds: string[] = [];
       for (const row of upload.rows ?? []) {
         if (row.outcome !== 'NEW' && row.outcome !== 'EXISTING') {
           final.push(row);
@@ -213,9 +214,11 @@ export class ConfirmEmployeeImportUseCase {
             employerClientId: company.id,
           });
           await memberStore.addStatusHistory({ memberId: created.id, fromStatus: null, toStatus: 'ACTIVE', reason: null, changedByUserId: input.access.userId });
+          memberIds.push(created.id);
           await this.sponsor(paymentStore, { tenantId: input.tenantId, userId: input.access.userId, memberId: created.id, tierBefore: 'BRONZE', today, graceDays });
         } else if (again.outcome === 'EXISTING') {
           const member = (await memberStore.find(input.tenantId, again.memberId!)) as MemberRecord;
+          memberIds.push(member.id);
           await memberStore.setEmployer(input.tenantId, member.id, company.id);
           await this.sponsor(paymentStore, { tenantId: input.tenantId, userId: input.access.userId, memberId: member.id, tierBefore: member.currentTier, today, graceDays });
         }
@@ -226,7 +229,7 @@ export class ConfirmEmployeeImportUseCase {
       const result: ImportRowResult[] = final
         .filter((r) => SKIPPED_OUTCOMES.has(r.outcome))
         .map((r) => ({ row: r.row, outcome: r.outcome as ImportRowResult['outcome'], reason: r.reason }));
-      await importStore.finish(upload.id, { ...counts, result, confirmedAt: now });
+      await importStore.finish(upload.id, { ...counts, result, memberIds, confirmedAt: now });
       await auditTrail.record({
         tenantId: input.tenantId,
         userId: input.access.userId,

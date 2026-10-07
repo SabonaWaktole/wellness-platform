@@ -2385,6 +2385,7 @@ model Member {
   payments       MemberPayment[]
   familyEvents   MemberFamilyEvent[]
   vipRequests    VipRequest[]
+  cardTokens     MemberCardToken[]
 
   @@unique([tenantId, memberNumber])
   @@index([tenantId, lastName, firstName])
@@ -2554,10 +2555,27 @@ model EmployeeImport {
   errors       Int       @default(0)
   createdAt    DateTime  @default(now())
   confirmedAt  DateTime?
+  /// Ids of the members created or linked, kept for the card-links sheet (Slice 11). Opaque ids, no personal value.
+  memberIds    Json?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, clientId, createdAt])
   @@index([tenantId, status, createdAt])
+}
+
+/// A card link that was replaced (M4 Slice 11, D11, FR-CRD-10). Only the SHA-256
+/// of the old token is kept, so the old URL can answer "This card was replaced"
+/// while an unknown token answers "Card not found", and the old secret itself is
+/// not stored anywhere.
+model MemberCardToken {
+  id         String   @id
+  memberId   String
+  tokenHash  String   @unique
+  replacedAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
 }

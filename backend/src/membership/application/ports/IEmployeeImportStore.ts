@@ -14,6 +14,8 @@ export interface EmployeeImportRecord extends ImportCounts {
   confirmToken: string;
   createdAt: Date;
   confirmedAt: Date | null;
+  /** The members created or linked by the confirmed upload: opaque ids, kept for the card-links sheet (FR-EMP-08). */
+  memberIds: string[] | null;
 }
 
 export interface NewEmployeeImport extends ImportCounts {
@@ -28,6 +30,7 @@ export interface NewEmployeeImport extends ImportCounts {
 
 export interface ConfirmedImport extends ImportCounts {
   result: ImportRowResult[];
+  memberIds: string[];
   confirmedAt: Date;
 }
 
@@ -45,6 +48,8 @@ export interface IEmployeeSheetReader {
 export interface IEmployeeSheetWriter {
   template(language: 'sq' | 'en'): Promise<Buffer>;
   result(rows: readonly ImportRowResult[]): Promise<Buffer>;
+  /** FR-EMP-08: member number, name and card link per member, safe to open in Excel (NFR-SEC-09). */
+  cardLinks(rows: ReadonlyArray<{ memberNumber: string; name: string; url: string }>): Promise<Buffer>;
 }
 
 export interface IEmployeeImportStore {

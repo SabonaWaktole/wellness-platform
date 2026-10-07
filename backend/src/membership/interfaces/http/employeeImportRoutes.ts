@@ -14,7 +14,7 @@ import { PermissionDeniedError } from '../../../access/domain/errors';
 import { redactMemberFields } from '../../../access/domain/redactFields';
 import { EMPLOYEE_IMPORT_LIMITS } from '../../domain/employeeImport';
 import { EmployeeImportNotFoundError, EmployeeImportRefusedError, type EmployeeImportRefusal } from '../../application/employeeImportErrors';
-import { MEMBERS_IMPORT, MEMBERS_VIEW } from '../../application/membershipPermissions';
+import { MEMBERS_IMPORT, MEMBERS_MANAGE, MEMBERS_VIEW } from '../../application/membershipPermissions';
 import {
   ConfirmEmployeeImportUseCase,
   GetEmployeeImportResultUseCase,
@@ -22,6 +22,7 @@ import {
   ListEmployeeImportsUseCase,
   PreviewEmployeeImportUseCase,
 } from '../../application/use-cases/EmployeeImportUseCases';
+import type { ExportUploadCardLinksUseCase } from '../../application/use-cases/CardUseCases';
 
 export interface EmployeeImportUseCases {
   template: GetEmployeeTemplateUseCase;
@@ -29,6 +30,7 @@ export interface EmployeeImportUseCases {
   confirm: ConfirmEmployeeImportUseCase;
   list: ListEmployeeImportsUseCase;
   result: GetEmployeeImportResultUseCase;
+  cardLinks: ExportUploadCardLinksUseCase;
 }
 
 /** The confirmation carries the token of the preview and nothing else (FR-EMP-04). */
@@ -152,6 +154,17 @@ export const createEmployeeImportRouter = (
     try {
       const tenant = requireTenant(req);
       const { fileName, file } = await uc.result.execute({ access: req.access!, tenantId: tenant.id, importId: String(req.params.id) });
+      sendFile(res, fileName, file);
+    } catch (error) {
+      fail(res, next, error);
+    }
+  });
+
+  // M4 Slice 11 (FR-EMP-08): name, member ID and card link per member of a confirmed upload. Members: manage.
+  router.get('/employee-imports/:id/card-links.xlsx', requirePermission(MEMBERS_MANAGE), async (req, res, next) => {
+    try {
+      const tenant = requireTenant(req);
+      const { fileName, file } = await uc.cardLinks.execute({ access: req.access!, tenantId: tenant.id, importId: String(req.params.id) });
       sendFile(res, fileName, file);
     } catch (error) {
       fail(res, next, error);

@@ -110,6 +110,11 @@ PUBLIC_BASE_URL="https://<the address printed on member cards>"
   Fix it before the first card is issued; if it ever changes, redirect the old
   address to the new one in the host's configuration so issued cards keep
   working.
+- **`CARD_RATE_LIMIT_PER_HOUR`** (optional, Wellness+, NFR-SEC-08) is how many
+  requests one IP address may make to the public card page per hour. The default
+  is 60. The card page is `/m/<token>` on the public address and the QR holds
+  `/v/<token>`; both are served by the frontend and need the same single-page
+  fallback as every other frontend route.
 - **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
   also the longest a stolen token stays usable; deactivation and suspension are
   enforced on every request regardless.

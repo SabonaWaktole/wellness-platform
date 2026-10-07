@@ -4,6 +4,7 @@ import type { IMemberPaymentStore, IReceiptNumbers } from './IMemberPaymentStore
 import type { IMemberNumbers, IMemberStore } from './IMemberStore';
 import type { IVipRequestStore } from './IVipRequestStore';
 import type { IEmployeeImportStore } from './IEmployeeImportStore';
+import type { ICardStore } from './ICardStore';
 
 /** The stores a Wellness+ settings write goes through, all on one connection. */
 export interface MembershipWriteRepos {
@@ -16,6 +17,7 @@ export interface MembershipWriteRepos {
   receiptNumbers: IReceiptNumbers;
   vipStore: IVipRequestStore;
   importStore: IEmployeeImportStore;
+  cardStore: ICardStore;
   /** Same connection as the stores: a failed audit write rolls the change back (FR-AUD-14). */
   auditTrail: IAuditTrail;
 }

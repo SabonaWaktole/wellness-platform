@@ -12,6 +12,7 @@ import { PrismaMembershipSettingsStore } from './PrismaMembershipSettingsStore';
 import { PrismaRelationshipStore } from './PrismaRelationshipStore';
 import { PrismaVipRequestStore } from './PrismaVipRequestStore';
 import { PrismaEmployeeImportStore } from './PrismaEmployeeImportStore';
+import { PrismaCardStore } from './PrismaCardStore';
 
 export class PrismaMembershipWriteTransaction implements IMembershipWriteTransaction {
   constructor(
@@ -33,6 +34,7 @@ export class PrismaMembershipWriteTransaction implements IMembershipWriteTransac
         receiptNumbers: new PrismaReceiptNumbers(client),
         vipStore: new PrismaVipRequestStore(client),
         importStore: new PrismaEmployeeImportStore(client),
+        cardStore: new PrismaCardStore(client),
         auditTrail: this.auditTrailFor(client),
       });
     }, options.timeoutMs ? { timeout: options.timeoutMs, maxWait: 10_000 } : undefined);

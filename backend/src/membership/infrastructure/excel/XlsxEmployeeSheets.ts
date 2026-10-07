@@ -108,4 +108,14 @@ export class XlsxEmployeeSheets implements IEmployeeSheetReader, IEmployeeSheetW
     for (const row of rows) sheet.addRow([row.row, safeCell(row.outcome.charAt(0) + row.outcome.slice(1).toLowerCase()), safeCell(row.reason ?? '')]);
     return Buffer.from(await workbook.xlsx.writeBuffer());
   }
+
+  async cardLinks(rows: ReadonlyArray<{ memberNumber: string; name: string; url: string }>): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Card links');
+    sheet.addRow(['Member ID', 'Name', 'Card link']);
+    sheet.getRow(1).font = { bold: true };
+    sheet.columns = [{ width: 14 }, { width: 32 }, { width: 80 }];
+    for (const row of rows) sheet.addRow([safeCell(row.memberNumber), safeCell(row.name), safeCell(row.url)]);
+    return Buffer.from(await workbook.xlsx.writeBuffer());
+  }
 }

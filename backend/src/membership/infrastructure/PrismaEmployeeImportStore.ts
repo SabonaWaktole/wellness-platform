@@ -21,6 +21,7 @@ const toRecord = (row: Row): EmployeeImportRecord => ({
   errors: row.errors,
   createdAt: row.createdAt,
   confirmedAt: row.confirmedAt,
+  memberIds: (row.memberIds as unknown as string[] | null) ?? null,
 });
 
 export class PrismaEmployeeImportStore implements IEmployeeImportStore {
@@ -48,11 +49,11 @@ export class PrismaEmployeeImportStore implements IEmployeeImportStore {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: 100,
       select: {
-        id: true, tenantId: true, clientId: true, fileName: true, uploadedBy: true, status: true, confirmToken: false, result: false,
+        id: true, tenantId: true, clientId: true, fileName: true, uploadedBy: true, status: true, confirmToken: false, result: false, memberIds: false,
         created: true, linked: true, skipped: true, refused: true, errors: true, createdAt: true, confirmedAt: true,
       },
     });
-    return rows.map((row) => toRecord({ ...row, rows: null, result: null, confirmToken: '' } as Row));
+    return rows.map((row) => toRecord({ ...row, rows: null, result: null, memberIds: null, confirmToken: '' } as Row));
   }
 
   async claim(tenantId: string, id: string, at: Date): Promise<boolean> {
@@ -61,10 +62,10 @@ export class PrismaEmployeeImportStore implements IEmployeeImportStore {
   }
 
   async finish(id: string, data: ConfirmedImport): Promise<void> {
-    const { result, ...counts } = data;
+    const { result, memberIds, ...counts } = data;
     await this.prisma.employeeImport.update({
       where: { id },
-      data: { ...counts, result: result as unknown as Prisma.InputJsonValue, rows: Prisma.DbNull },
+      data: { ...counts, result: result as unknown as Prisma.InputJsonValue, memberIds: memberIds as unknown as Prisma.InputJsonValue, rows: Prisma.DbNull },
     });
   }
 

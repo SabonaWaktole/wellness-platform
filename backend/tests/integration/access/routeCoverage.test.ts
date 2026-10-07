@@ -31,7 +31,9 @@ const EXEMPT_ROUTES: Record<string, string> = {
  * reviewer can check. Slices 11 and 13 add them here when they build the
  * routes; any other Wellness+ route must declare one of the nine permissions.
  */
-const PUBLIC_WELLNESS_ROUTES: Record<string, string> = {};
+const PUBLIC_WELLNESS_ROUTES: Record<string, string> = {
+  'GET /api/public/cards/:token': 'Public: the member card page opens from the QR or the home screen with no login; the 256-bit card token, the per-address rate limit and the allow-list response stand in for authentication (FR-CRD-01, FR-CRD-08).',
+};
 
 const WELLNESS_PLUS_KEYS = [
   'members.view', 'members.verify', 'members.manage', 'members.payments.view', 'members.payments.record',
@@ -79,6 +81,11 @@ describe('Route coverage (NFR-SEC-01)', () => {
     it('FR-RBAC-30 every public Wellness+ route carries a reason, and there are at most two (card and verification)', () => {
       for (const [id, reason] of Object.entries(PUBLIC_WELLNESS_ROUTES)) expect([id, reason.length > 10]).toEqual([id, true]);
       expect(Object.keys(PUBLIC_WELLNESS_ROUTES).length).toBeLessThanOrEqual(2);
+    });
+
+    it('FR-RBAC-30 every listed public Wellness+ route exists and carries no permission gate', () => {
+      const ungated = new Set(routes.filter((route) => route.gate.kind === 'none').map(routeId));
+      expect(Object.keys(PUBLIC_WELLNESS_ROUTES).filter((id) => !ungated.has(id))).toEqual([]);
     });
 
     it('FR-RBAC-30 every Wellness+ tenant route is gated by one of the nine Wellness+ permissions', () => {

@@ -281,6 +281,11 @@ import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
 import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
 import { createEmployeeImportRouter } from '../membership/interfaces/http/employeeImportRoutes';
 import { PrismaEmployeeImportStore } from '../membership/infrastructure/PrismaEmployeeImportStore';
+import { PrismaCardStore } from '../membership/infrastructure/PrismaCardStore';
+import { QrCodeSvg } from '../membership/infrastructure/QrCodeSvg';
+import { createPublicCardRouter } from '../membership/interfaces/http/publicCardRoutes';
+import { ExportUploadCardLinksUseCase, GetCardLinkUseCase, GetPublicCardUseCase, ReplaceCardLinkUseCase } from '../membership/application/use-cases/CardUseCases';
+import { readPublicBaseUrl } from './config/env';
 import { XlsxEmployeeSheets } from '../membership/infrastructure/excel/XlsxEmployeeSheets';
 import {
   ConfirmEmployeeImportUseCase,
@@ -1387,6 +1392,9 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   const vipRequestStore = new PrismaVipRequestStore(prisma);
   const quotePayment = new QuotePaymentUseCase(memberStore, memberPaymentStore, membershipSettingsStore, relationshipStore);
   const searchMemberPayments = new SearchMemberPaymentsUseCase(memberPaymentStore, memberStore);
+  // The one place a card link is built (NFR-OPS-05). Production requires PUBLIC_BASE_URL; elsewhere it falls back to the frontend address.
+  const publicLink = (path: string): string => `${readPublicBaseUrl() ?? (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}${path}`;
+  const cardStore = new PrismaCardStore(prisma);
   app.use(
     '/api/:tenantSlug/membership/members',
     createMemberRouter(
@@ -1408,11 +1416,19 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         correctTier: new CorrectMemberTierUseCase(membershipWriteTx),
         removeEmployee: new RemoveEmployeeUseCase(membershipWriteTx, memberStore),
         removeEmployees: new RemoveEmployeesUseCase(membershipWriteTx),
+        cardLink: new GetCardLinkUseCase(cardStore, new QrCodeSvg(), publicLink),
+        replaceCardLink: new ReplaceCardLinkUseCase(membershipWriteTx, generateShareToken, publicLink),
       },
       tokenService,
       tenantRepository,
       resolveAccessContext
     )
+  );
+
+  // The member's card page (M4 Slice 11, FR-CRD-01): public, no tenant in the path, found by the card token alone.
+  app.use(
+    '/api/public/cards',
+    createPublicCardRouter(new GetPublicCardUseCase(cardStore, memberStore, membershipSettingsStore, benefitStore, memberPaymentStore, new QrCodeSvg(), publicLink))
   );
 
   // Corporate employee upload (M4 Slice 9): template, preview, confirm, history
@@ -1428,6 +1444,7 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         confirm: new ConfirmEmployeeImportUseCase(membershipWriteTx, employeeImportStore, generateShareToken),
         list: new ListEmployeeImportsUseCase(employeeImportStore, memberStore),
         result: new GetEmployeeImportResultUseCase(employeeImportStore, employeeSheets),
+        cardLinks: new ExportUploadCardLinksUseCase(membershipWriteTx, employeeSheets, publicLink),
       },
       tokenService,
       tenantRepository,
