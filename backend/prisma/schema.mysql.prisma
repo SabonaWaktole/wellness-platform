@@ -178,6 +178,7 @@ model Tenant {
   benefitServices     BenefitService[]
   members             Member[]
   employeeImports     EmployeeImport[]
+  verificationEvents  VerificationEvent[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -2386,6 +2387,7 @@ model Member {
   familyEvents   MemberFamilyEvent[]
   vipRequests    VipRequest[]
   cardTokens     MemberCardToken[]
+  verifications  VerificationEvent[]
 
   @@unique([tenantId, memberNumber])
   @@index([tenantId, lastName, firstName])
@@ -2578,4 +2580,24 @@ model MemberCardToken {
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
+}
+
+/// One check of a member's card by Reception or a partner clinic (M4 Slice 13,
+/// FR-VER-03, FR-VER-06, FR-VER-10). Not the audit log. The address of a public
+/// scan is kept only as a keyed hash, never readable.
+model VerificationEvent {
+  id             String   @id
+  tenantId       String
+  memberId       String?
+  channel        String
+  userId         String?
+  result         String
+  identityChoice String   @default("NONE")
+  ipHash         String?
+  createdAt      DateTime @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, memberId, createdAt])
 }

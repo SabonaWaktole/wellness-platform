@@ -474,10 +474,11 @@ describe('Wellness+ member record (M4 Slice 4)', () => {
       expect(JSON.stringify(duplicate)).not.toMatch(/mo@example|0695556666/);
     });
 
-    it('FR-RBAC-27 a role with "view" sees phone, email and note, and no payment field exists yet', async () => {
+    it('FR-RBAC-27 a role with "view" sees phone, email, note and the verification log, and no payment field', async () => {
       const page = (await as('viewOnly').get(`/${memberId}`).expect(200)).body.data;
       expect(page).toMatchObject({ phone: '0693334444', email: 'perm@example.com', note: 'internal' });
-      for (const key of ['payments', 'amount', 'receiptNumber', 'revenue', 'verificationEvents']) expect(page).not.toHaveProperty(key);
+      for (const key of ['payments', 'amount', 'receiptNumber', 'revenue']) expect(page).not.toHaveProperty(key);
+      expect(page.verificationEvents).toEqual([]);
     });
 
     it('FR-RBAC-28 an unauthenticated request is 401', async () => {

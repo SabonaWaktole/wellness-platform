@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { createApp } from '../../../src/main/app';
 import { JwtTokenService } from '../../../src/auth/infrastructure/JwtTokenService';
@@ -9,7 +9,7 @@ import { seedSystemRoles } from '../../support/seedRoles';
 
 const prisma = new PrismaClient();
 
-/** NFR-PERF-05: the member list and search over 50,000 members. */
+/** NFR-PERF-05: the member list, search and verification over 50,000 members. */
 describe('Member list performance (M4 Slice 4)', () => {
   const tenantId = `t-wp-perf-${randomUUID()}`;
   const userId = `u-wpp-${randomUUID()}`;
@@ -32,7 +32,7 @@ describe('Member list performance (M4 Slice 4)', () => {
           const n = batch * 1000 + i + 1;
           return {
             id: randomUUID(), tenantId, memberNumber: `WP-${String(n).padStart(6, '0')}`, firstName: `First${n % 997}`, lastName: `Last${n}`, email: `m${n}@perf.example`,
-            phone: `+35569${String(n).padStart(7, '0')}`, currentTier: tiers[n % 4], startsOn: new Date('2026-01-01'), cardToken: randomUUID(), createdBy: userId,
+            phone: `+35569${String(n).padStart(7, '0')}`, currentTier: tiers[n % 4], startsOn: new Date('2026-01-01'), cardToken: randomBytes(32).toString('base64url'), createdBy: userId,
           };
         }),
       });
@@ -70,5 +70,26 @@ describe('Member list performance (M4 Slice 4)', () => {
     const { ms, body } = await timed(query);
     expect(body.total).toBeGreaterThan(0);
     expect(ms).toBeLessThan(1000);
+  });
+
+  it('NFR-PERF-05 Reception and public verification answer in under 1 second with 50,000 members', async () => {
+    const member = await prisma.member.findFirstOrThrow({ where: { tenantId, memberNumber: 'WP-031337' }, select: { id: true, cardToken: true } });
+    const reception = () => request(app).get(`/api/${tenantId}/membership/verify/by-token/${member.cardToken}`).set('Authorization', `Bearer ${token}`);
+    const publicPage = () => request(app).get(`/api/public/verify/${member.cardToken}`);
+    await reception().expect(200); // warm the connection
+
+    let started = Date.now();
+    const staff = await reception().expect(200);
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(staff.body.data).toMatchObject({ found: true, memberNumber: 'WP-031337' });
+
+    started = Date.now();
+    await publicPage().expect(200);
+    expect(Date.now() - started).toBeLessThan(1000);
+
+    started = Date.now();
+    const search = await request(app).get(`/api/${tenantId}/membership/verify/search`).query({ query: 'm31337@perf.example' }).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(search.body.data.map((h: any) => h.id)).toContain(member.id);
   });
 });

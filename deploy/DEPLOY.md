@@ -120,6 +120,14 @@ PUBLIC_BASE_URL="https://<the address printed on member cards>"
   (`frontend/public/.htaccess` does this) and the manifest comes from the API at
   `/api/public/cards/<token>/manifest.webmanifest`, so the API must allow the
   frontend origin through CORS, as it already does for `FRONTEND_URL`.
+- **`VERIFY_RATE_LIMIT_PER_HOUR`** (optional, Wellness+, NFR-SEC-08) is how many
+  requests one IP address may make to the public verification page
+  (`/api/public/verify/<token>`, opened from `/v/<token>`) per hour. The default
+  is 300. **`VERIFY_IP_HASH_SECRET`** (optional) is the key that hashes the caller's
+  address in the verification log (FR-VER-10); when it is not set, `JWT_SECRET` is
+  used. Changing either secret only means old and new rows can no longer be matched
+  by address. The migration `mysql_migration_m4_verification.sql` creates the
+  `VerificationEvent` table; `mysql_upgrade_to_current.sql` carries it too.
 - **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
   also the longest a stolen token stays usable; deactivation and suspension are
   enforced on every request regardless.

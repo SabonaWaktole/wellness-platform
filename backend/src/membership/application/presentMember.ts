@@ -3,6 +3,7 @@ import type { Tier } from '../domain/Tier';
 import type { TermSource } from '../domain/MemberTerm';
 import type { MemberPaymentView } from './presentMemberPayment';
 import type { VipRequestView } from './presentVip';
+import type { VerificationLogEntry } from './presentVerification';
 import type { MemberFamilyEventRecord, MemberRecord, MemberStatusHistoryRecord, MemberTermRecord, MemberTierHistoryRecord } from './ports/IMemberStore';
 
 /**
@@ -110,6 +111,8 @@ export interface MemberDetail extends MemberSummary {
   vip: { requests: VipRequestView[]; reviewDate: string | null };
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
+  /** The checks of this card by Reception and partner clinics, newest first (FR-VER-06). Removed without "Members: view" (FR-RBAC-27). */
+  verificationEvents: VerificationLogEntry[];
   /** Present only for a user who holds "Members: view payments" (FR-MPAY-08). */
   payments?: MemberPaymentView[];
 }
@@ -126,6 +129,7 @@ export function presentMember(input: {
   family: Omit<FamilyGroup, 'principalMemberId' | 'relationshipId'>;
   vip: MemberDetail['vip'];
   expiringSoon: boolean;
+  verificationEvents: VerificationLogEntry[];
 }): MemberDetail {
   const { member, userNames } = input;
   const nameOf = (id: string | null) => (id ? (userNames[id] ?? null) : null);
@@ -149,5 +153,6 @@ export function presentMember(input: {
     vip: input.vip,
     formerEmployerClientId: member.formerEmployerClientId,
     leftCompanyAt: member.leftCompanyAt,
+    verificationEvents: input.verificationEvents,
   };
 }

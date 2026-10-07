@@ -282,10 +282,15 @@ import { createMemberPaymentRouter } from '../membership/interfaces/http/memberP
 import { createEmployeeImportRouter } from '../membership/interfaces/http/employeeImportRoutes';
 import { PrismaEmployeeImportStore } from '../membership/infrastructure/PrismaEmployeeImportStore';
 import { PrismaCardStore } from '../membership/infrastructure/PrismaCardStore';
+import { MemberStandingResolver } from '../membership/application/memberStanding';
+import { PrismaVerificationStore } from '../membership/infrastructure/PrismaVerificationStore';
+import { PublicVerifyUseCase, RecordIdentityCheckUseCase, VerifyMemberUseCase } from '../membership/application/use-cases/VerificationUseCases';
+import { createVerificationRouter } from '../membership/interfaces/http/verificationRoutes';
+import { createPublicVerifyRouter } from '../membership/interfaces/http/publicVerifyRoutes';
 import { QrCodeSvg } from '../membership/infrastructure/QrCodeSvg';
 import { createPublicCardRouter } from '../membership/interfaces/http/publicCardRoutes';
 import { ExportUploadCardLinksUseCase, GetCardLinkUseCase, GetPublicCardUseCase, ReplaceCardLinkUseCase } from '../membership/application/use-cases/CardUseCases';
-import { readPublicBaseUrl } from './config/env';
+import { readPublicBaseUrl, requireJwtSecret } from './config/env';
 import { XlsxEmployeeSheets } from '../membership/infrastructure/excel/XlsxEmployeeSheets';
 import {
   ConfirmEmployeeImportUseCase,
@@ -1395,12 +1400,14 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // The one place a card link is built (NFR-OPS-05). Production requires PUBLIC_BASE_URL; elsewhere it falls back to the frontend address.
   const publicLink = (path: string): string => `${readPublicBaseUrl() ?? (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}${path}`;
   const cardStore = new PrismaCardStore(prisma);
+  const verificationStore = new PrismaVerificationStore(prisma);
+  const standingResolver = new MemberStandingResolver(memberStore, membershipSettingsStore, benefitStore, memberPaymentStore);
   app.use(
     '/api/:tenantSlug/membership/members',
     createMemberRouter(
       {
         search: new SearchMembersUseCase(memberStore, membershipSettingsStore),
-        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore, relationshipStore, vipRequestStore),
+        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore, relationshipStore, vipRequestStore, verificationStore),
         register: new RegisterMemberUseCase(membershipWriteTx, generateShareToken),
         update: new UpdateMemberUseCase(membershipWriteTx),
         changeStatus: new ChangeMemberStatusUseCase(membershipWriteTx),
@@ -1428,7 +1435,24 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // The member's card page (M4 Slice 11, FR-CRD-01): public, no tenant in the path, found by the card token alone.
   app.use(
     '/api/public/cards',
-    createPublicCardRouter(new GetPublicCardUseCase(cardStore, memberStore, membershipSettingsStore, benefitStore, memberPaymentStore, new QrCodeSvg(), publicLink), undefined, publicLink)
+    createPublicCardRouter(new GetPublicCardUseCase(cardStore, memberStore, standingResolver, new QrCodeSvg(), publicLink), undefined, publicLink)
+  );
+
+  // Verification (M4 Slice 13): Reception checks a card under Members: verify,
+  // and a partner clinic's ordinary phone opens the same link with no login and
+  // sees the public shape (D12). Registered before the wildcard tenant routes.
+  app.use(
+    '/api/public/verify',
+    createPublicVerifyRouter(new PublicVerifyUseCase(cardStore, memberStore, standingResolver, verificationStore, () => process.env.VERIFY_IP_HASH_SECRET?.trim() || requireJwtSecret()))
+  );
+  app.use(
+    '/api/:tenantSlug/membership/verify',
+    createVerificationRouter(
+      { verify: new VerifyMemberUseCase(cardStore, memberStore, standingResolver, verificationStore), recordIdentity: new RecordIdentityCheckUseCase(verificationStore) },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
   );
 
   // Corporate employee upload (M4 Slice 9): template, preview, confirm, history

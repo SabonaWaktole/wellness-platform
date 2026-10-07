@@ -1,26 +1,18 @@
 import type { AccessContext } from '../../../access/domain/AccessContext';
 import { AuditAction } from '../../../audit/domain/AuditAction';
-import { dayKeyInZone } from '../../../shared/domain/time/tenantDay';
 import { hashCardToken, isWellFormedCardToken, cardPath, verificationPath } from '../../domain/cardToken';
-import { effectiveTierOn, validTermsOn, type MemberTermValue } from '../../domain/MemberTerm';
-import { validityOn } from '../../domain/memberValidity';
 import { MEMBERS_MANAGE } from '../membershipPermissions';
 import type { CardTokenGenerator, IMemberStore, MemberRecord } from '../ports/IMemberStore';
 import type { ICardStore, IQrCodeRenderer } from '../ports/ICardStore';
-import type { IBenefitStore, IMembershipSettingsStore } from '../ports/IMembershipSettingsStore';
-import type { IMemberPaymentStore } from '../ports/IMemberPaymentStore';
 import type { IMembershipWriteTransaction } from '../ports/IMembershipWriteTransaction';
 import type { IEmployeeSheetWriter } from '../ports/IEmployeeImportStore';
+import { MemberStandingResolver } from '../memberStanding';
 import { presentPublicCard, type PublicCard } from '../presentPublicCard';
-import { SponsorValidity } from '../SponsorValidity';
 import { MemberNotFoundError } from './MemberUseCases';
 import { EmployeeImportNotFoundError } from '../employeeImportErrors';
 
 /** Builds an absolute link from a path, from the one configured public address (NFR-OPS-05). */
 export type PublicLinkBuilder = (path: string) => string;
-
-const day = (date: Date): string => date.toISOString().slice(0, 10);
-const dayDate = (value: string): Date => new Date(`${value}T00:00:00.000Z`);
 
 export type PublicCardOutcome = { kind: 'card'; card: PublicCard } | { kind: 'replaced' } | { kind: 'not-found' };
 
@@ -35,9 +27,7 @@ export class GetPublicCardUseCase {
   constructor(
     private readonly cards: ICardStore,
     private readonly members: IMemberStore,
-    private readonly settings: IMembershipSettingsStore,
-    private readonly benefits: IBenefitStore,
-    private readonly payments: IMemberPaymentStore,
+    private readonly standing: MemberStandingResolver,
     private readonly qr: IQrCodeRenderer,
     private readonly link: PublicLinkBuilder,
     private readonly now: () => Date = () => new Date()
@@ -52,31 +42,7 @@ export class GetPublicCardUseCase {
     if (!member) return { kind: 'not-found' };
 
     const now = this.now();
-    const today = dayDate(dayKeyInZone(now, owner.timezone));
-    const [terms, tiers, settings, services] = await Promise.all([
-      this.members.listTerms(member.id),
-      this.settings.getTiers(owner.tenantId),
-      this.settings.getSettings(owner.tenantId).then((s) => s.toJSON()),
-      this.benefits.list(owner.tenantId),
-    ]);
-    const sponsor = member.employerClientId
-      ? (await new SponsorValidity(this.payments).forCompanies(owner.tenantId, [member.employerClientId], day(today))).get(member.employerClientId)
-      : undefined;
-
-    const values: MemberTermValue[] = terms.map((t) => ({
-      tier: t.tier,
-      source: t.source,
-      startsOn: dayDate(t.startsOn),
-      endsOn: t.endsOn ? dayDate(t.endsOn) : null,
-    }));
-    const tier = effectiveTierOn(values, sponsor?.valid ?? false, settings.graceDays, today);
-    const current = validTermsOn(values, sponsor?.valid ?? false, settings.graceDays, today)
-      .filter((v) => v.tier === tier)
-      .sort((a, b) => (b.endsOn?.getTime() ?? Infinity) - (a.endsOn?.getTime() ?? Infinity))[0];
-    const validUntil = !current ? null : current.source === 'SPONSORED' ? (sponsor?.endsOn ?? null) : current.endsOn ? day(current.endsOn) : null;
-    const valid = validityOn(member.status, tier, null).valid && member.anonymisedAt === null;
-
-    const setting = tiers.find((t) => t.tier === tier);
+    const standing = await this.standing.resolve(owner.tenantId, owner.timezone, member, now);
     return {
       kind: 'card',
       card: presentPublicCard({
@@ -84,13 +50,11 @@ export class GetPublicCardUseCase {
         lastName: member.lastName,
         memberNumber: member.memberNumber,
         language: member.language,
-        valid,
-        tier: { tier, labelSq: setting?.labelSq ?? tier, labelEn: setting?.labelEn ?? tier, colour: setting?.colour ?? '#888888' },
-        validUntil,
-        benefits: valid
-          ? services.filter((s) => s.active && s.discounts[tier] !== null).map((s) => ({ nameSq: s.nameSq, nameEn: s.nameEn, percent: s.discounts[tier] as string }))
-          : [],
-        qrSvg: valid ? await this.qr.svg(this.link(verificationPath(token))) : '',
+        valid: standing.valid,
+        tier: standing.tierLabel,
+        validUntil: standing.validUntil,
+        benefits: standing.discounts,
+        qrSvg: standing.valid ? await this.qr.svg(this.link(verificationPath(token))) : '',
         generatedAt: now,
       }),
     };

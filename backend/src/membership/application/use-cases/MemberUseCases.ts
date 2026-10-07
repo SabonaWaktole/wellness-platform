@@ -19,6 +19,7 @@ import { MEMBERS_MANAGE, MEMBERS_PAYMENTS_VIEW, MEMBERS_VIEW } from '../membersh
 import type { IMemberPaymentStore } from '../ports/IMemberPaymentStore';
 import { paymentUserIds, presentMemberPayment } from '../presentMemberPayment';
 import type { IVipRequestStore } from '../ports/IVipRequestStore';
+import type { IVerificationStore } from '../ports/IVerificationStore';
 import { presentVipRequest, vipUserIds } from '../presentVip';
 import type { IMemberStore, MemberRecord, MemberSearchParams, CardTokenGenerator } from '../ports/IMemberStore';
 import type { IMembershipSettingsStore, IRelationshipStore } from '../ports/IMembershipSettingsStore';
@@ -315,6 +316,9 @@ export class SearchMembersUseCase {
   }
 }
 
+/** How many of the latest checks the member page lists (FR-VER-06). */
+const VERIFICATION_LOG_LIMIT = 50;
+
 /**
  * FR-MEM-08, FR-MEM-06: the member page. The current tier is calculated from the
  * terms on today's date with the one domain rule (D2), so it is right even
@@ -328,6 +332,7 @@ export class GetMemberUseCase {
     private readonly paymentStore: IMemberPaymentStore,
     private readonly relationshipStore: IRelationshipStore,
     private readonly vipStore: IVipRequestStore,
+    private readonly verificationStore: IVerificationStore,
     private readonly now: () => Date = () => new Date()
   ) {}
 
@@ -373,8 +378,12 @@ export class GetMemberUseCase {
       .sort()
       .pop();
 
+    // The verification log is a member-record field: read only for a user who may open the record (FR-VER-06, FR-RBAC-27).
+    const checks = input.access.can(MEMBERS_VIEW) ? await this.verificationStore.listForMember(input.tenantId, member.id, VERIFICATION_LOG_LIMIT) : [];
+
     const names = await this.store.userNames(input.tenantId, [
       member.createdBy,
+      ...checks.map((c) => c.userId).filter((id): id is string => !!id),
       ...family.userIds,
       ...vipUserIds(vipRequests),
       ...(payments ? paymentUserIds(payments) : []),
@@ -386,7 +395,7 @@ export class GetMemberUseCase {
     const latestPaidEnd = terms.filter((t) => t.source === 'PAID' && t.endsOn).map((t) => t.endsOn!).sort().pop();
     const expiringSoon = latestPaidEnd ? expiringSoonOn(new Date(`${latestPaidEnd}T00:00:00.000Z`), today, expiringSoonDays) : false;
 
-    const detail = presentMember({ expiringSoon, member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names), vip: { requests: vipRequests.map((r) => presentVipRequest(r, names)), reviewDate: vipEnd ?? null } });
+    const detail = presentMember({ expiringSoon, member, terms, tierHistory, statusHistory, effectiveTier, current, validity, userNames: names, family: family.present(names), vip: { requests: vipRequests.map((r) => presentVipRequest(r, names)), reviewDate: vipEnd ?? null }, verificationEvents: checks.map((c) => ({ id: c.id, channel: c.channel, result: c.result, identityChoice: c.identityChoice, by: c.userId ? (names[c.userId] ?? null) : null, at: c.createdAt })) });
     return payments ? { ...detail, payments: payments.map((p) => presentMemberPayment(p, names)) } : detail;
   }
 
