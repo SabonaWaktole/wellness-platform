@@ -1,0 +1,34 @@
+{
+  "brand": "Wellness+",
+  "pageTitle": "Wellness+ member card",
+  "loading": "Loading your card…",
+  "memberId": "Member ID",
+  "validUntil": "Valid until {{date}}",
+  "noExpiry": "No expiry",
+  "benefitsTitle": "Your benefits",
+  "benefitPercent": "{{percent}}%",
+  "noBenefits": "No discounts are listed for this tier.",
+  "qrAlt": "QR code that Wellness Albania scans to verify this membership",
+  "qrHelp": "Show this code at the clinic.",
+  "notValid": "Membership not valid, contact Wellness Albania",
+  "notFoundTitle": "Card not found",
+  "notFound": "This link does not open a card. Check the link or ask Wellness Albania.",
+  "replacedTitle": "Card replaced",
+  "replaced": "This card was replaced. Ask Wellness Albania for the new link.",
+  "failed": "The card could not be loaded. Check your connection and try again.",
+  "retry": "Try again",
+  "language": "Language",
+  "privacy": "Wellness Albania holds your name and membership details to run your Wellness+ membership. For questions about your data, contact Wellness Albania.",
+  "tier": {
+    "BRONZE": "Bronze",
+    "SILVER": "Silver",
+    "GOLD": "Gold",
+    "VIP": "VIP"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "English",
+    "el": "Ελληνικά",
+    "it": "Italiano"
+  }
+}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FileText, Pencil, Plus } from 'lucide-react';
+import { FileText, IdCard, Pencil, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Modal } from '../../components/ui/Modal/Modal';
 import { Tabs } from '../../components/ui/Tabs/Tabs';
@@ -17,6 +17,7 @@ import { memberPaymentService, voidRefusalOf } from '../../services/memberPaymen
 import { ExpiringBadge, StatusBadge, TierBadge } from './MemberBadges';
 import { CorrectTierDialog } from './CorrectTierDialog';
 import { RemoveFromCompanyDialog } from './RemoveFromCompanyDialog';
+import { MemberCardDialog } from './MemberCardDialog';
 import { useTierLabels } from './useTierLabels';
 import { FamilyTab } from './FamilyTab';
 import { VipTab } from './VipTab';
@@ -64,6 +65,7 @@ export const MemberDetailContent: React.FC = () => {
   const [recording, setRecording] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [showingCard, setShowingCard] = useState(false);
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<'reason' | 'notLatest' | 'alreadyVoided' | 'failed' | null>(null);
@@ -192,6 +194,11 @@ export const MemberDetailContent: React.FC = () => {
             {canManage && member.employer && member.status !== 'CLOSED' && (
               <Button variant="outline" onClick={() => setLeaving(true)}>
                 {t('removeEmployer.button')}
+              </Button>
+            )}
+            {canManage && (
+              <Button variant="outline" icon={<IdCard size={16} />} onClick={() => setShowingCard(true)}>
+                {t('card.button')}
               </Button>
             )}
             {canManage && <Button variant="outline" icon={<Pencil size={16} />} onClick={() => navigate(`/${tenantSlug}/members/${member.id}/edit`)}>
@@ -466,6 +473,21 @@ export const MemberDetailContent: React.FC = () => {
             setTab('history');
             void load();
           }}
+        />
+      )}
+
+      {showingCard && tenantSlug && (
+        <MemberCardDialog
+          tenantSlug={tenantSlug}
+          member={{
+            id: member.id,
+            memberNumber: member.memberNumber,
+            name: `${member.firstName} ${member.lastName}`,
+            tierLabel: style.label,
+            tierColour: style.colour ?? '#6b7280',
+            valid: member.validity.valid,
+          }}
+          onClose={() => setShowingCard(false)}
         />
       )}
 

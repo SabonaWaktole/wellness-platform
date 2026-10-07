@@ -474,3 +474,39 @@
 .match:focus-visible {
   background: var(--color-surface-container-high);
 }
+
+/* The card dialog (M4 Slice 11): the QR is always on a white square with a quiet zone, in dark mode too (NFR-USE-05). */
+.cardQr {
+  align-self: center;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  line-height: 0;
+}
+
+.cardQr img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.cardLinkLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+}
+
+.cardLinkInput {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface-container-lowest, #fff);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 400;
+}

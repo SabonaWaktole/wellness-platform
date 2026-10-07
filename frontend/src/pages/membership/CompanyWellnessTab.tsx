@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -9,6 +9,8 @@ import { useDateFormat } from '../../hooks/useDateFormat';
 import { dayAsDate } from '../../components/calendar/calendarGrouping';
 import { TIERS } from '../../services/membershipSettingsService';
 import { companyMembershipService, type CompanyMembership } from '../../services/companyMembershipService';
+import { memberCardService } from '../../services/memberCardService';
+import { downloadBlob } from '../../utils/downloadBlob';
 import { StatusBadge, TierBadge } from './MemberBadges';
 import { RemoveFromCompanyDialog } from './RemoveFromCompanyDialog';
 import { useTierLabels } from './useTierLabels';
@@ -32,6 +34,7 @@ export const CompanyWellnessTab: React.FC<{ clientId: string }> = ({ clientId })
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [selected, setSelected] = useState<string[]>([]);
   const [removing, setRemoving] = useState(false);
+  const [sheetFailed, setSheetFailed] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantSlug) return;
@@ -49,6 +52,16 @@ export const CompanyWellnessTab: React.FC<{ clientId: string }> = ({ clientId })
   }, [load]);
 
   const day = (key: string) => dates.date(dayAsDate(key));
+  // FR-EMP-08: name, member ID and card link of every member of one upload, for the company to hand out.
+  const downloadCardLinks = async (importId: string, fileName: string) => {
+    if (!tenantSlug) return;
+    setSheetFailed(false);
+    try {
+      downloadBlob(await memberCardService.linksSheet(tenantSlug, importId), `${fileName.replace(/\.xlsx$/i, '')}-card-links.xlsx`);
+    } catch {
+      setSheetFailed(true);
+    }
+  };
   const toggle = (id: string) => setSelected((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
 
   if (state === 'loading') return <Card padding="lg"><p role="status">{'…'}</p></Card>;
@@ -175,6 +188,7 @@ export const CompanyWellnessTab: React.FC<{ clientId: string }> = ({ clientId })
       )}
 
       <h3 className={styles.sectionTitle}>{t('companyTab.uploads')}</h3>
+      {sheetFailed && <p className={styles.formError} role="alert">{t('companyTab.cardLinksFailed')}</p>}
       {uploads.length === 0 ? (
         <p>{t('companyTab.noUploads')}</p>
       ) : (
@@ -186,6 +200,7 @@ export const CompanyWellnessTab: React.FC<{ clientId: string }> = ({ clientId })
                 <th scope="col">{t('companyTab.uploadBy')}</th>
                 <th scope="col">{t('companyTab.uploadWhen')}</th>
                 <th scope="col">{t('companyTab.uploadCounts')}</th>
+                {canManage && <th scope="col"><span className="sr-only">{t('companyTab.uploadActions')}</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -199,6 +214,15 @@ export const CompanyWellnessTab: React.FC<{ clientId: string }> = ({ clientId })
                       ? t('companyTab.counts', { created: upload.created, linked: upload.linked, skipped: upload.skipped + upload.refused + upload.errors })
                       : t(`companyTab.uploadStatus.${upload.status}`)}
                   </td>
+                  {canManage && (
+                    <td>
+                      {upload.status === 'CONFIRMED' && (
+                        <Button variant="outline" icon={<Download size={16} />} onClick={() => void downloadCardLinks(upload.id, upload.fileName)}>
+                          {t('companyTab.cardLinks')}
+                        </Button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

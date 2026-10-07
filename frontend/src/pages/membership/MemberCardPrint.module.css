@@ -1,0 +1,90 @@
+/*
+ * The printed card (M4 Slice 11, FR-CRD-09): name, member ID, tier and QR, at credit-card or A6 size.
+ * It is drawn off-screen and only shown when printing; the page size comes from the @page rule the dialog adds.
+ */
+.sheet {
+  display: none;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #000000;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+@media print {
+  .sheet {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2mm 4mm;
+  font-size: 3.5mm;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1mm;
+  text-align: center;
+  padding: 2mm;
+}
+
+.name {
+  margin: 0;
+  font-weight: 700;
+  font-size: 4mm;
+}
+
+.number {
+  margin: 0;
+  font-size: 3.2mm;
+  font-variant-numeric: tabular-nums;
+}
+
+.qrBox {
+  background: #ffffff;
+  line-height: 0;
+}
+
+.card {
+  width: 85.6mm;
+  height: 54mm;
+}
+
+.card .qr {
+  width: 28mm;
+  height: 28mm;
+}
+
+.a6 {
+  width: 105mm;
+  height: 148mm;
+}
+
+.a6 .band {
+  font-size: 5mm;
+  padding: 4mm 6mm;
+}
+
+.a6 .name {
+  font-size: 7mm;
+}
+
+.a6 .number {
+  font-size: 5mm;
+}
+
+.a6 .qr {
+  width: 70mm;
+  height: 70mm;
+}

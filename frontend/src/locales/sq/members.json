@@ -577,6 +577,31 @@
     "uploadStatus": {
       "PREVIEWED": "Pret konfirmimin",
       "EXPIRED": "Skadoi"
+    },
+    "cardLinks": "Linket e kartave",
+    "cardLinksFailed": "Linket e kartave nuk u shkarkuan.",
+    "uploadActions": "Veprimet e ngarkimit"
+  },
+  "card": {
+    "button": "Karta",
+    "title": "Karta e anëtarit",
+    "help": "Anëtari e hap këtë link në telefon. Nuk hyn me llogari.",
+    "link": "Linku i kartës",
+    "copy": "Kopjo linkun",
+    "copied": "Linku u kopjua.",
+    "printCard": "Printo (madhësia e kartës)",
+    "printA6": "Printo (A6)",
+    "replace": "Zëvendëso linkun",
+    "replaced": "Linku i ri është gati. I vjetri nuk funksionon më.",
+    "replaceFailed": "Linku nuk u zëvendësua. Provoni përsëri.",
+    "loadFailed": "Karta nuk mund të ngarkohej.",
+    "qrAlt": "Kodi QR i kartës së {{name}}",
+    "notValid": "Ky anëtarësim nuk është i vlefshëm, ndaj karta e anëtarit nuk tregon kod QR dhe zbritje.",
+    "replaceDialog": {
+      "title": "Të zëvendësohet linku i kartës?",
+      "help": "Linku i vjetër dhe çdo kopje e tij në telefon ndalojnë së punuari menjëherë dhe tregojnë se karta u zëvendësua. Jepini anëtarit linkun e ri.",
+      "cancel": "Anulo",
+      "confirm": "Zëvendëso linkun"
     }
   }
 }

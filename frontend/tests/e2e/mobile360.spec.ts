@@ -216,6 +216,27 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await expectNoHorizontalOverflow(page, 'company detail → Wellness+ tab');
     });
 
+    // M4 Slice 11 (NFR-USE-04, NFR-USE-05): the card dialog for staff and the public card page, with the QR at 220 px or more.
+    test('member detail → card dialog', async ({ page }) => {
+      await page.goto(`/${TENANT}/members/${memberId}`);
+      await page.getByRole('button', { name: /^(Card|Karta)$/ }).click();
+      const qr = page.getByRole('img', { name: /QR/ });
+      await expect(qr).toBeVisible();
+      expect((await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
+      await expectNoHorizontalOverflow(page, 'member detail → card dialog');
+    });
+
+    test('public member card (/m/:token)', async ({ page }) => {
+      const link = await page.request.get(`/api/${TENANT}/membership/members/${memberId}/card-link`);
+      expect(link.ok()).toBe(true);
+      const { url } = (await link.json()).data as { url: string };
+      await page.goto(new URL(url).pathname);
+      const qr = page.getByRole('img', { name: /QR/ });
+      await expect(qr).toBeVisible();
+      expect((await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
+      await expectNoHorizontalOverflow(page, 'public member card');
+    });
+
     for (const [screen, path] of screens) {
       test(screen, async ({ page }) => {
         await page.goto(`/${TENANT}/${path(companyId)}`);

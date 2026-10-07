@@ -577,6 +577,31 @@
     "uploadStatus": {
       "PREVIEWED": "Waiting for confirmation",
       "EXPIRED": "Expired"
+    },
+    "cardLinks": "Card links",
+    "cardLinksFailed": "The card links could not be downloaded.",
+    "uploadActions": "Upload actions"
+  },
+  "card": {
+    "button": "Card",
+    "title": "Member card",
+    "help": "The member opens this link on their phone. They do not sign in.",
+    "link": "Card link",
+    "copy": "Copy link",
+    "copied": "Link copied.",
+    "printCard": "Print (card size)",
+    "printA6": "Print (A6)",
+    "replace": "Replace link",
+    "replaced": "A new link is ready. The old one no longer works.",
+    "replaceFailed": "The link could not be replaced. Try again.",
+    "loadFailed": "The card could not be loaded.",
+    "qrAlt": "QR code of the card of {{name}}",
+    "notValid": "This membership is not valid, so the member's card shows no QR code and no discounts.",
+    "replaceDialog": {
+      "title": "Replace the card link?",
+      "help": "The old link and every copy of it on a phone stop working at once and show that the card was replaced. Give the member the new link.",
+      "cancel": "Cancel",
+      "confirm": "Replace link"
     }
   }
 }

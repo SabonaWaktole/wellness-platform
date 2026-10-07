@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
@@ -78,6 +79,9 @@ import { TenantGuard } from './TenantGuard';
 import { usePermissionScope } from '../hooks/usePermission';
 import { DashboardLanding } from '../pages/dashboard/DashboardLanding';
 
+/** Loaded on demand: a member opening a card does not download the staff application (M4 Slice 11). */
+const PublicCardPage = lazy(() => import('../pages/card/PublicCardPage').then((m) => ({ default: m.PublicCardPage })));
+
 const LegacyDashboardSelector = () => {
   const scope = usePermissionScope('companies.view');
 
@@ -141,6 +145,18 @@ export const routes: RouteObject[] = [
    * account for. `/f/` for the same "gets pasted into emails, read aloud on
    * phone calls" reason `/q/` is short.
    */
+  /*
+   * The member's card (M4 Slice 11, FR-CRD-01). Public, no tenant in the path, and loaded on demand so a member
+   * opening a card does not download the staff application. `/m/` for the same short-link reason as `/q/`.
+   */
+  {
+    path: '/m/:token',
+    element: (
+      <Suspense fallback={null}>
+        <PublicCardPage />
+      </Suspense>
+    ),
+  },
   {
     path: '/f/:token',
     element: <PublicFormPage />,
