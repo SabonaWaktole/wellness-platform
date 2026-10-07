@@ -114,7 +114,8 @@
     "renewals": "Rinovimet",
     "vipRequests": "Kërkesat VIP",
     "employeeUpload": "Ngarkimi i punonjësve",
-    "verifyMember": "Verifiko anëtarin"
+    "verifyMember": "Verifiko anëtarin",
+    "membershipReports": "Raportet Wellness+"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

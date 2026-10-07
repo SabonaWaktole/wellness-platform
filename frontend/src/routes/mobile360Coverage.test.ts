@@ -60,6 +60,7 @@ describe('NFR-USE-04 the 360 px suite covers every Milestone 4 screen built so f
     ['members/payments', "() => 'members/payments'"],
     ['members/vip-requests', "() => 'members/vip-requests'"],
     ['members/verify', "() => 'members/verify'"],
+    ['members/reports', "() => 'members/reports'"],
     ['members/employee-upload', "() => 'members/employee-upload'"],
     ['members/:memberId', 'members/${memberId}`'],
     ['members/:memberId/edit', 'members/${memberId}/edit'],

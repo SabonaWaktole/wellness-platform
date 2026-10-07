@@ -114,7 +114,8 @@
     "performance": "Performance",
     "vipRequests": "VIP requests",
     "employeeUpload": "Employee upload",
-    "verifyMember": "Verify member"
+    "verifyMember": "Verify member",
+    "membershipReports": "Wellness+ reports"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

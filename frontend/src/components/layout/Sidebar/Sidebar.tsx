@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, Calendar, Package, FileText, BarChart3,
+  LayoutDashboard, Users, Calendar, Package, FileText, BarChart3, PieChart,
   Settings, Building, CreditCard, Search, ClipboardCheck, Plus,
   HelpCircle, LogOut, Receipt, FileSignature, Columns3, CalendarClock, Banknote, RefreshCw, TrendingUp, HeartPulse, ScanLine,
   type LucideIcon,
@@ -42,6 +42,8 @@ const iconMap: Record<string, LucideIcon> = {
   follow_up: CalendarClock,
   // Wellness+ members (M4 Slice 4): a heart with a pulse, as in Settings → Wellness+.
   wellness: HeartPulse,
+  // Wellness+ reports (M4 Slice 14): bars over a baseline, apart from the general Reports entry.
+  wellness_reports: PieChart,
   // Verify member (M4 Slice 13): a scan line over a frame, the camera check at Reception.
   qr_code_scanner: ScanLine,
 };

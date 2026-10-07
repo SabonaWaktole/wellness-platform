@@ -167,6 +167,8 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['VIP requests', () => 'members/vip-requests'],
       // M4 Slice 13: the Verify member screen (the result and the identity buttons are on the same page)
       ['Verify member', () => 'members/verify'],
+      // M4 Slice 14: the Wellness+ reports page, tiles, charts, tables and working lists
+      ['Wellness+ reports', () => 'members/reports'],
       // M4 Slice 9: the corporate employee upload
       ['Employee upload', () => 'members/employee-upload'],
       // M2 Slice 6: the deal edit form

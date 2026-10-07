@@ -30,6 +30,7 @@ import { MemberPaymentsPage } from '../pages/membership/MemberPaymentsPage';
 import { VipRequestsPage } from '../pages/membership/VipRequestsPage';
 import { EmployeeUploadPage } from '../pages/membership/EmployeeUploadPage';
 import { VerifyMemberPage } from '../pages/membership/VerifyMemberPage';
+import { MembershipReportsPage } from '../pages/membership/reports/MembershipReportsPage';
 import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -606,6 +607,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="members.payments.view">
               <MemberPaymentsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 14: the Wellness+ reports (FR-RPT-01), open to "Members: view reports".
+        path: 'members/reports',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.reports.view">
+              <MembershipReportsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

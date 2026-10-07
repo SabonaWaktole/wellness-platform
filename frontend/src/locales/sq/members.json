@@ -666,5 +666,109 @@
       },
       "partner": "Klinikë partnere"
     }
+  },
+  "reports": {
+    "page": {
+      "title": "Raportet Wellness+",
+      "subtitle": "Anëtarët, rinovimet, përmirësimet, uljet dhe të ardhurat për një periudhë.",
+      "loadFailed": "Raportet nuk u ngarkuan."
+    },
+    "filters": {
+      "tier": "Niveli",
+      "segment": "Segmenti",
+      "employer": "Kompania punëdhënëse",
+      "area": "Zona",
+      "city": "Qyteti",
+      "allAreas": "Të gjitha zonat",
+      "allCities": "Të gjitha qytetet"
+    },
+    "segment": {
+      "CORPORATE": "Korporativ",
+      "INDIVIDUAL": "Individual"
+    },
+    "asOfNow": "Tani",
+    "presets": {
+      "TODAY": "Sot",
+      "THIS_WEEK": "Këtë javë",
+      "THIS_MONTH": "Këtë muaj",
+      "LAST_MONTH": "Muajin e kaluar",
+      "THIS_QUARTER": "Këtë tremujor",
+      "THIS_YEAR": "Këtë vit",
+      "CUSTOM": "Periudhë e zgjedhur"
+    },
+    "tiles": {
+      "active": "Anëtarë aktivë",
+      "new": "Anëtarë të rinj",
+      "newPaid": "Anëtarësime të reja me pagesë",
+      "rate": "Shkalla e rinovimit",
+      "upgrades": "Përmirësime",
+      "downgrades": "Ulje",
+      "expiring": "Anëtarësime që skadojnë",
+      "revenue": "Të ardhurat nga anëtarësimet"
+    },
+    "sections": {
+      "active": "Anëtarë aktivë sipas nivelit",
+      "monthly": "Anëtarë aktivë në fund të çdo muaji",
+      "segments": "Korporativ dhe individual",
+      "new": "Anëtarë të rinj",
+      "renewals": "Rinovimet",
+      "upgrades": "Përmirësimet",
+      "downgrades": "Uljet",
+      "employers": "Kompanitë punëdhënëse",
+      "revenue": "Të ardhurat nga anëtarësimet"
+    },
+    "columns": {
+      "tier": "Niveli",
+      "count": "Anëtarë",
+      "share": "Pjesa",
+      "month": "Muaji",
+      "total": "Totali",
+      "segment": "Segmenti",
+      "figure": "Shifra",
+      "due": "Rinovime të pritura",
+      "renewed": "Të rinovuara",
+      "notRenewed": "Të parinovuara",
+      "rate": "Shkalla e rinovimit",
+      "path": "Kalimi",
+      "amount": "Shuma",
+      "by": "Sipas",
+      "value": "Vlera",
+      "company": "Kompania",
+      "members": "Anëtarë",
+      "sponsored": "Silver i sponsorizuar",
+      "upgraded": "Kaluan në pagesë",
+      "former": "Ish-punonjës",
+      "kind": "Lloji",
+      "member": "Anëtari"
+    },
+    "figures": {
+      "newMembers": "Anëtarë të rinj",
+      "newPaid": "Anëtarësime të reja me pagesë"
+    },
+    "by": {
+      "path": "Kalimi",
+      "reason": "Arsyeja"
+    },
+    "reason": {
+      "NOT_RENEWED": "Nuk u rinovua",
+      "COMPANY_CONTRACT_ENDED": "Kontrata e kompanisë përfundoi",
+      "LEFT_COMPANY": "Largua nga kompania",
+      "VIP_ENDED": "VIP përfundoi"
+    },
+    "lists": {
+      "expiring": "Anëtarësime që skadojnë",
+      "expiringDate": "Afati me pagesë mbaron",
+      "vipReviews": "Rishikime VIP në pritje",
+      "vipDate": "Data e rishikimit",
+      "formerEmployees": "Ish-punonjës për t'u kontaktuar",
+      "leftDate": "U largua më",
+      "empty": "Askush në këtë listë."
+    },
+    "total": "Totali",
+    "view": "Pamja",
+    "chart": "Grafik",
+    "table": "Tabelë",
+    "exportCsv": "CSV",
+    "exportSection": "Eksporto {{title}} si CSV"
   }
 }

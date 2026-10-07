@@ -666,5 +666,109 @@
       },
       "partner": "Partner clinic"
     }
+  },
+  "reports": {
+    "page": {
+      "title": "Wellness+ reports",
+      "subtitle": "Members, renewals, upgrades, downgrades and revenue for a period.",
+      "loadFailed": "The reports could not be loaded."
+    },
+    "filters": {
+      "tier": "Tier",
+      "segment": "Segment",
+      "employer": "Employer company",
+      "area": "Area",
+      "city": "City",
+      "allAreas": "All areas",
+      "allCities": "All cities"
+    },
+    "segment": {
+      "CORPORATE": "Corporate",
+      "INDIVIDUAL": "Individual"
+    },
+    "asOfNow": "As of now",
+    "presets": {
+      "TODAY": "Today",
+      "THIS_WEEK": "This week",
+      "THIS_MONTH": "This month",
+      "LAST_MONTH": "Last month",
+      "THIS_QUARTER": "This quarter",
+      "THIS_YEAR": "This year",
+      "CUSTOM": "Custom range"
+    },
+    "tiles": {
+      "active": "Active members",
+      "new": "New members",
+      "newPaid": "New paid memberships",
+      "rate": "Renewal rate",
+      "upgrades": "Upgrades",
+      "downgrades": "Downgrades",
+      "expiring": "Expiring memberships",
+      "revenue": "Membership revenue"
+    },
+    "sections": {
+      "active": "Active members per tier",
+      "monthly": "Active members at the end of each month",
+      "segments": "Corporate and individual",
+      "new": "New members",
+      "renewals": "Renewals",
+      "upgrades": "Upgrades",
+      "downgrades": "Downgrades",
+      "employers": "Employer companies",
+      "revenue": "Membership revenue"
+    },
+    "columns": {
+      "tier": "Tier",
+      "count": "Members",
+      "share": "Share",
+      "month": "Month",
+      "total": "Total",
+      "segment": "Segment",
+      "figure": "Figure",
+      "due": "Renewals due",
+      "renewed": "Renewed",
+      "notRenewed": "Not renewed",
+      "rate": "Renewal rate",
+      "path": "Path",
+      "amount": "Amount",
+      "by": "By",
+      "value": "Value",
+      "company": "Company",
+      "members": "Members",
+      "sponsored": "Sponsored Silver",
+      "upgraded": "Upgraded to paid",
+      "former": "Former employees",
+      "kind": "Kind",
+      "member": "Member"
+    },
+    "figures": {
+      "newMembers": "New members",
+      "newPaid": "New paid memberships"
+    },
+    "by": {
+      "path": "Path",
+      "reason": "Reason"
+    },
+    "reason": {
+      "NOT_RENEWED": "Not renewed",
+      "COMPANY_CONTRACT_ENDED": "Company contract ended",
+      "LEFT_COMPANY": "Left company",
+      "VIP_ENDED": "VIP ended"
+    },
+    "lists": {
+      "expiring": "Expiring memberships",
+      "expiringDate": "Paid term ends",
+      "vipReviews": "VIP reviews due",
+      "vipDate": "Review date",
+      "formerEmployees": "Former employees to contact",
+      "leftDate": "Left company on",
+      "empty": "Nobody on this list."
+    },
+    "total": "Total",
+    "view": "View",
+    "chart": "Chart",
+    "table": "Table",
+    "exportCsv": "CSV",
+    "exportSection": "Export {{title}} as CSV"
   }
 }
