@@ -10,3 +10,12 @@ export const readableOn = (hex: string): '#000000' | '#ffffff' => {
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#000000' : '#ffffff';
 };
+
+/** dd.mm.yyyy hh:mm in the phone's own time, for "Last updated" (FR-CRD-06). */
+export const formatCardDateTime = (value: Date): string => {
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(value.getDate())}.${two(value.getMonth() + 1)}.${value.getFullYear()} ${two(value.getHours())}:${two(value.getMinutes())}`;
+};
+
+/** Today on the phone as dd.mm.yyyy: a screenshot keeps the day it was taken (FR-CRD-07). */
+export const formatToday = (value: Date = new Date()): string => formatCardDateTime(value).slice(0, 10);

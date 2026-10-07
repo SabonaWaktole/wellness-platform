@@ -30,5 +30,13 @@
     "en": "English",
     "el": "Ελληνικά",
     "it": "Italiano"
+  },
+  "lastUpdated": "Përditësuar së fundi {{when}}",
+  "today": "Sot",
+  "liveLabel": "Kartë e gjallë, data e sotme",
+  "install": {
+    "title": "Shtoje këtë kartë në ekranin kryesor",
+    "ios": "Në Safari, trokit Share, pastaj Add to Home Screen.",
+    "android": "Në Chrome, trokit menunë, pastaj Install app ose Add to Home screen."
   }
 }

@@ -33,21 +33,25 @@ export interface PublicCard {
   generatedAt: string;
 }
 
-export type PublicCardResult = { kind: 'card'; card: PublicCard } | { kind: 'replaced' } | { kind: 'not-found' } | { kind: 'failed' };
+export type PublicCardResult = { kind: 'card'; card: PublicCard; cachedAt?: string } | { kind: 'replaced' } | { kind: 'not-found' } | { kind: 'failed' };
 
 /**
  * The card page has no account, so it uses plain `fetch` and not the shared client: that one sends credentials and
  * redirects on 401, and a member opening a card must never be sent to a login. The token is only ever in the path
  * and is never logged (FR-CRD-08).
  */
+export const cardAnswerUrl = (token: string): string => `${API_BASE_URL}/public/cards/${encodeURIComponent(token)}`;
+
 export async function fetchPublicCard(token: string, signal?: AbortSignal): Promise<PublicCardResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}/public/cards/${encodeURIComponent(token)}`, { signal, credentials: 'omit', cache: 'no-store' });
+    const response = await fetch(cardAnswerUrl(token), { signal, credentials: 'omit', cache: 'no-store' });
     if (response.status === 410) return { kind: 'replaced' };
     if (response.status === 404) return { kind: 'not-found' };
     if (!response.ok) return { kind: 'failed' };
     const body = (await response.json()) as { data: PublicCard };
-    return { kind: 'card', card: body.data };
+    // The card worker marks an answer it gave from storage (flight mode) with when it was stored (FR-CRD-06).
+    const cachedAt = response.headers.get('X-From-Cache') ? (response.headers.get('X-Cached-At') ?? undefined) : undefined;
+    return { kind: 'card', card: body.data, cachedAt };
   } catch {
     return { kind: 'failed' };
   }

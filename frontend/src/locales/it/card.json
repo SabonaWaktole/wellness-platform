@@ -30,5 +30,13 @@
     "en": "English",
     "el": "Ελληνικά",
     "it": "Italiano"
+  },
+  "lastUpdated": "Ultimo aggiornamento {{when}}",
+  "today": "Oggi",
+  "liveLabel": "Tessera attiva, data di oggi",
+  "install": {
+    "title": "Aggiungi questa tessera alla schermata Home",
+    "ios": "In Safari, tocca Condividi, poi Aggiungi alla schermata Home.",
+    "android": "In Chrome, tocca il menu, poi Installa app o Aggiungi a schermata Home."
   }
 }

@@ -29,7 +29,7 @@ const gold = (extra: Partial<PublicCard> = {}): PublicCard => ({
   ...extra,
 });
 
-const answer = (status: number, body: unknown = {}) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
+const answer = (status: number, body: unknown = {}, headers: Record<string, string> = {}) => ({ ok: status >= 200 && status < 300, status, headers: new Headers(headers), json: async () => body });
 
 const renderPage = () =>
   render(
@@ -48,7 +48,7 @@ afterEach(() => {
   document.head.querySelectorAll('meta[name="robots"]').forEach((m) => m.remove());
 });
 
-const respondWith = (status: number, body?: unknown) => (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(answer(status, body));
+const respondWith = (status: number, body?: unknown, headers?: Record<string, string>) => (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(answer(status, body, headers));
 
 describe('The member card page (M4 Slice 11)', () => {
   it('FR-CRD-01 shows the logo name, name, member ID, tier, validity as dd.mm.yyyy, the QR and the benefits, and no personal field', async () => {
@@ -207,5 +207,90 @@ describe('The member card page (M4 Slice 11)', () => {
     const keys = (o: unknown, p = ''): string[] => (o && typeof o === 'object' ? Object.entries(o).flatMap(([k, v]) => keys(v, p ? `${p}.${k}` : k)) : [p]);
     expect(keys(sqCard).sort()).toEqual(keys(enCard).sort());
     await waitFor(() => expect(Object.keys(sqCard).length).toBeGreaterThan(10));
+  });
+});
+
+describe('The installable card (M4 Slice 12)', () => {
+  const setUserAgent = (value: string) => vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(value);
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    document.head.querySelectorAll('link[rel="manifest"], meta[name^="apple-mobile"], meta[name="mobile-web-app-capable"], meta[name="theme-color"]').forEach((e) => e.remove());
+  });
+
+  it('FR-CRD-07 shows today\'s date from the phone and a moving element', async () => {
+    respondWith(200, { data: gold() });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Ana Hoxha' });
+    const now = new Date();
+    const today = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+    expect(screen.getByLabelText(/data e sotme|date/i)).toHaveTextContent(today);
+    expect(screen.getByTestId('live-motion')).toBeInTheDocument();
+    expect(css).toMatch(/\.stampPulse[^}]*animation:\s*stampPulse/);
+  });
+
+  it('FR-CRD-07 with reduced motion the animation gives way to a visible second counter that moves', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false }) as MediaQueryList);
+    respondWith(200, { data: gold() });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Ana Hoxha' });
+    const counter = screen.getByTestId('live-counter');
+    expect(screen.queryByTestId('live-motion')).toBeNull();
+    const before = counter.textContent;
+    await waitFor(() => expect(screen.getByTestId('live-counter').textContent).not.toBe(before), { timeout: 3000 });
+  });
+
+  it('FR-CRD-05 adds the manifest and the iOS tags while a card is shown, and removes them after', async () => {
+    respondWith(200, { data: gold() });
+    const view = renderPage();
+    await screen.findByRole('heading', { name: 'Ana Hoxha' });
+    expect(document.head.querySelector('link[rel="manifest"]')?.getAttribute('href')).toMatch(new RegExp(`/public/cards/${TOKEN}/manifest.webmanifest$`));
+    expect(document.head.querySelector('meta[name="apple-mobile-web-app-capable"]')?.getAttribute('content')).toBe('yes');
+    expect(document.head.querySelector('meta[name="apple-mobile-web-app-title"]')?.getAttribute('content')).toBe('Wellness+');
+    view.unmount();
+    expect(document.head.querySelector('link[rel="manifest"]')).toBeNull();
+  });
+
+  it('FR-CRD-05 an unknown or replaced link is not installable: no manifest', async () => {
+    respondWith(410, {});
+    renderPage();
+    await screen.findByText(/This card was replaced|Kjo kartë u zëvendësua/);
+    expect(document.head.querySelector('link[rel="manifest"]')).toBeNull();
+  });
+
+  it('FR-CRD-05 shows the iPhone instructions in Safari, the Android ones in Chrome, and none once installed or on a desktop', async () => {
+    setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1');
+    respondWith(200, { data: gold({ language: 'en' }) });
+    const first = renderPage();
+    expect(await screen.findByText(/Add to Home Screen/)).toBeInTheDocument();
+    first.unmount();
+
+    setUserAgent('Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile Safari/537.36');
+    renderPage();
+    expect(await screen.findByText(/Install app/)).toBeInTheDocument();
+  });
+
+  it('FR-CRD-05 no instructions when the card runs from the home screen', async () => {
+    setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1');
+    Object.defineProperty(window.navigator, 'standalone', { value: true, configurable: true });
+    respondWith(200, { data: gold({ language: 'en' }) });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Ana Hoxha' });
+    expect(screen.queryByText(/Add this card to your home screen/)).toBeNull();
+    delete (window.navigator as { standalone?: boolean }).standalone;
+  });
+
+  it('FR-CRD-06 an answer the worker gave from storage shows "Last updated" with the time it was stored', async () => {
+    respondWith(200, { data: gold({ language: 'en' }) }, { 'X-From-Cache': '1', 'X-Cached-At': '2027-01-05T10:15:00.000Z' });
+    renderPage();
+    const note = await screen.findByText(/Last updated 05\.01\.2027 \d\d:\d\d/);
+    expect(note).toBeInTheDocument();
+  });
+
+  it('FR-CRD-06 a live answer shows no "Last updated" line', async () => {
+    respondWith(200, { data: gold({ language: 'en' }) });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Ana Hoxha' });
+    expect(screen.queryByText(/Last updated/)).toBeNull();
   });
 });

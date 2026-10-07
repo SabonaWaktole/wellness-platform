@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { fetchPublicCard, type PublicCard, type PublicCardResult } from '../../services/memberCardService';
+import { cardAnswerUrl, fetchPublicCard, type PublicCard, type PublicCardResult } from '../../services/memberCardService';
 import { cardI18n, isCardLanguage, type CardLanguage } from './cardI18n';
-import { formatCardDate, readableOn } from './cardFormat';
+import { formatCardDate, formatCardDateTime, readableOn } from './cardFormat';
+import { useCardWorker, useInstallableHead, useInstallHint } from './cardInstall';
+import { LiveStamp } from './LiveStamp';
 import styles from './PublicCardPage.module.css';
 
 /** 50.00 → 50, 12.50 → 12.5 */
@@ -36,6 +38,10 @@ export const PublicCardPage = () => {
   const [result, setResult] = useState<PublicCardResult | null>(null);
   const [language, setLanguage] = useState<CardLanguage>('sq');
   useNoIndex();
+  const hasCard = result?.kind === 'card';
+  useInstallableHead(token, hasCard);
+  useCardWorker(hasCard, token ? cardAnswerUrl(token) : undefined);
+  const installPlatform = useInstallHint();
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -106,6 +112,15 @@ export const PublicCardPage = () => {
         )}
 
         {card && <CardFace card={card} language={language} />}
+        {result?.kind === 'card' && result.cachedAt && (
+          <p className={styles.stale} role="status">{t('lastUpdated', { when: formatCardDateTime(new Date(result.cachedAt)) })}</p>
+        )}
+        {card && installPlatform && (
+          <aside className={styles.install}>
+            <strong>{t('install.title')}</strong>
+            <p>{t(`install.${installPlatform}`)}</p>
+          </aside>
+        )}
 
         <p className={styles.privacy}>{t('privacy')}</p>
       </div>
@@ -143,6 +158,7 @@ const CardFace = ({ card, language }: { card: PublicCard; language: CardLanguage
 
         {card.valid ? (
           <>
+            <LiveStamp />
             <p className={styles.validity}>{card.validUntil ? t('validUntil', { date: formatCardDate(card.validUntil) }) : t('noExpiry')}</p>
             {qr && (
               <div className={styles.qrBox}>

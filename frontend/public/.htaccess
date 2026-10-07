@@ -48,4 +48,12 @@
   <FilesMatch "\.(js|css|woff2?|svg|png|jpe?g|gif|webp|avif)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
+
+  # M4 Slice 12 (D14): the card's service worker is never cached, so a fix to it
+  # reaches phones at the next open, and it may control /m/ and nothing else. This
+  # comes after the rule above, which would otherwise make every .js immutable.
+  <Files "sw.js">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Service-Worker-Allowed "/m/"
+  </Files>
 </IfModule>
