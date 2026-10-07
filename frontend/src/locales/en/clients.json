@@ -165,7 +165,8 @@
       "paymentMethod": "Method: {{method}}",
       "dealWonValue": "{{monthly}} a month, {{annual}} a year"
     },
-    "calculatePrice": "Calculate price"
+    "calculatePrice": "Calculate price",
+    "employeeUpload": "Employee upload"
   },
   "activity": {
     "title": "Record activity",

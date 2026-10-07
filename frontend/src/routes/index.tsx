@@ -27,6 +27,7 @@ import { MemberFormPage } from '../pages/membership/MemberFormPage';
 import { MemberDetailPage } from '../pages/membership/MemberDetailPage';
 import { MemberPaymentsPage } from '../pages/membership/MemberPaymentsPage';
 import { VipRequestsPage } from '../pages/membership/VipRequestsPage';
+import { EmployeeUploadPage } from '../pages/membership/EmployeeUploadPage';
 import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -578,6 +579,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="members.payments.view">
               <MemberPaymentsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 9: the corporate employee upload (FR-EMP-01).
+        path: 'members/employee-upload',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.import">
+              <EmployeeUploadPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

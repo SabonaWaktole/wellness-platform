@@ -112,7 +112,8 @@
     "membershipPayments": "Pagesat e anëtarësimit",
     "performance": "Performanca",
     "renewals": "Rinovimet",
-    "vipRequests": "Kërkesat VIP"
+    "vipRequests": "Kërkesat VIP",
+    "employeeUpload": "Ngarkimi i punonjësve"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

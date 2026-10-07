@@ -426,3 +426,51 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* The employee upload (M4 Slice 9): the company chooser and the file field. */
+.uploadField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.companyChosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+}
+
+.companySearch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  max-width: 480px;
+}
+
+.matches {
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-xs);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.match {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.match:hover,
+.match:focus-visible {
+  background: var(--color-surface-container-high);
+}

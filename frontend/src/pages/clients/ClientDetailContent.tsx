@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Calculator, ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Calendar } from 'lucide-react';
+import { Calculator, ChevronRight, Edit3, Mail, MoreVertical, Phone, Settings, Calendar, Users } from 'lucide-react';
 import { useClientDetail, useClientHistory, useClientSettings } from '../../hooks/useClients';
 import { useClientAppointments } from '../../hooks/useAppointments';
 import { Card } from '../../components/ui/Card/Card';
@@ -101,6 +101,7 @@ export const ClientDetailContent: React.FC = () => {
   const canSeeContracts = usePermission('contracts.validity.view');
   const canSeeDeals = usePermission('deals.view');
   const canPrice = usePermission('offers.edit');
+  const canImportEmployees = usePermission('members.import');
   const shownTab =
     (activeTab === 'contracts' && !canSeeContracts) || (activeTab === 'deals' && !canSeeDeals) ? 'timeline' : activeTab;
   const canAddActivities = usePermission('activities.add');
@@ -220,6 +221,18 @@ export const ClientDetailContent: React.FC = () => {
                 onClick={() => navigate(`/${tenantSlug}/clients/${clientId}/pricing`)}
               >
                 <Calculator size={18} />
+              </Button>
+            )}
+            {/* M4 Slice 9: the employee upload, opened on this company (FR-EMP-01). */}
+            {canImportEmployees && (
+              <Button
+                variant="outline"
+                className={styles.iconButton}
+                aria-label={t('detail.employeeUpload')}
+                title={t('detail.employeeUpload')}
+                onClick={() => navigate(`/${tenantSlug}/members/employee-upload?clientId=${clientId}`)}
+              >
+                <Users size={18} />
               </Button>
             )}
             <Button

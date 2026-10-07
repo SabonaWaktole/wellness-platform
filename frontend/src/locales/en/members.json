@@ -444,5 +444,86 @@
       "NOT_PENDING": "This request has already been decided.",
       "NOT_VIP": "This member is not VIP."
     }
+  },
+  "employees": {
+    "title": "Employee upload",
+    "subtitle": "Add a company's employees as sponsored Silver members from an Excel file. Nothing is created until you confirm.",
+    "template": "Download template",
+    "company": "Company",
+    "change": "Change",
+    "search": "Search for a company",
+    "searchPlaceholder": "Company name",
+    "noCompanies": "No company found.",
+    "file": "Employee file",
+    "fileHelp": "An Excel .xlsx file with at most 1,000 rows and 2 MB. The company needs a valid contract today.",
+    "upload": "Upload and preview",
+    "confirm": "Confirm and create",
+    "cancel": "Cancel",
+    "failed": "Something went wrong. Try again.",
+    "counts": {
+      "created": "{{count}} new",
+      "linked": "{{count}} to link",
+      "skipped": "{{count}} skipped",
+      "refused": "{{count}} refused",
+      "errors": "{{count}} with errors"
+    },
+    "outcome": {
+      "NEW": "New member",
+      "EXISTING": "Existing member to link",
+      "SKIPPED": "Skipped",
+      "REFUSED": "Refused",
+      "ERROR": "Error"
+    },
+    "reason": {
+      "alreadyLinked": "Already linked to this company",
+      "repeated": "Repeated in the file",
+      "linkedElsewhere": "Linked to another company",
+      "closed": "The member is closed",
+      "ambiguous": "Matches more than one member",
+      "other": "{{defaultValue}}"
+    },
+    "columns": {
+      "row": "Row",
+      "name": "Name",
+      "result": "Result",
+      "reason": "Reason"
+    },
+    "preview": {
+      "title": "Preview of {{file}}",
+      "counts": "Counts",
+      "nothingCreated": "Nothing has been created yet."
+    },
+    "result": {
+      "title": "Upload confirmed",
+      "download": "Download skipped and error rows",
+      "another": "Upload another file"
+    },
+    "history": {
+      "title": "Uploads for this company",
+      "empty": "No uploads yet.",
+      "when": "When",
+      "who": "By",
+      "file": "File",
+      "counts": "Result",
+      "status": {
+        "PREVIEWED": "Not confirmed",
+        "CONFIRMED": "Confirmed",
+        "EXPIRED": "Expired"
+      }
+    },
+    "refusal": {
+      "NO_VALID_CONTRACT": "No valid contract: the company needs a valid contract today before its employees can be uploaded.",
+      "COMPANY_NOT_FOUND": "The company was not found.",
+      "NO_FILE": "Choose an Excel .xlsx file.",
+      "NOT_XLSX": "The file is not an Excel .xlsx workbook.",
+      "HAS_MACROS": "Workbooks with macros (.xlsm) are not accepted. Save the file as .xlsx.",
+      "TOO_LARGE": "The file must be smaller than 2 MB.",
+      "TOO_MANY_ROWS": "The file has more than 1,000 rows, which is the limit.",
+      "MISSING_COLUMNS": "The first row must have the columns First name and Last name.",
+      "EMPTY_FILE": "The file has no employee rows.",
+      "ALREADY_CONFIRMED": "This upload was already confirmed.",
+      "EXPIRED": "The preview expired after 24 hours. Upload the file again.",
+      "BAD_TOKEN": "This confirmation does not match the preview. Upload the file again."
+    }
   }
 }

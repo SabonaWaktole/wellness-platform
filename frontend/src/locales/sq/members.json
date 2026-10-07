@@ -444,5 +444,86 @@
       "NOT_PENDING": "Kjo kërkesë është vendosur tashmë.",
       "NOT_VIP": "Ky anëtar nuk është VIP."
     }
+  },
+  "employees": {
+    "title": "Ngarkimi i punonjësve",
+    "subtitle": "Shtoni punonjësit e një kompanie si anëtarë Silver të sponsorizuar nga një skedar Excel. Asgjë nuk krijohet derisa të konfirmoni.",
+    "template": "Shkarko modelin",
+    "company": "Kompania",
+    "change": "Ndrysho",
+    "search": "Kërko një kompani",
+    "searchPlaceholder": "Emri i kompanisë",
+    "noCompanies": "Nuk u gjet asnjë kompani.",
+    "file": "Skedari i punonjësve",
+    "fileHelp": "Një skedar Excel .xlsx me më së shumti 1,000 rreshta dhe 2 MB. Kompania duhet të ketë kontratë të vlefshme sot.",
+    "upload": "Ngarko dhe shiko paraprakisht",
+    "confirm": "Konfirmo dhe krijo",
+    "cancel": "Anulo",
+    "failed": "Diçka shkoi keq. Provoni përsëri.",
+    "counts": {
+      "created": "{{count}} të rinj",
+      "linked": "{{count}} për t'u lidhur",
+      "skipped": "{{count}} të anashkaluar",
+      "refused": "{{count}} të refuzuar",
+      "errors": "{{count}} me gabime"
+    },
+    "outcome": {
+      "NEW": "Anëtar i ri",
+      "EXISTING": "Anëtar ekzistues për t'u lidhur",
+      "SKIPPED": "I anashkaluar",
+      "REFUSED": "I refuzuar",
+      "ERROR": "Gabim"
+    },
+    "reason": {
+      "alreadyLinked": "Tashmë i lidhur me këtë kompani",
+      "repeated": "I përsëritur në skedar",
+      "linkedElsewhere": "I lidhur me një kompani tjetër",
+      "closed": "Anëtari është i mbyllur",
+      "ambiguous": "Përputhet me më shumë se një anëtar",
+      "other": "{{defaultValue}}"
+    },
+    "columns": {
+      "row": "Rreshti",
+      "name": "Emri",
+      "result": "Rezultati",
+      "reason": "Arsyeja"
+    },
+    "preview": {
+      "title": "Pamje paraprake e {{file}}",
+      "counts": "Numrat",
+      "nothingCreated": "Ende nuk është krijuar asgjë."
+    },
+    "result": {
+      "title": "Ngarkimi u konfirmua",
+      "download": "Shkarko rreshtat e anashkaluar dhe me gabime",
+      "another": "Ngarko një skedar tjetër"
+    },
+    "history": {
+      "title": "Ngarkimet për këtë kompani",
+      "empty": "Ende asnjë ngarkim.",
+      "when": "Kur",
+      "who": "Nga",
+      "file": "Skedari",
+      "counts": "Rezultati",
+      "status": {
+        "PREVIEWED": "I pakonfirmuar",
+        "CONFIRMED": "I konfirmuar",
+        "EXPIRED": "I skaduar"
+      }
+    },
+    "refusal": {
+      "NO_VALID_CONTRACT": "Pa kontratë të vlefshme: kompania ka nevojë për një kontratë të vlefshme sot para se të ngarkohen punonjësit.",
+      "COMPANY_NOT_FOUND": "Kompania nuk u gjet.",
+      "NO_FILE": "Zgjidhni një skedar Excel .xlsx.",
+      "NOT_XLSX": "Skedari nuk është libër pune Excel .xlsx.",
+      "HAS_MACROS": "Librat me makro (.xlsm) nuk pranohen. Ruajeni skedarin si .xlsx.",
+      "TOO_LARGE": "Skedari duhet të jetë më i vogël se 2 MB.",
+      "TOO_MANY_ROWS": "Skedari ka më shumë se 1,000 rreshta, që është kufiri.",
+      "MISSING_COLUMNS": "Rreshti i parë duhet të ketë kolonat Emri dhe Mbiemri.",
+      "EMPTY_FILE": "Skedari nuk ka rreshta punonjësish.",
+      "ALREADY_CONFIRMED": "Ky ngarkim është konfirmuar tashmë.",
+      "EXPIRED": "Pamja paraprake skadoi pas 24 orësh. Ngarkoni skedarin përsëri.",
+      "BAD_TOKEN": "Ky konfirmim nuk përputhet me pamjen paraprake. Ngarkoni skedarin përsëri."
+    }
   }
 }
