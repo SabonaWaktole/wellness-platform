@@ -224,7 +224,8 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await page.getByRole('button', { name: /^(Card|Karta)$/ }).click();
       const qr = page.getByRole('img', { name: /QR/ });
       await expect(qr).toBeVisible();
-      expect((await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
+      // The dialog scales in from 0.96, so wait for the animation to settle before measuring.
+      await expect.poll(async () => (await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
       await expectNoHorizontalOverflow(page, 'member detail → card dialog');
     });
 
@@ -235,7 +236,7 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await page.goto(new URL(url).pathname);
       const qr = page.getByRole('img', { name: /QR/ });
       await expect(qr).toBeVisible();
-      expect((await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
+      await expect.poll(async () => (await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
       await expectNoHorizontalOverflow(page, 'public member card');
     });
 
