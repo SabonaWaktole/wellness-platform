@@ -1431,6 +1431,51 @@
       "id": "FR-EMP-09",
       "priority": "Must",
       "requirement": "Sponsored Silver shall last as long as the employer company has a valid contract. The expiry date shown on the member is the end date of that contract. When a renewal contract takes over without a gap, the employees stay Silver and their expiry date moves to the new end date, with no action by anyone."
+    },
+    {
+      "id": "FR-RBAC-25",
+      "priority": "Must",
+      "requirement": "The permission catalogue shall get a Wellness+ group with these permissions: Members: view; Members: verify; Members: manage; Members: view payments; Members: record payments; Members: import employees; Members: approve VIP; Members: view reports; Wellness+ settings: manage. The Administrator can assign all of them from the Milestone 1 roles screen."
+    },
+    {
+      "id": "FR-RBAC-26",
+      "priority": "Must",
+      "requirement": "The default roles shall receive the permissions in the matrix in 10.2 on upgrade, once, without changing what the Administrator already customised (the upgrade ledger, Milestone 2 D7)."
+    },
+    {
+      "id": "FR-RBAC-27",
+      "priority": "Must",
+      "requirement": "Fields shall be removed from API responses, not only hidden: payment fields for users without \"Members: view payments\"; phone, email, internal note and verification log for users with only \"Members: verify\"; every Wellness+ field for users without any Wellness+ permission. Reception receives only the fields in FR-VER-02."
+    },
+    {
+      "id": "FR-RBAC-28",
+      "priority": "Must",
+      "requirement": "Members belong to the workspace, not to a salesperson: there is no Own or Team scope for members. A user holding a Wellness+ permission sees all members; a user without it sees none and gets 403 on direct calls."
+    },
+    {
+      "id": "FR-RBAC-29",
+      "priority": "Must",
+      "requirement": "The CEO shall be read only for Wellness+: by default \"Members: view\", \"Members: view payments\" and \"Members: view reports\", and no write permission (as Milestone 1 Q7, Milestone 3 FR-RBAC-24)."
+    },
+    {
+      "id": "FR-RBAC-30",
+      "priority": "Must",
+      "requirement": "The card page and the public verification page are the only endpoints without login. Every other Wellness+ endpoint shall check the permission on the server for every request."
+    },
+    {
+      "id": "FR-AUD-15",
+      "priority": "Must",
+      "requirement": "The audit log viewer shall offer filters for the new entity types: Member, Membership payment and Wellness+ settings."
+    },
+    {
+      "id": "FR-DPR-02",
+      "priority": "Must",
+      "requirement": "A user whose role holds Wellness+ permissions shall reach membership and commercial information only: members, payments, reports, and the company and contract validity data that Reception already sees. A Membership Agent role needs no commercial details of contracts (price, terms, document)."
+    },
+    {
+      "id": "NFR-SEC-07",
+      "priority": "Must",
+      "requirement": "Tier rules, permissions, field removal, the card and verification rules and the import limits shall be enforced on the server for every request. Card tokens shall come from a cryptographically secure generator, be unique in the database and be at least 128 bits."
     }
   ]
 }
