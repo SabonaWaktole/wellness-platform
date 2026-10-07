@@ -1541,6 +1541,71 @@
       "id": "NFR-OPS-05",
       "priority": "Must",
       "requirement": "Card links and QR codes shall be built from one configured public base URL. The production address is fixed before the first card is issued; if it ever changes, the old address redirects to the new one so issued cards keep working."
+    },
+    {
+      "id": "FR-MEM-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall register a member by hand. First name and last name are required, and at least one of date of birth, phone or email, so the person can be recognised later. A new member is Bronze, Active, with the start date today."
+    },
+    {
+      "id": "FR-MEM-02",
+      "priority": "Must",
+      "requirement": "The member record shall hold: member ID, first name, last name, date of birth, phone, email, card language (Albanian by default; English, Greek, Italian), city (from the predefined Area and City lists, optional), tier, status, start date, expiry date, employer company, family link, internal note, created by and when. It holds no medical information (FR-DPR-01)."
+    },
+    {
+      "id": "FR-MEM-04",
+      "priority": "Must",
+      "requirement": "The platform shall prevent a second record for the same person: a member with the same email, or the same phone, or the same first name, last name and date of birth, is reported before saving. The agent can confirm \"different person\" and save. Imports (FR-EMP-04) report such rows and never create them."
+    },
+    {
+      "id": "FR-MEM-05",
+      "priority": "Must",
+      "requirement": "A member has the status Active, Suspended or Closed. A user with \"Members: manage\" can suspend a member with a reason (card not valid, no discounts, tier unchanged) and reinstate. Closing keeps the record and the ID for history; a closed member can be reopened. No member is deleted."
+    },
+    {
+      "id": "FR-MEM-07",
+      "priority": "Must",
+      "requirement": "The member list shall search by name, member ID, phone and email and filter by tier, status, validity, source (corporate, individual, family), employer company, expiring soon, VIP review due and former employee, plus the Area and City of the employer company from the predefined lists. It pages and sorts."
+    },
+    {
+      "id": "FR-MEM-08",
+      "priority": "Must",
+      "requirement": "The member page shall show all fields, the current tier with its term dates, the term history, the tier history, payments (for users who may see them, FR-MPAY-08), the family group, the employer company, the verification events (FR-VER-06) and the internal note."
+    },
+    {
+      "id": "FR-MEM-09",
+      "priority": "Must",
+      "requirement": "Personal details (name, date of birth, phone, email, language, city, note) can be edited by users with \"Members: manage\". The tier, the term dates, the status history and the member ID cannot be typed: they change only through the actions in this milestone (payment, upgrade, VIP, import, removal, correction)."
+    },
+    {
+      "id": "FR-MEM-10",
+      "priority": "Should",
+      "requirement": "The member page shall let an authorized user write an internal note. The note field shows a warning that no medical information may be written there."
+    },
+    {
+      "id": "FR-TIR-08",
+      "priority": "Must",
+      "requirement": "Every change of effective tier shall be written to the tier history with the date, the old and new tier, the reason (Purchase, Renewal, Upgrade, Not renewed, Company contract ended, Left company, VIP approved, VIP ended, Import, Correction), who (or \"system\") and a comment."
+    },
+    {
+      "id": "FR-DPR-01",
+      "priority": "Must",
+      "requirement": "The platform shall hold no medical information about members: no diagnosis, no result, no service used, no medical note. The member fields are those in FR-MEM-02 and nothing in the member record, the card or the reports is derived from medical data."
+    },
+    {
+      "id": "FR-DPR-03",
+      "priority": "Must",
+      "requirement": "The platform shall collect the minimum: no national identity number, address, photograph or health data. Date of birth is optional and used for identification at Reception."
+    },
+    {
+      "id": "NFR-DAT-02",
+      "priority": "Must",
+      "requirement": "The database shall guarantee: one member number and one card token per value; one receipt number per value; one open VIP request per member; one employer per member; one principal per family member; one discount per service and tier."
+    },
+    {
+      "id": "NFR-PERF-05",
+      "priority": "Should",
+      "requirement": "The member list and search shall return in under 1 second with 50,000 members; Reception verification and the public verification page in under 1 second; the card page shall be usable in under 2 seconds on a mid-range phone on 4G; the preview of a 1,000-row upload in under 15 seconds and its confirmation in under 30 seconds; the reports and the dashboard block in under 2 seconds with 50,000 members and 20,000 payments."
     }
   ]
 }
