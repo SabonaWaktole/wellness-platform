@@ -190,6 +190,7 @@ model Tenant {
   membershipSettings  MembershipSettings?
   familyRelationships FamilyRelationship[]
   benefitServices     BenefitService[]
+  members             Member[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -614,6 +615,8 @@ model Client {
   @@index([tenantId, name])
   @@index([tenantId, businessTypeId])
   @@index([tenantId, areaId, cityId])
+  employedMembers       Member[] @relation("MemberEmployer")
+  formerEmployedMembers Member[] @relation("MemberFormerEmployer")
 }
 
 /// A named person at a company (FR-CMP-04, Slice 12): name, position, phone
@@ -1878,6 +1881,7 @@ model City {
 
   @@unique([tenantId, areaId, nameSq])
   @@index([tenantId, areaId, order])
+  members    Member[]
 }
 
 /// Days after which an unattended deal should resurface as a follow-up
@@ -2393,6 +2397,7 @@ model FamilyRelationship {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, order])
+  members  Member[]
 }
 
 /// A service in the Wellness+ benefit table (M4 Slice 3, FR-BEN-01).
@@ -2419,4 +2424,114 @@ model BenefitDiscount {
   service BenefitService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@id([serviceId, tier])
+}
+
+/// A Wellness+ member (M4 Slice 4, FR-MEM-02). Not a Client and not a User. The
+/// columns are exactly the FR-MEM-02 list plus the keys the later slices link
+/// through; no medical, address, photograph or national-ID column exists
+/// (FR-DPR-01, FR-DPR-03). `currentTier` is a stored copy kept by the domain
+/// actions and the daily job; single-member reads calculate it (D2).
+model Member {
+  id                      String    @id
+  tenantId                String
+  memberNumber            String
+  firstName               String
+  lastName                String
+  dateOfBirth             DateTime? @db.Date
+  phone                   String?
+  email                   String?
+  language                String    @default("sq")
+  cityId                  String?
+  status                  String    @default("ACTIVE")
+  currentTier             String    @default("BRONZE")
+  startsOn                DateTime  @db.Date
+  employerClientId        String?
+  formerEmployerClientId  String?
+  leftCompanyAt           DateTime? @db.Date
+  principalMemberId       String?
+  relationshipId          String?
+  relationshipConfirmedBy String?
+  relationshipConfirmedAt DateTime?
+  /// The secret behind the member's card link (Slice 11). Never audited or logged.
+  cardToken               String    @unique
+  note                    String?   @db.Text
+  createdBy               String
+  createdAt               DateTime  @default(now())
+  closedAt                DateTime?
+  anonymisedAt            DateTime?
+
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  city           City?               @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  employer       Client?             @relation("MemberEmployer", fields: [employerClientId], references: [id], onDelete: Restrict)
+  formerEmployer Client?             @relation("MemberFormerEmployer", fields: [formerEmployerClientId], references: [id], onDelete: Restrict)
+  principal      Member?             @relation("MemberFamily", fields: [principalMemberId], references: [id], onDelete: Restrict)
+  dependants     Member[]            @relation("MemberFamily")
+  relationship   FamilyRelationship? @relation(fields: [relationshipId], references: [id], onDelete: Restrict)
+  terms          MemberTerm[]
+  tierHistory    MemberTierHistory[]
+  statusHistory  MemberStatusHistory[]
+
+  @@unique([tenantId, memberNumber])
+  @@index([tenantId, lastName, firstName])
+  @@index([tenantId, currentTier, status])
+  @@index([tenantId, employerClientId])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@index([tenantId, dateOfBirth])
+  @@index([principalMemberId])
+}
+
+/// One term of membership (M4 Slice 4, D3). A new member has none: Bronze is
+/// the floor. A sponsored term has no end date. The payment columns are filled
+/// by Slice 5, `followsTermId` by the daily job of Slice 8 (one downgrade term
+/// per ended term, enforced here by the unique index).
+model MemberTerm {
+  id                     String    @id
+  memberId               String
+  tier                   String
+  source                 String
+  startsOn               DateTime  @db.Date
+  endsOn                 DateTime? @db.Date
+  paymentId              String?
+  followsTermId          String?   @unique
+  closedEarlyByPaymentId String?
+  originalEndsOn         DateTime? @db.Date
+  createdAt              DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, startsOn])
+}
+
+/// Every change of effective tier (M4 Slice 4, FR-TIR-08). `changedByUserId`
+/// is null for the system.
+model MemberTierHistory {
+  id              String   @id
+  memberId        String
+  fromTier        String
+  toTier          String
+  reason          String
+  comment         String?  @db.Text
+  changedByUserId String?
+  createdAt       DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
+}
+
+/// Every change of status (M4 Slice 4, FR-MEM-05, D15): the history the monthly
+/// "Active at the end of the month" report replays.
+model MemberStatusHistory {
+  id              String   @id
+  memberId        String
+  fromStatus      String?
+  toStatus        String
+  reason          String?  @db.Text
+  changedByUserId String?
+  createdAt       DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
 }

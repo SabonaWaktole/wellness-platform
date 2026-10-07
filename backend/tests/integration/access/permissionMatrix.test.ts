@@ -297,6 +297,22 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).post(`/api/${tenantSlug}/membership/settings/benefits`).set('Authorization', `Bearer ${t}`).send({ nameSq: '', nameEn: '' }),
     },
     {
+      label: 'members.view — GET /membership/members',
+      permissionKey: 'members.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.manage — POST /membership/members',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members`).set('Authorization', `Bearer ${t}`).send({ firstName: '', lastName: '' }),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/status',
+      permissionKey: 'members.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/status`).set('Authorization', `Bearer ${t}`).send({ action: 'CLOSE' }),
+    },
+    {
       label: 'settings.manage — PATCH /settings/contracts',
       permissionKey: 'settings.manage',
       request: (t) =>

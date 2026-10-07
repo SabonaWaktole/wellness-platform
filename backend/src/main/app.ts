@@ -261,6 +261,16 @@ import {
   UpdateBenefitServiceUseCase,
 } from '../membership/application/use-cases/BenefitUseCases';
 import { createMembershipSettingsRouter } from '../membership/interfaces/http/membershipSettingsRoutes';
+import { PrismaMemberStore } from '../membership/infrastructure/PrismaMemberStore';
+import {
+  ChangeMemberStatusUseCase,
+  GetMemberUseCase,
+  RegisterMemberUseCase,
+  SearchMembersUseCase,
+  UpdateMemberUseCase,
+} from '../membership/application/use-cases/MemberUseCases';
+import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
+import { generateShareToken } from '../quotations/domain/shareToken';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -1320,6 +1330,25 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
         getBenefits: new GetBenefitTableUseCase(benefitStore, membershipSettingsStore),
         createBenefit: new CreateBenefitServiceUseCase(benefitStore, membershipWriteTx),
         updateBenefit: new UpdateBenefitServiceUseCase(benefitStore, membershipWriteTx),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // The Wellness+ member record (M4 Slice 4): register, search, edit personal
+  // details, suspend and close. Members: view reads, Members: manage writes.
+  const memberStore = new PrismaMemberStore(prisma);
+  app.use(
+    '/api/:tenantSlug/membership/members',
+    createMemberRouter(
+      {
+        search: new SearchMembersUseCase(memberStore, membershipSettingsStore),
+        get: new GetMemberUseCase(memberStore, membershipSettingsStore),
+        register: new RegisterMemberUseCase(membershipWriteTx, generateShareToken),
+        update: new UpdateMemberUseCase(membershipWriteTx),
+        changeStatus: new ChangeMemberStatusUseCase(membershipWriteTx),
       },
       tokenService,
       tenantRepository,
