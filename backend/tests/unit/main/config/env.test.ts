@@ -1,4 +1,4 @@
-import { assertRequiredEnv, requireJwtSecret, MissingEnvironmentError } from '@main/config/env';
+import { assertRequiredEnv, buildPublicLink, readPublicBaseUrl, requireJwtSecret, InvalidPublicBaseUrlError, MissingEnvironmentError } from '@main/config/env';
 import { JwtTokenService } from '@auth/infrastructure/JwtTokenService';
 
 /**
@@ -87,6 +87,53 @@ describe('required environment validation', () => {
     it('constructs normally when a secret is present', () => {
       process.env.JWT_SECRET = 'a-real-secret';
       expect(() => new JwtTokenService()).not.toThrow();
+    });
+  });
+
+  describe('NFR-OPS-05 PUBLIC_BASE_URL', () => {
+    const env = (vars: Record<string, string | undefined>) => vars as NodeJS.ProcessEnv;
+
+    it('NFR-OPS-05 is required in production', () => {
+      expect(() => readPublicBaseUrl(env({ NODE_ENV: 'production' }))).toThrow(InvalidPublicBaseUrlError);
+      expect(() => readPublicBaseUrl(env({ NODE_ENV: 'production', PUBLIC_BASE_URL: '  ' }))).toThrow(/required in production/);
+    });
+
+    it('NFR-OPS-05 may be unset outside production', () => {
+      expect(readPublicBaseUrl(env({ NODE_ENV: 'development' }))).toBeNull();
+      expect(readPublicBaseUrl(env({}))).toBeNull();
+    });
+
+    it.each([
+      ['http://wellness.example.al', 'must start with https://'],
+      ['wellness.example.al', 'not an absolute URL'],
+      ['https://wellness.example.al/', 'must not end with a slash'],
+      ['https://wellness.example.al/app', 'origin only'],
+      ['https://wellness.example.al?x=1', 'origin only'],
+    ])('NFR-OPS-05 refuses %s', (value, reason) => {
+      expect(() => readPublicBaseUrl(env({ NODE_ENV: 'production', PUBLIC_BASE_URL: value }))).toThrow(reason);
+    });
+
+    it('NFR-OPS-05 accepts an https origin, and http://localhost only outside production', () => {
+      expect(readPublicBaseUrl(env({ NODE_ENV: 'production', PUBLIC_BASE_URL: 'https://wellness.example.al' }))).toBe('https://wellness.example.al');
+      expect(readPublicBaseUrl(env({ NODE_ENV: 'development', PUBLIC_BASE_URL: 'http://localhost:5173' }))).toBe('http://localhost:5173');
+      expect(() => readPublicBaseUrl(env({ NODE_ENV: 'production', PUBLIC_BASE_URL: 'http://localhost:5173' }))).toThrow(InvalidPublicBaseUrlError);
+    });
+
+    it('NFR-OPS-05 builds links from the configured value, and changing it changes new links', () => {
+      expect(buildPublicLink('/m/abc', env({ PUBLIC_BASE_URL: 'https://a.example.al' }))).toBe('https://a.example.al/m/abc');
+      expect(buildPublicLink('v/abc', env({ PUBLIC_BASE_URL: 'https://b.example.al' }))).toBe('https://b.example.al/v/abc');
+    });
+
+    it('NFR-OPS-05 the startup guard fails for an invalid value', () => {
+      const original = process.env.PUBLIC_BASE_URL;
+      try {
+        process.env.JWT_SECRET = 'a-real-secret';
+        process.env.PUBLIC_BASE_URL = 'http://not-secure.example.al';
+        expect(() => assertRequiredEnv()).toThrow(InvalidPublicBaseUrlError);
+      } finally {
+        if (original === undefined) delete process.env.PUBLIC_BASE_URL;
+        else process.env.PUBLIC_BASE_URL = original;
+      }
     });
   });
 });

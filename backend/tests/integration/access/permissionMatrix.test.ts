@@ -286,6 +286,17 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).patch(`/api/${tenantSlug}/lookups/risk-levels/nonexistent`).set('Authorization', `Bearer ${t}`).send({}),
     },
     {
+      label: 'wellnessplus.settings.manage — PATCH /membership/settings',
+      permissionKey: 'wellnessplus.settings.manage',
+      request: (t) => request(app).patch(`/api/${tenantSlug}/membership/settings`).set('Authorization', `Bearer ${t}`).send({ graceDays: 0 }),
+    },
+    {
+      label: 'wellnessplus.settings.manage — POST /membership/settings/benefits',
+      permissionKey: 'wellnessplus.settings.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/settings/benefits`).set('Authorization', `Bearer ${t}`).send({ nameSq: '', nameEn: '' }),
+    },
+    {
       label: 'settings.manage — PATCH /settings/contracts',
       permissionKey: 'settings.manage',
       request: (t) =>

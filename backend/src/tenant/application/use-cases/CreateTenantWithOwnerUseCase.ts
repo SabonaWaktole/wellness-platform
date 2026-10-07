@@ -69,7 +69,7 @@ export class CreateTenantWithOwnerUseCase {
     const platformDefaults = await this.platformSettingsRepository?.get();
 
     try {
-      return await this.provisioningTx.run(async ({ tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder, salesScriptSeeder }) => {
+      return await this.provisioningTx.run(async ({ tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder, salesScriptSeeder, membershipSeeder }) => {
         /*
          * The slug check runs INSIDE the transaction, unlike the original,
          * which checked before opening one. That does not by itself make the
@@ -112,6 +112,8 @@ export class CreateTenantWithOwnerUseCase {
         await pricingSeeder.seed(tenant.id);
         // The placeholder sales script, published as version 1 (M2 Slice 5).
         await salesScriptSeeder.seed(tenant.id);
+        // Wellness+ tiers, rules, relationships and the benefit table (M4 Slice 3).
+        await membershipSeeder.seed(tenant.id);
 
         const user = User.create({
           id: uuidv4(),

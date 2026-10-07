@@ -9,6 +9,7 @@ import { PrismaUserRepository } from '../../auth/infrastructure/repositories/Pri
 import { PrismaSystemRoleSeeder } from '../../access/infrastructure/PrismaSystemRoleSeeder';
 import { PrismaLookupSeeder } from '../../lookups/infrastructure/PrismaLookupSeeder';
 import { PrismaPricingSeeder } from '../../pricing/infrastructure/PrismaPricingSeeder';
+import { PrismaMembershipSeeder } from '../../membership/infrastructure/PrismaMembershipSeeder';
 import { PrismaSalesScriptSeeder } from '../../salesScript/infrastructure/PrismaSalesScriptSeeder';
 
 export class PrismaTenantProvisioningTransaction implements ITenantProvisioningTransaction {
@@ -34,6 +35,7 @@ export class PrismaTenantProvisioningTransaction implements ITenantProvisioningT
         lookupSeeder: new PrismaLookupSeeder(client),
         pricingSeeder: new PrismaPricingSeeder(client),
         salesScriptSeeder: new PrismaSalesScriptSeeder(client),
+        membershipSeeder: new PrismaMembershipSeeder(client),
       });
     });
   }

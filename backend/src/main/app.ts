@@ -241,6 +241,26 @@ import { PrismaContractValidityReader } from '../contracts/infrastructure/Prisma
 import { PrismaContractSettingsStore } from '../contracts/infrastructure/PrismaContractSettingsStore';
 import { GetContractSettingsUseCase, UpdateContractSettingsUseCase } from '../contracts/application/use-cases/ContractSettingsUseCases';
 import { createContractSettingsRouter } from '../contracts/interfaces/http/contractSettingsRoutes';
+import { PrismaMembershipSettingsStore } from '../membership/infrastructure/PrismaMembershipSettingsStore';
+import { PrismaRelationshipStore } from '../membership/infrastructure/PrismaRelationshipStore';
+import { PrismaBenefitStore } from '../membership/infrastructure/PrismaBenefitStore';
+import { PrismaMembershipWriteTransaction } from '../membership/infrastructure/PrismaMembershipWriteTransaction';
+import {
+  GetMembershipSettingsUseCase,
+  UpdateMembershipSettingsUseCase,
+  UpdateTierSettingUseCase,
+} from '../membership/application/use-cases/MembershipSettingsUseCases';
+import {
+  CreateRelationshipUseCase,
+  ListRelationshipsUseCase,
+  UpdateRelationshipUseCase,
+} from '../membership/application/use-cases/RelationshipUseCases';
+import {
+  CreateBenefitServiceUseCase,
+  GetBenefitTableUseCase,
+  UpdateBenefitServiceUseCase,
+} from '../membership/application/use-cases/BenefitUseCases';
+import { createMembershipSettingsRouter } from '../membership/interfaces/http/membershipSettingsRoutes';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -1274,6 +1294,33 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     createContractSettingsRouter(
       new GetContractSettingsUseCase(contractSettingsStore),
       new UpdateContractSettingsUseCase(contractSettingsStore, contractWriteTx),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Wellness+ settings and benefit table (M4 Slice 3): tiers and fees, rules,
+  // relationships and benefits under wellnessplus.settings.manage, and the
+  // read-only benefit table for members.view / members.verify.
+  const membershipSettingsStore = new PrismaMembershipSettingsStore(prisma);
+  const relationshipStore = new PrismaRelationshipStore(prisma);
+  const benefitStore = new PrismaBenefitStore(prisma);
+  const membershipWriteTx = new PrismaMembershipWriteTransaction(prisma);
+  app.use(
+    '/api/:tenantSlug/membership',
+    createMembershipSettingsRouter(
+      {
+        getSettings: new GetMembershipSettingsUseCase(membershipSettingsStore),
+        updateSettings: new UpdateMembershipSettingsUseCase(membershipSettingsStore, membershipWriteTx),
+        updateTier: new UpdateTierSettingUseCase(membershipSettingsStore, membershipWriteTx),
+        listRelationships: new ListRelationshipsUseCase(relationshipStore),
+        createRelationship: new CreateRelationshipUseCase(relationshipStore, membershipWriteTx),
+        updateRelationship: new UpdateRelationshipUseCase(relationshipStore, membershipWriteTx),
+        getBenefits: new GetBenefitTableUseCase(benefitStore, membershipSettingsStore),
+        createBenefit: new CreateBenefitServiceUseCase(benefitStore, membershipWriteTx),
+        updateBenefit: new UpdateBenefitServiceUseCase(benefitStore, membershipWriteTx),
+      },
       tokenService,
       tenantRepository,
       resolveAccessContext

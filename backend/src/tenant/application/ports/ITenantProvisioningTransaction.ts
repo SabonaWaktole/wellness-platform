@@ -3,6 +3,7 @@ import { IUserRepository } from '../../../auth/domain/repositories/IUserReposito
 import { ISystemRoleSeeder } from '../../../access/application/ports/ISystemRoleSeeder';
 import { ILookupSeeder } from '../../../lookups/application/ports/ILookupSeeder';
 import { IPricingSeeder } from '../../../pricing/application/ports/IPricingSeeder';
+import { IMembershipSeeder } from '../../../membership/application/ports/IMembershipSeeder';
 import { ISalesScriptSeeder } from '../../../salesScript/application/ports/ISalesScriptSeeder';
 
 /** The repositories provisioning a workspace writes through, all on one connection. */
@@ -13,6 +14,7 @@ export interface TenantProvisioningRepos {
   lookupSeeder: ILookupSeeder;
   pricingSeeder: IPricingSeeder;
   salesScriptSeeder: ISalesScriptSeeder;
+  membershipSeeder: IMembershipSeeder;
 }
 
 /**

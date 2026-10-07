@@ -94,6 +94,7 @@ DATABASE_URL="mysql://user:password@host:3306/dbname"
 JWT_SECRET="<a long random string, at least 32 characters>"
 JWT_EXPIRATION="24h"
 FRONTEND_URL="https://<the frontend's own origin>"
+PUBLIC_BASE_URL="https://<the address printed on member cards>"
 ```
 
 - **`NODE_ENV=production` is not optional**, on staging as much as on
@@ -103,6 +104,12 @@ FRONTEND_URL="https://<the frontend's own origin>"
   sends its session cookie over plain HTTP.
 - **`FRONTEND_URL`** is the only origin CORS lets call the API with
   credentials. It must match exactly, scheme included.
+- **`PUBLIC_BASE_URL`** (Wellness+, NFR-OPS-05) is the one address that member
+  card links and QR codes are built from. In production the server **refuses to
+  start without it**: an `https://` origin with no trailing slash and no path.
+  Fix it before the first card is issued; if it ever changes, redirect the old
+  address to the new one in the host's configuration so issued cards keep
+  working.
 - **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
   also the longest a stolen token stays usable; deactivation and suspension are
   enforced on every request regardless.
