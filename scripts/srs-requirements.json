@@ -1786,6 +1786,66 @@
       "id": "FR-MEM-11",
       "priority": "Should",
       "requirement": "The company page shall get a Wellness+ tab for users with \"Members: view\": the members linked to the company with the count per tier, the former employees, the upload button (FR-EMP-01) and the history of uploads. It shows \"N members of M employees\" where M is the employee count of the company record."
+    },
+    {
+      "id": "FR-CRD-01",
+      "priority": "Must",
+      "requirement": "Each member shall have a personal card page at a private link that contains a random token of at least 128 bits and opens without login. The page shows the Wellness+ logo, name, member ID, tier (in its colour), validity (\"Valid until dd.mm.yyyy\", or \"No expiry\" for Bronze), the QR code and the benefits of the tier (FR-BEN-03). It shows no phone, email, date of birth, employer or payment."
+    },
+    {
+      "id": "FR-CRD-02",
+      "priority": "Must",
+      "requirement": "The QR code shall contain the verification link of the member (FR-VER-08), not the plain member ID. It shall be at least 220 px wide, black on white with a quiet zone and error correction level M or higher, and shall be readable by the built-in camera of an iPhone and of an Android phone."
+    },
+    {
+      "id": "FR-CRD-03",
+      "priority": "Must",
+      "requirement": "The card shall always show the situation at the time it is opened: tier, validity and benefits come from the server. For a suspended or closed member the card shows \"Membership not valid, contact Wellness Albania\" and no QR code."
+    },
+    {
+      "id": "FR-CRD-04",
+      "priority": "Must",
+      "requirement": "The card shall be shown in the language of the member (Albanian by default) with a switch between Albanian and English. Greek and Italian are shown for members who have them."
+    },
+    {
+      "id": "FR-CRD-08",
+      "priority": "Must",
+      "requirement": "The card and verification pages shall give the same neutral \"Card not found\" page for an unknown, replaced or malformed token, shall carry noindex, shall be rate-limited per IP, shall not put the token in server logs or audit entries and shall contain no analytics or third-party scripts."
+    },
+    {
+      "id": "FR-CRD-09",
+      "priority": "Should",
+      "requirement": "A user with \"Members: manage\" shall be able to show the card QR on screen, copy the card link and print the card (credit card size and A6) from the member page."
+    },
+    {
+      "id": "FR-CRD-10",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall be able to replace the card link of a member, for example when a phone is lost or the card was shared. The old link and every home-screen copy of it stop working at once and show \"This card was replaced. Ask Wellness Albania for the new link.\" The replacement is audited."
+    },
+    {
+      "id": "FR-CRD-12",
+      "priority": "Should",
+      "requirement": "The card page shall carry a short privacy line (who holds the data, why, whom to contact) in Albanian and English. The text comes from Wellness Albania."
+    },
+    {
+      "id": "FR-BEN-03",
+      "priority": "Must",
+      "requirement": "The discounts of the effective tier of the member shall be shown on the verification screen (FR-VER-02) and, as \"Your benefits\", on the card page (FR-CRD-01). A suspended or closed member is shown no discounts."
+    },
+    {
+      "id": "FR-EMP-08",
+      "priority": "Should",
+      "requirement": "The platform shall send nothing to the employees automatically. A user with \"Members: manage\" can download, for one upload, an Excel sheet with name and card link of each member, so the company or Wellness Albania can distribute the cards (Q14). The download is audited."
+    },
+    {
+      "id": "NFR-SEC-08",
+      "priority": "Must",
+      "requirement": "The card page and the public verification page shall be rate-limited per IP: by default 60 requests per hour for the card page and 300 per hour for verification, so a clinic scanning many members from one network is not blocked. The limits are settings."
+    },
+    {
+      "id": "NFR-USE-05",
+      "priority": "Must",
+      "requirement": "The QR code shall stay scannable in dark mode and at low screen brightness: the card page always shows the code on a white square with a quiet zone."
     }
   ]
 }
