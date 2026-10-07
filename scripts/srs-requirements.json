@@ -1756,6 +1756,36 @@
       "id": "NFR-SEC-09",
       "priority": "Must",
       "requirement": "Uploads shall be limited to .xlsx workbooks of at most 2 MB and 1,000 rows, checked by content; formulas and external links are never followed; exports protect against formula injection."
+    },
+    {
+      "id": "FR-EMP-10",
+      "priority": "Must",
+      "requirement": "When the employer has no valid contract (Expired, Cancelled, Suspended or not started), the sponsored term shall not count, so the employee is Bronze unless a paid or VIP term gives a higher tier. The daily job records the change with the reason \"Company contract ended\" and the effect is also visible at once, because the effective tier is calculated (FR-TIR-02)."
+    },
+    {
+      "id": "FR-EMP-11",
+      "priority": "Must",
+      "requirement": "While an employee is still linked to the company, a new valid contract of the company, also after a gap, shall make the employee Silver again. A suspended contract makes the employees Bronze while it is suspended and Silver again when it is reinstated."
+    },
+    {
+      "id": "FR-EMP-12",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall remove an employee from the company, with the leaving date (default today) and an optional reason. The employer link is cleared, the sponsored term ends and the effective tier becomes the highest own term, Bronze if none. The member is kept and listed as a former employee of that company, so the agent can contact the person and offer a paid membership. The tier history records \"Left company\"."
+    },
+    {
+      "id": "FR-EMP-13",
+      "priority": "Must",
+      "requirement": "The member list and the Wellness+ tab of the company shall have the filter \"Former employees\", with the company and the leaving date."
+    },
+    {
+      "id": "FR-EMP-15",
+      "priority": "Could",
+      "requirement": "An agent shall be able to remove several selected employees at once, for example when a company reduces its staff."
+    },
+    {
+      "id": "FR-MEM-11",
+      "priority": "Should",
+      "requirement": "The company page shall get a Wellness+ tab for users with \"Members: view\": the members linked to the company with the count per tier, the former employees, the upload button (FR-EMP-01) and the history of uploads. It shows \"N members of M employees\" where M is the employee count of the company record."
     }
   ]
 }
