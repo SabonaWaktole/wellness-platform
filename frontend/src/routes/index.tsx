@@ -25,6 +25,7 @@ import { ContractSettingsPage } from '../pages/settings/contracts/ContractSettin
 import { MembersList } from '../pages/membership/MembersList';
 import { MemberFormPage } from '../pages/membership/MemberFormPage';
 import { MemberDetailPage } from '../pages/membership/MemberDetailPage';
+import { MemberPaymentsPage } from '../pages/membership/MemberPaymentsPage';
 import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
@@ -565,6 +566,17 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="members.manage">
               <MemberFormPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 5: the Membership payments list (FR-MPAY-07), open to "Members: view payments".
+        path: 'members/payments',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.payments.view">
+              <MemberPaymentsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),

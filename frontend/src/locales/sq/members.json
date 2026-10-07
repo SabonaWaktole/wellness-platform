@@ -85,7 +85,7 @@
     "edit": "Ndrysho të dhënat",
     "notFound": "Ky anëtar nuk ekziston.",
     "loadFailed": "Anëtari nuk u ngarkua.",
-    "tabs": { "overview": "Të dhënat", "terms": "Afatet", "history": "Historiku", "note": "Shënimi i brendshëm", "label": "Pjesët e anëtarit" },
+    "tabs": { "overview": "Të dhënat", "terms": "Afatet", "payments": "Pagesat", "history": "Historiku", "note": "Shënimi i brendshëm", "label": "Pjesët e anëtarit" },
     "fields": {
       "memberNumber": "ID e anëtarit",
       "dateOfBirth": "Data e lindjes",
@@ -159,6 +159,105 @@
       "confirm": "Konfirmo",
       "cancel": "Anulo",
       "failed": "Statusi nuk u ndryshua."
+    }
+  },
+  "payments": {
+    "record": "Regjistro pagesë",
+    "openReceipt": "Hap kuponin {{number}}",
+    "kind": {
+      "NEW": "Anëtarësim i ri",
+      "RENEWAL": "Rinovim",
+      "UPGRADE": "Përmirësim niveli"
+    },
+    "method": {
+      "CASH": "Para në dorë",
+      "BANK_TRANSFER": "Transfertë bankare",
+      "CARD": "Kartë",
+      "OTHER": "Tjetër"
+    },
+    "status": {
+      "RECORDED": "Regjistruar",
+      "VOIDED": "Anuluar"
+    },
+    "warning": {
+      "SPONSORED_SILVER_OWN_TERM": "Ky punonjës ka tashmë Argjend të paguar nga kompania. Kjo pagesë nis një afat të veçantë Argjend që mbetet me personin pasi largohet nga kompania."
+    },
+    "columns": {
+      "receipt": "Kuponi",
+      "date": "Data e pranimit",
+      "member": "Anëtari",
+      "kind": "Lloji",
+      "tier": "Niveli",
+      "amount": "Shuma",
+      "method": "Mënyra",
+      "status": "Statusi",
+      "by": "Regjistruar nga",
+      "actions": "Veprime"
+    },
+    "drawer": {
+      "title": "Regjistro një pagesë",
+      "receivedOn": "Data e pranimit",
+      "dateRefused": "Data e pranimit nuk mund të jetë në të ardhmen.",
+      "option": "Pagesa",
+      "optionLabel": "{{kind}} · {{tier}}",
+      "noOptions": "Për këtë anëtar nuk mund të regjistrohet asnjë pagesë në këtë datë.",
+      "loadFailed": "Opsionet e pagesës nuk u ngarkuan.",
+      "quote": "Pagesa e llogaritur",
+      "listFee": "Tarifa e listës",
+      "discount": "Zbritja familjare",
+      "amount": "Shuma për t'u paguar",
+      "newTerm": "Afati i ri",
+      "term": "{{from}} – {{to}}",
+      "calculated": "Shuma llogaritet nga platforma dhe nuk mund të ndryshohet.",
+      "method": "Mënyra e pagesës",
+      "note": "Shënim (opsional)",
+      "save": "Regjistro pagesën",
+      "cancel": "Anulo",
+      "failed": "Pagesa nuk u ruajt. Provo përsëri.",
+      "refused": {
+        "MEMBER_NOT_ACTIVE": "Vetëm një anëtar aktiv mund të paguajë.",
+        "TIER_NOT_PURCHASABLE": "Ky nivel nuk mund të blihet.",
+        "NOT_A_HIGHER_TIER": "Një pagesë nuk mund ta kalojë anëtarin në një nivel më të ulët.",
+        "PAID_TERM_RUNNING": "Ky anëtar ka tashmë një afat të paguar. Rinovoje ose përmirësoje.",
+        "NOTHING_TO_RENEW": "Nuk ka afat të paguar të këtij niveli për t'u rinovuar.",
+        "NOTHING_TO_UPGRADE": "Nuk ka nivel të paguar për t'u përmirësuar. Bli nivelin si anëtarësim të ri.",
+        "USE_UPGRADE": "Ky anëtar ka tashmë një nivel. Paguaj diferencën si përmirësim."
+      }
+    },
+    "tab": {
+      "title": "Pagesat",
+      "empty": "Për këtë anëtar nuk është regjistruar asnjë pagesë.",
+      "void": "Anulo",
+      "discounted": "{{percent}}% zbritje nga {{fee}}"
+    },
+    "voidDialog": {
+      "title": "Anulo këtë pagesë",
+      "help": "Anulimi heq efektin e pagesës: niveli dhe afati i mëparshëm rikthehen. Numri i kuponit mbetet dhe shënohet si i anuluar.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Për të anuluar një pagesë kërkohet një arsye.",
+      "confirm": "Anulo pagesën",
+      "cancel": "Anulo veprimin",
+      "notLatest": "Vetëm pagesa e fundit e një anëtari mund të anulohet. Anulo fillimisht pagesën më të re.",
+      "alreadyVoided": "Kjo pagesë është anuluar tashmë.",
+      "failed": "Pagesa nuk u anulua. Provo përsëri."
+    },
+    "page": {
+      "title": "Pagesat e anëtarësimit",
+      "subtitle": "Çdo pagesë Wellness+, me kuponin për secilën.",
+      "from": "Pranuar nga",
+      "to": "Pranuar deri",
+      "tier": "Niveli",
+      "kind": "Lloji",
+      "method": "Mënyra",
+      "status": "Statusi",
+      "summary_one": "{{count}} pagesë",
+      "summary_other": "{{count}} pagesa",
+      "total": "Totali",
+      "totalNote": "pagesat e anuluara nuk llogariten",
+      "exportCsv": "Eksporto CSV",
+      "loadFailed": "Pagesat nuk u ngarkuan.",
+      "empty": "Ende nuk është regjistruar asnjë pagesë anëtarësimi.",
+      "emptyFiltered": "Asnjë pagesë nuk përputhet me këto filtra."
     }
   }
 }

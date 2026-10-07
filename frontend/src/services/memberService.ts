@@ -1,5 +1,6 @@
 import { apiClient as api } from '../api';
 import type { Tier } from './membershipSettingsService';
+import type { MemberPayment } from './memberPaymentService';
 
 export type MemberStatus = 'ACTIVE' | 'SUSPENDED' | 'CLOSED';
 export type MemberSource = 'CORPORATE' | 'INDIVIDUAL' | 'FAMILY';
@@ -49,6 +50,8 @@ export interface MemberDetail extends MemberSummary {
   family: { principalMemberId: string | null; relationshipId: string | null; dependants: unknown[] };
   formerEmployerClientId: string | null;
   leftCompanyAt: string | null;
+  /** Only for a user who holds "Members: view payments" (FR-MPAY-08). */
+  payments?: MemberPayment[];
 }
 
 /** The personal details of FR-MEM-09: the only fields a member form can send. */

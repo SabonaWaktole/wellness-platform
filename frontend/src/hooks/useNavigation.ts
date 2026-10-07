@@ -56,6 +56,8 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'renewals', labelKey: 'nav.renewals', icon: 'autorenew', permission: 'contracts.validity.view' },
   // The Wellness+ member list (M4 Slice 4, FR-MEM-07): members, their tier and status. Wellness Albania's workflow only (D1).
   { id: 'members', labelKey: 'nav.members', icon: 'wellness', permission: 'members.view', workflow: 'SALES_PROCESS' },
+  // The Membership payments list (M4 Slice 5, FR-MPAY-07): every payment with filters, totals, CSV and receipts.
+  { id: 'members/payments', labelKey: 'nav.membershipPayments', icon: 'receipt_long', permission: 'members.payments.view', workflow: 'SALES_PROCESS' },
   // The Performance screen (M3 Slice 12, FR-PRF-01): one row per salesperson, in the viewer's scope.
   { id: 'performance', labelKey: 'nav.performance', icon: 'trending_up', permission: 'performance.view' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },
@@ -136,7 +138,8 @@ export const useNavigation = (user?: any | null, currentPath?: string): NavItem[
       ? { badge: overdueFollowUps, badgeLabel: t('nav.followUpsOverdue', { count: overdueFollowUps }) }
       : {}),
     isActive:
-      matchesPath(item.id) ||
+      // The Members entry does not also light up on its own Payments sub-page.
+      (matchesPath(item.id) && !(item.id === 'members' && currentPath?.includes('/members/payments'))) ||
       (item.id === 'dashboard' &&
         currentPath?.endsWith('/login') === false &&
         !anotherItemMatches),

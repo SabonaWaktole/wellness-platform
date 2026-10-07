@@ -1,22 +1,26 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Pencil } from 'lucide-react';
+import { FileText, Pencil, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
 import { Modal } from '../../components/ui/Modal/Modal';
 import { Tabs } from '../../components/ui/Tabs/Tabs';
 import { TextareaInput } from '../../components/ui/TextareaInput/TextareaInput';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDateFormat } from '../../hooks/useDateFormat';
+import { useMoneyFormat } from '../../hooks/useMoneyFormat';
 import { dayAsDate } from '../../components/calendar/calendarGrouping';
 import { lookupService, type City } from '../../services/lookupService';
 import { lookupLabel } from '../../utils/lookupLabel';
 import { memberService, type MemberDetail, type StatusAction } from '../../services/memberService';
+import { memberPaymentService, voidRefusalOf } from '../../services/memberPaymentService';
 import { StatusBadge, TierBadge } from './MemberBadges';
 import { useTierLabels } from './useTierLabels';
+import { RecordPaymentModal } from './RecordPaymentModal';
+import { useReceipt } from './useReceipt';
 import styles from './Members.module.css';
 
-type TabId = 'overview' | 'terms' | 'history' | 'note';
+type TabId = 'overview' | 'terms' | 'payments' | 'history' | 'note';
 
 /** The actions a status allows (FR-MEM-05). */
 const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
@@ -29,7 +33,8 @@ const ACTIONS_FOR: Record<MemberDetail['status'], StatusAction[]> = {
  * The member page (FR-MEM-08): every field, the current tier with its term dates, the term history, the tier
  * history, the status history and the internal note. The tier shown is the one the server calculated for today
  * from the terms, never a stored value. No control edits the tier, an expiry date or the member ID (FR-MEM-09).
- * Payments, the family group and the verification events fill in with Slices 5, 6 and 13.
+ * Payments (FR-MPAY-08) arrive only for a user who may view them; recording and voiding need "record payments".
+ * The family group and the verification events fill in with Slices 6 and 13.
  */
 export const MemberDetailContent: React.FC = () => {
   const { t, i18n } = useTranslation('members');
@@ -37,7 +42,10 @@ export const MemberDetailContent: React.FC = () => {
   const navigate = useNavigate();
   const dates = useDateFormat();
   const canManage = useAuthStore((s) => s.user?.permissions?.['members.manage'] !== undefined);
+  const canRecord = useAuthStore((s) => s.user?.permissions?.['members.payments.record'] !== undefined);
+  const { format: formatMoney } = useMoneyFormat();
   const tier = useTierLabels(tenantSlug);
+  const openReceipt = useReceipt(tenantSlug);
 
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [cities, setCities] = useState<City[]>([]);
@@ -47,6 +55,11 @@ export const MemberDetailContent: React.FC = () => {
   const [reason, setReason] = useState('');
   const [statusError, setStatusError] = useState<'reason' | 'failed' | null>(null);
   const [changing, setChanging] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [voiding, setVoiding] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidError, setVoidError] = useState<'reason' | 'notLatest' | 'alreadyVoided' | 'failed' | null>(null);
+  const [voidSaving, setVoidSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantSlug || !memberId) return;
@@ -87,6 +100,28 @@ export const MemberDetailContent: React.FC = () => {
       setStatusError('failed');
     } finally {
       setChanging(false);
+    }
+  };
+
+  const closeVoid = () => {
+    setVoiding(null);
+    setVoidReason('');
+    setVoidError(null);
+  };
+
+  const confirmVoid = async () => {
+    if (!tenantSlug || !voiding) return;
+    if (voidReason.trim() === '') return setVoidError('reason');
+    setVoidSaving(true);
+    try {
+      await memberPaymentService.void(tenantSlug, voiding, voidReason.trim());
+      closeVoid();
+      await load();
+    } catch (err) {
+      const code = voidRefusalOf(err);
+      setVoidError(code === 'PAYMENT_NOT_LATEST' ? 'notLatest' : code === 'PAYMENT_ALREADY_VOIDED' ? 'alreadyVoided' : 'failed');
+    } finally {
+      setVoidSaving(false);
     }
   };
 
@@ -132,12 +167,17 @@ export const MemberDetailContent: React.FC = () => {
             <span className={styles.chip}>{validityText}</span>
           </div>
         </div>
-        {canManage && (
+        {(canManage || canRecord) && (
           <div className={styles.headerActions}>
-            <Button variant="outline" icon={<Pencil size={16} />} onClick={() => navigate(`/${tenantSlug}/members/${member.id}/edit`)}>
+            {canRecord && member.status === 'ACTIVE' && (
+              <Button icon={<Plus size={16} />} onClick={() => setRecording(true)}>
+                {t('payments.record')}
+              </Button>
+            )}
+            {canManage && <Button variant="outline" icon={<Pencil size={16} />} onClick={() => navigate(`/${tenantSlug}/members/${member.id}/edit`)}>
               {t('detail.edit')}
-            </Button>
-            {ACTIONS_FOR[member.status].map((a) => (
+            </Button>}
+            {canManage && ACTIONS_FOR[member.status].map((a) => (
               <Button key={a} variant={a === 'CLOSE' ? 'danger' : 'outline'} onClick={() => setAction(a)}>
                 {t(`detail.actions.${a}`)}
               </Button>
@@ -171,6 +211,7 @@ export const MemberDetailContent: React.FC = () => {
             tabs={[
               { id: 'overview', label: t('detail.tabs.overview') },
               { id: 'terms', label: t('detail.tabs.terms'), count: member.terms.length },
+              ...(member.payments ? [{ id: 'payments' as const, label: t('detail.tabs.payments'), count: member.payments.length }] : []),
               { id: 'history', label: t('detail.tabs.history') },
               { id: 'note', label: t('detail.tabs.note') },
             ]}
@@ -220,6 +261,76 @@ export const MemberDetailContent: React.FC = () => {
                           <td>{term.endsOn ? day(term.endsOn) : t('detail.terms.openEnded')}</td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'payments' && member.payments && (
+            <>
+              <h2 className={styles.sectionTitle}>{t('payments.tab.title')}</h2>
+              {member.payments.length === 0 ? (
+                <p>{t('payments.tab.empty')}</p>
+              ) : (
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th scope="col">{t('payments.columns.receipt')}</th>
+                        <th scope="col">{t('payments.columns.date')}</th>
+                        <th scope="col">{t('payments.columns.kind')}</th>
+                        <th scope="col">{t('payments.columns.tier')}</th>
+                        <th scope="col">{t('payments.columns.amount')}</th>
+                        <th scope="col">{t('payments.columns.method')}</th>
+                        <th scope="col">{t('payments.columns.status')}</th>
+                        <th scope="col">{t('payments.columns.by')}</th>
+                        {canRecord && <th scope="col"><span className="sr-only">{t('payments.columns.actions')}</span></th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {member.payments.map((payment) => {
+                        // Only the latest payment that is not voided can be voided (FR-MPAY-06); the list is newest first.
+                        const latest = member.payments?.find((p) => p.status === 'RECORDED')?.id === payment.id;
+                        return (
+                          <tr key={payment.id}>
+                            <td>
+                              <button type="button" className={styles.memberLink} onClick={() => void openReceipt(payment.id)} aria-label={t('payments.openReceipt', { number: payment.receiptNumber })}>
+                                <FileText size={14} aria-hidden /> {payment.receiptNumber}
+                              </button>
+                            </td>
+                            <td>{day(payment.receivedOn)}</td>
+                            <td>{t(`payments.kind.${payment.kind}`)}</td>
+                            <td>{tier(payment.fromTier).label} → {tier(payment.toTier).label}</td>
+                            <td>
+                              {formatMoney(payment.amount)}
+                              {Number(payment.discountPercent) > 0 && <div className={styles.muted}>{t('payments.tab.discounted', { percent: payment.discountPercent, fee: formatMoney(payment.listFee) })}</div>}
+                            </td>
+                            <td>{t(`payments.method.${payment.method}`)}</td>
+                            <td>
+                              {payment.status === 'VOIDED' ? (
+                                <>
+                                  <span className={styles.chip}>{t('payments.status.VOIDED')}</span>
+                                  {payment.voidReason && <div className={styles.muted}>{payment.voidReason}</div>}
+                                </>
+                              ) : (
+                                t('payments.status.RECORDED')
+                              )}
+                            </td>
+                            <td>{payment.recordedBy.name ?? <span className={styles.muted}>—</span>}</td>
+                            {canRecord && (
+                              <td>
+                                {latest && (
+                                  <Button variant="outline" onClick={() => setVoiding(payment.id)}>
+                                    {t('payments.tab.void')}
+                                  </Button>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -292,6 +403,41 @@ export const MemberDetailContent: React.FC = () => {
           )}
         </div>
       </div>
+
+      {canRecord && tenantSlug && memberId && (
+        <RecordPaymentModal
+          tenantSlug={tenantSlug}
+          memberId={memberId}
+          isOpen={recording}
+          onClose={() => setRecording(false)}
+          onRecorded={() => {
+            setRecording(false);
+            setTab('payments');
+            void load();
+          }}
+        />
+      )}
+
+      <Modal isOpen={voiding !== null} onClose={closeVoid} title={t('payments.voidDialog.title')}>
+        <div className={styles.modalBody}>
+          <p>{t('payments.voidDialog.help')}</p>
+          <TextareaInput
+            label={t('payments.voidDialog.reason')}
+            value={voidReason}
+            onChange={(e) => {
+              setVoidReason(e.target.value);
+              setVoidError(null);
+            }}
+            rows={3}
+            error={voidError === 'reason' ? t('payments.voidDialog.reasonRequired') : undefined}
+          />
+          {voidError && voidError !== 'reason' && <p className={styles.formError} role="alert">{t(`payments.voidDialog.${voidError}`)}</p>}
+          <div className={styles.modalActions}>
+            <Button variant="ghost" onClick={closeVoid}>{t('payments.voidDialog.cancel')}</Button>
+            <Button variant="danger" isLoading={voidSaving} onClick={() => void confirmVoid()}>{t('payments.voidDialog.confirm')}</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={action !== null} onClose={closeDialog} title={action ? t(`detail.statusDialog.${action}`) : ''}>
         <div className={styles.modalBody}>

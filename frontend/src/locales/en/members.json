@@ -85,7 +85,7 @@
     "edit": "Edit details",
     "notFound": "This member does not exist.",
     "loadFailed": "The member could not be loaded.",
-    "tabs": { "overview": "Details", "terms": "Terms", "history": "History", "note": "Internal note", "label": "Member sections" },
+    "tabs": { "overview": "Details", "terms": "Terms", "payments": "Payments", "history": "History", "note": "Internal note", "label": "Member sections" },
     "fields": {
       "memberNumber": "Member ID",
       "dateOfBirth": "Date of birth",
@@ -159,6 +159,105 @@
       "confirm": "Confirm",
       "cancel": "Cancel",
       "failed": "The status could not be changed."
+    }
+  },
+  "payments": {
+    "record": "Record payment",
+    "openReceipt": "Open receipt {{number}}",
+    "kind": {
+      "NEW": "New membership",
+      "RENEWAL": "Renewal",
+      "UPGRADE": "Upgrade"
+    },
+    "method": {
+      "CASH": "Cash",
+      "BANK_TRANSFER": "Bank transfer",
+      "CARD": "Card",
+      "OTHER": "Other"
+    },
+    "status": {
+      "RECORDED": "Recorded",
+      "VOIDED": "Voided"
+    },
+    "warning": {
+      "SPONSORED_SILVER_OWN_TERM": "This employee already has Silver paid by the company. This payment starts a separate Silver term that stays with the person after leaving the company."
+    },
+    "columns": {
+      "receipt": "Receipt",
+      "date": "Date received",
+      "member": "Member",
+      "kind": "Kind",
+      "tier": "Tier",
+      "amount": "Amount",
+      "method": "Method",
+      "status": "Status",
+      "by": "Recorded by",
+      "actions": "Actions"
+    },
+    "drawer": {
+      "title": "Record a payment",
+      "receivedOn": "Date received",
+      "dateRefused": "The date received cannot be in the future.",
+      "option": "Payment",
+      "optionLabel": "{{kind}} · {{tier}}",
+      "noOptions": "No payment can be recorded for this member on this date.",
+      "loadFailed": "The payment options could not be loaded.",
+      "quote": "Calculated payment",
+      "listFee": "List fee",
+      "discount": "Family discount",
+      "amount": "Amount to pay",
+      "newTerm": "New term",
+      "term": "{{from}} – {{to}}",
+      "calculated": "The amount is calculated by the platform and cannot be changed.",
+      "method": "Method",
+      "note": "Note (optional)",
+      "save": "Record payment",
+      "cancel": "Cancel",
+      "failed": "The payment could not be saved. Try again.",
+      "refused": {
+        "MEMBER_NOT_ACTIVE": "Only an active member can pay.",
+        "TIER_NOT_PURCHASABLE": "This tier cannot be bought.",
+        "NOT_A_HIGHER_TIER": "A payment cannot move a member to a lower tier.",
+        "PAID_TERM_RUNNING": "This member already has a paid term. Renew or upgrade it instead.",
+        "NOTHING_TO_RENEW": "There is no paid term of this tier to renew.",
+        "NOTHING_TO_UPGRADE": "There is no paid tier to upgrade. Buy the tier as a new membership.",
+        "USE_UPGRADE": "This member already holds a tier. Pay the difference as an upgrade."
+      }
+    },
+    "tab": {
+      "title": "Payments",
+      "empty": "No payment has been recorded for this member.",
+      "void": "Void",
+      "discounted": "{{percent}}% off {{fee}}"
+    },
+    "voidDialog": {
+      "title": "Void this payment",
+      "help": "Voiding takes back the effect of the payment: the earlier tier and term are restored. The receipt number stays and is marked Voided.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required to void a payment.",
+      "confirm": "Void payment",
+      "cancel": "Cancel",
+      "notLatest": "Only the latest payment of a member can be voided. Void the later payment first.",
+      "alreadyVoided": "This payment is already voided.",
+      "failed": "The payment could not be voided. Try again."
+    },
+    "page": {
+      "title": "Membership payments",
+      "subtitle": "Every Wellness+ payment, with the receipt for each.",
+      "from": "Received from",
+      "to": "Received to",
+      "tier": "Tier",
+      "kind": "Kind",
+      "method": "Method",
+      "status": "Status",
+      "summary_one": "{{count}} payment",
+      "summary_other": "{{count}} payments",
+      "total": "Total",
+      "totalNote": "voided payments are not counted",
+      "exportCsv": "Export CSV",
+      "loadFailed": "The payments could not be loaded.",
+      "empty": "No membership payment has been recorded yet.",
+      "emptyFiltered": "No payment matches these filters."
     }
   }
 }
