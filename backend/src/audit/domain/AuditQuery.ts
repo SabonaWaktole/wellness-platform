@@ -44,6 +44,10 @@ export const AUDITED_ENTITY_TYPES = [
   'ContractSettings',
   // Milestone 3 Slice 12: an export of the Performance screen (FR-PRF-09, FR-AUD-13).
   'Performance',
+  // Milestone 4 Slice 2: registered for the viewer's filter (FR-AUD-15). Slices 3, 4 and 5 write them.
+  'Member',
+  'MemberPayment',
+  'MembershipSettings',
 ] as const;
 
 export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
@@ -54,7 +58,7 @@ export type AuditedEntityType = (typeof AUDITED_ENTITY_TYPES)[number];
  * so a slice that starts auditing a new entity type registers it here too.
  * Group and type labels are translations in the frontend's audit.json.
  */
-export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists', 'pricing', 'salesScript', 'deals', 'offers', 'discounts'] as const;
+export const AUDIT_ENTITY_GROUP_KEYS = ['access', 'clients', 'contracts', 'lists', 'pricing', 'salesScript', 'deals', 'offers', 'discounts', 'membership'] as const;
 
 export type AuditEntityGroup = (typeof AUDIT_ENTITY_GROUP_KEYS)[number];
 
@@ -74,6 +78,7 @@ export const AUDIT_ENTITY_GROUPS: ReadonlyArray<{ group: AuditEntityGroup; types
   { group: 'deals', types: ['Deal', 'Performance'] },
   { group: 'offers', types: ['Offer'] },
   { group: 'discounts', types: ['DiscountApproval'] },
+  { group: 'membership', types: ['Member', 'MemberPayment', 'MembershipSettings'] },
 ];
 
 export function typesForGroup(group: AuditEntityGroup): readonly AuditedEntityType[] {

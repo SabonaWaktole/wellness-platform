@@ -252,7 +252,8 @@
     },
     "milestone": {
       "M2": "Available from Milestone 2",
-      "M3": "Available from Milestone 3"
+      "M3": "Available from Milestone 3",
+      "M4": "Available from Milestone 4"
     },
     "groups": {
       "companies": "Companies & contacts",
@@ -263,6 +264,7 @@
       "sales": "Sales",
       "payments": "Payments",
       "performance": "Performance",
+      "wellnessplus": "Wellness+",
       "admin": "Administration",
       "modules": "Other modules"
     },
@@ -305,7 +307,16 @@
       "inventory_manage": "Manage inventory",
       "forms_manage": "Manage forms",
       "integrations_manage": "Manage integrations",
-      "reports_view": "View reports"
+      "reports_view": "View reports",
+      "members_view": "Members: view records, contact details and history",
+      "members_verify": "Members: verify at reception (search, scan, benefits)",
+      "members_manage": "Members: register, edit, family, card link, suspend and remove employees",
+      "members_payments_view": "Members: view payments",
+      "members_payments_record": "Members: record payments, upgrades, renewals and voids",
+      "members_import": "Members: import employees",
+      "members_vip_approve": "Members: approve VIP",
+      "members_reports_view": "Members: view reports",
+      "wellnessplus_settings_manage": "Wellness+ settings: manage fees, terms, benefits and numbering"
     },
     "copyModal": {
       "title": "Copy {{role}}",

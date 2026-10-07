@@ -25,6 +25,19 @@ const EXEMPT_ROUTES: Record<string, string> = {
   [`PATCH ${TENANT}/notifications/:id/read`]: "Marks one of the caller's own notifications read.",
 };
 
+/**
+ * Wellness+ routes that carry no login (FR-RBAC-30): the card page and the
+ * public verification page are the only two. Each entry needs a reason a
+ * reviewer can check. Slices 11 and 13 add them here when they build the
+ * routes; any other Wellness+ route must declare one of the nine permissions.
+ */
+const PUBLIC_WELLNESS_ROUTES: Record<string, string> = {};
+
+const WELLNESS_PLUS_KEYS = [
+  'members.view', 'members.verify', 'members.manage', 'members.payments.view', 'members.payments.record',
+  'members.import', 'members.vip.approve', 'members.reports.view', 'wellnessplus.settings.manage',
+];
+
 describe('Route coverage (NFR-SEC-01)', () => {
   const routes = routeTable(createApp());
   const tenantRoutes = routes.filter((route) => route.path.startsWith(`${TENANT}/`));
@@ -58,5 +71,26 @@ describe('Route coverage (NFR-SEC-01)', () => {
 
   it('FR-RBAC-05 no tenant route is gated by a role name', () => {
     expect(tenantRoutes.filter((route) => route.gate.kind === 'roles').map(routeId)).toEqual([]);
+  });
+
+  describe('FR-RBAC-30 Wellness+ routes', () => {
+    const isWellnessRoute = (path: string) => /\/(members|membership|wellness-plus)(\/|$)/.test(path);
+
+    it('FR-RBAC-30 every public Wellness+ route carries a reason, and there are at most two (card and verification)', () => {
+      for (const [id, reason] of Object.entries(PUBLIC_WELLNESS_ROUTES)) expect([id, reason.length > 10]).toEqual([id, true]);
+      expect(Object.keys(PUBLIC_WELLNESS_ROUTES).length).toBeLessThanOrEqual(2);
+    });
+
+    it('FR-RBAC-30 every Wellness+ tenant route is gated by one of the nine Wellness+ permissions', () => {
+      const wrong = tenantRoutes
+        .filter((route) => isWellnessRoute(route.path))
+        .filter((route) => !(route.gate.kind === 'permission' && route.gate.key.split('|').every((key) => WELLNESS_PLUS_KEYS.includes(key))))
+        .map(routeId);
+      expect(wrong).toEqual([]);
+    });
+
+    it('FR-RBAC-30 no Wellness+ route sits in the general exemption list', () => {
+      expect(Object.keys(EXEMPT_ROUTES).filter((id) => isWellnessRoute(id))).toEqual([]);
+    });
   });
 });

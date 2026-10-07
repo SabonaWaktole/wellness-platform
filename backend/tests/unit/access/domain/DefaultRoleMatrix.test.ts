@@ -167,4 +167,61 @@ describe('DEFAULT_ROLE_MATRIX (SRS §4.2)', () => {
     expect(DEFAULT_ROLE_MATRIX[RoleKey.SalesUser]['integrations.manage']).toBeUndefined();
     expect(DEFAULT_ROLE_MATRIX[RoleKey.SalesUser]['reports.view']).toBeUndefined();
   });
+
+  const WELLNESS_KEYS = [
+    'members.view',
+    'members.verify',
+    'members.manage',
+    'members.payments.view',
+    'members.payments.record',
+    'members.import',
+    'members.vip.approve',
+    'members.reports.view',
+    'wellnessplus.settings.manage',
+  ];
+  const WELLNESS_MATRIX: Record<string, Partial<Record<RoleKey, true>>> = {
+    'members.view': { ADMINISTRATOR: true, CEO: true },
+    'members.verify': { RECEPTION: true, ADMINISTRATOR: true },
+    'members.manage': { ADMINISTRATOR: true },
+    'members.payments.view': { ADMINISTRATOR: true, CEO: true },
+    'members.payments.record': { ADMINISTRATOR: true },
+    'members.import': { ADMINISTRATOR: true },
+    'members.vip.approve': { ADMINISTRATOR: true },
+    'members.reports.view': { ADMINISTRATOR: true, CEO: true },
+    'wellnessplus.settings.manage': { ADMINISTRATOR: true },
+  };
+
+  it.each(Object.entries(WELLNESS_MATRIX))('FR-RBAC-25 %s has the SRS M4 §10.2 default for every system role', (permissionKey, expected) => {
+    for (const roleKey of Object.values(RoleKey)) {
+      expect([roleKey, DEFAULT_ROLE_MATRIX[roleKey][permissionKey]]).toEqual([roleKey, expected[roleKey]]);
+    }
+  });
+
+  it('FR-RBAC-25 the catalogue has the nine Wellness+ keys in one group, none scoped (FR-RBAC-28)', () => {
+    const entries = PERMISSION_CATALOGUE.filter((entry) => entry.group === 'wellnessplus');
+    expect(entries.map((entry) => entry.key).sort()).toEqual([...WELLNESS_KEYS].sort());
+    for (const entry of entries) expect(entry).toMatchObject({ supportsScope: false, milestone: 'M4' });
+  });
+
+  it('FR-RBAC-25 the matrix above covers all nine keys', () => {
+    expect(Object.keys(WELLNESS_MATRIX).sort()).toEqual([...WELLNESS_KEYS].sort());
+  });
+
+  it('FR-RBAC-29 the CEO holds the three read keys and no Wellness+ write key', () => {
+    const held = WELLNESS_KEYS.filter((key) => DEFAULT_ROLE_MATRIX[RoleKey.Ceo][key]);
+    expect(held.sort()).toEqual(['members.payments.view', 'members.reports.view', 'members.view']);
+  });
+
+  it('FR-RBAC-28 Sales User and Sales Manager hold no Wellness+ key', () => {
+    for (const roleKey of [RoleKey.SalesUser, RoleKey.SalesManager]) {
+      for (const key of WELLNESS_KEYS) expect([roleKey, key, DEFAULT_ROLE_MATRIX[roleKey][key]]).toEqual([roleKey, key, undefined]);
+    }
+  });
+
+  it('FR-DPR-02 Reception holds no commercial or payment permission, so a copy of it with the agent keys sees no contract price', () => {
+    const reception = DEFAULT_ROLE_MATRIX[RoleKey.Reception];
+    for (const key of ['commercial.view', 'payments.view', 'payments.update', 'contracts.manage', 'quotations.manage']) {
+      expect(reception[key]).toBeUndefined();
+    }
+  });
 });

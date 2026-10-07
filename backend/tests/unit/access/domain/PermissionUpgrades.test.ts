@@ -75,6 +75,15 @@ describe('PermissionUpgrades (FR-RBAC-16)', () => {
     }
   });
 
+  it('FR-RBAC-26 m4-wellness-plus adds the nine Wellness+ keys at the §10.2 defaults and nothing else', () => {
+    const m4 = permissionUpgrade('m4-wellness-plus');
+    expect(m4.permissionKeys).toHaveLength(9);
+    expect(grantsForUpgrade(m4, RoleKey.Reception)).toEqual({ 'members.verify': true });
+    expect(Object.keys(grantsForUpgrade(m4, RoleKey.Administrator))).toHaveLength(9);
+    expect(Object.keys(grantsForUpgrade(m4, RoleKey.Ceo)).sort()).toEqual(['members.payments.view', 'members.reports.view', 'members.view']);
+    for (const roleKey of [RoleKey.SalesUser, RoleKey.SalesManager]) expect(grantsForUpgrade(m4, roleKey)).toEqual({});
+  });
+
   it('refuses an unknown upgrade key', () => {
     expect(() => permissionUpgrade('m9-nothing')).toThrow();
   });

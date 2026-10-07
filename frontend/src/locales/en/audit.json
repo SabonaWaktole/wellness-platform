@@ -58,7 +58,10 @@
     "Offer": "Offer",
     "DiscountApproval": "Discount approval",
     "ContractSettings": "Contract settings",
-    "Performance": "Performance export"
+    "Performance": "Performance export",
+    "Member": "Member",
+    "MemberPayment": "Membership payment",
+    "MembershipSettings": "Wellness+ settings"
   },
   "entityGroups": {
     "access": "Users, roles & workspace",
@@ -69,7 +72,8 @@
     "salesScript": "Sales script",
     "deals": "Deals",
     "offers": "Offers",
-    "discounts": "Discount approvals"
+    "discounts": "Discount approvals",
+    "membership": "Wellness+ members"
   },
   "actors": {
     "system": "System",

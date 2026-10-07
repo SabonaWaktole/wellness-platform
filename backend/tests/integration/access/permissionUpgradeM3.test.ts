@@ -80,7 +80,11 @@ describe('m3-contracts-payments permission upgrade (FR-RBAC-20)', () => {
 
   it('FR-RBAC-20 the other system roles end with the full §7.2 default matrix', async () => {
     for (const roleKey of [RoleKey.SalesUser, RoleKey.SalesManager, RoleKey.Administrator, RoleKey.Ceo]) {
-      expect([roleKey, await grantsOf(roles[roleKey])]).toEqual([roleKey, DEFAULT_ROLE_MATRIX[roleKey]]);
+      // The m4-wellness-plus keys come from the later upgrade, which this suite does not run.
+      expect([roleKey, await grantsOf(roles[roleKey])]).toEqual([
+        roleKey,
+        { ...m2State(roleKey), ...grantsForUpgrade(permissionUpgrade(KEY), roleKey) },
+      ]);
     }
     expect((await grantsOf(roles[RoleKey.SalesManager]))['contracts.terminate']).toBe(Team);
     expect((await grantsOf(roles[RoleKey.Administrator]))['contracts.terminate']).toBe(All);

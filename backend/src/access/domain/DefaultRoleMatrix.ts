@@ -36,6 +36,11 @@ const { Own, Team, All } = PermissionScope;
  * re-seeding. Q8: the CEO holds `discounts.approve` so that a Sales Manager's
  * own discount above the cap has an approver; the Administrator manages the
  * pricing rules but does not approve individual discounts.
+ *
+ * Milestone 4 (SRS M4 §10.2) adds the nine Wellness+ keys, none scoped.
+ * Existing tenants receive them once through the `m4-wellness-plus` upgrade.
+ * Reception holds `members.verify` only. The Membership Agent is a preset
+ * custom role (Q1, D17), not a system role, so it is not in this matrix.
  */
 export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
   [RoleKey.SalesUser]: {
@@ -106,6 +111,7 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'notes.view': All,
     'notes.add': All,
     'contracts.validity.view': All,
+    'members.verify': true,
   },
   [RoleKey.Administrator]: {
     'companies.view': All,
@@ -146,6 +152,15 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'discounts.apply': All,
     'followups.manage': All,
     'activityResults.manage': true,
+    'members.view': true,
+    'members.verify': true,
+    'members.manage': true,
+    'members.payments.view': true,
+    'members.payments.record': true,
+    'members.import': true,
+    'members.vip.approve': true,
+    'members.reports.view': true,
+    'wellnessplus.settings.manage': true,
   },
   [RoleKey.Ceo]: {
     'companies.view': All,
@@ -160,5 +175,9 @@ export const DEFAULT_ROLE_MATRIX: Readonly<Record<RoleKey, RoleGrantMap>> = {
     'script.view': true,
     'deals.view': All,
     'discounts.approve': All,
+    // Milestone 4: read-only for Wellness+ (FR-RBAC-29).
+    'members.view': true,
+    'members.payments.view': true,
+    'members.reports.view': true,
   },
 };

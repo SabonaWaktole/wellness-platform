@@ -132,6 +132,14 @@ describe('Audit log viewer (FR-AUD-06, 08)', () => {
     for (const entry of payments.body.data) expect(entry.entityType).toBe('ContractPayment');
   });
 
+  it('FR-AUD-15 offers Member, Membership payment and Wellness+ settings as filter types, and filtering by Membership payment shows only payment entries', async () => {
+    const res = await as('admin').get('/audit/entity-types').expect(200);
+    expect(res.body.groups.find((group: any) => group.group === 'membership').types).toEqual(['Member', 'MemberPayment', 'MembershipSettings']);
+    const payments = await as('admin').get('/audit?entityType=MemberPayment').expect(200);
+    for (const entry of payments.body.data) expect(entry.entityType).toBe('MemberPayment');
+    await as('admin').get('/audit?entityGroup=membership').expect(200);
+  });
+
   it('FR-AUD-10 filtering by a group returns only that group\'s entries', async () => {
     const access = await as('admin').get('/audit?entityGroup=access').expect(200);
     expect(access.body.data.map((entry: any) => entry.id)).toEqual(expect.arrayContaining([roleEntryId, userEntryId]));

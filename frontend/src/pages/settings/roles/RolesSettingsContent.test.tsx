@@ -12,6 +12,15 @@ const CATALOGUE = [
   { key: 'payments.view', group: 'payments', supportsScope: true },
   { key: 'commercial.view', group: 'sales', supportsScope: true, milestone: 'M2' },
   { key: 'notes.add', group: 'activities', supportsScope: true },
+  { key: 'members.view', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.verify', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.manage', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.payments.view', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.payments.record', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.import', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.vip.approve', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.reports.view', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'wellnessplus.settings.manage', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
   { key: 'roles.manage', group: 'admin', supportsScope: false },
   { key: 'audit.view', group: 'admin', supportsScope: false },
 ];
@@ -108,6 +117,23 @@ describe('RolesSettingsContent', () => {
     expect(within(terminate).queryByText(/Available from Milestone/)).toBeNull();
     const payments = screen.getByLabelText('View payments').closest('li')!;
     expect(within(payments).queryByText('Available from Milestone 3')).toBeNull();
+  });
+
+  it('FR-RBAC-25 lists the nine Wellness+ permissions under Wellness+, unscoped, each tagged for Milestone 4', () => {
+    renderRoles();
+
+    const group = screen.getByRole('heading', { name: 'Wellness+' }).closest('section')!;
+    expect(within(group).getAllByRole('checkbox')).toHaveLength(9);
+    expect(within(group).getAllByText('Available from Milestone 4')).toHaveLength(9);
+    expect(within(group).queryByRole('combobox')).toBeNull();
+    for (const label of [
+      'Members: view records, contact details and history',
+      'Members: verify at reception (search, scan, benefits)',
+      'Members: approve VIP',
+      'Wellness+ settings: manage fees, terms, benefits and numbering',
+    ]) {
+      expect(within(group).getByLabelText(label)).toBeDefined();
+    }
   });
 
   it('UAT-3 FR-RBAC-03 removes contract validity from Reception and saves the whole new set', async () => {
