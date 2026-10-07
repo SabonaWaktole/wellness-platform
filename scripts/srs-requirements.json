@@ -1901,6 +1901,56 @@
       "id": "NFR-USE-04",
       "priority": "Must",
       "requirement": "All Milestone 4 staff screens shall work on desktop and on mobile from 360 px wide, and the card, the QR scan and the add-to-home-screen steps shall be tested on a real iPhone (Safari) and a real Android phone (Chrome)."
+    },
+    {
+      "id": "FR-RPT-01",
+      "priority": "Must",
+      "requirement": "A Wellness+ reports page shall be open to users with \"Members: view reports\". It has the period selector of Milestone 3 (FR-DSH-03: Today, This week, This month (default), This quarter, This year, custom) and the filters tier, segment (corporate, individual), employer company and the predefined Area and City of the employer company. Every figure is calculated on the server."
+    },
+    {
+      "id": "FR-RPT-02",
+      "priority": "Must",
+      "requirement": "The report shall show the active members per tier, with count and share, as of now, and the active members at the end of each month of the period per tier."
+    },
+    {
+      "id": "FR-RPT-03",
+      "priority": "Must",
+      "requirement": "The report shall show the new members in the period, split by corporate and individual, and the new paid memberships (payments of kind New)."
+    },
+    {
+      "id": "FR-RPT-04",
+      "priority": "Must",
+      "requirement": "The report shall show the renewals: terms that ended in the period, how many were renewed and how many not, and the renewal rate, in total and per tier."
+    },
+    {
+      "id": "FR-RPT-05",
+      "priority": "Must",
+      "requirement": "The report shall show the upgrades in the period: count and amount per path (Bronze to Silver, Bronze to Gold, Silver to Gold)."
+    },
+    {
+      "id": "FR-RPT-06",
+      "priority": "Must",
+      "requirement": "The report shall show the downgrades in the period: count per path (Gold to Silver, Silver to Bronze, VIP to lower) and per reason (Not renewed, Company contract ended, Left company, VIP ended)."
+    },
+    {
+      "id": "FR-RPT-07",
+      "priority": "Must",
+      "requirement": "The report shall compare corporate and individual members (count and share of the active members) and list, per employer company, the members, the sponsored Silver, the members who upgraded to a paid tier and the former employees, with a link to the company."
+    },
+    {
+      "id": "FR-RPT-08",
+      "priority": "Should",
+      "requirement": "For users who can view payments, the report shall show the membership revenue in the period: money received per tier and per kind, excluding voided payments."
+    },
+    {
+      "id": "FR-RPT-09",
+      "priority": "Should",
+      "requirement": "The report page shall offer working lists: memberships expiring in the window, VIP reviews due, and former employees to contact, each with the member, the date and a link to the member."
+    },
+    {
+      "id": "FR-RPT-10",
+      "priority": "Should",
+      "requirement": "Every report shall have a table view and a CSV export. Exports are audited, cells that begin with =, +, - or @ are protected against formula injection, and an export contains contact details only for users with \"Members: view\"."
     }
   ]
 }
