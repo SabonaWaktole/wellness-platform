@@ -56,10 +56,11 @@ describe('The member card page (M4 Slice 11)', () => {
     renderPage();
 
     expect(await screen.findByRole('heading', { name: 'Ana Hoxha' })).toBeInTheDocument();
+    // The page starts in Albanian and switches to the card's language once it has loaded, so wait for the English text.
+    expect(await screen.findByText('Valid until 31.12.2027')).toBeInTheDocument();
     expect(screen.getAllByText('Wellness+').length).toBeGreaterThan(0);
     expect(screen.getByText('WP-000123')).toBeInTheDocument();
     expect(screen.getByText('Gold')).toBeInTheDocument();
-    expect(screen.getByText('Valid until 31.12.2027')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /QR code/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Your benefits' })).toBeInTheDocument();
     const benefits = within(screen.getByRole('list'));
