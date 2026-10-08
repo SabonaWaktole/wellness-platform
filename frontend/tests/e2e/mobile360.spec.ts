@@ -15,6 +15,9 @@ const TENANT = process.env.E2E_TENANT ?? 'wellness-albania';
 const LISTS = ['risk-levels', 'business-types', 'areas', 'cities', 'follow-up-intervals', 'lost-reasons', 'activity-results'];
 
 /** Settings → Pricing's tabs (M2 Slices 3 and 4; NFR-USE-02). */
+/** Settings → Wellness+'s tabs (M4 Slice 3; NFR-USE-04). */
+const WELLNESS_PLUS_TABS = ['tiers', 'rules', 'relationships', 'benefits'];
+
 const PRICING_TABS = ['bands', 'risk', 'frequencies', 'zones', 'cap', 'services', 'packages', 'offer', 'calculator'];
 
 async function expectNoHorizontalOverflow(page: Page, screen: string) {
@@ -63,6 +66,7 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
     let companyId: string;
     let dealId: string;
     let contractId: string;
+    let memberId: string;
 
     test.beforeEach(async ({ page }) => {
       if (!companyId) {
@@ -84,6 +88,21 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
         const contracts = await page.request.get(`/api/${TENANT}/contracts?search=${encodeURIComponent('UAT Kafe Blloku')}`);
         contractId = (await contracts.json()).data?.[0]?.id;
         expect(contractId, 'run seed:uat first — UAT Kafe Blloku has no contract').toBeTruthy();
+      }
+    });
+
+    // M4 Slice 4 (NFR-USE-04): the member screens open on a member of their own, registered once and found again by name.
+    test.beforeEach(async ({ page }) => {
+      if (!memberId) {
+        const found = await page.request.get(`/api/${TENANT}/membership/members?query=${encodeURIComponent('E2E Mobile')}`);
+        memberId = (await found.json()).data?.[0]?.id;
+        if (!memberId) {
+          const created = await page.request.post(`/api/${TENANT}/membership/members`, {
+            data: { firstName: 'E2E', lastName: 'Mobile', email: 'e2e.mobile@example.com', confirmDifferentPerson: true },
+          });
+          memberId = (await created.json()).data?.id;
+        }
+        expect(memberId, 'the Administrator could not register an E2E member').toBeTruthy();
       }
     });
 
@@ -112,6 +131,8 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['settings → statuses', () => 'settings/statuses'],
       // M3 Slice 3
       ['settings → contracts and payments', () => 'settings/contracts'],
+      // M4 Slice 3
+      ...WELLNESS_PLUS_TABS.map((tab): [string, () => string] => [`settings → wellness+ → ${tab}`, () => `settings/wellness-plus/${tab}`]),
       ...LISTS.map((list): [string, () => string] => [`settings → lists → ${list}`, () => `settings/lists/${list}`]),
       ...PRICING_TABS.map((tab): [string, () => string] => [`settings → pricing → ${tab}`, () => `settings/pricing/${tab}`]),
       // M2 Slice 5
@@ -135,6 +156,21 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       ['calendar (agenda)', () => 'appointments?view=agenda'],
       ['calendar (week)', () => 'appointments?view=week'],
       ['calendar (month)', () => 'appointments?view=month'],
+      // M4 Slice 4: the member list, the new-member form, a member page and its edit form
+      ['members', () => 'members'],
+      ['new member form', () => 'members/new'],
+      ['member detail (terms, family, history, note)', () => `members/${memberId}`],
+      ['member edit form', () => `members/${memberId}/edit`],
+      // M4 Slice 5: the Membership payments list (the Payments tab and the record-payment dialog are on the member page)
+      ['membership payments', () => 'members/payments'],
+      // M4 Slice 7: the VIP requests list (the VIP tab and its dialogs are on the member page)
+      ['VIP requests', () => 'members/vip-requests'],
+      // M4 Slice 13: the Verify member screen (the result and the identity buttons are on the same page)
+      ['Verify member', () => 'members/verify'],
+      // M4 Slice 14: the Wellness+ reports page, tiles, charts, tables and working lists
+      ['Wellness+ reports', () => 'members/reports'],
+      // M4 Slice 9: the corporate employee upload
+      ['Employee upload', () => 'members/employee-upload'],
       // M2 Slice 6: the deal edit form
       ['deal edit form', () => `deals/${dealId}/edit`],
     ];
@@ -174,6 +210,47 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await expect(dialog.getByRole('radio', { name: /Visit|Vizitë/ })).toHaveAttribute('aria-checked', 'true');
       await expectNoHorizontalOverflow(page, 'activity dialog');
       await page.keyboard.press('Escape');
+    });
+
+    // M4 Slice 10 (NFR-USE-04): the Wellness+ tab of the company page, with its tables scrolling inside their own containers.
+    test('company detail → Wellness+ tab', async ({ page }) => {
+      await page.goto(`/${TENANT}/clients/${companyId}`);
+      await page.getByRole('tab', { name: 'Wellness+' }).click();
+      await expect(page.getByRole('heading', { name: /Wellness\+ members|Anëtarët Wellness\+/ })).toBeVisible();
+      await expectNoHorizontalOverflow(page, 'company detail → Wellness+ tab');
+    });
+
+    // M4 Slice 11 (NFR-USE-04, NFR-USE-05): the card dialog for staff and the public card page, with the QR at 220 px or more.
+    test('member detail → card dialog', async ({ page }) => {
+      await page.goto(`/${TENANT}/members/${memberId}`);
+      await page.getByRole('button', { name: /^(Card|Karta)$/ }).click();
+      const qr = page.getByRole('img', { name: /QR/ });
+      await expect(qr).toBeVisible();
+      // The dialog scales in from 0.96, so wait for the animation to settle before measuring.
+      await expect.poll(async () => (await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
+      await expectNoHorizontalOverflow(page, 'member detail → card dialog');
+    });
+
+    test('public member card (/m/:token)', async ({ page }) => {
+      const link = await page.request.get(`/api/${TENANT}/membership/members/${memberId}/card-link`);
+      expect(link.ok()).toBe(true);
+      const { url } = (await link.json()).data as { url: string };
+      await page.goto(new URL(url).pathname);
+      const qr = page.getByRole('img', { name: /QR/ });
+      await expect(qr).toBeVisible();
+      await expect.poll(async () => (await qr.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(220);
+      await expectNoHorizontalOverflow(page, 'public member card');
+    });
+
+    // M4 Slice 13 (NFR-USE-04): the same QR link, opened with no session as a partner clinic's phone does. Valid and Not valid look alike in width.
+    test('public verification page (/v/:token)', async ({ page }) => {
+      const link = await page.request.get(`/api/${TENANT}/membership/members/${memberId}/card-link`);
+      expect(link.ok()).toBe(true);
+      const { qrPayload } = (await link.json()).data as { qrPayload: string };
+      await page.context().clearCookies();
+      await page.goto(new URL(qrPayload).pathname);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expectNoHorizontalOverflow(page, 'public verification page');
     });
 
     for (const [screen, path] of screens) {

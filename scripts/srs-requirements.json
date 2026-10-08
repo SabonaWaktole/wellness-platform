@@ -1,5 +1,5 @@
 {
-  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026); Wellness Platform - Milestone 3 SRS.docx v0.1 (04.10.2026)",
+  "source": "Wellness Platform - Milestone 1 SRS.docx v0.1 (27.09.2026), sections 5-6; Wellness Platform - Milestone 2 SRS.docx v0.1 (30.09.2026); Wellness Platform - Milestone 3 SRS.docx v0.1 (04.10.2026); Wellness Platform - Milestone 4 SRS.docx v0.1 (06.10.2026)",
   "note": "Extracted once from the SRS and reviewed by hand. Update it when the SRS changes; scripts/check-traceability.mjs reads it.",
   "requirements": [
     {
@@ -1351,6 +1351,621 @@
       "id": "NFR-MNT-03",
       "priority": "Must",
       "requirement": "The Milestone 3 requirement IDs shall be added to scripts/srs-requirements.json as each implementation slice starts, so the CI traceability check covers them."
+    },
+    {
+      "id": "NFR-ACC-05",
+      "priority": "Must",
+      "requirement": "Fees, discounts, upgrade differences, payments and revenue shall be calculated as Decimal (two decimals, half up), never Float."
+    },
+    {
+      "id": "NFR-ACC-06",
+      "priority": "Must",
+      "requirement": "Every figure in section 9.3 shall be reproduced exactly on a fixed set of test data, including the worked example."
+    },
+    {
+      "id": "FR-MEM-06",
+      "priority": "Must",
+      "requirement": "Validity shall be one rule, calculated on the server: a member is valid when the status is Active. Every Active member is valid at least as Bronze. Every other member is not valid, with the status as the reason. The tier is never a reason for not being valid."
+    },
+    {
+      "id": "FR-TIR-02",
+      "priority": "Must",
+      "requirement": "The effective tier of a member shall be the highest tier among the terms valid today, with Bronze as the floor. A sponsored term counts only while the employer has a valid contract (Milestone 3 FR-CON-20); a term counts until its end date plus the grace days (FR-TIR-05). It is one rule in the domain, used by the list, the card, Reception, partner verification and the reports."
+    },
+    {
+      "id": "FR-TIR-03",
+      "priority": "Must",
+      "requirement": "A paid term shall start on the payment date for a new purchase, an upgrade or a purchase after the previous term ended, and on the day after the current end date for a renewal. It ends on the start date plus the term months minus one day."
+    },
+    {
+      "id": "FR-TIR-04",
+      "priority": "Must",
+      "requirement": "A renewal can be recorded at any time while a paid term is valid or within the grace days after it ended. A payment for the same tier after that is a new purchase and starts on the payment date."
+    },
+    {
+      "id": "FR-TIR-05",
+      "priority": "Should",
+      "requirement": "The Administrator shall set the grace days (default 0). The member keeps the tier during the grace days, and the daily job downgrades only after term end plus grace days."
+    },
+    {
+      "id": "FR-TIR-06",
+      "priority": "Must",
+      "requirement": "When a paid term has ended without renewal, the member shall be downgraded one step: Gold to Silver, Silver to Bronze. The Silver term created by a Gold downgrade lasts 12 months from the next day and, if not renewed, ends in Bronze in the same way."
+    },
+    {
+      "id": "FR-TIR-10",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the \"expiring soon\" window (default 30 days). A paid term ending within it shows the Expiring soon badge, counts in the reports and appears in the list of expiring memberships (FR-RPT-09)."
+    },
+    {
+      "id": "FR-MPAY-02",
+      "priority": "Must",
+      "requirement": "The amount shall be calculated on the server by the price rule above from the fee settings and the family discount valid on the payment date. Silver and Gold can be bought by any Active member. VIP cannot be bought."
+    },
+    {
+      "id": "FR-MPAY-03",
+      "priority": "Must",
+      "requirement": "Any Active member, including a family member and a sponsored Silver employee, can upgrade to a higher paid tier by paying the difference. A payment cannot move a member to a lower tier. Bronze to Gold is allowed in one step at the full Gold price."
+    },
+    {
+      "id": "FR-MPAY-04",
+      "priority": "Must",
+      "requirement": "An upgrade shall start the new term on the payment date for the full term length and close the member's earlier paid term the day before. A sponsored term is left as it is. A member has at most one paid term at a time."
+    },
+    {
+      "id": "FR-FAM-04",
+      "priority": "Must",
+      "requirement": "The family discount (Administrator setting, default 50%) shall apply to the price of Silver and Gold, to renewals and to upgrades of a family member, on the payment date, when the principal is Active and has the effective tier Silver, Gold or VIP. Otherwise the full price applies."
+    },
+    {
+      "id": "FR-VIP-03",
+      "priority": "Must",
+      "requirement": "An approval shall create a VIP term from the approval date for the VIP term length (default 12 months), free of charge, with the review date equal to its end date. No payment is created."
+    },
+    {
+      "id": "FR-VIP-04",
+      "priority": "Must",
+      "requirement": "The approvers shall be notified once, 30 days before the review date, and the member list shall offer the filter \"VIP review due\". A new approved request before the end extends VIP from the next day. If the VIP term ends without a new approval, the member falls back to the highest other valid tier, Bronze if none."
+    },
+    {
+      "id": "FR-EMP-09",
+      "priority": "Must",
+      "requirement": "Sponsored Silver shall last as long as the employer company has a valid contract. The expiry date shown on the member is the end date of that contract. When a renewal contract takes over without a gap, the employees stay Silver and their expiry date moves to the new end date, with no action by anyone."
+    },
+    {
+      "id": "FR-RBAC-25",
+      "priority": "Must",
+      "requirement": "The permission catalogue shall get a Wellness+ group with these permissions: Members: view; Members: verify; Members: manage; Members: view payments; Members: record payments; Members: import employees; Members: approve VIP; Members: view reports; Wellness+ settings: manage. The Administrator can assign all of them from the Milestone 1 roles screen."
+    },
+    {
+      "id": "FR-RBAC-26",
+      "priority": "Must",
+      "requirement": "The default roles shall receive the permissions in the matrix in 10.2 on upgrade, once, without changing what the Administrator already customised (the upgrade ledger, Milestone 2 D7)."
+    },
+    {
+      "id": "FR-RBAC-27",
+      "priority": "Must",
+      "requirement": "Fields shall be removed from API responses, not only hidden: payment fields for users without \"Members: view payments\"; phone, email, internal note and verification log for users with only \"Members: verify\"; every Wellness+ field for users without any Wellness+ permission. Reception receives only the fields in FR-VER-02."
+    },
+    {
+      "id": "FR-RBAC-28",
+      "priority": "Must",
+      "requirement": "Members belong to the workspace, not to a salesperson: there is no Own or Team scope for members. A user holding a Wellness+ permission sees all members; a user without it sees none and gets 403 on direct calls."
+    },
+    {
+      "id": "FR-RBAC-29",
+      "priority": "Must",
+      "requirement": "The CEO shall be read only for Wellness+: by default \"Members: view\", \"Members: view payments\" and \"Members: view reports\", and no write permission (as Milestone 1 Q7, Milestone 3 FR-RBAC-24)."
+    },
+    {
+      "id": "FR-RBAC-30",
+      "priority": "Must",
+      "requirement": "The card page and the public verification page are the only endpoints without login. Every other Wellness+ endpoint shall check the permission on the server for every request."
+    },
+    {
+      "id": "FR-AUD-15",
+      "priority": "Must",
+      "requirement": "The audit log viewer shall offer filters for the new entity types: Member, Membership payment and Wellness+ settings."
+    },
+    {
+      "id": "FR-DPR-02",
+      "priority": "Must",
+      "requirement": "A user whose role holds Wellness+ permissions shall reach membership and commercial information only: members, payments, reports, and the company and contract validity data that Reception already sees. A Membership Agent role needs no commercial details of contracts (price, terms, document)."
+    },
+    {
+      "id": "NFR-SEC-07",
+      "priority": "Must",
+      "requirement": "Tier rules, permissions, field removal, the card and verification rules and the import limits shall be enforced on the server for every request. Card tokens shall come from a cryptographically secure generator, be unique in the database and be at least 128 bits."
+    },
+    {
+      "id": "FR-MEM-03",
+      "priority": "Must",
+      "requirement": "Each member shall get a unique member ID made of a prefix and a six-digit sequential number, for example WP-000123, using the same numbering mechanism as offers and contracts but without a yearly restart. The prefix is a setting of the Administrator. An ID is never changed or reused, even after the member is closed."
+    },
+    {
+      "id": "FR-TIR-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall set the labels (Albanian and English) and colour of the four tiers, the fee and term length in months of Silver and Gold (defaults €60 and €100, 12 months) and the term length of VIP (default 12 months). Bronze and VIP are free and cannot be given a fee. A new fee applies to payments recorded after the change; recorded payments never change."
+    },
+    {
+      "id": "FR-MPAY-05",
+      "priority": "Must",
+      "requirement": "Each payment shall get a sequential receipt number per year, for example RCP-2027-000045, using the same numbering mechanism as offers (Milestone 2 FR-OFR-08). The receipt is a record, not a legal invoice. The Administrator can set the prefix."
+    },
+    {
+      "id": "FR-FAM-02",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the relationship list (Albanian and English labels, order, active or not). The seed list is Spouse or partner, Child and Parent, as in the strategy. A deactivated relationship is not offered for new links and stays on existing ones."
+    },
+    {
+      "id": "FR-BEN-01",
+      "priority": "Must",
+      "requirement": "The Administrator shall manage the list of services (Albanian and English name, order, active or not) and, for each service and each tier (Bronze, Silver, Gold, VIP), a discount percentage from 0 to 100 with up to two decimals. An empty value means no discount."
+    },
+    {
+      "id": "FR-BEN-02",
+      "priority": "Must",
+      "requirement": "A new installation shall be seeded with the table in 6.1, with VIP equal to Gold, so the module is usable before Wellness Albania sends its final numbers. Every value is editable."
+    },
+    {
+      "id": "FR-BEN-04",
+      "priority": "Should",
+      "requirement": "All users with \"Members: view\" or \"Members: verify\" can open the benefit table read only, with the tiers as columns."
+    },
+    {
+      "id": "FR-BEN-05",
+      "priority": "Must",
+      "requirement": "A change in the table shall apply at once to the card and the verification screen and is audited with the old and new value. There is no per-member exception and no history of past tables."
+    },
+    {
+      "id": "FR-BEN-06",
+      "priority": "Must",
+      "requirement": "The platform shows the discount that applies. It does not apply the discount to bills or bookings and does not record which services a member used (out of scope, section 1.2)."
+    },
+    {
+      "id": "FR-AUD-14",
+      "priority": "Must",
+      "requirement": "In Milestone 4 the following shall be audited with old and new values, using the Milestone 1 audit mechanism: creation and every change of a member, status change with reason, tier correction, payment recorded or voided, VIP request, decision and ending, family link, confirmation and removal, employee upload (company, counts, file name), removal from a company, card link replaced, anonymisation or export of a member, and every change of the settings (fees, terms, grace days, expiring-soon window, numbering prefixes, relationship list, benefit services and percentages)."
+    },
+    {
+      "id": "NFR-I18N-04",
+      "priority": "Must",
+      "requirement": "All Milestone 4 staff screens, messages, notifications and tier and benefit labels shall be translated in Albanian and English. The card and the public verification page shall be in Albanian and English; Greek and Italian are Should."
+    },
+    {
+      "id": "NFR-OPS-04",
+      "priority": "Must",
+      "requirement": "Migrations shall run on PostgreSQL and MySQL, add the new permissions through the upgrade ledger, seed the tier settings, the relationship list and the benefit table, and be reversible or backed up."
+    },
+    {
+      "id": "NFR-OPS-05",
+      "priority": "Must",
+      "requirement": "Card links and QR codes shall be built from one configured public base URL. The production address is fixed before the first card is issued; if it ever changes, the old address redirects to the new one so issued cards keep working."
+    },
+    {
+      "id": "FR-MEM-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall register a member by hand. First name and last name are required, and at least one of date of birth, phone or email, so the person can be recognised later. A new member is Bronze, Active, with the start date today."
+    },
+    {
+      "id": "FR-MEM-02",
+      "priority": "Must",
+      "requirement": "The member record shall hold: member ID, first name, last name, date of birth, phone, email, card language (Albanian by default; English, Greek, Italian), city (from the predefined Area and City lists, optional), tier, status, start date, expiry date, employer company, family link, internal note, created by and when. It holds no medical information (FR-DPR-01)."
+    },
+    {
+      "id": "FR-MEM-04",
+      "priority": "Must",
+      "requirement": "The platform shall prevent a second record for the same person: a member with the same email, or the same phone, or the same first name, last name and date of birth, is reported before saving. The agent can confirm \"different person\" and save. Imports (FR-EMP-04) report such rows and never create them."
+    },
+    {
+      "id": "FR-MEM-05",
+      "priority": "Must",
+      "requirement": "A member has the status Active, Suspended or Closed. A user with \"Members: manage\" can suspend a member with a reason (card not valid, no discounts, tier unchanged) and reinstate. Closing keeps the record and the ID for history; a closed member can be reopened. No member is deleted."
+    },
+    {
+      "id": "FR-MEM-07",
+      "priority": "Must",
+      "requirement": "The member list shall search by name, member ID, phone and email and filter by tier, status, validity, source (corporate, individual, family), employer company, expiring soon, VIP review due and former employee, plus the Area and City of the employer company from the predefined lists. It pages and sorts."
+    },
+    {
+      "id": "FR-MEM-08",
+      "priority": "Must",
+      "requirement": "The member page shall show all fields, the current tier with its term dates, the term history, the tier history, payments (for users who may see them, FR-MPAY-08), the family group, the employer company, the verification events (FR-VER-06) and the internal note."
+    },
+    {
+      "id": "FR-MEM-09",
+      "priority": "Must",
+      "requirement": "Personal details (name, date of birth, phone, email, language, city, note) can be edited by users with \"Members: manage\". The tier, the term dates, the status history and the member ID cannot be typed: they change only through the actions in this milestone (payment, upgrade, VIP, import, removal, correction)."
+    },
+    {
+      "id": "FR-MEM-10",
+      "priority": "Should",
+      "requirement": "The member page shall let an authorized user write an internal note. The note field shows a warning that no medical information may be written there."
+    },
+    {
+      "id": "FR-TIR-08",
+      "priority": "Must",
+      "requirement": "Every change of effective tier shall be written to the tier history with the date, the old and new tier, the reason (Purchase, Renewal, Upgrade, Not renewed, Company contract ended, Left company, VIP approved, VIP ended, Import, Correction), who (or \"system\") and a comment."
+    },
+    {
+      "id": "FR-DPR-01",
+      "priority": "Must",
+      "requirement": "The platform shall hold no medical information about members: no diagnosis, no result, no service used, no medical note. The member fields are those in FR-MEM-02 and nothing in the member record, the card or the reports is derived from medical data."
+    },
+    {
+      "id": "FR-DPR-03",
+      "priority": "Must",
+      "requirement": "The platform shall collect the minimum: no national identity number, address, photograph or health data. Date of birth is optional and used for identification at Reception."
+    },
+    {
+      "id": "NFR-DAT-02",
+      "priority": "Must",
+      "requirement": "The database shall guarantee: one member number and one card token per value; one receipt number per value; one open VIP request per member; one employer per member; one principal per family member; one discount per service and tier."
+    },
+    {
+      "id": "NFR-PERF-05",
+      "priority": "Should",
+      "requirement": "The member list and search shall return in under 1 second with 50,000 members; Reception verification and the public verification page in under 1 second; the card page shall be usable in under 2 seconds on a mid-range phone on 4G; the preview of a 1,000-row upload in under 15 seconds and its confirmation in under 30 seconds; the reports and the dashboard block in under 2 seconds with 50,000 members and 20,000 payments."
+    },
+    {
+      "id": "FR-MPAY-01",
+      "priority": "Must",
+      "requirement": "Only users with \"Members: record payments\" shall record a membership payment. The user chooses the member, the kind (New, Renewal, Upgrade), the target tier, the method (Cash, Bank transfer, Card, Other) and the date received (not in the future) and may add a note. The amount is calculated by the platform and shown; it cannot be typed."
+    },
+    {
+      "id": "FR-MPAY-06",
+      "priority": "Should",
+      "requirement": "A user with \"Members: record payments\" shall be able to void the latest payment of a member with a required reason. Voiding reverses its effect (the earlier tier and term are restored), keeps the receipt number marked Voided and is written to the history. An earlier payment cannot be voided while a later one exists."
+    },
+    {
+      "id": "FR-MPAY-07",
+      "priority": "Must",
+      "requirement": "A Membership payments list shall show payments with filters by date range, tier, kind, method, agent and status (Recorded or Voided), with totals of the filtered list that exclude voided payments. It is open to users with \"Members: view payments\"."
+    },
+    {
+      "id": "FR-MPAY-08",
+      "priority": "Must",
+      "requirement": "Users without \"Members: view payments\" shall see no fee, amount, receipt or revenue field. These fields are removed from API responses, not only hidden. Reception sees tier and validity only."
+    },
+    {
+      "id": "FR-MPAY-09",
+      "priority": "Must",
+      "requirement": "A sponsored Silver membership shall not create a payment: the company pays under its contract. No fee is recorded for the employee."
+    },
+    {
+      "id": "FR-MPAY-10",
+      "priority": "Should",
+      "requirement": "Each payment shall store the list fee, the family discount percentage and the amount, so a later change of fee or discount never changes it. The list of payments and one member's payments can be exported to CSV by users who can view them; the export is audited."
+    },
+    {
+      "id": "FR-MPAY-11",
+      "priority": "Should",
+      "requirement": "A printable receipt (PDF) with the Wellness+ logo, member name and ID, tier, period, amount, method, receipt number and the agent shall be available from the payment, stating that it is not an invoice."
+    },
+    {
+      "id": "FR-AUD-16",
+      "priority": "Should",
+      "requirement": "Exports (FR-RPT-10, FR-MPAY-10), the card links sheet (FR-EMP-08) and card link replacement shall be recorded with who, when and the filters used, never with a token. Verifications are kept in their own log (FR-VER-06, FR-VER-10), not in the audit log. Viewing a report or dashboard is not audited."
+    },
+    {
+      "id": "FR-FAM-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall add a family member to a principal member, by creating a new member or linking an existing one. The user must choose the relationship from the relationship list and tick that the relationship was confirmed. The platform stores who confirmed it and when."
+    },
+    {
+      "id": "FR-FAM-03",
+      "priority": "Must",
+      "requirement": "A family member is a full member with an own ID, card, tier and terms. A family member has one principal; a principal cannot be a family member of another; nobody is linked to themselves."
+    },
+    {
+      "id": "FR-FAM-05",
+      "priority": "Must",
+      "requirement": "The payment screen shall show the list fee, the discount and the reason \"Family discount, relationship (name)\", and the payment shall store them."
+    },
+    {
+      "id": "FR-FAM-06",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" can remove a family link with a reason. The family member keeps the membership and all terms; later payments are at the full price. The change is recorded."
+    },
+    {
+      "id": "FR-FAM-07",
+      "priority": "Must",
+      "requirement": "The principal's page shall list the family group with relationship, tier and validity, and each member's page shall show the principal. All links, confirmations and removals are audited."
+    },
+    {
+      "id": "FR-FAM-08",
+      "priority": "Must",
+      "requirement": "Sponsored Silver covers the employee only. A family member of an employee does not get a sponsored term; the family discount applies when the employee is Silver or higher (FR-FAM-04)."
+    },
+    {
+      "id": "FR-VIP-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall request VIP for a member with a required reason (for example strategic client, PR relationship, key partner). The request has the status Pending."
+    },
+    {
+      "id": "FR-VIP-02",
+      "priority": "Must",
+      "requirement": "Only a user with \"Members: approve VIP\" shall approve or reject a request, and a rejection needs a reason. A user cannot approve a request they made themselves."
+    },
+    {
+      "id": "FR-VIP-05",
+      "priority": "Should",
+      "requirement": "A user with \"Members: approve VIP\" can end a VIP early with a reason. Requests, decisions and endings are shown on the member page and audited."
+    },
+    {
+      "id": "FR-TIR-07",
+      "priority": "Must",
+      "requirement": "A daily job shall record the changes in FR-TIR-06, in FR-EMP-10 and in FR-VIP-04: new terms, the tier history and a notification to the agents, in the workspace time zone, with \"system\" as the actor. Running it twice shall change nothing the second time, and after a missed run it shall catch up without duplicating anything."
+    },
+    {
+      "id": "FR-TIR-09",
+      "priority": "Should",
+      "requirement": "A user with \"Wellness+ settings: manage\" shall be able to correct the tier of a member with a required reason and an end date. The correction is a term of its own, recorded in the history with the reason Correction."
+    },
+    {
+      "id": "FR-TIR-11",
+      "priority": "Could",
+      "requirement": "Once per member and term, the users who can record payments shall get a notification when the term enters the expiring soon window, so the member can be contacted. A daily summary instead of one message per member is acceptable."
+    },
+    {
+      "id": "NFR-REL-02",
+      "priority": "Must",
+      "requirement": "The daily member job shall be idempotent, use the workspace time zone, record \"system\" as the actor and catch up after a missed run without duplicating any term, history entry or notification."
+    },
+    {
+      "id": "FR-EMP-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: import employees\" shall upload an employee list for one company, from the Wellness+ tab of the company page and from the Wellness+ menu. The company must have a valid contract today (Milestone 3 FR-CON-20); otherwise the upload is refused with the reason."
+    },
+    {
+      "id": "FR-EMP-02",
+      "priority": "Must",
+      "requirement": "The platform shall offer a template to download with the columns First name*, Last name*, Date of birth, Phone, Email and Language (sq, en, el, it; empty means sq). Column names in Albanian and English are accepted. Each row needs a first name, a last name and at least one of date of birth, phone or email."
+    },
+    {
+      "id": "FR-EMP-03",
+      "priority": "Must",
+      "requirement": "The file shall be checked by content, not by name: an Excel .xlsx workbook, at most 2 MB and 1,000 data rows (the limits of the existing client import), first sheet only, blank rows ignored. Macro files are refused. Cell values are read as text; formulas are never evaluated by the platform."
+    },
+    {
+      "id": "FR-EMP-04",
+      "priority": "Must",
+      "requirement": "Before anything is created the platform shall show a preview that classifies each row: New member; Existing member to link (found by FR-MEM-04 and not linked to another company); Already linked to this company, or repeated in the file (skipped); Linked to another company (refused); Error (with the reason). It shows the counts. Nothing is created until the user confirms."
+    },
+    {
+      "id": "FR-EMP-05",
+      "priority": "Must",
+      "requirement": "On confirmation the platform shall create each new member with a unique member ID, the employer company, the language and a sponsored Silver term starting today, and link each existing member with a sponsored Silver term. Everything of one upload is created in one transaction: if anything fails, nothing is created. The tier history records the reason Import."
+    },
+    {
+      "id": "FR-EMP-06",
+      "priority": "Must",
+      "requirement": "After an upload the platform shall show the result (created, linked, skipped, errors) and offer an Excel file of the skipped and error rows with the row number and the reason. The upload is recorded with who, when, file name and counts, and listed on the Wellness+ tab of the company."
+    },
+    {
+      "id": "FR-EMP-07",
+      "priority": "Must",
+      "requirement": "Uploading the same file again shall create nothing new: every row is reported as Already linked."
+    },
+    {
+      "id": "FR-EMP-14",
+      "priority": "Must",
+      "requirement": "A member can be linked to one employer company at a time. Linking a second company is refused until the first link is removed."
+    },
+    {
+      "id": "NFR-SEC-09",
+      "priority": "Must",
+      "requirement": "Uploads shall be limited to .xlsx workbooks of at most 2 MB and 1,000 rows, checked by content; formulas and external links are never followed; exports protect against formula injection."
+    },
+    {
+      "id": "FR-EMP-10",
+      "priority": "Must",
+      "requirement": "When the employer has no valid contract (Expired, Cancelled, Suspended or not started), the sponsored term shall not count, so the employee is Bronze unless a paid or VIP term gives a higher tier. The daily job records the change with the reason \"Company contract ended\" and the effect is also visible at once, because the effective tier is calculated (FR-TIR-02)."
+    },
+    {
+      "id": "FR-EMP-11",
+      "priority": "Must",
+      "requirement": "While an employee is still linked to the company, a new valid contract of the company, also after a gap, shall make the employee Silver again. A suspended contract makes the employees Bronze while it is suspended and Silver again when it is reinstated."
+    },
+    {
+      "id": "FR-EMP-12",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall remove an employee from the company, with the leaving date (default today) and an optional reason. The employer link is cleared, the sponsored term ends and the effective tier becomes the highest own term, Bronze if none. The member is kept and listed as a former employee of that company, so the agent can contact the person and offer a paid membership. The tier history records \"Left company\"."
+    },
+    {
+      "id": "FR-EMP-13",
+      "priority": "Must",
+      "requirement": "The member list and the Wellness+ tab of the company shall have the filter \"Former employees\", with the company and the leaving date."
+    },
+    {
+      "id": "FR-EMP-15",
+      "priority": "Could",
+      "requirement": "An agent shall be able to remove several selected employees at once, for example when a company reduces its staff."
+    },
+    {
+      "id": "FR-MEM-11",
+      "priority": "Should",
+      "requirement": "The company page shall get a Wellness+ tab for users with \"Members: view\": the members linked to the company with the count per tier, the former employees, the upload button (FR-EMP-01) and the history of uploads. It shows \"N members of M employees\" where M is the employee count of the company record."
+    },
+    {
+      "id": "FR-CRD-01",
+      "priority": "Must",
+      "requirement": "Each member shall have a personal card page at a private link that contains a random token of at least 128 bits and opens without login. The page shows the Wellness+ logo, name, member ID, tier (in its colour), validity (\"Valid until dd.mm.yyyy\", or \"No expiry\" for Bronze), the QR code and the benefits of the tier (FR-BEN-03). It shows no phone, email, date of birth, employer or payment."
+    },
+    {
+      "id": "FR-CRD-02",
+      "priority": "Must",
+      "requirement": "The QR code shall contain the verification link of the member (FR-VER-08), not the plain member ID. It shall be at least 220 px wide, black on white with a quiet zone and error correction level M or higher, and shall be readable by the built-in camera of an iPhone and of an Android phone."
+    },
+    {
+      "id": "FR-CRD-03",
+      "priority": "Must",
+      "requirement": "The card shall always show the situation at the time it is opened: tier, validity and benefits come from the server. For a suspended or closed member the card shows \"Membership not valid, contact Wellness Albania\" and no QR code."
+    },
+    {
+      "id": "FR-CRD-04",
+      "priority": "Must",
+      "requirement": "The card shall be shown in the language of the member (Albanian by default) with a switch between Albanian and English. Greek and Italian are shown for members who have them."
+    },
+    {
+      "id": "FR-CRD-08",
+      "priority": "Must",
+      "requirement": "The card and verification pages shall give the same neutral \"Card not found\" page for an unknown, replaced or malformed token, shall carry noindex, shall be rate-limited per IP, shall not put the token in server logs or audit entries and shall contain no analytics or third-party scripts."
+    },
+    {
+      "id": "FR-CRD-09",
+      "priority": "Should",
+      "requirement": "A user with \"Members: manage\" shall be able to show the card QR on screen, copy the card link and print the card (credit card size and A6) from the member page."
+    },
+    {
+      "id": "FR-CRD-10",
+      "priority": "Must",
+      "requirement": "A user with \"Members: manage\" shall be able to replace the card link of a member, for example when a phone is lost or the card was shared. The old link and every home-screen copy of it stop working at once and show \"This card was replaced. Ask Wellness Albania for the new link.\" The replacement is audited."
+    },
+    {
+      "id": "FR-CRD-12",
+      "priority": "Should",
+      "requirement": "The card page shall carry a short privacy line (who holds the data, why, whom to contact) in Albanian and English. The text comes from Wellness Albania."
+    },
+    {
+      "id": "FR-BEN-03",
+      "priority": "Must",
+      "requirement": "The discounts of the effective tier of the member shall be shown on the verification screen (FR-VER-02) and, as \"Your benefits\", on the card page (FR-CRD-01). A suspended or closed member is shown no discounts."
+    },
+    {
+      "id": "FR-EMP-08",
+      "priority": "Should",
+      "requirement": "The platform shall send nothing to the employees automatically. A user with \"Members: manage\" can download, for one upload, an Excel sheet with name and card link of each member, so the company or Wellness Albania can distribute the cards (Q14). The download is audited."
+    },
+    {
+      "id": "NFR-SEC-08",
+      "priority": "Must",
+      "requirement": "The card page and the public verification page shall be rate-limited per IP: by default 60 requests per hour for the card page and 300 per hour for verification, so a clinic scanning many members from one network is not blocked. The limits are settings."
+    },
+    {
+      "id": "NFR-USE-05",
+      "priority": "Must",
+      "requirement": "The QR code shall stay scannable in dark mode and at low screen brightness: the card page always shows the code on a white square with a quiet zone."
+    },
+    {
+      "id": "FR-VER-01",
+      "priority": "Must",
+      "requirement": "A user with \"Members: verify\" shall find a member by scanning the QR code with the camera of the device in the browser, or by searching member ID, name, phone or email. The \"Verify member\" screen is in the main menu and works on a phone, a tablet and a desktop with a webcam."
+    },
+    {
+      "id": "FR-VER-02",
+      "priority": "Must",
+      "requirement": "The result shall show, large, Valid or Not valid; the name, member ID, tier, valid until, status and date of birth (for the identity check); and the discounts of the tier. For a suspended or closed member it shows Not valid with the status and no discounts. It shows no payment, fee, phone, email or employer."
+    },
+    {
+      "id": "FR-VER-03",
+      "priority": "Must",
+      "requirement": "Reception shall confirm the identity by comparing the name and date of birth with the person's identity document and press \"Identity confirmed\" or \"Does not match\". The choice is stored with the verification."
+    },
+    {
+      "id": "FR-VER-04",
+      "priority": "Must",
+      "requirement": "A scanned code that is unknown or replaced shall show \"Member not found\" with no other information."
+    },
+    {
+      "id": "FR-VER-05",
+      "priority": "Must",
+      "requirement": "The result shall always come from the server at that moment; nothing is cached on the device."
+    },
+    {
+      "id": "FR-VER-06",
+      "priority": "Should",
+      "requirement": "Every verification at Reception shall be recorded with the member, the user, the time, scan or search, the result and the identity choice, and shown on the member page for users with \"Members: view\"."
+    },
+    {
+      "id": "FR-VER-07",
+      "priority": "Must",
+      "requirement": "A partner clinic shall scan the QR code with an ordinary phone camera. The link opens a public verification page, without login, that shows Valid or Not valid and, for a valid member, the full name, the member ID, the tier and the valid-until date. It shows no date of birth, contact details, employer, payment or discounts."
+    },
+    {
+      "id": "FR-VER-08",
+      "priority": "Must",
+      "requirement": "The QR code shall carry one link per member. The same link opened by a logged-in user with \"Members: verify\" shall show the Reception screen of FR-VER-02, and opened by anyone else the public page of FR-VER-07."
+    },
+    {
+      "id": "FR-VER-09",
+      "priority": "Must",
+      "requirement": "The public page shall give the same neutral answer for every reason a member is not valid (Not valid), and the same \"Member not found\" for an unknown token, so nothing is learned about suspended or closed members."
+    },
+    {
+      "id": "FR-VER-10",
+      "priority": "Should",
+      "requirement": "Each public verification shall be recorded with the time, the result and a hashed IP address, without identifying the clinic. Whether partner clinics must be registered and identified is open (Q15)."
+    },
+    {
+      "id": "NFR-USE-04",
+      "priority": "Must",
+      "requirement": "All Milestone 4 staff screens shall work on desktop and on mobile from 360 px wide, and the card, the QR scan and the add-to-home-screen steps shall be tested on a real iPhone (Safari) and a real Android phone (Chrome)."
+    },
+    {
+      "id": "FR-RPT-01",
+      "priority": "Must",
+      "requirement": "A Wellness+ reports page shall be open to users with \"Members: view reports\". It has the period selector of Milestone 3 (FR-DSH-03: Today, This week, This month (default), This quarter, This year, custom) and the filters tier, segment (corporate, individual), employer company and the predefined Area and City of the employer company. Every figure is calculated on the server."
+    },
+    {
+      "id": "FR-RPT-02",
+      "priority": "Must",
+      "requirement": "The report shall show the active members per tier, with count and share, as of now, and the active members at the end of each month of the period per tier."
+    },
+    {
+      "id": "FR-RPT-03",
+      "priority": "Must",
+      "requirement": "The report shall show the new members in the period, split by corporate and individual, and the new paid memberships (payments of kind New)."
+    },
+    {
+      "id": "FR-RPT-04",
+      "priority": "Must",
+      "requirement": "The report shall show the renewals: terms that ended in the period, how many were renewed and how many not, and the renewal rate, in total and per tier."
+    },
+    {
+      "id": "FR-RPT-05",
+      "priority": "Must",
+      "requirement": "The report shall show the upgrades in the period: count and amount per path (Bronze to Silver, Bronze to Gold, Silver to Gold)."
+    },
+    {
+      "id": "FR-RPT-06",
+      "priority": "Must",
+      "requirement": "The report shall show the downgrades in the period: count per path (Gold to Silver, Silver to Bronze, VIP to lower) and per reason (Not renewed, Company contract ended, Left company, VIP ended)."
+    },
+    {
+      "id": "FR-RPT-07",
+      "priority": "Must",
+      "requirement": "The report shall compare corporate and individual members (count and share of the active members) and list, per employer company, the members, the sponsored Silver, the members who upgraded to a paid tier and the former employees, with a link to the company."
+    },
+    {
+      "id": "FR-RPT-08",
+      "priority": "Should",
+      "requirement": "For users who can view payments, the report shall show the membership revenue in the period: money received per tier and per kind, excluding voided payments."
+    },
+    {
+      "id": "FR-RPT-09",
+      "priority": "Should",
+      "requirement": "The report page shall offer working lists: memberships expiring in the window, VIP reviews due, and former employees to contact, each with the member, the date and a link to the member."
+    },
+    {
+      "id": "FR-RPT-10",
+      "priority": "Should",
+      "requirement": "Every report shall have a table view and a CSV export. Exports are audited, cells that begin with =, +, - or @ are protected against formula injection, and an export contains contact details only for users with \"Members: view\"."
+    },
+    {
+      "id": "FR-DSH-14",
+      "priority": "Must",
+      "requirement": "The CEO dashboard shall show the Wellness+ block that Milestone 3 reserved (FR-DSH-12): active members and members per tier, corporate versus individual, new members, new paid memberships, upgrades, downgrades, renewal rate, memberships expiring in the window and, if the user can view payments, the membership revenue."
+    },
+    {
+      "id": "FR-DSH-15",
+      "priority": "Must",
+      "requirement": "The block shall follow the rules of Milestone 3 FR-DSH-03 and FR-DSH-05: period figures follow the period, \"as of now\" figures are labelled, and a click opens the report or list already filtered. Money is hidden and removed from the response for users without \"Members: view payments\"."
+    },
+    {
+      "id": "FR-DSH-16",
+      "priority": "Must",
+      "requirement": "The block shall be shown only to users with \"Members: view reports\". Other dashboards are unchanged. Reception keeps its landing page and gets \"Verify member\" in the menu."
     }
   ]
 }

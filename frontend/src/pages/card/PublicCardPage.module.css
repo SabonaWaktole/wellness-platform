@@ -1,0 +1,304 @@
+/*
+ * The member's card (M4 Slice 11). Its own small stylesheet: the public page does not load the staff theme.
+ * The QR sits on a white square with a quiet zone in light AND dark mode, so it scans at low brightness
+ * (NFR-USE-05). Nothing scrolls sideways at 360 px (NFR-USE-04).
+ */
+
+.page {
+  --card-bg: #f3f5f7;
+  --card-surface: #ffffff;
+  --card-text: #14202b;
+  --card-muted: #5b6874;
+  --card-line: #dfe4e8;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  background: var(--card-bg);
+  color: var(--card-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .page {
+    --card-bg: #0f151b;
+    --card-surface: #1a232c;
+    --card-text: #eef2f5;
+    --card-muted: #a3afba;
+    --card-line: #2d3945;
+  }
+}
+
+.column {
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.language select {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--card-line);
+  background: var(--card-surface);
+  color: var(--card-text);
+  font: inherit;
+}
+
+.message {
+  text-align: center;
+  color: var(--card-muted);
+}
+
+.panel {
+  background: var(--card-surface);
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  padding: 24px 20px;
+  overflow-wrap: anywhere;
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+.retry {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 8px;
+  border: 1px solid var(--card-line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.card {
+  background: var(--card-surface);
+  border: 1px solid var(--card-line);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 12%);
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+}
+
+.bandBrand {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tier {
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.name {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  margin: 0;
+}
+
+.facts div {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.facts dt {
+  color: var(--card-muted);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.validity {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Always a white square with a quiet zone, whatever the theme (NFR-USE-05). */
+.qrBox {
+  margin: 8px 0 0;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 12px;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.qr {
+  display: block;
+  width: 240px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  background: #ffffff;
+}
+
+.qrHelp {
+  margin: 0;
+  color: var(--card-muted);
+  font-size: 0.875rem;
+}
+
+.benefitsTitle {
+  align-self: stretch;
+  margin: 16px 0 0;
+  font-size: 1rem;
+  text-align: left;
+  border-top: 1px solid var(--card-line);
+  padding-top: 16px;
+}
+
+.benefits {
+  align-self: stretch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.benefits li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9375rem;
+}
+
+.benefits li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.benefits li strong {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--card-muted);
+  margin: 0;
+}
+
+.notValid {
+  margin: 16px 0;
+  padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--card-line);
+  font-weight: 600;
+}
+
+.privacy {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--card-muted);
+  text-align: center;
+}
+
+/* Today's date and a moving element: a screenshot cannot move (FR-CRD-07). */
+.stamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--card-muted);
+}
+
+.stampPulse {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: #18988b;
+  animation: stampPulse 1.4s ease-in-out infinite;
+}
+
+.stampClock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+@keyframes stampPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stampPulse { animation: none; }
+}
+
+.stale {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--card-muted);
+}
+
+.install {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--card-line);
+  border-radius: 0.75rem;
+  background: var(--card-surface);
+  font-size: 0.9rem;
+}
+
+.install strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.install p {
+  margin: 0;
+  color: var(--card-muted);
+}

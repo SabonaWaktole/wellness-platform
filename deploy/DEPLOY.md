@@ -94,6 +94,7 @@ DATABASE_URL="mysql://user:password@host:3306/dbname"
 JWT_SECRET="<a long random string, at least 32 characters>"
 JWT_EXPIRATION="24h"
 FRONTEND_URL="https://<the frontend's own origin>"
+PUBLIC_BASE_URL="https://<the address printed on member cards>"
 ```
 
 - **`NODE_ENV=production` is not optional**, on staging as much as on
@@ -103,6 +104,37 @@ FRONTEND_URL="https://<the frontend's own origin>"
   sends its session cookie over plain HTTP.
 - **`FRONTEND_URL`** is the only origin CORS lets call the API with
   credentials. It must match exactly, scheme included.
+- **`PUBLIC_BASE_URL`** (Wellness+, NFR-OPS-05) is the one address that member
+  card links and QR codes are built from. In production the server **refuses to
+  start without it**: an `https://` origin with no trailing slash and no path.
+  Fix it before the first card is issued; if it ever changes, redirect the old
+  address to the new one in the host's configuration so issued cards keep
+  working.
+- **`CARD_RATE_LIMIT_PER_HOUR`** (optional, Wellness+, NFR-SEC-08) is how many
+  requests one IP address may make to the public card page per hour. The default
+  is 60. The card page is `/m/<token>` on the public address and the QR holds
+  `/v/<token>`; both are served by the frontend and need the same single-page
+  fallback as every other frontend route.
+  The installable card (Slice 12) adds `/m/sw.js` and `/icons/*` to the frontend
+  build; the service worker must be served from `/m/sw.js` with no cache header
+  (`frontend/public/.htaccess` does this) and the manifest comes from the API at
+  `/api/public/cards/<token>/manifest.webmanifest`, so the API must allow the
+  frontend origin through CORS, as it already does for `FRONTEND_URL`.
+- **`VERIFY_RATE_LIMIT_PER_HOUR`** (optional, Wellness+, NFR-SEC-08) is how many
+  requests one IP address may make to the public verification page
+  (`/api/public/verify/<token>`, opened from `/v/<token>`) per hour. The default
+  is 300. **`VERIFY_IP_HASH_SECRET`** (optional) is the key that hashes the caller's
+  address in the verification log (FR-VER-10); when it is not set, `JWT_SECRET` is
+  used. Changing either secret only means old and new rows can no longer be matched
+  by address. The migration `mysql_migration_m4_verification.sql` creates the
+  `VerificationEvent` table; `mysql_upgrade_to_current.sql` carries it too.
+- **MySQL 8 or newer** (Wellness+ reports, M4 Slice 14, D15). "Active members at
+  the end of each month" replays the tier and status histories with
+  `ROW_NUMBER() OVER (PARTITION BY ...)` and a `WITH` clause. MySQL 5.7 and MariaDB
+  older than 10.2 do not have them, and then the monthly series fails while the
+  other figures still work. Run `SELECT VERSION();` on the Hostinger database
+  before the first deployment of Slice 14. The slice has no schema change, so there
+  is no migration.
 - **`JWT_EXPIRATION`** defaults to `24h`. There is no refresh token, so this is
   also the longest a stolen token stays usable; deactivation and suspension are
   enforced on every request regardless.

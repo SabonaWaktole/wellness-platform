@@ -1,0 +1,774 @@
+{
+  "expiringBadge": "Skadon së shpejti",
+  "breadcrumb": "Wellness+",
+  "tiers": {
+    "BRONZE": "Bronz",
+    "SILVER": "Argjend",
+    "GOLD": "Ar",
+    "VIP": "VIP"
+  },
+  "status": {
+    "ACTIVE": "Aktiv",
+    "SUSPENDED": "I pezulluar",
+    "CLOSED": "I mbyllur"
+  },
+  "validity": {
+    "valid": "I vlefshëm",
+    "notValid": "Jo i vlefshëm: {{reason}}"
+  },
+  "source": {
+    "CORPORATE": "Korporatë",
+    "INDIVIDUAL": "Individual",
+    "FAMILY": "Familje"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "Anglisht",
+    "el": "Greqisht",
+    "it": "Italisht"
+  },
+  "list": {
+    "title": "Anëtarët",
+    "subtitle": "Anëtarët e Wellness+, niveli dhe statusi i tyre.",
+    "new": "Anëtar i ri",
+    "searchLabel": "Kërko anëtarë",
+    "searchPlaceholder": "Emri, ID e anëtarit, telefoni ose email",
+    "filters": {
+      "tier": "Niveli",
+      "status": "Statusi",
+      "validity": "Vlefshmëria",
+      "source": "Burimi",
+      "any": "Të gjithë",
+      "valid": "I vlefshëm",
+      "notValid": "Jo i vlefshëm",
+      "expiringSoon": "Skadon së shpejti",
+      "vipReviewDue": "Rishikim VIP i afërt",
+      "formerEmployee": "Ish-punonjës",
+      "clear": "Pastro filtrat",
+      "leftFrom": "U largua nga data",
+      "leftTo": "U largua deri më"
+    },
+    "columns": {
+      "number": "ID e anëtarit",
+      "name": "Emri",
+      "tier": "Niveli",
+      "status": "Statusi",
+      "source": "Burimi",
+      "employer": "Punëdhënësi",
+      "phone": "Telefoni",
+      "email": "Email"
+    },
+    "sortBy": "Rendit sipas",
+    "sort": {
+      "name": "Emrit",
+      "memberNumber": "ID e anëtarit",
+      "tier": "Nivelit",
+      "createdAt": "Më të rejat"
+    },
+    "formerEmployee": "Ish-punonjës",
+    "total_one": "{{count}} anëtar",
+    "total_other": "{{count}} anëtarë",
+    "empty": "Ende nuk ka anëtarë. Regjistroni të parin.",
+    "emptyFiltered": "Asnjë anëtar nuk përputhet me këtë kërkim.",
+    "loadFailed": "Anëtarët nuk u ngarkuan."
+  },
+  "form": {
+    "newTitle": "Anëtar i ri",
+    "editTitle": "Ndrysho të dhënat personale",
+    "intro": "Emri dhe mbiemri janë të detyrueshëm, si dhe të paktën një nga data e lindjes, telefoni ose emaili, që personi të njihet më vonë.",
+    "firstName": "Emri",
+    "lastName": "Mbiemri",
+    "dateOfBirth": "Data e lindjes",
+    "phone": "Telefoni",
+    "email": "Email",
+    "language": "Gjuha e kartës",
+    "city": "Qyteti",
+    "cityNone": "Nuk është caktuar",
+    "note": "Shënim i brendshëm",
+    "noteWarning": "Mos shkruani informacion mjekësor këtu: asnjë diagnozë, rezultat apo shërbim të përdorur.",
+    "save": "Ruaj anëtarin",
+    "saving": "Po ruhet…",
+    "cancel": "Anulo",
+    "errors": {
+      "firstName": "Shkruani emrin.",
+      "lastName": "Shkruani mbiemrin.",
+      "dateOfBirth": "Shkruani një datë lindjeje reale, jo në të ardhmen.",
+      "phone": "Shkruani një numër telefoni të vlefshëm.",
+      "email": "Shkruani një adresë emaili të vlefshme.",
+      "identifier": "Shkruani datën e lindjes, një numër telefoni ose një email.",
+      "language": "Zgjidhni gjuhën e kartës.",
+      "cityId": "Zgjidhni një nga qytetet e paracaktuara.",
+      "note": "Shënimi është shumë i gjatë.",
+      "generic": "Anëtari nuk u ruajt."
+    }
+  },
+  "duplicate": {
+    "title": "Ky person mund të jetë tashmë anëtar",
+    "body": "Ekziston një anëtar me të njëjtin email, telefon, ose emër dhe datë lindjeje. Hapni anëtarin ekzistues, ose ruajeni këtë si person tjetër.",
+    "open": "Hap",
+    "differentPerson": "Person tjetër, ruaje",
+    "cancel": "Kthehu te formulari"
+  },
+  "detail": {
+    "back": "Anëtarët",
+    "edit": "Ndrysho të dhënat",
+    "notFound": "Ky anëtar nuk ekziston.",
+    "loadFailed": "Anëtari nuk u ngarkua.",
+    "tabs": {
+      "overview": "Të dhënat",
+      "terms": "Afatet",
+      "payments": "Pagesat",
+      "history": "Historiku",
+      "note": "Shënimi i brendshëm",
+      "label": "Pjesët e anëtarit",
+      "family": "Familja",
+      "vip": "VIP"
+    },
+    "fields": {
+      "memberNumber": "ID e anëtarit",
+      "dateOfBirth": "Data e lindjes",
+      "phone": "Telefoni",
+      "email": "Email",
+      "language": "Gjuha e kartës",
+      "city": "Qyteti",
+      "startsOn": "Anëtar që nga",
+      "employer": "Kompania punëdhënëse",
+      "family": "Grupi familjar",
+      "createdBy": "Krijuar nga",
+      "createdAt": "Krijuar më",
+      "closedAt": "Mbyllur më",
+      "formerEmployer": "Ish-punonjësi i"
+    },
+    "none": "Asnjë",
+    "tierCard": {
+      "title": "Niveli aktual",
+      "term": "Afati {{from}} – {{to}}",
+      "noEnd": "Afati nga {{from}}, pa datë përfundimi",
+      "floor": "Bronzi është niveli falas që ka çdo anëtar aktiv."
+    },
+    "termSource": {
+      "PAID": "I paguar",
+      "SPONSORED": "Punëdhënësi",
+      "VIP": "VIP",
+      "DOWNGRADE": "Nuk u rinovua",
+      "CORRECTION": "Korrigjim"
+    },
+    "terms": {
+      "title": "Historiku i afateve",
+      "empty": "Ende nuk ka afat të paguar, nga punëdhënësi ose VIP. Anëtari është Bronz.",
+      "tier": "Niveli",
+      "source": "Burimi",
+      "from": "Nga",
+      "to": "Deri",
+      "openEnded": "Pa datë përfundimi"
+    },
+    "history": {
+      "tierTitle": "Historiku i nivelit",
+      "tierEmpty": "Niveli ende nuk ka ndryshuar.",
+      "statusTitle": "Historiku i statusit",
+      "date": "Data",
+      "change": "Ndryshimi",
+      "reason": "Arsyeja",
+      "by": "Nga",
+      "system": "Sistemi",
+      "registered": "Regjistruar"
+    },
+    "correctTier": {
+      "button": "Korrigjo nivelin",
+      "title": "Korrigjo nivelin",
+      "help": "I jep anëtarit një afat të korrigjuar nga sot deri në datën e fundit. Regjistrohet në historikun e nivelit si korrigjim dhe në regjistrin e auditimit.",
+      "tier": "Niveli i korrigjuar",
+      "endsOn": "Vlen deri më",
+      "endsOnInvalid": "Zgjidhni një datë mbarimi që është sot ose më vonë.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Arsyeja është e detyrueshme.",
+      "failed": "Niveli nuk u korrigjua. Kontrolloni të dhënat dhe provoni sërish.",
+      "cancel": "Anulo",
+      "confirm": "Korrigjo nivelin"
+    },
+    "tierReason": {
+      "Purchase": "Blerje",
+      "Renewal": "Rinovim",
+      "Upgrade": "Përmirësim",
+      "Not renewed": "Nuk u rinovua",
+      "Company contract ended": "Kontrata e kompanisë përfundoi",
+      "Left company": "Largua nga kompania",
+      "VIP approved": "VIP u miratua",
+      "VIP ended": "VIP përfundoi",
+      "Import": "Importim",
+      "Correction ended": "Korrigjimi përfundoi",
+      "Term ended": "Afati përfundoi",
+      "Term started": "Afati nisi",
+      "Correction": "Korrigjim",
+      "Company contract valid again": "Kontrata e kompanisë u bë sërish e vlefshme"
+    },
+    "notePanel": {
+      "empty": "Nuk ka shënim të brendshëm."
+    },
+    "actions": {
+      "SUSPEND": "Pezullo",
+      "REINSTATE": "Rivendos",
+      "CLOSE": "Mbyll anëtarin",
+      "REOPEN": "Rihap"
+    },
+    "statusDialog": {
+      "SUSPEND": "Pezulloni këtë anëtar",
+      "REINSTATE": "Rivendosni këtë anëtar",
+      "CLOSE": "Mbyllni këtë anëtar",
+      "REOPEN": "Rihapni këtë anëtar",
+      "suspendHelp": "Një anëtar i pezulluar nuk është i vlefshëm: karta nuk jep zbritje. Niveli nuk ndryshon.",
+      "closeHelp": "Mbyllja ruan regjistrimin dhe ID e anëtarit. Një anëtar i mbyllur mund të rihapet.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Për të pezulluar një anëtar nevojitet një arsye.",
+      "confirm": "Konfirmo",
+      "cancel": "Anulo",
+      "failed": "Statusi nuk u ndryshua."
+    },
+    "formerEmployee": "Ish-punonjës",
+    "formerEmployerSince": "U largua më {{date}}"
+  },
+  "payments": {
+    "record": "Regjistro pagesë",
+    "openReceipt": "Hap kuponin {{number}}",
+    "kind": {
+      "NEW": "Anëtarësim i ri",
+      "RENEWAL": "Rinovim",
+      "UPGRADE": "Përmirësim niveli"
+    },
+    "method": {
+      "CASH": "Para në dorë",
+      "BANK_TRANSFER": "Transfertë bankare",
+      "CARD": "Kartë",
+      "OTHER": "Tjetër"
+    },
+    "status": {
+      "RECORDED": "Regjistruar",
+      "VOIDED": "Anuluar"
+    },
+    "warning": {
+      "SPONSORED_SILVER_OWN_TERM": "Ky punonjës ka tashmë Argjend të paguar nga kompania. Kjo pagesë nis një afat të veçantë Argjend që mbetet me personin pasi largohet nga kompania."
+    },
+    "columns": {
+      "receipt": "Kuponi",
+      "date": "Data e pranimit",
+      "member": "Anëtari",
+      "kind": "Lloji",
+      "tier": "Niveli",
+      "amount": "Shuma",
+      "method": "Mënyra",
+      "status": "Statusi",
+      "by": "Regjistruar nga",
+      "actions": "Veprime"
+    },
+    "drawer": {
+      "title": "Regjistro një pagesë",
+      "receivedOn": "Data e pranimit",
+      "dateRefused": "Data e pranimit nuk mund të jetë në të ardhmen.",
+      "option": "Pagesa",
+      "optionLabel": "{{kind}} · {{tier}}",
+      "noOptions": "Për këtë anëtar nuk mund të regjistrohet asnjë pagesë në këtë datë.",
+      "loadFailed": "Opsionet e pagesës nuk u ngarkuan.",
+      "quote": "Pagesa e llogaritur",
+      "listFee": "Tarifa e listës",
+      "discount": "Zbritja familjare",
+      "amount": "Shuma për t'u paguar",
+      "newTerm": "Afati i ri",
+      "term": "{{from}} – {{to}}",
+      "calculated": "Shuma llogaritet nga platforma dhe nuk mund të ndryshohet.",
+      "method": "Mënyra e pagesës",
+      "note": "Shënim (opsional)",
+      "save": "Regjistro pagesën",
+      "cancel": "Anulo",
+      "failed": "Pagesa nuk u ruajt. Provo përsëri.",
+      "refused": {
+        "MEMBER_NOT_ACTIVE": "Vetëm një anëtar aktiv mund të paguajë.",
+        "TIER_NOT_PURCHASABLE": "Ky nivel nuk mund të blihet.",
+        "NOT_A_HIGHER_TIER": "Një pagesë nuk mund ta kalojë anëtarin në një nivel më të ulët.",
+        "PAID_TERM_RUNNING": "Ky anëtar ka tashmë një afat të paguar. Rinovoje ose përmirësoje.",
+        "NOTHING_TO_RENEW": "Nuk ka afat të paguar të këtij niveli për t'u rinovuar.",
+        "NOTHING_TO_UPGRADE": "Nuk ka nivel të paguar për t'u përmirësuar. Bli nivelin si anëtarësim të ri.",
+        "USE_UPGRADE": "Ky anëtar ka tashmë një nivel. Paguaj diferencën si përmirësim."
+      },
+      "familyReason": "Zbritja familjare, {{relationship}} ({{principal}})"
+    },
+    "tab": {
+      "title": "Pagesat",
+      "empty": "Për këtë anëtar nuk është regjistruar asnjë pagesë.",
+      "void": "Anulo",
+      "discounted": "{{percent}}% zbritje nga {{fee}}"
+    },
+    "voidDialog": {
+      "title": "Anulo këtë pagesë",
+      "help": "Anulimi heq efektin e pagesës: niveli dhe afati i mëparshëm rikthehen. Numri i kuponit mbetet dhe shënohet si i anuluar.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Për të anuluar një pagesë kërkohet një arsye.",
+      "confirm": "Anulo pagesën",
+      "cancel": "Anulo veprimin",
+      "notLatest": "Vetëm pagesa e fundit e një anëtari mund të anulohet. Anulo fillimisht pagesën më të re.",
+      "alreadyVoided": "Kjo pagesë është anuluar tashmë.",
+      "failed": "Pagesa nuk u anulua. Provo përsëri."
+    },
+    "page": {
+      "title": "Pagesat e anëtarësimit",
+      "subtitle": "Çdo pagesë Wellness+, me kuponin për secilën.",
+      "from": "Pranuar nga",
+      "to": "Pranuar deri",
+      "tier": "Niveli",
+      "kind": "Lloji",
+      "method": "Mënyra",
+      "status": "Statusi",
+      "summary_one": "{{count}} pagesë",
+      "summary_other": "{{count}} pagesa",
+      "total": "Totali",
+      "totalNote": "pagesat e anuluara nuk llogariten",
+      "exportCsv": "Eksporto CSV",
+      "loadFailed": "Pagesat nuk u ngarkuan.",
+      "empty": "Ende nuk është regjistruar asnjë pagesë anëtarësimi.",
+      "emptyFiltered": "Asnjë pagesë nuk përputhet me këto filtra."
+    }
+  },
+  "family": {
+    "title": "Familja",
+    "principal": "Anëtari kryesor",
+    "relationship": "Lidhja",
+    "confirmation": "Konfirmimi",
+    "confirmedBy": "Konfirmuar nga {{name}} më {{date}}",
+    "confirmedOn": "Konfirmuar më {{date}}",
+    "relationshipUnknown": "Lidhja nuk është caktuar",
+    "empty": "Ky anëtar nuk ka ende anëtarë familjarë.",
+    "add": "Shto anëtar familjar",
+    "remove": "Hiq lidhjen familjare",
+    "columns": {
+      "member": "Anëtari",
+      "relationship": "Lidhja",
+      "tier": "Niveli",
+      "validity": "Vlefshmëria",
+      "confirmation": "Konfirmimi"
+    },
+    "history": {
+      "title": "Historiku i familjes",
+      "event": "Ngjarja",
+      "LINKED": "Lidhur me {{principal}} si {{relationship}}",
+      "REMOVED": "Lidhja me {{principal}} u hoq"
+    },
+    "addDialog": {
+      "title": "Shto një anëtar familjar",
+      "mode": "Anëtari familjar",
+      "modeNew": "Një person i ri",
+      "modeExisting": "Një anëtar ekzistues",
+      "search": "Kërko sipas emrit, ID-së, telefonit ose emailit",
+      "member": "Anëtari",
+      "choose": "Zgjidh…",
+      "relationship": "Lidhja",
+      "relationshipRequired": "Zgjidhni lidhjen.",
+      "confirmed": "Konfirmoj që lidhja u kontrollua.",
+      "confirmationRequired": "Vendosni shenjën e konfirmimit për të ruajtur.",
+      "memberRequired": "Zgjidhni anëtarin për t'u lidhur.",
+      "failed": "Anëtari familjar nuk u ruajt.",
+      "cancel": "Anulo",
+      "save": "Shto anëtar familjar"
+    },
+    "removeDialog": {
+      "title": "Hiq lidhjen familjare",
+      "help": "Anëtari mban anëtarësimin dhe të gjitha afatet. Pagesat e mëvonshme janë me çmimin e plotë. Ndryshimi regjistrohet.",
+      "reason": "Arsyeja",
+      "reasonRequired": "Arsyeja është e detyrueshme.",
+      "failed": "Lidhja nuk u hoq.",
+      "cancel": "Anulo",
+      "confirm": "Hiq lidhjen"
+    },
+    "refused": {
+      "SELF_LINK": "Një anëtar nuk mund të lidhet me veten.",
+      "PRINCIPAL_IS_FAMILY_MEMBER": "Ky anëtar është anëtar familjar i dikujt tjetër, ndaj nuk mund të jetë kryesor.",
+      "ALREADY_HAS_PRINCIPAL": "Ky anëtar ka tashmë një anëtar kryesor.",
+      "MEMBER_IS_PRINCIPAL": "Ky anëtar ka tashmë anëtarë familjarë, ndaj nuk mund të bëhet anëtar familjar.",
+      "NOT_A_FAMILY_MEMBER": "Ky anëtar nuk ka lidhje familjare."
+    }
+  },
+  "vip": {
+    "title": "VIP",
+    "reviewDate": "Data e rishikimit të VIP: {{date}}",
+    "request": "Kërko VIP",
+    "end": "Përfundo VIP",
+    "empty": "Ky anëtar nuk ka kërkesa VIP.",
+    "reason": "Arsyeja",
+    "reasonRequired": "Arsyeja është e detyrueshme.",
+    "failed": "Veprimi nuk u krye.",
+    "cancel": "Anulo",
+    "ownRequest": "Këtë kërkesë e keni bërë ju; vendos një miratues tjetër.",
+    "decidedBy": "{{name}} më {{date}}",
+    "endedOn": "VIP përfundoi më {{date}} nga {{name}}",
+    "endReason": "Arsyeja e përfundimit: {{reason}}",
+    "status": {
+      "PENDING": "Në pritje",
+      "APPROVED": "E miratuar",
+      "REJECTED": "E refuzuar",
+      "WITHDRAWN": "E tërhequr"
+    },
+    "columns": {
+      "member": "Anëtari",
+      "date": "Kërkuar më",
+      "status": "Statusi",
+      "reason": "Arsyeja",
+      "requestedBy": "Kërkuar nga",
+      "decision": "Vendimi"
+    },
+    "requestDialog": {
+      "title": "Kërko VIP",
+      "help": "Shkruani pse ky anëtar duhet të jetë VIP, për shembull klient strategjik, marrëdhënie PR ose partner kyç. Vendos një përdorues tjetër me të drejtën e miratimit.",
+      "confirm": "Dërgo kërkesën"
+    },
+    "endDialog": {
+      "title": "Përfundo VIP",
+      "help": "Anëtari kthehet sot në nivelin më të lartë tjetër të vlefshëm, Bronz nëse nuk ka. Arsyeja ruhet në histori.",
+      "confirm": "Përfundo VIP"
+    },
+    "decide": {
+      "approve": "Mirato",
+      "reject": "Refuzo",
+      "cancel": "Anulo",
+      "approveTitle": "Mirato VIP për {{name}}",
+      "rejectTitle": "Refuzo VIP për {{name}}",
+      "approveHelp": "Miratimi jep një afat VIP falas nga sot për kohëzgjatjen e VIP, me datë rishikimi të barabartë me përfundimin. Nëse anëtari është tashmë VIP, vazhdon nga dita tjetër.",
+      "rejectHelp": "Kërkuesi e sheh arsyen.",
+      "requestedWith": "Arsyeja e dhënë: {{reason}}",
+      "note": "Shënim (opsional)",
+      "rejectReason": "Arsyeja e refuzimit",
+      "reasonRequired": "Për të refuzuar nevojitet një arsye.",
+      "failed": "Vendimi nuk u ruajt."
+    },
+    "list": {
+      "title": "Kërkesat VIP",
+      "subtitle": "Kërkesat që presin vendim dhe vendimet e kaluara.",
+      "empty": "Nuk ka kërkesa VIP.",
+      "loadFailed": "Kërkesat VIP nuk u ngarkuan."
+    },
+    "refused": {
+      "MEMBER_CLOSED": "Një anëtar i mbyllur nuk mund të bëhet VIP.",
+      "OPEN_REQUEST": "Ky anëtar ka tashmë një kërkesë VIP të hapur.",
+      "OWN_REQUEST": "Nuk mund të vendosni për një kërkesë që e keni bërë vetë.",
+      "NOT_PENDING": "Kjo kërkesë është vendosur tashmë.",
+      "NOT_VIP": "Ky anëtar nuk është VIP."
+    }
+  },
+  "employees": {
+    "title": "Ngarkimi i punonjësve",
+    "subtitle": "Shtoni punonjësit e një kompanie si anëtarë Silver të sponsorizuar nga një skedar Excel. Asgjë nuk krijohet derisa të konfirmoni.",
+    "template": "Shkarko modelin",
+    "company": "Kompania",
+    "change": "Ndrysho",
+    "search": "Kërko një kompani",
+    "searchPlaceholder": "Emri i kompanisë",
+    "noCompanies": "Nuk u gjet asnjë kompani.",
+    "file": "Skedari i punonjësve",
+    "fileHelp": "Një skedar Excel .xlsx me më së shumti 1,000 rreshta dhe 2 MB. Kompania duhet të ketë kontratë të vlefshme sot.",
+    "upload": "Ngarko dhe shiko paraprakisht",
+    "confirm": "Konfirmo dhe krijo",
+    "cancel": "Anulo",
+    "failed": "Diçka shkoi keq. Provoni përsëri.",
+    "counts": {
+      "created": "{{count}} të rinj",
+      "linked": "{{count}} për t'u lidhur",
+      "skipped": "{{count}} të anashkaluar",
+      "refused": "{{count}} të refuzuar",
+      "errors": "{{count}} me gabime"
+    },
+    "outcome": {
+      "NEW": "Anëtar i ri",
+      "EXISTING": "Anëtar ekzistues për t'u lidhur",
+      "SKIPPED": "I anashkaluar",
+      "REFUSED": "I refuzuar",
+      "ERROR": "Gabim"
+    },
+    "reason": {
+      "alreadyLinked": "Tashmë i lidhur me këtë kompani",
+      "repeated": "I përsëritur në skedar",
+      "linkedElsewhere": "I lidhur me një kompani tjetër",
+      "closed": "Anëtari është i mbyllur",
+      "ambiguous": "Përputhet me më shumë se një anëtar",
+      "other": "{{defaultValue}}"
+    },
+    "columns": {
+      "row": "Rreshti",
+      "name": "Emri",
+      "result": "Rezultati",
+      "reason": "Arsyeja"
+    },
+    "preview": {
+      "title": "Pamje paraprake e {{file}}",
+      "counts": "Numrat",
+      "nothingCreated": "Ende nuk është krijuar asgjë."
+    },
+    "result": {
+      "title": "Ngarkimi u konfirmua",
+      "download": "Shkarko rreshtat e anashkaluar dhe me gabime",
+      "another": "Ngarko një skedar tjetër"
+    },
+    "history": {
+      "title": "Ngarkimet për këtë kompani",
+      "empty": "Ende asnjë ngarkim.",
+      "when": "Kur",
+      "who": "Nga",
+      "file": "Skedari",
+      "counts": "Rezultati",
+      "status": {
+        "PREVIEWED": "I pakonfirmuar",
+        "CONFIRMED": "I konfirmuar",
+        "EXPIRED": "I skaduar"
+      }
+    },
+    "refusal": {
+      "NO_VALID_CONTRACT": "Pa kontratë të vlefshme: kompania ka nevojë për një kontratë të vlefshme sot para se të ngarkohen punonjësit.",
+      "COMPANY_NOT_FOUND": "Kompania nuk u gjet.",
+      "NO_FILE": "Zgjidhni një skedar Excel .xlsx.",
+      "NOT_XLSX": "Skedari nuk është libër pune Excel .xlsx.",
+      "HAS_MACROS": "Librat me makro (.xlsm) nuk pranohen. Ruajeni skedarin si .xlsx.",
+      "TOO_LARGE": "Skedari duhet të jetë më i vogël se 2 MB.",
+      "TOO_MANY_ROWS": "Skedari ka më shumë se 1,000 rreshta, që është kufiri.",
+      "MISSING_COLUMNS": "Rreshti i parë duhet të ketë kolonat Emri dhe Mbiemri.",
+      "EMPTY_FILE": "Skedari nuk ka rreshta punonjësish.",
+      "ALREADY_CONFIRMED": "Ky ngarkim është konfirmuar tashmë.",
+      "EXPIRED": "Pamja paraprake skadoi pas 24 orësh. Ngarkoni skedarin përsëri.",
+      "BAD_TOKEN": "Ky konfirmim nuk përputhet me pamjen paraprake. Ngarkoni skedarin përsëri."
+    }
+  },
+  "removeEmployer": {
+    "button": "Hiq nga kompania",
+    "title": "Hiq nga kompania",
+    "titleMany": "Hiq punonjësit nga kompania",
+    "help": "{{company}} nuk do ta sponsorizojë më Silver-in e këtij anëtari. Niveli që ka paguar vetë mbetet dhe anëtari ruhet si ish-punonjës.",
+    "helpMany": "{{count}} anëtarët e zgjedhur do të hiqen së bashku. Niveli që kanë paguar vetë mbetet dhe ruhen si ish-punonjës.",
+    "leftOn": "Data e largimit",
+    "leftOnInvalid": "Zgjidh një ditë që nuk është në të ardhmen.",
+    "reason": "Arsyeja (opsionale)",
+    "reasonInvalid": "Arsyeja është shumë e gjatë.",
+    "notEmployee": "Ky anëtar nuk është më i lidhur me asnjë kompani.",
+    "failed": "Heqja nuk u ruajt. Provo përsëri.",
+    "cancel": "Anulo",
+    "confirm": "Hiq"
+  },
+  "companyTab": {
+    "title": "Anëtarët Wellness+",
+    "loadFailed": "Anëtarët Wellness+ nuk u ngarkuan.",
+    "membersOfEmployees": "{{members}} anëtarë nga {{employees}} punonjës",
+    "membersOnly": "{{members}} anëtarë",
+    "sponsorValid": "Kontrata e kompanisë sponsorizon Silver deri më {{date}}.",
+    "sponsorNone": "Kompania nuk ka kontratë të vlefshme, ndaj Silver i sponsorizuar nuk është aktiv.",
+    "perTier": "Anëtarë sipas nivelit",
+    "tierCount": "{{tier}}: {{count}}",
+    "members": "Anëtarët",
+    "noMembers": "Asnjë punonjës nuk është lidhur ende me këtë kompani.",
+    "selectAll": "Zgjidh të gjithë anëtarët",
+    "select": "Zgjidh {{name}}",
+    "removeSelected": "Hiq {{count}} të zgjedhur nga kompania",
+    "former_one": "Ish-punonjës ({{count}})",
+    "former_other": "Ish-punonjës ({{count}})",
+    "noFormer": "Askush nuk ka lënë këtë kompani.",
+    "leftOn": "U largua më",
+    "openInList": "Hape në listën e anëtarëve",
+    "upload": "Ngarko punonjësit",
+    "uploads": "Historiku i ngarkimeve",
+    "noUploads": "Për këtë kompani nuk është ngarkuar asnjë listë punonjësish.",
+    "uploadFile": "Skedari",
+    "uploadBy": "Nga",
+    "uploadWhen": "Kur",
+    "uploadCounts": "Rezultati",
+    "counts": "{{created}} të krijuar, {{linked}} të lidhur, {{skipped}} të pashtuar",
+    "uploadStatus": {
+      "PREVIEWED": "Pret konfirmimin",
+      "EXPIRED": "Skadoi"
+    },
+    "cardLinks": "Linket e kartave",
+    "cardLinksFailed": "Linket e kartave nuk u shkarkuan.",
+    "uploadActions": "Veprimet e ngarkimit"
+  },
+  "card": {
+    "button": "Karta",
+    "title": "Karta e anëtarit",
+    "help": "Anëtari e hap këtë link në telefon. Nuk hyn me llogari.",
+    "link": "Linku i kartës",
+    "copy": "Kopjo linkun",
+    "copied": "Linku u kopjua.",
+    "printCard": "Printo (madhësia e kartës)",
+    "printA6": "Printo (A6)",
+    "replace": "Zëvendëso linkun",
+    "replaced": "Linku i ri është gati. I vjetri nuk funksionon më.",
+    "replaceFailed": "Linku nuk u zëvendësua. Provoni përsëri.",
+    "loadFailed": "Karta nuk mund të ngarkohej.",
+    "qrAlt": "Kodi QR i kartës së {{name}}",
+    "notValid": "Ky anëtarësim nuk është i vlefshëm, ndaj karta e anëtarit nuk tregon kod QR dhe zbritje.",
+    "replaceDialog": {
+      "title": "Të zëvendësohet linku i kartës?",
+      "help": "Linku i vjetër dhe çdo kopje e tij në telefon ndalojnë së punuari menjëherë dhe tregojnë se karta u zëvendësua. Jepini anëtarit linkun e ri.",
+      "cancel": "Anulo",
+      "confirm": "Zëvendëso linkun"
+    }
+  },
+  "verify": {
+    "title": "Verifiko anëtarin",
+    "subtitle": "Skanoni kodin QR të anëtarit ose kërkoni për të kontrolluar nëse anëtarësimi është i vlefshëm.",
+    "scan": "Skano",
+    "stopScan": "Ndalo skanimin",
+    "scanning": "Drejtoni kamerën nga kodi QR i anëtarit.",
+    "cameraLabel": "Pamja e kamerës",
+    "cameraDenied": "Qasja në kamerë u bllokua. Lejoni kamerën për këtë faqe në cilësimet e shfletuesit, ose kërkoni më poshtë.",
+    "cameraUnavailable": "Kamera nuk mund të përdoret në këtë pajisje ose shfletues. Kërkoni me ID e anëtarit, emër, telefon ose email.",
+    "notACard": "Ky kod nuk është kartë Wellness+. Provoni përsëri kartën e anëtarit.",
+    "searchLabel": "ID e anëtarit, emri, telefoni ose emaili",
+    "search": "Kërko",
+    "checking": "Po kontrollohet…",
+    "failed": "Kontrolli nuk u krye. Provoni përsëri.",
+    "noMatches": "Nuk u gjet asnjë anëtar.",
+    "choose": "Zgjidhni anëtarin",
+    "valid": "E vlefshme",
+    "notValid": "Jo e vlefshme",
+    "notValidReason": "Jo e vlefshme: {{reason}}",
+    "notFound": "Anëtari nuk u gjet",
+    "memberId": "ID e anëtarit",
+    "tier": "Niveli",
+    "validUntil": "E vlefshme deri më",
+    "noExpiry": "Pa skadencë",
+    "status": "Statusi",
+    "dateOfBirth": "Data e lindjes",
+    "discounts": "Zbritjet",
+    "noDiscounts": "Për këtë nivel nuk ka zbritje të listuara.",
+    "percent": "{{percent}}%",
+    "identityTitle": "Kontrolloni identitetin",
+    "identityHelp": "Krahasoni emrin dhe datëlindjen me dokumentin e identitetit të personit.",
+    "identityConfirmed": "Identiteti u konfirmua",
+    "identityMismatch": "Nuk përputhet",
+    "recordedConfirmed": "U regjistrua: identiteti u konfirmua.",
+    "recordedMismatch": "U regjistrua: nuk përputhet.",
+    "identityFailed": "Përgjigjja nuk u ruajt. Provoni përsëri.",
+    "another": "Verifiko anëtar tjetër",
+    "log": {
+      "title": "Verifikimet",
+      "empty": "Kjo kartë nuk është kontrolluar ende.",
+      "when": "Kur",
+      "channel": "Si",
+      "result": "Rezultati",
+      "identity": "Kontrolli i identitetit",
+      "by": "Nga",
+      "channelValue": {
+        "RECEPTION_SCAN": "Skanim në recepsion",
+        "RECEPTION_SEARCH": "Kërkim në recepsion",
+        "PARTNER_SCAN": "Skanim nga klinika partnere"
+      },
+      "resultValue": {
+        "VALID": "E vlefshme",
+        "NOT_VALID": "Jo e vlefshme",
+        "NOT_FOUND": "Nuk u gjet"
+      },
+      "identityValue": {
+        "NONE": "Pa regjistrim",
+        "CONFIRMED": "Identiteti u konfirmua",
+        "MISMATCH": "Nuk përputhet"
+      },
+      "partner": "Klinikë partnere"
+    }
+  },
+  "reports": {
+    "page": {
+      "title": "Raportet Wellness+",
+      "subtitle": "Anëtarët, rinovimet, përmirësimet, uljet dhe të ardhurat për një periudhë.",
+      "loadFailed": "Raportet nuk u ngarkuan."
+    },
+    "filters": {
+      "tier": "Niveli",
+      "segment": "Segmenti",
+      "employer": "Kompania punëdhënëse",
+      "area": "Zona",
+      "city": "Qyteti",
+      "allAreas": "Të gjitha zonat",
+      "allCities": "Të gjitha qytetet"
+    },
+    "segment": {
+      "CORPORATE": "Korporativ",
+      "INDIVIDUAL": "Individual"
+    },
+    "asOfNow": "Tani",
+    "presets": {
+      "TODAY": "Sot",
+      "THIS_WEEK": "Këtë javë",
+      "THIS_MONTH": "Këtë muaj",
+      "LAST_MONTH": "Muajin e kaluar",
+      "THIS_QUARTER": "Këtë tremujor",
+      "THIS_YEAR": "Këtë vit",
+      "CUSTOM": "Periudhë e zgjedhur"
+    },
+    "tiles": {
+      "active": "Anëtarë aktivë",
+      "new": "Anëtarë të rinj",
+      "newPaid": "Anëtarësime të reja me pagesë",
+      "rate": "Shkalla e rinovimit",
+      "upgrades": "Përmirësime",
+      "downgrades": "Ulje",
+      "expiring": "Anëtarësime që skadojnë",
+      "revenue": "Të ardhurat nga anëtarësimet"
+    },
+    "sections": {
+      "active": "Anëtarë aktivë sipas nivelit",
+      "monthly": "Anëtarë aktivë në fund të çdo muaji",
+      "segments": "Korporativ dhe individual",
+      "new": "Anëtarë të rinj",
+      "renewals": "Rinovimet",
+      "upgrades": "Përmirësimet",
+      "downgrades": "Uljet",
+      "employers": "Kompanitë punëdhënëse",
+      "revenue": "Të ardhurat nga anëtarësimet"
+    },
+    "columns": {
+      "tier": "Niveli",
+      "count": "Anëtarë",
+      "share": "Pjesa",
+      "month": "Muaji",
+      "total": "Totali",
+      "segment": "Segmenti",
+      "figure": "Shifra",
+      "due": "Rinovime të pritura",
+      "renewed": "Të rinovuara",
+      "notRenewed": "Të parinovuara",
+      "rate": "Shkalla e rinovimit",
+      "path": "Kalimi",
+      "amount": "Shuma",
+      "by": "Sipas",
+      "value": "Vlera",
+      "company": "Kompania",
+      "members": "Anëtarë",
+      "sponsored": "Silver i sponsorizuar",
+      "upgraded": "Kaluan në pagesë",
+      "former": "Ish-punonjës",
+      "kind": "Lloji",
+      "member": "Anëtari"
+    },
+    "figures": {
+      "newMembers": "Anëtarë të rinj",
+      "newPaid": "Anëtarësime të reja me pagesë"
+    },
+    "by": {
+      "path": "Kalimi",
+      "reason": "Arsyeja"
+    },
+    "reason": {
+      "NOT_RENEWED": "Nuk u rinovua",
+      "COMPANY_CONTRACT_ENDED": "Kontrata e kompanisë përfundoi",
+      "LEFT_COMPANY": "Largua nga kompania",
+      "VIP_ENDED": "VIP përfundoi"
+    },
+    "lists": {
+      "expiring": "Anëtarësime që skadojnë",
+      "expiringDate": "Afati me pagesë mbaron",
+      "vipReviews": "Rishikime VIP në pritje",
+      "vipDate": "Data e rishikimit",
+      "formerEmployees": "Ish-punonjës për t'u kontaktuar",
+      "leftDate": "U largua më",
+      "empty": "Askush në këtë listë."
+    },
+    "total": "Totali",
+    "view": "Pamja",
+    "chart": "Grafik",
+    "table": "Tabelë",
+    "exportCsv": "CSV",
+    "exportSection": "Eksporto {{title}} si CSV"
+  }
+}

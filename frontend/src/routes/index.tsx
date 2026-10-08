@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
@@ -22,6 +23,15 @@ import { PricingSettingsPage } from '../pages/settings/pricing/PricingSettingsPa
 import { SalesScriptSettingsPage } from '../pages/settings/salesScript/SalesScriptSettingsPage';
 import { StatusesSettingsPage } from '../pages/settings/statuses/StatusesSettingsPage';
 import { ContractSettingsPage } from '../pages/settings/contracts/ContractSettingsPage';
+import { MembersList } from '../pages/membership/MembersList';
+import { MemberFormPage } from '../pages/membership/MemberFormPage';
+import { MemberDetailPage } from '../pages/membership/MemberDetailPage';
+import { MemberPaymentsPage } from '../pages/membership/MemberPaymentsPage';
+import { VipRequestsPage } from '../pages/membership/VipRequestsPage';
+import { EmployeeUploadPage } from '../pages/membership/EmployeeUploadPage';
+import { VerifyMemberPage } from '../pages/membership/VerifyMemberPage';
+import { MembershipReportsPage } from '../pages/membership/reports/MembershipReportsPage';
+import { WellnessPlusSettingsPage } from '../pages/settings/wellnessPlus/WellnessPlusSettingsPage';
 import { ProfilePage } from '../pages/settings/profile/ProfilePage';
 import { AcceptInvitationPage } from '../pages/auth/AcceptInvitationPage';
 import { InventoryList } from '../pages/inventory/InventoryList';
@@ -70,6 +80,11 @@ import { TenantGuard } from './TenantGuard';
 // dashboard. We will refine this as we build out the AppShell properly.
 import { usePermissionScope } from '../hooks/usePermission';
 import { DashboardLanding } from '../pages/dashboard/DashboardLanding';
+
+/** Loaded on demand: a member opening a card does not download the staff application (M4 Slice 11). */
+const PublicCardPage = lazy(() => import('../pages/card/PublicCardPage').then((m) => ({ default: m.PublicCardPage })));
+/** The card's QR link: the Reception screen for a signed-in user with Members: verify, the public page for anyone else (M4 Slice 13). */
+const VerifyLinkPage = lazy(() => import('../pages/verify/VerifyLinkPage').then((m) => ({ default: m.VerifyLinkPage })));
 
 const LegacyDashboardSelector = () => {
   const scope = usePermissionScope('companies.view');
@@ -134,6 +149,26 @@ export const routes: RouteObject[] = [
    * account for. `/f/` for the same "gets pasted into emails, read aloud on
    * phone calls" reason `/q/` is short.
    */
+  /*
+   * The member's card (M4 Slice 11, FR-CRD-01). Public, no tenant in the path, and loaded on demand so a member
+   * opening a card does not download the staff application. `/m/` for the same short-link reason as `/q/`.
+   */
+  {
+    path: '/m/:token',
+    element: (
+      <Suspense fallback={null}>
+        <PublicCardPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/v/:token',
+    element: (
+      <Suspense fallback={null}>
+        <VerifyLinkPage />
+      </Suspense>
+    ),
+  },
   {
     path: '/f/:token',
     element: <PublicFormPage />,
@@ -232,6 +267,18 @@ export const routes: RouteObject[] = [
           <ProtectedRoute>
             <RequirePermission permission="settings.manage">
               <StatusesSettingsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 3: the Administrator edits everything; members.view and
+        // members.verify reach the read-only benefit table (FR-BEN-04).
+        path: 'settings/wellness-plus/:tab?',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission={['wellnessplus.settings.manage', 'members.view', 'members.verify']}>
+              <WellnessPlusSettingsPage />
             </RequirePermission>
           </ProtectedRoute>
         ),
@@ -529,6 +576,102 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ContractFormPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 4: the Wellness+ member record. Reading is "Members: view", writing "Members: manage" (FR-RBAC-28).
+        path: 'members',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.view">
+              <MembersList />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'members/new',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.manage">
+              <MemberFormPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 5: the Membership payments list (FR-MPAY-07), open to "Members: view payments".
+        path: 'members/payments',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.payments.view">
+              <MemberPaymentsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 14: the Wellness+ reports (FR-RPT-01), open to "Members: view reports".
+        path: 'members/reports',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.reports.view">
+              <MembershipReportsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 13: Reception scans or searches and sees Valid / Not valid (FR-VER-01). Needs only "Members: verify".
+        path: 'members/verify',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.verify">
+              <VerifyMemberPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 9: the corporate employee upload (FR-EMP-01).
+        path: 'members/employee-upload',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.import">
+              <EmployeeUploadPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // M4 Slice 7: the VIP requests list for approvers (FR-VIP-02).
+        path: 'members/vip-requests',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.vip.approve">
+              <VipRequestsPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'members/:memberId',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.view">
+              <MemberDetailPage />
+            </RequirePermission>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'members/:memberId/edit',
+        element: (
+          <ProtectedRoute>
+            <RequirePermission permission="members.manage">
+              <MemberFormPage />
+            </RequirePermission>
           </ProtectedRoute>
         ),
       },

@@ -6,7 +6,7 @@ export type DashboardKind = 'SALES_USER' | 'SALES_MANAGER' | 'ADMINISTRATOR' | '
 
 /** Which list a figure opens, and with which filters (FR-DSH-05). */
 export interface DashboardLink {
-  target: 'FOLLOW_UPS' | 'DEALS' | 'OFFERS' | 'PAYMENTS' | 'RENEWALS';
+  target: 'FOLLOW_UPS' | 'DEALS' | 'OFFERS' | 'PAYMENTS' | 'RENEWALS' | 'MEMBERSHIP_REPORTS';
   filters: Record<string, string | string[]>;
 }
 
@@ -20,6 +20,13 @@ export interface DashboardFigure {
   /** `period` figures follow the period selector, `asOfNow` ones do not (FR-DSH-03). */
   basis: 'period' | 'asOfNow';
   link: DashboardLink | null;
+}
+
+/** The same figures as the Wellness+ reports page; revenue is absent without "Members: view payments" (FR-DSH-14, 15). */
+export interface WellnessPlusBlock {
+  figures: DashboardFigure[];
+  charts: { activePerTier: DashboardPoint[] };
+  tables: { renewalsPerTier: Array<{ tier: string; due: number; renewed: number; notRenewed: number; rate: string | null }> };
 }
 
 export interface DashboardPoint {
@@ -139,8 +146,8 @@ export interface DashboardData {
     companiesPerStatus?: DashboardPoint[];
   };
   charts: { pipeline?: DashboardPoint[]; lostReasons?: DashboardPoint[]; salesPerMonth?: DashboardPoint[]; companiesPerStatus?: DashboardPoint[] };
-  /** The place for the Wellness+ indicators: always empty until Milestone 4, and not drawn (FR-DSH-12). */
-  wellnessPlus?: never[];
+  /** The CEO's Wellness+ block (M4 Slice 15). The key is absent without "Members: view reports" (FR-DSH-16). */
+  wellnessPlus?: WellnessPlusBlock;
   /** Nothing to show yet: the screen explains it instead of showing zeros (FR-DSH-06). */
   empty: boolean;
 }

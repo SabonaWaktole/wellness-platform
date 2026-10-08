@@ -1,5 +1,12 @@
-import { COMMERCIAL_FIELDS, PAYMENT_FIELDS, redactFields } from '../../../../src/access/domain/redactFields';
-import { accessWith, administrator, reception } from '../../../support/access';
+import {
+  COMMERCIAL_FIELDS,
+  MEMBER_CONTACT_FIELDS,
+  MEMBER_PAYMENT_FIELDS,
+  PAYMENT_FIELDS,
+  redactFields,
+  redactMemberFields,
+} from '../../../../src/access/domain/redactFields';
+import { accessWith, administrator, ceo, reception, salesUser } from '../../../support/access';
 import { expectNoCommercialFields } from '../../../support/expectNoCommercialFields';
 
 describe('redactFields (FR-RBAC-06)', () => {
@@ -191,6 +198,81 @@ describe('redactFields (FR-RBAC-06)', () => {
 
     it('an Administrator receives the whole contract', () => {
       expect(redactFields(contract, administrator())).toEqual(contract);
+    });
+  });
+
+  describe('FR-RBAC-27 Wellness+ fields', () => {
+    const member = {
+      id: 'm1',
+      memberNumber: 'WP-000001',
+      name: 'Ana Dervishi',
+      phone: '+355 69 000 0000',
+      email: 'ana@example.com',
+      note: 'Prefers mornings',
+      verificationEvents: [{ at: '2027-03-01', result: 'MATCH' }],
+      listFee: '60.00',
+      discountPercent: '50.00',
+      amount: '30.00',
+      receiptNumber: 'RCP-2027-000045',
+      method: 'CASH',
+      receivedOn: '2027-03-15',
+      voidReason: null,
+      payments: [{ id: 'p1', amount: '30.00', receiptNumber: 'RCP-2027-000045' }],
+    };
+    const verifyOnly = () => accessWith({ 'members.verify': true });
+
+    it('lists the payment and contact fields the SRS names', () => {
+      expect(MEMBER_PAYMENT_FIELDS).toEqual(
+        expect.arrayContaining(['amount', 'listFee', 'discountPercent', 'receiptNumber', 'method', 'receivedOn', 'payments', 'revenue', 'voidReason'])
+      );
+      expect(MEMBER_CONTACT_FIELDS).toEqual(expect.arrayContaining(['phone', 'email', 'note', 'verificationEvents']));
+    });
+
+    it('FR-RBAC-27 leaves a member whole to a viewer with every Wellness+ read permission', () => {
+      expect(redactMemberFields(member, administrator())).toEqual(member);
+    });
+
+    it('FR-RBAC-27 removes payment fields without members.payments.view and keeps the contact fields', () => {
+      const view = redactMemberFields(member, accessWith({ 'members.view': true })) as any;
+      for (const key of MEMBER_PAYMENT_FIELDS) expect(view).not.toHaveProperty(key);
+      expect(view.payments).toBeUndefined();
+      expect(view).toMatchObject({ phone: member.phone, email: member.email, note: member.note });
+    });
+
+    it('FR-RBAC-27 removes phone, email, internal note and verification log from a viewer holding only members.verify', () => {
+      const view = redactMemberFields(member, verifyOnly()) as any;
+      for (const key of MEMBER_CONTACT_FIELDS) expect(view).not.toHaveProperty(key);
+      for (const key of MEMBER_PAYMENT_FIELDS) expect(view).not.toHaveProperty(key);
+      expect(view).toMatchObject({ id: 'm1', memberNumber: 'WP-000001', name: 'Ana Dervishi' });
+    });
+
+    it('FR-RBAC-27 shows payments to a viewer with members.payments.view but not members.view, and no contact field', () => {
+      const view = redactMemberFields(member, accessWith({ 'members.payments.view': true })) as any;
+      expect(view.payments).toHaveLength(1);
+      expect(view).not.toHaveProperty('phone');
+    });
+
+    it.each([
+      ['Sales User', salesUser()],
+      ['an Administrator whose Wellness+ keys were all revoked', administrator({ revoke: ['members.view', 'members.verify', 'members.manage', 'members.payments.view', 'members.payments.record', 'members.import', 'members.vip.approve', 'members.reports.view', 'wellnessplus.settings.manage'] })],
+    ])('FR-RBAC-27 %s with no Wellness+ permission receives no Wellness+ field', (_label, access) => {
+      const view = redactMemberFields(member, access) as Record<string, unknown>;
+      expect(Object.keys(view)).toEqual(['id', 'memberNumber', 'name']);
+    });
+
+    it('the Wellness+ names that belong to nothing else are guarded in every response (redactFields), not only member ones', () => {
+      const view = redactFields({ listFee: '60.00', receiptNumber: 'RCP-1', voidReason: 'x', verificationEvents: [], phone: '1' }, salesUser()) as any;
+      expect(view).toEqual({ phone: '1' });
+    });
+
+    it('generic names shared with other modules stay in other responses (a company keeps its phone and note)', () => {
+      const company = { id: 'c1', phone: '+355 4 000', email: 'a@b.al', note: 'x' };
+      expect(redactFields(company, reception())).toEqual(company);
+    });
+
+    it('the CEO reads members and payments but the contact fields come from members.view', () => {
+      const view = redactMemberFields(member, ceo()) as any;
+      expect(view).toEqual(member);
     });
   });
 });

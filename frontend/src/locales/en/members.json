@@ -1,0 +1,774 @@
+{
+  "expiringBadge": "Expiring soon",
+  "breadcrumb": "Wellness+",
+  "tiers": {
+    "BRONZE": "Bronze",
+    "SILVER": "Silver",
+    "GOLD": "Gold",
+    "VIP": "VIP"
+  },
+  "status": {
+    "ACTIVE": "Active",
+    "SUSPENDED": "Suspended",
+    "CLOSED": "Closed"
+  },
+  "validity": {
+    "valid": "Valid",
+    "notValid": "Not valid: {{reason}}"
+  },
+  "source": {
+    "CORPORATE": "Corporate",
+    "INDIVIDUAL": "Individual",
+    "FAMILY": "Family"
+  },
+  "languages": {
+    "sq": "Albanian",
+    "en": "English",
+    "el": "Greek",
+    "it": "Italian"
+  },
+  "list": {
+    "title": "Members",
+    "subtitle": "Wellness+ members, their tier and status.",
+    "new": "New member",
+    "searchLabel": "Search members",
+    "searchPlaceholder": "Name, member ID, phone or email",
+    "filters": {
+      "tier": "Tier",
+      "status": "Status",
+      "validity": "Validity",
+      "source": "Source",
+      "any": "All",
+      "valid": "Valid",
+      "notValid": "Not valid",
+      "expiringSoon": "Expiring soon",
+      "vipReviewDue": "VIP review due",
+      "formerEmployee": "Former employee",
+      "clear": "Clear filters",
+      "leftFrom": "Left company from",
+      "leftTo": "Left company until"
+    },
+    "columns": {
+      "number": "Member ID",
+      "name": "Name",
+      "tier": "Tier",
+      "status": "Status",
+      "source": "Source",
+      "employer": "Employer",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "sortBy": "Sort by",
+    "sort": {
+      "name": "Name",
+      "memberNumber": "Member ID",
+      "tier": "Tier",
+      "createdAt": "Newest"
+    },
+    "formerEmployee": "Former employee",
+    "total_one": "{{count}} member",
+    "total_other": "{{count}} members",
+    "empty": "No members yet. Register the first one.",
+    "emptyFiltered": "No member matches this search.",
+    "loadFailed": "The members could not be loaded."
+  },
+  "form": {
+    "newTitle": "New member",
+    "editTitle": "Edit personal details",
+    "intro": "First and last name are required, and at least one of date of birth, phone or email, so the person can be recognised later.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "dateOfBirth": "Date of birth",
+    "phone": "Phone",
+    "email": "Email",
+    "language": "Card language",
+    "city": "City",
+    "cityNone": "Not set",
+    "note": "Internal note",
+    "noteWarning": "Do not write any medical information here: no diagnosis, no result, no service used.",
+    "save": "Save member",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "errors": {
+      "firstName": "Enter the first name.",
+      "lastName": "Enter the last name.",
+      "dateOfBirth": "Enter a real date of birth that is not in the future.",
+      "phone": "Enter a valid phone number.",
+      "email": "Enter a valid email address.",
+      "identifier": "Enter a date of birth, a phone number or an email.",
+      "language": "Choose a card language.",
+      "cityId": "Choose one of the predefined cities.",
+      "note": "The note is too long.",
+      "generic": "The member could not be saved."
+    }
+  },
+  "duplicate": {
+    "title": "This person may already be a member",
+    "body": "A member with the same email, phone, or name and date of birth exists. Open the existing member, or save this one as a different person.",
+    "open": "Open",
+    "differentPerson": "Different person, save",
+    "cancel": "Back to the form"
+  },
+  "detail": {
+    "back": "Members",
+    "edit": "Edit details",
+    "notFound": "This member does not exist.",
+    "loadFailed": "The member could not be loaded.",
+    "tabs": {
+      "overview": "Details",
+      "terms": "Terms",
+      "payments": "Payments",
+      "history": "History",
+      "note": "Internal note",
+      "label": "Member sections",
+      "family": "Family",
+      "vip": "VIP"
+    },
+    "fields": {
+      "memberNumber": "Member ID",
+      "dateOfBirth": "Date of birth",
+      "phone": "Phone",
+      "email": "Email",
+      "language": "Card language",
+      "city": "City",
+      "startsOn": "Member since",
+      "employer": "Employer company",
+      "family": "Family group",
+      "createdBy": "Created by",
+      "createdAt": "Created",
+      "closedAt": "Closed",
+      "formerEmployer": "Former employer"
+    },
+    "none": "None",
+    "tierCard": {
+      "title": "Current tier",
+      "term": "Term {{from}} – {{to}}",
+      "noEnd": "Term from {{from}}, no end date",
+      "floor": "Bronze is the free level every active member has."
+    },
+    "termSource": {
+      "PAID": "Paid",
+      "SPONSORED": "Employer",
+      "VIP": "VIP",
+      "DOWNGRADE": "Not renewed",
+      "CORRECTION": "Correction"
+    },
+    "terms": {
+      "title": "Term history",
+      "empty": "No paid, sponsored or VIP term yet. The member is Bronze.",
+      "tier": "Tier",
+      "source": "Source",
+      "from": "From",
+      "to": "To",
+      "openEnded": "No end date"
+    },
+    "history": {
+      "tierTitle": "Tier history",
+      "tierEmpty": "The tier has not changed yet.",
+      "statusTitle": "Status history",
+      "date": "Date",
+      "change": "Change",
+      "reason": "Reason",
+      "by": "By",
+      "system": "System",
+      "registered": "Registered"
+    },
+    "correctTier": {
+      "button": "Correct tier",
+      "title": "Correct the tier",
+      "help": "Gives the member a corrected term from today to the end date. It is recorded in the tier history as a correction and in the audit log.",
+      "tier": "Corrected tier",
+      "endsOn": "Valid until",
+      "endsOnInvalid": "Choose an end date that is today or later.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required.",
+      "failed": "The tier could not be corrected. Check the details and try again.",
+      "cancel": "Cancel",
+      "confirm": "Correct tier"
+    },
+    "tierReason": {
+      "Purchase": "Purchase",
+      "Renewal": "Renewal",
+      "Upgrade": "Upgrade",
+      "Not renewed": "Not renewed",
+      "Company contract ended": "Company contract ended",
+      "Left company": "Left company",
+      "VIP approved": "VIP approved",
+      "VIP ended": "VIP ended",
+      "Import": "Import",
+      "Correction ended": "Correction ended",
+      "Term ended": "Term ended",
+      "Term started": "Term started",
+      "Correction": "Correction",
+      "Company contract valid again": "Company contract valid again"
+    },
+    "notePanel": {
+      "empty": "No internal note."
+    },
+    "actions": {
+      "SUSPEND": "Suspend",
+      "REINSTATE": "Reinstate",
+      "CLOSE": "Close member",
+      "REOPEN": "Reopen"
+    },
+    "statusDialog": {
+      "SUSPEND": "Suspend this member",
+      "REINSTATE": "Reinstate this member",
+      "CLOSE": "Close this member",
+      "REOPEN": "Reopen this member",
+      "suspendHelp": "A suspended member is not valid: the card shows no discounts. The tier does not change.",
+      "closeHelp": "Closing keeps the record and the member ID. A closed member can be reopened.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required to suspend a member.",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "failed": "The status could not be changed."
+    },
+    "formerEmployee": "Former employee",
+    "formerEmployerSince": "Left on {{date}}"
+  },
+  "payments": {
+    "record": "Record payment",
+    "openReceipt": "Open receipt {{number}}",
+    "kind": {
+      "NEW": "New membership",
+      "RENEWAL": "Renewal",
+      "UPGRADE": "Upgrade"
+    },
+    "method": {
+      "CASH": "Cash",
+      "BANK_TRANSFER": "Bank transfer",
+      "CARD": "Card",
+      "OTHER": "Other"
+    },
+    "status": {
+      "RECORDED": "Recorded",
+      "VOIDED": "Voided"
+    },
+    "warning": {
+      "SPONSORED_SILVER_OWN_TERM": "This employee already has Silver paid by the company. This payment starts a separate Silver term that stays with the person after leaving the company."
+    },
+    "columns": {
+      "receipt": "Receipt",
+      "date": "Date received",
+      "member": "Member",
+      "kind": "Kind",
+      "tier": "Tier",
+      "amount": "Amount",
+      "method": "Method",
+      "status": "Status",
+      "by": "Recorded by",
+      "actions": "Actions"
+    },
+    "drawer": {
+      "title": "Record a payment",
+      "receivedOn": "Date received",
+      "dateRefused": "The date received cannot be in the future.",
+      "option": "Payment",
+      "optionLabel": "{{kind}} · {{tier}}",
+      "noOptions": "No payment can be recorded for this member on this date.",
+      "loadFailed": "The payment options could not be loaded.",
+      "quote": "Calculated payment",
+      "listFee": "List fee",
+      "discount": "Family discount",
+      "amount": "Amount to pay",
+      "newTerm": "New term",
+      "term": "{{from}} – {{to}}",
+      "calculated": "The amount is calculated by the platform and cannot be changed.",
+      "method": "Method",
+      "note": "Note (optional)",
+      "save": "Record payment",
+      "cancel": "Cancel",
+      "failed": "The payment could not be saved. Try again.",
+      "refused": {
+        "MEMBER_NOT_ACTIVE": "Only an active member can pay.",
+        "TIER_NOT_PURCHASABLE": "This tier cannot be bought.",
+        "NOT_A_HIGHER_TIER": "A payment cannot move a member to a lower tier.",
+        "PAID_TERM_RUNNING": "This member already has a paid term. Renew or upgrade it instead.",
+        "NOTHING_TO_RENEW": "There is no paid term of this tier to renew.",
+        "NOTHING_TO_UPGRADE": "There is no paid tier to upgrade. Buy the tier as a new membership.",
+        "USE_UPGRADE": "This member already holds a tier. Pay the difference as an upgrade."
+      },
+      "familyReason": "Family discount, {{relationship}} ({{principal}})"
+    },
+    "tab": {
+      "title": "Payments",
+      "empty": "No payment has been recorded for this member.",
+      "void": "Void",
+      "discounted": "{{percent}}% off {{fee}}"
+    },
+    "voidDialog": {
+      "title": "Void this payment",
+      "help": "Voiding takes back the effect of the payment: the earlier tier and term are restored. The receipt number stays and is marked Voided.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required to void a payment.",
+      "confirm": "Void payment",
+      "cancel": "Cancel",
+      "notLatest": "Only the latest payment of a member can be voided. Void the later payment first.",
+      "alreadyVoided": "This payment is already voided.",
+      "failed": "The payment could not be voided. Try again."
+    },
+    "page": {
+      "title": "Membership payments",
+      "subtitle": "Every Wellness+ payment, with the receipt for each.",
+      "from": "Received from",
+      "to": "Received to",
+      "tier": "Tier",
+      "kind": "Kind",
+      "method": "Method",
+      "status": "Status",
+      "summary_one": "{{count}} payment",
+      "summary_other": "{{count}} payments",
+      "total": "Total",
+      "totalNote": "voided payments are not counted",
+      "exportCsv": "Export CSV",
+      "loadFailed": "The payments could not be loaded.",
+      "empty": "No membership payment has been recorded yet.",
+      "emptyFiltered": "No payment matches these filters."
+    }
+  },
+  "family": {
+    "title": "Family",
+    "principal": "Principal member",
+    "relationship": "Relationship",
+    "confirmation": "Confirmation",
+    "confirmedBy": "Confirmed by {{name}} on {{date}}",
+    "confirmedOn": "Confirmed on {{date}}",
+    "relationshipUnknown": "Relationship not set",
+    "empty": "This member has no family members yet.",
+    "add": "Add family member",
+    "remove": "Remove family link",
+    "columns": {
+      "member": "Member",
+      "relationship": "Relationship",
+      "tier": "Tier",
+      "validity": "Validity",
+      "confirmation": "Confirmation"
+    },
+    "history": {
+      "title": "Family history",
+      "event": "Event",
+      "LINKED": "Linked to {{principal}} as {{relationship}}",
+      "REMOVED": "Link to {{principal}} removed"
+    },
+    "addDialog": {
+      "title": "Add a family member",
+      "mode": "Family member",
+      "modeNew": "A new person",
+      "modeExisting": "An existing member",
+      "search": "Search by name, ID, phone or email",
+      "member": "Member",
+      "choose": "Choose…",
+      "relationship": "Relationship",
+      "relationshipRequired": "Choose the relationship.",
+      "confirmed": "I confirm that the relationship was checked.",
+      "confirmationRequired": "Tick the confirmation to save.",
+      "memberRequired": "Choose the member to link.",
+      "failed": "The family member could not be saved.",
+      "cancel": "Cancel",
+      "save": "Add family member"
+    },
+    "removeDialog": {
+      "title": "Remove the family link",
+      "help": "The member keeps the membership and all terms. Later payments are at the full price. The change is recorded.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required.",
+      "failed": "The link could not be removed.",
+      "cancel": "Cancel",
+      "confirm": "Remove link"
+    },
+    "refused": {
+      "SELF_LINK": "A member cannot be linked to themselves.",
+      "PRINCIPAL_IS_FAMILY_MEMBER": "This member is a family member of someone else, so cannot be a principal.",
+      "ALREADY_HAS_PRINCIPAL": "This member already has a principal.",
+      "MEMBER_IS_PRINCIPAL": "This member already has family members, so cannot become a family member.",
+      "NOT_A_FAMILY_MEMBER": "This member has no family link."
+    }
+  },
+  "vip": {
+    "title": "VIP",
+    "reviewDate": "VIP review date: {{date}}",
+    "request": "Request VIP",
+    "end": "End VIP",
+    "empty": "No VIP requests for this member.",
+    "reason": "Reason",
+    "reasonRequired": "A reason is required.",
+    "failed": "The action could not be completed.",
+    "cancel": "Cancel",
+    "ownRequest": "You made this request; another approver decides it.",
+    "decidedBy": "{{name}} on {{date}}",
+    "endedOn": "VIP ended on {{date}} by {{name}}",
+    "endReason": "Ending reason: {{reason}}",
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "columns": {
+      "member": "Member",
+      "date": "Requested",
+      "status": "Status",
+      "reason": "Reason",
+      "requestedBy": "Requested by",
+      "decision": "Decision"
+    },
+    "requestDialog": {
+      "title": "Request VIP",
+      "help": "Say why this member should be VIP, for example strategic client, PR relationship or key partner. Another user with the approval permission decides.",
+      "confirm": "Send request"
+    },
+    "endDialog": {
+      "title": "End VIP",
+      "help": "The member returns today to the highest other valid tier, Bronze if none. The reason is kept in the history.",
+      "confirm": "End VIP"
+    },
+    "decide": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "approveTitle": "Approve VIP for {{name}}",
+      "rejectTitle": "Reject VIP for {{name}}",
+      "approveHelp": "Approving gives a free VIP term from today for the VIP length, with a review date equal to its end. If the member is already VIP, it continues from the next day.",
+      "rejectHelp": "The requester sees the reason.",
+      "requestedWith": "Reason given: {{reason}}",
+      "note": "Note (optional)",
+      "rejectReason": "Reason for rejecting",
+      "reasonRequired": "A reason is required to reject.",
+      "failed": "The decision could not be saved."
+    },
+    "list": {
+      "title": "VIP requests",
+      "subtitle": "Requests waiting for a decision, and past decisions.",
+      "empty": "No VIP requests.",
+      "loadFailed": "The VIP requests could not be loaded."
+    },
+    "refused": {
+      "MEMBER_CLOSED": "A closed member cannot be given VIP.",
+      "OPEN_REQUEST": "This member already has an open VIP request.",
+      "OWN_REQUEST": "You cannot decide a request you made yourself.",
+      "NOT_PENDING": "This request has already been decided.",
+      "NOT_VIP": "This member is not VIP."
+    }
+  },
+  "employees": {
+    "title": "Employee upload",
+    "subtitle": "Add a company's employees as sponsored Silver members from an Excel file. Nothing is created until you confirm.",
+    "template": "Download template",
+    "company": "Company",
+    "change": "Change",
+    "search": "Search for a company",
+    "searchPlaceholder": "Company name",
+    "noCompanies": "No company found.",
+    "file": "Employee file",
+    "fileHelp": "An Excel .xlsx file with at most 1,000 rows and 2 MB. The company needs a valid contract today.",
+    "upload": "Upload and preview",
+    "confirm": "Confirm and create",
+    "cancel": "Cancel",
+    "failed": "Something went wrong. Try again.",
+    "counts": {
+      "created": "{{count}} new",
+      "linked": "{{count}} to link",
+      "skipped": "{{count}} skipped",
+      "refused": "{{count}} refused",
+      "errors": "{{count}} with errors"
+    },
+    "outcome": {
+      "NEW": "New member",
+      "EXISTING": "Existing member to link",
+      "SKIPPED": "Skipped",
+      "REFUSED": "Refused",
+      "ERROR": "Error"
+    },
+    "reason": {
+      "alreadyLinked": "Already linked to this company",
+      "repeated": "Repeated in the file",
+      "linkedElsewhere": "Linked to another company",
+      "closed": "The member is closed",
+      "ambiguous": "Matches more than one member",
+      "other": "{{defaultValue}}"
+    },
+    "columns": {
+      "row": "Row",
+      "name": "Name",
+      "result": "Result",
+      "reason": "Reason"
+    },
+    "preview": {
+      "title": "Preview of {{file}}",
+      "counts": "Counts",
+      "nothingCreated": "Nothing has been created yet."
+    },
+    "result": {
+      "title": "Upload confirmed",
+      "download": "Download skipped and error rows",
+      "another": "Upload another file"
+    },
+    "history": {
+      "title": "Uploads for this company",
+      "empty": "No uploads yet.",
+      "when": "When",
+      "who": "By",
+      "file": "File",
+      "counts": "Result",
+      "status": {
+        "PREVIEWED": "Not confirmed",
+        "CONFIRMED": "Confirmed",
+        "EXPIRED": "Expired"
+      }
+    },
+    "refusal": {
+      "NO_VALID_CONTRACT": "No valid contract: the company needs a valid contract today before its employees can be uploaded.",
+      "COMPANY_NOT_FOUND": "The company was not found.",
+      "NO_FILE": "Choose an Excel .xlsx file.",
+      "NOT_XLSX": "The file is not an Excel .xlsx workbook.",
+      "HAS_MACROS": "Workbooks with macros (.xlsm) are not accepted. Save the file as .xlsx.",
+      "TOO_LARGE": "The file must be smaller than 2 MB.",
+      "TOO_MANY_ROWS": "The file has more than 1,000 rows, which is the limit.",
+      "MISSING_COLUMNS": "The first row must have the columns First name and Last name.",
+      "EMPTY_FILE": "The file has no employee rows.",
+      "ALREADY_CONFIRMED": "This upload was already confirmed.",
+      "EXPIRED": "The preview expired after 24 hours. Upload the file again.",
+      "BAD_TOKEN": "This confirmation does not match the preview. Upload the file again."
+    }
+  },
+  "removeEmployer": {
+    "button": "Remove from company",
+    "title": "Remove from company",
+    "titleMany": "Remove employees from the company",
+    "help": "{{company}} will no longer sponsor this member's Silver. Any tier they paid for stays, and they are kept as a former employee.",
+    "helpMany": "{{count}} selected members will be removed together. Any tier they paid for stays, and they are kept as former employees.",
+    "leftOn": "Leaving date",
+    "leftOnInvalid": "Choose a day that is not in the future.",
+    "reason": "Reason (optional)",
+    "reasonInvalid": "The reason is too long.",
+    "notEmployee": "This member is not linked to a company any more.",
+    "failed": "The removal could not be saved. Try again.",
+    "cancel": "Cancel",
+    "confirm": "Remove"
+  },
+  "companyTab": {
+    "title": "Wellness+ members",
+    "loadFailed": "The Wellness+ members could not be loaded.",
+    "membersOfEmployees": "{{members}} members of {{employees}} employees",
+    "membersOnly": "{{members}} members",
+    "sponsorValid": "The company contract sponsors Silver until {{date}}.",
+    "sponsorNone": "The company has no valid contract, so sponsored Silver is not active.",
+    "perTier": "Members per tier",
+    "tierCount": "{{tier}}: {{count}}",
+    "members": "Members",
+    "noMembers": "No employees are linked to this company yet.",
+    "selectAll": "Select all members",
+    "select": "Select {{name}}",
+    "removeSelected": "Remove {{count}} selected from the company",
+    "former_one": "Former employee ({{count}})",
+    "former_other": "Former employees ({{count}})",
+    "noFormer": "Nobody has left this company.",
+    "leftOn": "Left on",
+    "openInList": "Open in the member list",
+    "upload": "Upload employees",
+    "uploads": "Upload history",
+    "noUploads": "No employee list was uploaded for this company.",
+    "uploadFile": "File",
+    "uploadBy": "By",
+    "uploadWhen": "When",
+    "uploadCounts": "Result",
+    "counts": "{{created}} created, {{linked}} linked, {{skipped}} not added",
+    "uploadStatus": {
+      "PREVIEWED": "Waiting for confirmation",
+      "EXPIRED": "Expired"
+    },
+    "cardLinks": "Card links",
+    "cardLinksFailed": "The card links could not be downloaded.",
+    "uploadActions": "Upload actions"
+  },
+  "card": {
+    "button": "Card",
+    "title": "Member card",
+    "help": "The member opens this link on their phone. They do not sign in.",
+    "link": "Card link",
+    "copy": "Copy link",
+    "copied": "Link copied.",
+    "printCard": "Print (card size)",
+    "printA6": "Print (A6)",
+    "replace": "Replace link",
+    "replaced": "A new link is ready. The old one no longer works.",
+    "replaceFailed": "The link could not be replaced. Try again.",
+    "loadFailed": "The card could not be loaded.",
+    "qrAlt": "QR code of the card of {{name}}",
+    "notValid": "This membership is not valid, so the member's card shows no QR code and no discounts.",
+    "replaceDialog": {
+      "title": "Replace the card link?",
+      "help": "The old link and every copy of it on a phone stop working at once and show that the card was replaced. Give the member the new link.",
+      "cancel": "Cancel",
+      "confirm": "Replace link"
+    }
+  },
+  "verify": {
+    "title": "Verify member",
+    "subtitle": "Scan the member's QR code or search to check that the membership is valid.",
+    "scan": "Scan",
+    "stopScan": "Stop scanning",
+    "scanning": "Point the camera at the member's QR code.",
+    "cameraLabel": "Camera view",
+    "cameraDenied": "Camera access was blocked. Allow the camera for this site in your browser settings, or search below.",
+    "cameraUnavailable": "The camera cannot be used on this device or in this browser. Search by member ID, name, phone or email instead.",
+    "notACard": "That code is not a Wellness+ card. Try the member's card again.",
+    "searchLabel": "Member ID, name, phone or email",
+    "search": "Search",
+    "checking": "Checking…",
+    "failed": "The check could not be completed. Try again.",
+    "noMatches": "No member found.",
+    "choose": "Choose the member",
+    "valid": "Valid",
+    "notValid": "Not valid",
+    "notValidReason": "Not valid: {{reason}}",
+    "notFound": "Member not found",
+    "memberId": "Member ID",
+    "tier": "Tier",
+    "validUntil": "Valid until",
+    "noExpiry": "No expiry",
+    "status": "Status",
+    "dateOfBirth": "Date of birth",
+    "discounts": "Discounts",
+    "noDiscounts": "No discounts are listed for this tier.",
+    "percent": "{{percent}}%",
+    "identityTitle": "Check the identity",
+    "identityHelp": "Compare the name and date of birth with the person's identity document.",
+    "identityConfirmed": "Identity confirmed",
+    "identityMismatch": "Does not match",
+    "recordedConfirmed": "Recorded: identity confirmed.",
+    "recordedMismatch": "Recorded: does not match.",
+    "identityFailed": "The answer could not be saved. Try again.",
+    "another": "Verify another member",
+    "log": {
+      "title": "Verifications",
+      "empty": "This card has not been checked yet.",
+      "when": "When",
+      "channel": "How",
+      "result": "Result",
+      "identity": "Identity check",
+      "by": "By",
+      "channelValue": {
+        "RECEPTION_SCAN": "Reception scan",
+        "RECEPTION_SEARCH": "Reception search",
+        "PARTNER_SCAN": "Partner clinic scan"
+      },
+      "resultValue": {
+        "VALID": "Valid",
+        "NOT_VALID": "Not valid",
+        "NOT_FOUND": "Not found"
+      },
+      "identityValue": {
+        "NONE": "Not recorded",
+        "CONFIRMED": "Identity confirmed",
+        "MISMATCH": "Does not match"
+      },
+      "partner": "Partner clinic"
+    }
+  },
+  "reports": {
+    "page": {
+      "title": "Wellness+ reports",
+      "subtitle": "Members, renewals, upgrades, downgrades and revenue for a period.",
+      "loadFailed": "The reports could not be loaded."
+    },
+    "filters": {
+      "tier": "Tier",
+      "segment": "Segment",
+      "employer": "Employer company",
+      "area": "Area",
+      "city": "City",
+      "allAreas": "All areas",
+      "allCities": "All cities"
+    },
+    "segment": {
+      "CORPORATE": "Corporate",
+      "INDIVIDUAL": "Individual"
+    },
+    "asOfNow": "As of now",
+    "presets": {
+      "TODAY": "Today",
+      "THIS_WEEK": "This week",
+      "THIS_MONTH": "This month",
+      "LAST_MONTH": "Last month",
+      "THIS_QUARTER": "This quarter",
+      "THIS_YEAR": "This year",
+      "CUSTOM": "Custom range"
+    },
+    "tiles": {
+      "active": "Active members",
+      "new": "New members",
+      "newPaid": "New paid memberships",
+      "rate": "Renewal rate",
+      "upgrades": "Upgrades",
+      "downgrades": "Downgrades",
+      "expiring": "Expiring memberships",
+      "revenue": "Membership revenue"
+    },
+    "sections": {
+      "active": "Active members per tier",
+      "monthly": "Active members at the end of each month",
+      "segments": "Corporate and individual",
+      "new": "New members",
+      "renewals": "Renewals",
+      "upgrades": "Upgrades",
+      "downgrades": "Downgrades",
+      "employers": "Employer companies",
+      "revenue": "Membership revenue"
+    },
+    "columns": {
+      "tier": "Tier",
+      "count": "Members",
+      "share": "Share",
+      "month": "Month",
+      "total": "Total",
+      "segment": "Segment",
+      "figure": "Figure",
+      "due": "Renewals due",
+      "renewed": "Renewed",
+      "notRenewed": "Not renewed",
+      "rate": "Renewal rate",
+      "path": "Path",
+      "amount": "Amount",
+      "by": "By",
+      "value": "Value",
+      "company": "Company",
+      "members": "Members",
+      "sponsored": "Sponsored Silver",
+      "upgraded": "Upgraded to paid",
+      "former": "Former employees",
+      "kind": "Kind",
+      "member": "Member"
+    },
+    "figures": {
+      "newMembers": "New members",
+      "newPaid": "New paid memberships"
+    },
+    "by": {
+      "path": "Path",
+      "reason": "Reason"
+    },
+    "reason": {
+      "NOT_RENEWED": "Not renewed",
+      "COMPANY_CONTRACT_ENDED": "Company contract ended",
+      "LEFT_COMPANY": "Left company",
+      "VIP_ENDED": "VIP ended"
+    },
+    "lists": {
+      "expiring": "Expiring memberships",
+      "expiringDate": "Paid term ends",
+      "vipReviews": "VIP reviews due",
+      "vipDate": "Review date",
+      "formerEmployees": "Former employees to contact",
+      "leftDate": "Left company on",
+      "empty": "Nobody on this list."
+    },
+    "total": "Total",
+    "view": "View",
+    "chart": "Chart",
+    "table": "Table",
+    "exportCsv": "CSV",
+    "exportSection": "Export {{title}} as CSV"
+  }
+}

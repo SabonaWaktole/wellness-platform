@@ -108,8 +108,14 @@
     "tenants": "Klientë biznesi",
     "people": "Përdoruesit",
     "payments": "Pagesat",
+    "members": "Anëtarët",
+    "membershipPayments": "Pagesat e anëtarësimit",
     "performance": "Performanca",
-    "renewals": "Rinovimet"
+    "renewals": "Rinovimet",
+    "vipRequests": "Kërkesat VIP",
+    "employeeUpload": "Ngarkimi i punonjësve",
+    "verifyMember": "Verifiko anëtarin",
+    "membershipReports": "Raportet Wellness+"
   },
   "shell": {
     "platformName": "Platforma {{appName}}",

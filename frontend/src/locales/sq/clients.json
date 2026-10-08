@@ -80,6 +80,7 @@
     "tabAppointments": "Takimet",
     "tabContracts": "Kontratat",
     "tabDeals": "Marrëveshjet",
+    "tabWellness": "Wellness+",
     "loadingHistory": "Duke ngarkuar historikun...",
     "appointments": "Takimet",
     "newAppointment": "Takim i ri",
@@ -165,7 +166,8 @@
       "paymentMethod": "Mënyra: {{method}}",
       "dealWonValue": "{{monthly}} në muaj, {{annual}} në vit"
     },
-    "calculatePrice": "Llogarit çmimin"
+    "calculatePrice": "Llogarit çmimin",
+    "employeeUpload": "Ngarkimi i punonjësve"
   },
   "activity": {
     "title": "Regjistro aktivitet",

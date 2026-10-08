@@ -1,0 +1,512 @@
+/* The Wellness+ member screens (M4 Slice 4). Same grammar as the contracts and renewals lists; narrow
+ * screens scroll a table inside its own container, never the page (NFR-USE-04). */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 0;
+  }
+}
+
+.narrow {
+  max-width: 880px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.breadcrumb {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline-lg);
+  font-weight: var(--font-weight-headline-lg);
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.card {
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--border-hairline);
+}
+
+.cardBody {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-title-md, 1.125rem);
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------- filters */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  background-color: var(--color-surface-container-low);
+}
+
+.filters > * {
+  min-width: 140px;
+  flex: 1 1 140px;
+}
+
+.filters > .searchBox {
+  flex: 2 1 260px;
+}
+
+.filterCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  min-height: 40px;
+}
+
+.summary {
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.tierDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusActive {
+  background: var(--color-success-bg, #dcfce7);
+  color: var(--color-success-text, #166534);
+}
+
+.statusSuspended {
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning-text, #92400e);
+}
+
+.statusClosed {
+  background: var(--color-surface-container-high, #e5e7eb);
+  color: var(--text-secondary);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-surface-container-high, #e5e7eb);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- table */
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.table th {
+  text-align: left;
+  padding: 0 var(--spacing-lg);
+  height: 40px;
+  font-size: var(--font-size-label-sm);
+  color: var(--text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-color: var(--color-surface-container-low);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+  padding: var(--spacing-base) var(--spacing-lg);
+  height: 56px;
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+  font-size: var(--font-size-body-md);
+  color: var(--text-primary);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover td {
+  background-color: var(--color-surface-container-low);
+}
+
+.memberLink {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.memberLink:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.muted {
+  color: var(--text-tertiary);
+}
+
+.loadingCell {
+  text-align: center;
+  padding: 20px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl, 48px) var(--spacing-md);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- form */
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+@media (min-width: 640px) {
+  .form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.intro {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.warning {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning-text, #92400e);
+  font-size: var(--font-size-body-sm);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  grid-column: 1 / -1;
+}
+
+.formError {
+  margin: 0;
+  color: var(--color-error, #b91c1c);
+  font-size: var(--font-size-body-sm);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.duplicateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.duplicateItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px var(--border-hairline);
+}
+
+/* ---------------------------------------------------------------- detail */
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.fact dt {
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.fact dd {
+  margin: 2px 0 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.tierCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.tabs {
+  padding: 0 var(--spacing-md);
+  border-bottom: 1px solid var(--border-hairline);
+  overflow-x: auto;
+}
+
+.noteText {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pager {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.checkRow input {
+  margin-top: 3px;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The employee upload (M4 Slice 9): the company chooser and the file field. */
+.uploadField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.companyChosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+}
+
+.companySearch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  max-width: 480px;
+}
+
+.matches {
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-xs);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.match {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.match:hover,
+.match:focus-visible {
+  background: var(--color-surface-container-high);
+}
+
+/* The card dialog (M4 Slice 11): the QR is always on a white square with a quiet zone, in dark mode too (NFR-USE-05). */
+.cardQr {
+  align-self: center;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  line-height: 0;
+}
+
+.cardQr img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.cardLinkLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-label-sm);
+  font-weight: 600;
+}
+
+.cardLinkInput {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface-container-lowest, #fff);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 400;
+}

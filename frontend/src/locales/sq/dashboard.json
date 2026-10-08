@@ -290,7 +290,17 @@
       "paymentsOutstanding": "Pagesa të papaguara",
       "paymentsOverdue": "Këste të vonuara",
       "paymentsOverdueAmount": "Shuma e vonuar",
-      "offersWaiting": "Oferta që presin përgjigje"
+      "offersWaiting": "Oferta që presin përgjigje",
+      "membersActive": "Anëtarë aktivë",
+      "membersCorporate": "Anëtarë korporativë",
+      "membersIndividual": "Anëtarë individualë",
+      "membersNew": "Anëtarë të rinj",
+      "membershipsNewPaid": "Anëtarësime të reja me pagesë",
+      "membershipUpgrades": "Përmirësime",
+      "membershipDowngrades": "Zbritje niveli",
+      "membershipRenewalRate": "Norma e rinovimit",
+      "membershipsExpiring": "Anëtarësime që skadojnë",
+      "membershipRevenue": "Të ardhurat nga anëtarësimet"
     },
     "asOfNow": "Tani",
     "openList": "{{label}}: {{value}}. Hap listën.",
@@ -367,7 +377,16 @@
       "amount": "Shuma",
       "outstanding": "E papaguar",
       "companies": "Kompanitë sipas statusit",
-      "noStatus": "Pa status"
+      "noStatus": "Pa status",
+      "wellnessPlus": "Anëtarët Wellness+",
+      "wellnessPlusActive": "Anëtarë aktivë sipas nivelit",
+      "wellnessPlusRenewals": "Rinovimet sipas nivelit",
+      "tier": "Niveli",
+      "due": "Për rinovim",
+      "renewed": "Rinovuar",
+      "notRenewed": "Jo të rinovuar",
+      "rate": "Norma",
+      "openReports": "Hap raportet Wellness+"
     }
   }
 }

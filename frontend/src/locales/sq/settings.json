@@ -16,7 +16,8 @@
     "audit": "Regjistri i auditimit",
     "pricing": "Çmimet",
     "salesScript": "Skripti i shitjes",
-    "contracts": "Kontratat dhe pagesat"
+    "contracts": "Kontratat dhe pagesat",
+    "wellnessPlus": "Wellness+"
   },
   "company": {
     "title": "Cilësimet e kompanisë",
@@ -252,7 +253,8 @@
     },
     "milestone": {
       "M2": "E disponueshme nga Faza 2",
-      "M3": "E disponueshme nga Faza 3"
+      "M3": "E disponueshme nga Faza 3",
+      "M4": "E disponueshme nga Faza 4"
     },
     "groups": {
       "companies": "Kompanitë dhe kontaktet",
@@ -263,6 +265,7 @@
       "sales": "Shitjet",
       "payments": "Pagesat",
       "performance": "Performanca",
+      "wellnessplus": "Wellness+",
       "admin": "Administrimi",
       "modules": "Module të tjera"
     },
@@ -305,7 +308,16 @@
       "inventory_manage": "Menaxho inventarin",
       "forms_manage": "Menaxho formularët",
       "integrations_manage": "Menaxho integrimet",
-      "reports_view": "Shiko raportet"
+      "reports_view": "Shiko raportet",
+      "members_view": "Anëtarët: shiko kartelën, kontaktet dhe historikun",
+      "members_verify": "Anëtarët: verifiko në recepsion (kërko, skano, përfitimet)",
+      "members_manage": "Anëtarët: regjistro, ndrysho, familja, lidhja e kartës, pezullo dhe hiq punonjës",
+      "members_payments_view": "Anëtarët: shiko pagesat",
+      "members_payments_record": "Anëtarët: regjistro pagesa, përmirësime, rinovime dhe anulime",
+      "members_import": "Anëtarët: importo punonjës",
+      "members_vip_approve": "Anëtarët: mirato VIP",
+      "members_reports_view": "Anëtarët: shiko raportet",
+      "wellnessplus_settings_manage": "Cilësimet e Wellness+: menaxho tarifat, afatet, përfitimet dhe numërimin"
     },
     "copyModal": {
       "title": "Kopjo {{role}}",
@@ -974,6 +986,105 @@
         "hint": "2 deri në 6 shkronja të mëdha ose shifra, p.sh. CTR për CTR-2026-0001.",
         "invalid": "Shkruani 2 deri në 6 shkronja të mëdha ose shifra."
       }
+    }
+  },
+  "wellnessPlus": {
+    "breadcrumb": "Wellness+",
+    "title": "Wellness+",
+    "subtitle": "Caktoni emrat dhe tarifat e niveleve, rregullat për zbritjen familjare, ditët e tolerancës dhe numërtimin, listën e lidhjeve familjare dhe zbritjet që merr çdo nivel.",
+    "subtitleReadOnly": "Zbritjet që merr çdo nivel. Vetëm Administratori mund t'i ndryshojë.",
+    "loading": "Duke u ngarkuar…",
+    "loadFailed": "Cilësimet nuk u ngarkuan.",
+    "saveFailed": "Ndryshimi nuk u ruajt. Provoni përsëri.",
+    "save": "Ruaj",
+    "saved": "U ruajt.",
+    "nameSq": "Emri (shqip)",
+    "nameEn": "Emri (anglisht)",
+    "active": "Aktiv",
+    "inactive": "Joaktiv",
+    "activate": "Aktivizo",
+    "deactivate": "Çaktivizo",
+    "tabs": {
+      "tiers": "Nivelet dhe tarifat",
+      "rules": "Rregullat",
+      "relationships": "Lidhjet familjare",
+      "benefits": "Përfitimet"
+    },
+    "tiers": {
+      "hint": {
+        "BRONZE": "Falas, pa datë mbarimi. Çdo anëtar fillon këtu.",
+        "SILVER": "Paguhet për një afat, ose sponsorizohet nga kontrata e punëdhënësit.",
+        "GOLD": "Paguhet për një afat.",
+        "VIP": "Falas. Miratohet nga drejtimi për një afat."
+      },
+      "fields": {
+        "labelSq": {
+          "label": "Etiketa (shqip)",
+          "invalid": "Shkruani një etiketë në shqip, deri në 40 shkronja."
+        },
+        "labelEn": {
+          "label": "Etiketa (anglisht)",
+          "invalid": "Shkruani një etiketë në anglisht, deri në 40 shkronja."
+        },
+        "colour": {
+          "label": "Ngjyra",
+          "invalid": "Zgjidhni një ngjyrë."
+        },
+        "fee": {
+          "label": "Tarifa (EUR)",
+          "invalid": "Shkruani një shumë të paktën 0.01 me më së shumti dy shifra pas presjes. Tarifa e re vlen për pagesat e regjistruara nga tani."
+        },
+        "termMonths": {
+          "label": "Afati (muaj)",
+          "invalid": "Shkruani një numër të plotë muajsh nga 1 deri në 60."
+        }
+      }
+    },
+    "rules": {
+      "familyDiscountPercent": {
+        "label": "Zbritja familjare (%)",
+        "hint": "Zbritet nga Silver dhe Gold për një anëtar familjar, kur titullari është Aktiv dhe Silver ose më lart.",
+        "invalid": "Shkruani një përqindje nga 0 deri në 100 me më së shumti dy shifra pas presjes."
+      },
+      "graceDays": {
+        "label": "Ditët e tolerancës",
+        "hint": "Ditët që anëtari e mban nivelin pas mbarimit të afatit. 0 do të thotë asnjë.",
+        "invalid": "Shkruani një numër të plotë ditësh nga 0 deri në 60."
+      },
+      "expiringSoonDays": {
+        "label": "Dritarja e skadimit të afërt (ditë)",
+        "hint": "Një afat i paguar që mbaron brenda kësaj kohe shfaq shenjën Skadon së shpejti.",
+        "invalid": "Shkruani një numër të plotë ditësh nga 1 deri në 365."
+      },
+      "vipReviewNoticeDays": {
+        "label": "Njoftimi për rishikimin VIP (ditë)",
+        "hint": "Sa ditë para datës së rishikimit VIP njoftohen miratuesit.",
+        "invalid": "Shkruani një numër të plotë ditësh nga 1 deri në 365."
+      },
+      "memberPrefix": {
+        "label": "Parashtesa e numrit të anëtarit",
+        "hint": "2 deri në 6 shkronja të mëdha ose shifra, për shembull WP për WP-000123. Parashtesa e re vlen vetëm për anëtarët e rinj.",
+        "invalid": "Shkruani 2 deri në 6 shkronja të mëdha ose shifra."
+      },
+      "receiptPrefix": {
+        "label": "Parashtesa e numrit të faturës së pagesës",
+        "hint": "2 deri në 6 shkronja të mëdha ose shifra, për shembull RCP për RCP-2027-000045.",
+        "invalid": "Shkruani 2 deri në 6 shkronja të mëdha ose shifra."
+      }
+    },
+    "relationships": {
+      "name": "Lidhja",
+      "status": "Gjendja",
+      "action": "Veprimi",
+      "add": "Shto lidhje",
+      "invalid": "Shkruani emrin në shqip dhe në anglisht."
+    },
+    "benefits": {
+      "service": "Shërbimi",
+      "addTitle": "Shto një shërbim",
+      "add": "Shto shërbim",
+      "invalid": "Shkruani një përqindje nga 0 deri në 100 me më së shumti dy shifra pas presjes, ose lëreni bosh për pa zbritje.",
+      "invalidName": "Shkruani emrin në shqip dhe në anglisht."
     }
   }
 }

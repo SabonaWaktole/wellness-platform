@@ -184,6 +184,15 @@ model Tenant {
   // M2 Slice 11: workspace sales settings (FR-DEAL-12)
   salesSettings    SalesSettings?
   contractSettings ContractSettings?
+
+  // M4 Slice 3: Wellness+ settings
+  tierSettings        TierSetting[]
+  membershipSettings  MembershipSettings?
+  familyRelationships FamilyRelationship[]
+  benefitServices     BenefitService[]
+  members             Member[]
+  employeeImports     EmployeeImport[]
+  verificationEvents  VerificationEvent[]
 }
 
 /// Platform-wide default settings, applied to a workspace only at the moment
@@ -608,6 +617,9 @@ model Client {
   @@index([tenantId, name])
   @@index([tenantId, businessTypeId])
   @@index([tenantId, areaId, cityId])
+  employedMembers       Member[] @relation("MemberEmployer")
+  formerEmployedMembers Member[] @relation("MemberFormerEmployer")
+  employeeImports       EmployeeImport[]
 }
 
 /// A named person at a company (FR-CMP-04, Slice 12): name, position, phone
@@ -1872,6 +1884,7 @@ model City {
 
   @@unique([tenantId, areaId, nameSq])
   @@index([tenantId, areaId, order])
+  members    Member[]
 }
 
 /// Days after which an unattended deal should resurface as a follow-up
@@ -2338,4 +2351,343 @@ model DealStageHistory {
   @@index([dealId])
   @@index([changedByUserId])
   @@index([tenantId, ownerUserId, toStage, at])
+}
+
+/// Wellness+ tier label, colour, fee and term (M4 Slice 3, FR-TIR-01). Four rows
+/// per workspace, one per fixed tier; Bronze has neither fee nor term, VIP has
+/// a term and no fee. Fee is money: Decimal(12,2) (NFR-ACC-05).
+model TierSetting {
+  tenantId        String
+  tier            String
+  labelSq         String
+  labelEn         String
+  colour          String
+  fee             Decimal? @db.Decimal(12, 2)
+  termMonths      Int?
+  updatedAt       DateTime @updatedAt
+  updatedByUserId String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, tier])
+}
+
+/// Workspace Wellness+ rules (M4 Slice 3), one row per workspace, created
+/// lazily: no row means the defaults in DefaultMembership.ts.
+model MembershipSettings {
+  tenantId              String   @id
+  familyDiscountPercent Decimal  @default(50) @db.Decimal(7, 2)
+  graceDays             Int      @default(0)
+  expiringSoonDays      Int      @default(30)
+  memberPrefix          String   @default("WP")
+  receiptPrefix         String   @default("RCP")
+  vipReviewNoticeDays   Int      @default(30)
+  updatedAt             DateTime @updatedAt
+  updatedByUserId       String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// The family relationship choice list (M4 Slice 3, FR-FAM-02).
+model FamilyRelationship {
+  id       String  @id
+  tenantId String
+  nameSq   String
+  nameEn   String
+  order    Int     @default(0)
+  active   Boolean @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, order])
+  members  Member[]
+}
+
+/// A service in the Wellness+ benefit table (M4 Slice 3, FR-BEN-01).
+model BenefitService {
+  id       String  @id
+  tenantId String
+  nameSq   String
+  nameEn   String
+  order    Int     @default(0)
+  active   Boolean @default(true)
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  discounts BenefitDiscount[]
+
+  @@index([tenantId, order])
+}
+
+/// The discount of one service for one tier; no row means no discount.
+model BenefitDiscount {
+  serviceId String
+  tier      String
+  percent   Decimal @db.Decimal(5, 2)
+
+  service BenefitService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, tier])
+}
+
+/// A Wellness+ member (M4 Slice 4, FR-MEM-02). Not a Client and not a User. The
+/// columns are exactly the FR-MEM-02 list plus the keys the later slices link
+/// through; no medical, address, photograph or national-ID column exists
+/// (FR-DPR-01, FR-DPR-03). `currentTier` is a stored copy kept by the domain
+/// actions and the daily job; single-member reads calculate it (D2).
+model Member {
+  id                      String    @id
+  tenantId                String
+  memberNumber            String
+  firstName               String
+  lastName                String
+  dateOfBirth             DateTime? @db.Date
+  phone                   String?
+  email                   String?
+  language                String    @default("sq")
+  cityId                  String?
+  status                  String    @default("ACTIVE")
+  currentTier             String    @default("BRONZE")
+  startsOn                DateTime  @db.Date
+  employerClientId        String?
+  formerEmployerClientId  String?
+  leftCompanyAt           DateTime? @db.Date
+  principalMemberId       String?
+  relationshipId          String?
+  relationshipConfirmedBy String?
+  relationshipConfirmedAt DateTime?
+  /// The secret behind the member's card link (Slice 11). Never audited or logged.
+  cardToken               String    @unique
+  note                    String?   @db.Text
+  createdBy               String
+  createdAt               DateTime  @default(now())
+  closedAt                DateTime?
+  anonymisedAt            DateTime?
+
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  city           City?               @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  employer       Client?             @relation("MemberEmployer", fields: [employerClientId], references: [id], onDelete: Restrict)
+  formerEmployer Client?             @relation("MemberFormerEmployer", fields: [formerEmployerClientId], references: [id], onDelete: Restrict)
+  principal      Member?             @relation("MemberFamily", fields: [principalMemberId], references: [id], onDelete: Restrict)
+  dependants     Member[]            @relation("MemberFamily")
+  relationship   FamilyRelationship? @relation(fields: [relationshipId], references: [id], onDelete: Restrict)
+  terms          MemberTerm[]
+  tierHistory    MemberTierHistory[]
+  statusHistory  MemberStatusHistory[]
+  payments       MemberPayment[]
+  familyEvents   MemberFamilyEvent[]
+  vipRequests    VipRequest[]
+  cardTokens     MemberCardToken[]
+  verifications  VerificationEvent[]
+
+  @@unique([tenantId, memberNumber])
+  @@index([tenantId, lastName, firstName])
+  @@index([tenantId, currentTier, status])
+  @@index([tenantId, employerClientId])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@index([tenantId, dateOfBirth])
+  @@index([principalMemberId])
+}
+
+/// One term of membership (M4 Slice 4, D3). A new member has none: Bronze is
+/// the floor. A sponsored term has no end date. The payment columns are filled
+/// by Slice 5, `followsTermId` by the daily job of Slice 8 (one downgrade term
+/// per ended term, enforced here by the unique index).
+model MemberTerm {
+  id                     String    @id
+  memberId               String
+  tier                   String
+  source                 String
+  startsOn               DateTime  @db.Date
+  endsOn                 DateTime? @db.Date
+  paymentId              String?
+  followsTermId          String?   @unique
+  closedEarlyByPaymentId String?
+  originalEndsOn         DateTime? @db.Date
+  /// Set after the expiring-soon notice for this paid term was sent (M4 Slice 8, FR-TIR-11, D9).
+  expiringNotifiedAt     DateTime?
+  createdAt              DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, startsOn])
+}
+
+/// Every change of effective tier (M4 Slice 4, FR-TIR-08). `changedByUserId`
+/// is null for the system.
+model MemberTierHistory {
+  id              String   @id
+  memberId        String
+  fromTier        String
+  toTier          String
+  reason          String
+  comment         String?  @db.Text
+  changedByUserId String?
+  createdAt       DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
+}
+
+/// Every change of status (M4 Slice 4, FR-MEM-05, D15): the history the monthly
+/// "Active at the end of the month" report replays.
+model MemberStatusHistory {
+  id              String   @id
+  memberId        String
+  fromStatus      String?
+  toStatus        String
+  reason          String?  @db.Text
+  changedByUserId String?
+  createdAt       DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
+}
+
+/// A membership payment (M4 Slice 5, FR-MPAY-01..11, D6). Immutable except for
+/// the three void columns: the list fee, the discount and the amount are stored
+/// so a later change of fee or discount never changes it (FR-MPAY-10).
+model MemberPayment {
+  id              String    @id
+  tenantId        String
+  memberId        String
+  kind            String
+  fromTier        String
+  toTier          String
+  listFee         Decimal   @db.Decimal(12, 2)
+  discountPercent Decimal   @db.Decimal(7, 2)
+  amount          Decimal   @db.Decimal(12, 2)
+  method          String
+  receivedOn      DateTime  @db.Date
+  receiptNumber   String
+  note            String?   @db.Text
+  recordedBy      String
+  createdAt       DateTime  @default(now())
+  voidedAt        DateTime?
+  voidedBy        String?
+  voidReason      String?   @db.Text
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId, receivedOn])
+  @@index([memberId, createdAt])
+}
+
+/// The history of family links and removals (M4 Slice 6, FR-FAM-06, FR-FAM-07),
+/// so a removed link is still explainable. `principalMemberId` and
+/// `relationshipId` are plain copies, not keys: the history outlives the link.
+model MemberFamilyEvent {
+  id                String   @id
+  memberId          String
+  principalMemberId String?
+  relationshipId    String?
+  /// LINKED or REMOVED.
+  kind              String
+  reason            String?  @db.Text
+  byUserId          String
+  at                DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, at])
+}
+
+/// A request to make a member VIP and the decision on it (M4 Slice 7, FR-VIP-01,
+/// 02, 04, 05). One PENDING request per member (NFR-DAT-02): PostgreSQL enforces
+/// it with a partial unique index that lives in the migration only (Prisma
+/// cannot declare one); MySQL relies on the use case, which checks inside the
+/// transaction after taking the member's row lock. `endedAt`, `endedBy` and
+/// `endReason` record an early ending of the VIP the request created.
+model VipRequest {
+  id               String    @id
+  tenantId         String
+  memberId         String
+  requestedBy      String
+  reason           String    @db.Text
+  /// PENDING, APPROVED, REJECTED or WITHDRAWN.
+  status           String    @default("PENDING")
+  decidedBy        String?
+  decidedAt        DateTime?
+  decisionNote     String?   @db.Text
+  reviewNotifiedAt DateTime?
+  endedAt          DateTime?
+  endedBy          String?
+  endReason        String?   @db.Text
+  createdAt        DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([memberId, createdAt])
+}
+
+/// One corporate employee upload (M4 Slice 9, D10, FR-EMP-03..07). `rows` holds
+/// the parsed rows and their classification from the preview until the upload
+/// is confirmed or 24 hours pass, then is cleared (FR-DPR-03). `result` keeps
+/// only row numbers, outcomes and reasons, never a personal value, so the
+/// result file and the history survive the clearing.
+model EmployeeImport {
+  id           String    @id
+  tenantId     String
+  clientId     String
+  fileName     String
+  uploadedBy   String
+  /// PREVIEWED, CONFIRMED or EXPIRED.
+  status       String    @default("PREVIEWED")
+  rows         Json?
+  result       Json?
+  confirmToken String
+  created      Int       @default(0)
+  linked       Int       @default(0)
+  skipped      Int       @default(0)
+  refused      Int       @default(0)
+  errors       Int       @default(0)
+  createdAt    DateTime  @default(now())
+  confirmedAt  DateTime?
+  /// Ids of the members created or linked, kept for the card-links sheet (Slice 11). Opaque ids, no personal value.
+  memberIds    Json?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, clientId, createdAt])
+  @@index([tenantId, status, createdAt])
+}
+
+/// A card link that was replaced (M4 Slice 11, D11, FR-CRD-10). Only the SHA-256
+/// of the old token is kept, so the old URL can answer "This card was replaced"
+/// while an unknown token answers "Card not found", and the old secret itself is
+/// not stored anywhere.
+model MemberCardToken {
+  id         String   @id
+  memberId   String
+  tokenHash  String   @unique
+  replacedAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+/// One check of a member's card by Reception or a partner clinic (M4 Slice 13,
+/// FR-VER-03, FR-VER-06, FR-VER-10). Not the audit log. The address of a public
+/// scan is kept only as a keyed hash, never readable.
+model VerificationEvent {
+  id             String   @id
+  tenantId       String
+  memberId       String?
+  channel        String
+  userId         String?
+  result         String
+  identityChoice String   @default("NONE")
+  ipHash         String?
+  createdAt      DateTime @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, memberId, createdAt])
 }

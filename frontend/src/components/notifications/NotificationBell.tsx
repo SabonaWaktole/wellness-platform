@@ -12,6 +12,8 @@ import styles from './NotificationBell.module.css';
 const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
   // FR-FUP-09: the daily summary opens the list it summarises.
   if (n.type === 'FOLLOW_UP_DAILY_SUMMARY') return `/${tenantSlug}/follow-ups`;
+  // M4 Slice 8 (FR-TIR-11): the expiring summary opens the member list on the Expiring soon filter.
+  if (n.type === 'MEMBERSHIP_EXPIRING') return `/${tenantSlug}/members?expiringSoon=true`;
   if (!n.entityId) return null;
   switch (n.entityType) {
     case 'QUOTATION': return `/${tenantSlug}/quotations/${n.entityId}`;
@@ -28,6 +30,8 @@ const targetPath = (tenantSlug: string, n: NotificationItem): string | null => {
     case 'CONTRACT': return `/${tenantSlug}/contracts/${n.entityId}`;
     // M2 Slice 11: "My follow-ups", on that follow-up.
     case 'FOLLOW_UP': return `/${tenantSlug}/follow-ups?open=${n.entityId}`;
+    // M4 Slice 8 (FR-VIP-04): a VIP review opens the member.
+    case 'MEMBER': return `/${tenantSlug}/members/${n.entityId}`;
     default: return null;
   }
 };

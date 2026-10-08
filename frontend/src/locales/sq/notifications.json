@@ -43,7 +43,9 @@
     "FOLLOW_UP_ASSIGNED": "{{actor}} ju caktoi një ndjekje ({{followUpType}}) me {{clientName}}, afati {{scheduledAt}}",
     "FOLLOW_UP_DUE": "Ndjekja është për tani: {{followUpType}} me {{clientName}}",
     "FOLLOW_UP_DAILY_SUMMARY": "Sot: {{today}} ndjekje, dhe {{overdue}} të vonuara nga ditët e kaluara",
-    "PAYMENT_OVERDUE": "Kësti {{instalment}} i kontratës {{planName}} të {{clientName}} ishte i pagueshëm më {{dueDate}} dhe ka vonuar"
+    "PAYMENT_OVERDUE": "Kësti {{instalment}} i kontratës {{planName}} të {{clientName}} ishte i pagueshëm më {{dueDate}} dhe ka vonuar",
+    "MEMBERSHIP_EXPIRING": "{{count}} anëtarësi Wellness+ mbarojnë brenda {{windowDays}} ditësh. Hapeni listën për të kontaktuar anëtarët.",
+    "VIP_REVIEW_DUE": "VIP i {{memberName}} ({{memberNumber}}) duhet rishikuar më {{reviewDate}}. Miratojeni sërish, ose anëtari kalon në nivelin tjetër."
   },
   "followUpType": {
     "CALL": "telefonatë",

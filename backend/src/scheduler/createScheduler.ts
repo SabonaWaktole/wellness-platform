@@ -16,6 +16,14 @@ import { ContractExpiryJob } from './jobs/ContractExpiryJob';
 import { MarkPaymentsOverdueJob } from './jobs/MarkPaymentsOverdueJob';
 import { MarkPaymentOverdueUseCase } from '../contracts/application/use-cases/MarkPaymentOverdueUseCase';
 import { ContractRenewalReminderJob } from './jobs/ContractRenewalReminderJob';
+import { MemberTermJob } from './jobs/MemberTermJob';
+import { ExpireMemberTermsUseCase } from '../membership/application/use-cases/MemberTermUseCases';
+import { SyncEmployerMembersUseCase } from '../membership/application/use-cases/EmployerUseCases';
+import { ContractValidityListener } from '../membership/application/ContractValidityListener';
+import { PrismaMemberStore } from '../membership/infrastructure/PrismaMemberStore';
+import { PrismaMemberTermJobStore } from '../membership/infrastructure/PrismaMemberTermJobStore';
+import { PrismaMembershipSettingsStore } from '../membership/infrastructure/PrismaMembershipSettingsStore';
+import { PrismaMembershipWriteTransaction } from '../membership/infrastructure/PrismaMembershipWriteTransaction';
 
 import { PrismaUserRepository } from '../auth/infrastructure/repositories/PrismaUserRepository';
 import { PrismaTenantRepository } from '../tenant/infrastructure/repositories/PrismaTenantRepository';
@@ -82,7 +90,11 @@ export function createScheduler(options: SchedulerOptions = {}): Scheduler {
 
   const markInvoiceOverdue = new MarkInvoiceOverdueUseCase(new PrismaInvoiceWriteTransaction());
 
-  const expireContract = new ExpireContractUseCase(new PrismaContractWriteTransaction());
+  const expireMemberTerms = new ExpireMemberTermsUseCase(new PrismaMembershipWriteTransaction());
+  const expireContract = new ExpireContractUseCase(
+    new PrismaContractWriteTransaction(),
+    new ContractValidityListener(new SyncEmployerMembersUseCase(new PrismaMemberStore(), expireMemberTerms))
+  );
 
   const jobs: ScheduledJob[] = [
     new AppointmentReminderJob(queries, settingsRepository, notifications),
@@ -95,6 +107,13 @@ export function createScheduler(options: SchedulerOptions = {}): Scheduler {
     new ContractExpiryJob(queries, expireContract, notifications),
     new MarkPaymentsOverdueJob(queries, new MarkPaymentOverdueUseCase(new PrismaContractWriteTransaction()), notifications),
     new ContractRenewalReminderJob(queries, notifications),
+    new MemberTermJob(
+      queries,
+      new PrismaMemberTermJobStore(),
+      new PrismaMembershipSettingsStore(),
+      expireMemberTerms,
+      notifications
+    ),
   ];
 
   return new Scheduler(jobs, options);

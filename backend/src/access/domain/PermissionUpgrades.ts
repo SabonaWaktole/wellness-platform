@@ -43,6 +43,21 @@ export const PERMISSION_UPGRADES: readonly PermissionUpgrade[] = [
     key: 'm3-contracts-payments',
     permissionKeys: ['contracts.terminate'],
   },
+  {
+    // The nine Wellness+ keys (FR-RBAC-25, 26). All are new, none is scoped.
+    key: 'm4-wellness-plus',
+    permissionKeys: [
+      'members.view',
+      'members.verify',
+      'members.manage',
+      'members.payments.view',
+      'members.payments.record',
+      'members.import',
+      'members.vip.approve',
+      'members.reports.view',
+      'wellnessplus.settings.manage',
+    ],
+  },
 ];
 
 export function permissionUpgrade(key: string): PermissionUpgrade {

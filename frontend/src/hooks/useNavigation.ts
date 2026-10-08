@@ -54,6 +54,18 @@ const tenantNavItems: NavItemSpec[] = [
   { id: 'payments', labelKey: 'nav.payments', icon: 'payments', permission: 'payments.view' },
   // The Renewals screen (M3 Slice 11, FR-REN-05): contracts about to end and just ended, with their renewal state.
   { id: 'renewals', labelKey: 'nav.renewals', icon: 'autorenew', permission: 'contracts.validity.view' },
+  // The Wellness+ member list (M4 Slice 4, FR-MEM-07): members, their tier and status. Wellness Albania's workflow only (D1).
+  { id: 'members', labelKey: 'nav.members', icon: 'wellness', permission: 'members.view', workflow: 'SALES_PROCESS' },
+  // The Membership payments list (M4 Slice 5, FR-MPAY-07): every payment with filters, totals, CSV and receipts.
+  { id: 'members/payments', labelKey: 'nav.membershipPayments', icon: 'receipt_long', permission: 'members.payments.view', workflow: 'SALES_PROCESS' },
+  // The Wellness+ reports (M4 Slice 14, FR-RPT-01): figures, working lists and CSV for the CEO and the Administrator.
+  { id: 'members/reports', labelKey: 'nav.membershipReports', icon: 'wellness_reports', permission: 'members.reports.view', workflow: 'SALES_PROCESS' },
+  // The Verify member screen (M4 Slice 13, FR-VER-01): Reception scans a card or searches, and sees Valid / Not valid.
+  { id: 'members/verify', labelKey: 'nav.verifyMember', icon: 'qr_code_scanner', permission: 'members.verify', workflow: 'SALES_PROCESS' },
+  // The VIP requests list for approvers (M4 Slice 7, FR-VIP-02).
+  { id: 'members/vip-requests', labelKey: 'nav.vipRequests', icon: 'workspace_premium', permission: 'members.vip.approve', workflow: 'SALES_PROCESS' },
+  // The corporate employee upload (M4 Slice 9, FR-EMP-01).
+  { id: 'members/employee-upload', labelKey: 'nav.employeeUpload', icon: 'upload_file', permission: 'members.import', workflow: 'SALES_PROCESS' },
   // The Performance screen (M3 Slice 12, FR-PRF-01): one row per salesperson, in the viewer's scope.
   { id: 'performance', labelKey: 'nav.performance', icon: 'trending_up', permission: 'performance.view' },
   { id: 'reports', labelKey: 'nav.reports', icon: 'bar_chart', permission: 'reports.view' },
@@ -134,7 +146,8 @@ export const useNavigation = (user?: any | null, currentPath?: string): NavItem[
       ? { badge: overdueFollowUps, badgeLabel: t('nav.followUpsOverdue', { count: overdueFollowUps }) }
       : {}),
     isActive:
-      matchesPath(item.id) ||
+      // The Members entry does not also light up on its own Payments sub-page.
+      (matchesPath(item.id) && !(item.id === 'members' && (currentPath?.includes('/members/payments') || currentPath?.includes('/members/reports')))) ||
       (item.id === 'dashboard' &&
         currentPath?.endsWith('/login') === false &&
         !anotherItemMatches),

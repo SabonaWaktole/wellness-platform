@@ -14,6 +14,7 @@ import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { ContractValidationError } from '../../domain/contractErrors';
 import { buildInstalmentSchedule } from '../../domain/paymentSchedule';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
+import type { IContractValidityEvents } from '../ports/IContractValidityEvents';
 import { updateCompanyStatusAfterEnd } from './updateCompanyStatus';
 import { reachableContract } from './contractAccess';
 import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
@@ -48,7 +49,8 @@ export class ChangeContractStatusUseCase {
     private readonly scopes: RecordScopeResolver,
     private readonly tenants: ITenantRepository,
     private readonly notifications?: NotificationService,
-    private readonly now: () => Date = () => new Date()
+    private readonly now: () => Date = () => new Date(),
+    private readonly validityEvents?: IContractValidityEvents
   ) {}
 
   async execute(input: {
@@ -157,6 +159,8 @@ export class ChangeContractStatusUseCase {
       return { contract, generatedPayments: generatedPayments ?? 0 };
     });
 
+    // After the commit, so a Wellness+ failure can never undo or block the contract change (D8).
+    await this.validityEvents?.contractValidityChanged({ tenantId: input.tenantId, clientId: result.contract.clientId, today });
     await this.notify(input, result.contract);
     return result;
   }

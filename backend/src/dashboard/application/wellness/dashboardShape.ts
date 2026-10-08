@@ -3,7 +3,7 @@ import { DayRange } from '../../domain/PerformancePeriod';
 
 /** Which list a figure opens, and the filters it opens it with (FR-DSH-05). The screen turns it into a route. */
 export interface DashboardLink {
-  target: 'FOLLOW_UPS' | 'DEALS' | 'OFFERS' | 'PAYMENTS' | 'RENEWALS';
+  target: 'FOLLOW_UPS' | 'DEALS' | 'OFFERS' | 'PAYMENTS' | 'RENEWALS' | 'MEMBERSHIP_REPORTS';
   filters: Record<string, string | string[]>;
 }
 

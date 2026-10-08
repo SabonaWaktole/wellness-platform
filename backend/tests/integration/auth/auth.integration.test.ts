@@ -420,6 +420,7 @@ class FakeTenantProvisioningTransaction implements ITenantProvisioningTransactio
       lookupSeeder: { seed: async () => {} },
       pricingSeeder: { seed: async () => {} },
       salesScriptSeeder: { seed: async () => {} },
+      membershipSeeder: { seed: async () => {} },
     });
   }
 }

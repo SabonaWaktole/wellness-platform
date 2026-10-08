@@ -171,6 +171,27 @@ describe('NotificationBell', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/acme/contracts/contract-7');
   });
 
+  it('FR-TIR-11 the expiring-memberships summary opens the member list on the Expiring soon filter', async () => {
+    setup([notification({ id: 'n10', type: 'MEMBERSHIP_EXPIRING', params: { count: 3, windowDays: 30 }, actorUserId: null, entityType: null, entityId: null })], 1);
+
+    await userEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    await userEvent.click(screen.getByText(/3 Wellness\+ membership\(s\) end within 30 days/));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/acme/members?expiringSoon=true');
+  });
+
+  it('FR-VIP-04 a VIP review notice opens the member', async () => {
+    setup(
+      [notification({ id: 'n11', type: 'VIP_REVIEW_DUE', params: { memberName: 'Ana Hoxha', memberNumber: 'WP-000001', reviewDate: '2027-01-31' }, actorUserId: null, entityType: 'MEMBER' as const, entityId: 'm1' })],
+      1
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /notifications/i }));
+    await userEvent.click(screen.getByText(/The VIP of Ana Hoxha \(WP-000001\) is up for review on 2027-01-31/));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/acme/members/m1');
+  });
+
   it('does not re-mark an already-read notification', async () => {
     setup([notification({ readAt: '2026-07-27T11:00:00.000Z' })], 0);
 

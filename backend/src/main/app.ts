@@ -241,6 +241,79 @@ import { PrismaContractValidityReader } from '../contracts/infrastructure/Prisma
 import { PrismaContractSettingsStore } from '../contracts/infrastructure/PrismaContractSettingsStore';
 import { GetContractSettingsUseCase, UpdateContractSettingsUseCase } from '../contracts/application/use-cases/ContractSettingsUseCases';
 import { createContractSettingsRouter } from '../contracts/interfaces/http/contractSettingsRoutes';
+import { PrismaMembershipSettingsStore } from '../membership/infrastructure/PrismaMembershipSettingsStore';
+import { PrismaRelationshipStore } from '../membership/infrastructure/PrismaRelationshipStore';
+import { PrismaBenefitStore } from '../membership/infrastructure/PrismaBenefitStore';
+import { PrismaMembershipWriteTransaction } from '../membership/infrastructure/PrismaMembershipWriteTransaction';
+import {
+  GetMembershipSettingsUseCase,
+  UpdateMembershipSettingsUseCase,
+  UpdateTierSettingUseCase,
+} from '../membership/application/use-cases/MembershipSettingsUseCases';
+import {
+  CreateRelationshipUseCase,
+  ListRelationshipsUseCase,
+  UpdateRelationshipUseCase,
+} from '../membership/application/use-cases/RelationshipUseCases';
+import {
+  CreateBenefitServiceUseCase,
+  GetBenefitTableUseCase,
+  UpdateBenefitServiceUseCase,
+} from '../membership/application/use-cases/BenefitUseCases';
+import { createMembershipSettingsRouter } from '../membership/interfaces/http/membershipSettingsRoutes';
+import { PrismaMemberStore } from '../membership/infrastructure/PrismaMemberStore';
+import {
+  ChangeMemberStatusUseCase,
+  GetMemberUseCase,
+  RegisterMemberUseCase,
+  SearchMembersUseCase,
+  UpdateMemberUseCase,
+} from '../membership/application/use-cases/MemberUseCases';
+import { AddFamilyMemberUseCase, ListFamilyRelationshipsUseCase, RemoveFamilyLinkUseCase } from '../membership/application/use-cases/FamilyUseCases';
+import { CorrectMemberTierUseCase, ExpireMemberTermsUseCase } from '../membership/application/use-cases/MemberTermUseCases';
+import { GetCompanyMembershipUseCase, RemoveEmployeesUseCase, RemoveEmployeeUseCase, SyncEmployerMembersUseCase } from '../membership/application/use-cases/EmployerUseCases';
+import { ContractValidityListener } from '../membership/application/ContractValidityListener';
+import { SponsorValidity } from '../membership/application/SponsorValidity';
+import { createCompanyMembershipRouter } from '../membership/interfaces/http/companyMembershipRoutes';
+import { DecideVipRequestUseCase, EndVipUseCase, ListVipRequestsUseCase, RequestVipUseCase } from '../membership/application/use-cases/VipUseCases';
+import { PrismaVipRequestStore } from '../membership/infrastructure/PrismaVipRequestStore';
+import { createMemberRouter } from '../membership/interfaces/http/memberRoutes';
+import { createMemberPaymentRouter } from '../membership/interfaces/http/memberPaymentRoutes';
+import { createMembershipReportRouter } from '../membership/interfaces/http/membershipReportRoutes';
+import { PrismaMembershipReportReader } from '../membership/infrastructure/PrismaMembershipReportReader';
+import { GetMembershipReportUseCase } from '../membership/application/reports/GetMembershipReportUseCase';
+import { ExportMembershipReportUseCase } from '../membership/application/reports/ExportMembershipReportUseCase';
+import { createEmployeeImportRouter } from '../membership/interfaces/http/employeeImportRoutes';
+import { PrismaEmployeeImportStore } from '../membership/infrastructure/PrismaEmployeeImportStore';
+import { PrismaCardStore } from '../membership/infrastructure/PrismaCardStore';
+import { MemberStandingResolver } from '../membership/application/memberStanding';
+import { PrismaVerificationStore } from '../membership/infrastructure/PrismaVerificationStore';
+import { PublicVerifyUseCase, RecordIdentityCheckUseCase, VerifyMemberUseCase } from '../membership/application/use-cases/VerificationUseCases';
+import { createVerificationRouter } from '../membership/interfaces/http/verificationRoutes';
+import { createPublicVerifyRouter } from '../membership/interfaces/http/publicVerifyRoutes';
+import { QrCodeSvg } from '../membership/infrastructure/QrCodeSvg';
+import { createPublicCardRouter } from '../membership/interfaces/http/publicCardRoutes';
+import { ExportUploadCardLinksUseCase, GetCardLinkUseCase, GetPublicCardUseCase, ReplaceCardLinkUseCase } from '../membership/application/use-cases/CardUseCases';
+import { readPublicBaseUrl, requireJwtSecret } from './config/env';
+import { XlsxEmployeeSheets } from '../membership/infrastructure/excel/XlsxEmployeeSheets';
+import {
+  ConfirmEmployeeImportUseCase,
+  GetEmployeeImportResultUseCase,
+  GetEmployeeTemplateUseCase,
+  ListEmployeeImportsUseCase,
+  PreviewEmployeeImportUseCase,
+} from '../membership/application/use-cases/EmployeeImportUseCases';
+import { PrismaMemberPaymentStore } from '../membership/infrastructure/PrismaMemberPaymentStore';
+import { MemberReceiptPdfRenderer } from '../membership/infrastructure/MemberReceiptPdfRenderer';
+import {
+  ExportMemberPaymentsUseCase,
+  GetPaymentReceiptUseCase,
+  QuotePaymentUseCase,
+  RecordMemberPaymentUseCase,
+  SearchMemberPaymentsUseCase,
+  VoidMemberPaymentUseCase,
+} from '../membership/application/use-cases/MemberPaymentUseCases';
+import { generateShareToken } from '../quotations/domain/shareToken';
 
 export interface AppDependencies {
   userRepository: IUserRepository;
@@ -715,6 +788,16 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Client routes require PrismaClient, TokenService, TenantRepository
   const { prisma } = require('@shared/infrastructure/prisma/client');
   const clientRoutes = createClientRouter(prisma, tokenService, tenantRepository, notificationService, resolveAccessContext);
+  // The Wellness+ tab of the company page (M4 Slice 10): one path, the rest falls through to the clients routes.
+  app.use(
+    '/api/:tenantSlug/clients',
+    createCompanyMembershipRouter(
+      new GetCompanyMembershipUseCase(new PrismaMemberStore(prisma), new PrismaEmployeeImportStore(prisma), new SponsorValidity(new PrismaMemberPaymentStore(prisma))),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
   app.use('/api/:tenantSlug/clients', clientRoutes);
 
   // The client-facing form (§24) — no tenant prefix, no auth. Mounted BEFORE
@@ -1136,10 +1219,14 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
   // Suspending or cancelling tells the people who hold contracts.terminate over the company (M3 Slice 5).
   const contractNotifications = new NotificationService(notificationRepository, userRepository, notificationEmailDispatcher, permissionDirectory);
 
+  // M4 Slice 10 (D8): a contract change tells Wellness+ so employees follow the employer at once.
+  const contractValidityListener = new ContractValidityListener(
+    new SyncEmployerMembersUseCase(new PrismaMemberStore(prisma), new ExpireMemberTermsUseCase(new PrismaMembershipWriteTransaction(prisma)))
+  );
   const contractsController = new ContractsController(
     new CreateContractUseCase(contractWriteTx, prismaClientRepository, recordScopes, tenantRepository),
     new UpdateContractUseCase(contractWriteTx, recordScopes),
-    new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications),
+    new ChangeContractStatusUseCase(contractWriteTx, recordScopes, tenantRepository, contractNotifications, undefined, contractValidityListener),
     new RenewContractUseCase(contractWriteTx, recordScopes, tenantRepository),
     new StartRenewalUseCase(contractWriteTx, recordScopes, tenantRepository),
     new SearchContractsUseCase(contractRepo, recordScopes, new PrismaContractSettingsStore(prisma)),
@@ -1226,6 +1313,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     const dashboardReader = new PrismaDashboardReader(prisma, performanceReader);
     const dashboardRoster = new PrismaTeamRoster();
     const dashboardSettings = new PrismaContractSettingsStore(prisma);
+    // The CEO's Wellness+ block calls the reports page's own use case (M4 Slice 15, FR-DSH-14).
+    const dashboardMembershipReport = new GetMembershipReportUseCase(new PrismaMembershipReportReader(prisma), new PrismaMembershipSettingsStore(prisma));
     app.use(
       '/api/:tenantSlug/dashboard',
       createRoleDashboardRouter(
@@ -1241,7 +1330,8 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
             new PrismaPaymentOverviewReader(prisma),
             new GetCeoPerformanceUseCase(performanceReader, dashboardRoster),
             dashboardRoster,
-            dashboardSettings
+            dashboardSettings,
+            dashboardMembershipReport
           )
         ),
         tokenService,
@@ -1274,6 +1364,149 @@ export const createApp = (overrides?: Partial<AppDependencies>) => {
     createContractSettingsRouter(
       new GetContractSettingsUseCase(contractSettingsStore),
       new UpdateContractSettingsUseCase(contractSettingsStore, contractWriteTx),
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Wellness+ settings and benefit table (M4 Slice 3): tiers and fees, rules,
+  // relationships and benefits under wellnessplus.settings.manage, and the
+  // read-only benefit table for members.view / members.verify.
+  const membershipSettingsStore = new PrismaMembershipSettingsStore(prisma);
+  const relationshipStore = new PrismaRelationshipStore(prisma);
+  const benefitStore = new PrismaBenefitStore(prisma);
+  const membershipWriteTx = new PrismaMembershipWriteTransaction(prisma);
+  app.use(
+    '/api/:tenantSlug/membership',
+    createMembershipSettingsRouter(
+      {
+        getSettings: new GetMembershipSettingsUseCase(membershipSettingsStore),
+        updateSettings: new UpdateMembershipSettingsUseCase(membershipSettingsStore, membershipWriteTx),
+        updateTier: new UpdateTierSettingUseCase(membershipSettingsStore, membershipWriteTx),
+        listRelationships: new ListRelationshipsUseCase(relationshipStore),
+        createRelationship: new CreateRelationshipUseCase(relationshipStore, membershipWriteTx),
+        updateRelationship: new UpdateRelationshipUseCase(relationshipStore, membershipWriteTx),
+        getBenefits: new GetBenefitTableUseCase(benefitStore, membershipSettingsStore),
+        createBenefit: new CreateBenefitServiceUseCase(benefitStore, membershipWriteTx),
+        updateBenefit: new UpdateBenefitServiceUseCase(benefitStore, membershipWriteTx),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // The Wellness+ member record (M4 Slice 4): register, search, edit personal
+  // details, suspend and close. Members: view reads, Members: manage writes.
+  const memberStore = new PrismaMemberStore(prisma);
+  const memberPaymentStore = new PrismaMemberPaymentStore(prisma);
+  const vipRequestStore = new PrismaVipRequestStore(prisma);
+  const quotePayment = new QuotePaymentUseCase(memberStore, memberPaymentStore, membershipSettingsStore, relationshipStore);
+  const searchMemberPayments = new SearchMemberPaymentsUseCase(memberPaymentStore, memberStore);
+  // The one place a card link is built (NFR-OPS-05). Production requires PUBLIC_BASE_URL; elsewhere it falls back to the frontend address.
+  const publicLink = (path: string): string => `${readPublicBaseUrl() ?? (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}${path}`;
+  const cardStore = new PrismaCardStore(prisma);
+  const verificationStore = new PrismaVerificationStore(prisma);
+  const standingResolver = new MemberStandingResolver(memberStore, membershipSettingsStore, benefitStore, memberPaymentStore);
+  app.use(
+    '/api/:tenantSlug/membership/members',
+    createMemberRouter(
+      {
+        search: new SearchMembersUseCase(memberStore, membershipSettingsStore),
+        get: new GetMemberUseCase(memberStore, membershipSettingsStore, memberPaymentStore, relationshipStore, vipRequestStore, verificationStore),
+        register: new RegisterMemberUseCase(membershipWriteTx, generateShareToken),
+        update: new UpdateMemberUseCase(membershipWriteTx),
+        changeStatus: new ChangeMemberStatusUseCase(membershipWriteTx),
+        quotePayment,
+        recordPayment: new RecordMemberPaymentUseCase(membershipWriteTx),
+        addFamilyMember: new AddFamilyMemberUseCase(membershipWriteTx, generateShareToken),
+        removeFamilyLink: new RemoveFamilyLinkUseCase(membershipWriteTx),
+        familyRelationships: new ListFamilyRelationshipsUseCase(relationshipStore),
+        requestVip: new RequestVipUseCase(membershipWriteTx),
+        decideVip: new DecideVipRequestUseCase(membershipWriteTx),
+        endVip: new EndVipUseCase(membershipWriteTx),
+        listVipRequests: new ListVipRequestsUseCase(vipRequestStore, memberStore),
+        correctTier: new CorrectMemberTierUseCase(membershipWriteTx),
+        removeEmployee: new RemoveEmployeeUseCase(membershipWriteTx, memberStore),
+        removeEmployees: new RemoveEmployeesUseCase(membershipWriteTx),
+        cardLink: new GetCardLinkUseCase(cardStore, new QrCodeSvg(), publicLink),
+        replaceCardLink: new ReplaceCardLinkUseCase(membershipWriteTx, generateShareToken, publicLink),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // The member's card page (M4 Slice 11, FR-CRD-01): public, no tenant in the path, found by the card token alone.
+  app.use(
+    '/api/public/cards',
+    createPublicCardRouter(new GetPublicCardUseCase(cardStore, memberStore, standingResolver, new QrCodeSvg(), publicLink), undefined, publicLink)
+  );
+
+  // Verification (M4 Slice 13): Reception checks a card under Members: verify,
+  // and a partner clinic's ordinary phone opens the same link with no login and
+  // sees the public shape (D12). Registered before the wildcard tenant routes.
+  app.use(
+    '/api/public/verify',
+    createPublicVerifyRouter(new PublicVerifyUseCase(cardStore, memberStore, standingResolver, verificationStore, () => process.env.VERIFY_IP_HASH_SECRET?.trim() || requireJwtSecret()))
+  );
+  app.use(
+    '/api/:tenantSlug/membership/verify',
+    createVerificationRouter(
+      { verify: new VerifyMemberUseCase(cardStore, memberStore, standingResolver, verificationStore), recordIdentity: new RecordIdentityCheckUseCase(verificationStore) },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Corporate employee upload (M4 Slice 9): template, preview, confirm, history
+  // and the result file. Members: import employees.
+  const employeeImportStore = new PrismaEmployeeImportStore(prisma);
+  const employeeSheets = new XlsxEmployeeSheets();
+  app.use(
+    '/api/:tenantSlug/membership',
+    createEmployeeImportRouter(
+      {
+        template: new GetEmployeeTemplateUseCase(employeeSheets),
+        preview: new PreviewEmployeeImportUseCase(employeeImportStore, memberStore, memberPaymentStore, employeeSheets, generateShareToken),
+        confirm: new ConfirmEmployeeImportUseCase(membershipWriteTx, employeeImportStore, generateShareToken),
+        list: new ListEmployeeImportsUseCase(employeeImportStore, memberStore),
+        result: new GetEmployeeImportResultUseCase(employeeImportStore, employeeSheets),
+        cardLinks: new ExportUploadCardLinksUseCase(membershipWriteTx, employeeSheets, publicLink),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Membership payments (M4 Slice 5): the list with totals, the CSV export, the
+  // PDF receipt and the void. Members: view payments reads, record payments voids.
+  app.use(
+    '/api/:tenantSlug/membership/payments',
+    createMemberPaymentRouter(
+      {
+        search: searchMemberPayments,
+        export: new ExportMemberPaymentsUseCase(searchMemberPayments, membershipWriteTx),
+        receipt: new GetPaymentReceiptUseCase(memberPaymentStore, memberStore, new MemberReceiptPdfRenderer()),
+        void: new VoidMemberPaymentUseCase(membershipWriteTx),
+      },
+      tokenService,
+      tenantRepository,
+      resolveAccessContext
+    )
+  );
+
+  // Wellness+ reports (M4 Slice 14): the figures of SRS 9.3, the working lists
+  // and the audited CSV export. Members: view reports.
+  const getMembershipReport = new GetMembershipReportUseCase(new PrismaMembershipReportReader(prisma), membershipSettingsStore);
+  app.use(
+    '/api/:tenantSlug/membership/reports',
+    createMembershipReportRouter(
+      { get: getMembershipReport, export: new ExportMembershipReportUseCase(getMembershipReport, membershipWriteTx) },
       tokenService,
       tenantRepository,
       resolveAccessContext

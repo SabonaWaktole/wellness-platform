@@ -21,7 +21,7 @@ export interface PermissionCatalogueEntry {
   group: string;
   supportsScope: boolean;
   /** Milestone the enforcement point ships in, when later than Milestone 1. */
-  milestone?: 'M2' | 'M3';
+  milestone?: 'M2' | 'M3' | 'M4';
 }
 
 export const PERMISSION_CATALOGUE: readonly PermissionCatalogueEntry[] = [
@@ -74,6 +74,17 @@ export const PERMISSION_CATALOGUE: readonly PermissionCatalogueEntry[] = [
   { key: 'payments.view', group: 'payments', supportsScope: true },
   { key: 'payments.update', group: 'payments', supportsScope: false },
   { key: 'performance.view', group: 'performance', supportsScope: true },
+
+  // Wellness+ (M4). Members belong to the workspace, so none of these has a scope (FR-RBAC-28).
+  { key: 'members.view', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.verify', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.manage', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.payments.view', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.payments.record', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.import', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.vip.approve', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'members.reports.view', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
+  { key: 'wellnessplus.settings.manage', group: 'wellnessplus', supportsScope: false, milestone: 'M4' },
 
   // Administration
   { key: 'users.manage', group: 'admin', supportsScope: false },

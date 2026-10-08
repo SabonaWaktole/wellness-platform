@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { ContractStatus } from '../../domain/Contract';
 import { ContractStatusHistory } from '../../domain/ContractStatusHistory';
 import { IContractWriteTransaction } from '../ports/IContractWriteTransaction';
+import type { IContractValidityEvents } from '../ports/IContractValidityEvents';
 import { AuditAction } from '../../../audit/domain/AuditAction';
 import { diff } from '../../../audit/domain/diff';
 import { CONTRACT_AUDIT_FIELDS, contractLabel, contractSnapshot } from './contractAudit';
@@ -22,10 +23,13 @@ import { updateCompanyStatusAfterEnd } from './updateCompanyStatus';
  * (FR-CON-17).
  */
 export class ExpireContractUseCase {
-  constructor(private writeTx: IContractWriteTransaction) {}
+  constructor(
+    private writeTx: IContractWriteTransaction,
+    private validityEvents?: IContractValidityEvents
+  ) {}
 
   async execute(input: { tenantId: string; contractId: string; today: Date; now: Date }) {
-    return this.writeTx.run(async (repos) => {
+    const expired = await this.writeTx.run(async (repos) => {
       const contract = await repos.contractRepo.findById(input.tenantId, input.contractId);
       if (!contract) {
         throw new Error('Contract not found');
@@ -77,5 +81,8 @@ export class ExpireContractUseCase {
 
       return { contract };
     });
+    // After the commit (D8). Null means nothing changed, so there is nothing to tell.
+    if (expired) await this.validityEvents?.contractValidityChanged({ tenantId: input.tenantId, clientId: expired.contract.clientId, today: input.today });
+    return expired;
   }
 }

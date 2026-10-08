@@ -109,7 +109,13 @@
     "people": "Users",
     "payments": "Payments",
     "renewals": "Renewals",
-    "performance": "Performance"
+    "members": "Members",
+    "membershipPayments": "Membership payments",
+    "performance": "Performance",
+    "vipRequests": "VIP requests",
+    "employeeUpload": "Employee upload",
+    "verifyMember": "Verify member",
+    "membershipReports": "Wellness+ reports"
   },
   "shell": {
     "platformName": "{{appName}} Platform",

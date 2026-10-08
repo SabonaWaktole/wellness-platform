@@ -43,7 +43,9 @@
     "FOLLOW_UP_ASSIGNED": "{{actor}} gave you a follow-up ({{followUpType}}) with {{clientName}}, due {{scheduledAt}}",
     "FOLLOW_UP_DUE": "Follow-up due now: {{followUpType}} with {{clientName}}",
     "FOLLOW_UP_DAILY_SUMMARY": "Today: {{today}} follow-up(s), and {{overdue}} overdue from earlier days",
-    "PAYMENT_OVERDUE": "{{clientName}}'s instalment {{instalment}} of the {{planName}} contract was due on {{dueDate}} and is overdue"
+    "PAYMENT_OVERDUE": "{{clientName}}'s instalment {{instalment}} of the {{planName}} contract was due on {{dueDate}} and is overdue",
+    "MEMBERSHIP_EXPIRING": "{{count}} Wellness+ membership(s) end within {{windowDays}} days. Open the list to contact the members.",
+    "VIP_REVIEW_DUE": "The VIP of {{memberName}} ({{memberNumber}}) is up for review on {{reviewDate}}. Approve it again, or the member falls back to the next tier."
   },
   "followUpType": {
     "CALL": "call",

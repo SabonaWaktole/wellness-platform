@@ -125,6 +125,15 @@ describe('CreateTenantWithOwnerUseCase — roles (FR-RBAC-01, FR-USR-02)', () =>
     expect(salesScriptSeeder.seed).toHaveBeenCalledWith(tenantRepo.create.mock.calls[0][0].id);
   });
 
+  it('FR-BEN-02, NFR-OPS-04 seeds the Wellness+ tiers, rules, relationships and benefit table for the new workspace', async () => {
+    const { provisioningTx, membershipSeeder, tenantRepo } = makeTenantProvisioningHarness();
+    const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);
+
+    await useCase.execute(validInput);
+
+    expect(membershipSeeder.seed).toHaveBeenCalledWith(tenantRepo.create.mock.calls[0][0].id);
+  });
+
   it('FR-USR-02 makes the owner an Administrator by role, not only by the legacy string', async () => {
     const { provisioningTx, userRepo } = makeTenantProvisioningHarness();
     const useCase = new CreateTenantWithOwnerUseCase(provisioningTx, passwordHasher);

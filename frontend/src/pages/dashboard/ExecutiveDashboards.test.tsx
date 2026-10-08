@@ -12,6 +12,7 @@ vi.mock('../../services/dashboardService', async (original) => ({
   roleDashboardService: { home: vi.fn(), fetch: vi.fn() },
 }));
 vi.mock('../../hooks/useStatusLabels', () => ({ useStatusLabels: () => [] }));
+vi.mock('../membership/useTierLabels', () => ({ useTierLabels: () => (tier: string) => ({ label: tier === 'SILVER' ? 'Silver' : tier === 'GOLD' ? 'Gold' : 'Bronze', colour: null }) }));
 vi.mock('../../hooks/useActiveLookups', () => ({ useActiveLookups: () => [] }));
 
 const figure = (key: string, value: number | string | null, format: 'count' | 'money' | 'percent', basis: 'period' | 'asOfNow', link: unknown = null) => ({
@@ -98,7 +99,6 @@ const ceoData = (over: Record<string, unknown> = {}) => ({
   },
   charts: { pipeline: [{ key: 'NEW_LEAD', label: 'NEW_LEAD', count: 2, annualValue: '0.00' }], salesPerMonth: months, companiesPerStatus: companies },
   empty: false,
-  wellnessPlus: [],
   ...over,
 });
 
@@ -308,5 +308,44 @@ describe('CEO dashboard (FR-DSH-12, FR-DSH-13)', () => {
     renderAt(<CeoDashboard />);
     expect(await screen.findByRole('status')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Team performance' })).not.toBeInTheDocument();
+  });
+
+  const wellnessBlock = (revenue = true) => ({
+    figures: [
+      figure('membersActive', 12, 'count', 'asOfNow', { target: 'MEMBERSHIP_REPORTS', filters: { section: 'active' } }),
+      figure('membershipUpgrades', 2, 'count', 'period', { target: 'MEMBERSHIP_REPORTS', filters: { section: 'upgrades', preset: 'THIS_MONTH' } }),
+      figure('membershipRenewalRate', 66.67, 'percent', 'period'),
+      ...(revenue ? [figure('membershipRevenue', '1140.00', 'money', 'period')] : []),
+    ],
+    charts: { activePerTier: [{ key: 'BRONZE', label: 'BRONZE', count: 4 }, { key: 'SILVER', label: 'SILVER', count: 6 }, { key: 'GOLD', label: 'GOLD', count: 2 }] },
+    tables: { renewalsPerTier: [{ tier: 'SILVER', due: 10, renewed: 7, notRenewed: 3, rate: '70.00' }, { tier: 'GOLD', due: 5, renewed: 3, notRenewed: 2, rate: '60.00' }] },
+  });
+
+  it('FR-DSH-14 draws the Wellness+ block with its tiles, period labels and links to the filtered report', async () => {
+    (roleDashboardService.fetch as any).mockResolvedValue(ceoData({ wellnessPlus: wellnessBlock() }));
+    renderAt(<CeoDashboard />);
+    const block = await screen.findByRole('region', { name: 'Wellness+ members' });
+    const tile = (key: string) => block.querySelector(`[data-figure="${key}"]`) as HTMLElement;
+    expect(tile('membersActive').textContent).toContain('As of now');
+    expect(tile('membershipUpgrades').textContent).toContain('This month');
+    expect(tile('membershipRevenue').textContent).toContain('1,140.00');
+    expect(tile('membershipUpgrades').querySelector('a')!.getAttribute('href')).toBe('/acme/members/reports?section=upgrades&preset=THIS_MONTH');
+    expect(screen.getByRole('region', { name: 'Active members per tier' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Renewals per tier' })).getByRole('row', { name: /Silver 10 7 3/ })).toBeInTheDocument();
+  });
+
+  it('FR-DSH-15 draws no revenue tile when the server left the revenue out', async () => {
+    (roleDashboardService.fetch as any).mockResolvedValue(ceoData({ wellnessPlus: wellnessBlock(false) }));
+    renderAt(<CeoDashboard />);
+    const block = await screen.findByRole('region', { name: 'Wellness+ members' });
+    expect(block.querySelector('[data-figure="membershipRevenue"]')).toBeNull();
+    expect(block.textContent).not.toContain('1,140');
+  });
+
+  it('FR-DSH-16 draws nothing about Wellness+ when the key is absent', async () => {
+    renderAt(<CeoDashboard />);
+    await screen.findByRole('region', { name: 'Team performance' });
+    expect(screen.queryByRole('region', { name: 'Wellness+ members' })).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('Wellness+');
   });
 });

@@ -51,6 +51,7 @@ describe('UpdateRolePermissionsUseCase', () => {
       'companies.view': All,
       'notes.view': All,
       'notes.add': All,
+      'members.verify': true,
     });
   });
 

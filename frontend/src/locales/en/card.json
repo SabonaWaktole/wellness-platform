@@ -1,0 +1,50 @@
+{
+  "brand": "Wellness+",
+  "pageTitle": "Wellness+ member card",
+  "loading": "Loading your card…",
+  "memberId": "Member ID",
+  "validUntil": "Valid until {{date}}",
+  "noExpiry": "No expiry",
+  "benefitsTitle": "Your benefits",
+  "benefitPercent": "{{percent}}%",
+  "noBenefits": "No discounts are listed for this tier.",
+  "qrAlt": "QR code that Wellness Albania scans to verify this membership",
+  "qrHelp": "Show this code at the clinic.",
+  "notValid": "Membership not valid, contact Wellness Albania",
+  "notFoundTitle": "Card not found",
+  "notFound": "This link does not open a card. Check the link or ask Wellness Albania.",
+  "replacedTitle": "Card replaced",
+  "replaced": "This card was replaced. Ask Wellness Albania for the new link.",
+  "failed": "The card could not be loaded. Check your connection and try again.",
+  "retry": "Try again",
+  "language": "Language",
+  "privacy": "Wellness Albania holds your name and membership details to run your Wellness+ membership. For questions about your data, contact Wellness Albania.",
+  "tier": {
+    "BRONZE": "Bronze",
+    "SILVER": "Silver",
+    "GOLD": "Gold",
+    "VIP": "VIP"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "English",
+    "el": "Ελληνικά",
+    "it": "Italiano"
+  },
+  "lastUpdated": "Last updated {{when}}",
+  "today": "Today",
+  "liveLabel": "Live card, today's date",
+  "install": {
+    "title": "Add this card to your home screen",
+    "ios": "In Safari, tap Share, then Add to Home Screen.",
+    "android": "In Chrome, tap the menu, then Install app or Add to Home screen."
+  },
+  "verify": {
+    "pageTitle": "Wellness+ membership check",
+    "loading": "Checking the card…",
+    "failed": "The card could not be checked. Check your connection and try again.",
+    "valid": "Valid",
+    "notValid": "Not valid",
+    "validUntilLabel": "Valid until"
+  }
+}

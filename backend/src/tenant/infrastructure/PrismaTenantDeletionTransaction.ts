@@ -81,6 +81,14 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
        * but one statement removing the whole set satisfies the constraint in a
        * way that deleting renewals one at a time would not.
        */
+      /*
+       * Members (M4 Slice 4) hold RESTRICT references to Client (employer),
+       * City, FamilyRelationship and to each other (principal), so the family
+       * links are cleared first and the members go before all of them. Their
+       * terms and histories cascade.
+       */
+      await tx.member.updateMany({ where: { tenantId }, data: { principalMemberId: null } });
+      await tx.member.deleteMany({ where: { tenantId } });
       await tx.contract.deleteMany({ where: { tenantId } });
       await tx.ownershipTransfer.deleteMany({ where: { tenantId } });
       await tx.notification.deleteMany({ where: { tenantId } });
@@ -145,6 +153,7 @@ export class PrismaTenantDeletionTransaction implements ITenantDeletionTransacti
 
       // NotificationSettings cascades from this and needs no separate call.
       await tx.tenant.delete({ where: { id: tenantId } });
-    });
+      // A workspace can hold tens of thousands of members (M4 NFR-PERF-05), more than Prisma's 5 s default allows.
+    }, { timeout: 60_000 });
   }
 }

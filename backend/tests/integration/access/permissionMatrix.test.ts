@@ -286,6 +286,127 @@ describe('Permission matrix (SRS §4.2)', () => {
         request(app).patch(`/api/${tenantSlug}/lookups/risk-levels/nonexistent`).set('Authorization', `Bearer ${t}`).send({}),
     },
     {
+      label: 'wellnessplus.settings.manage — PATCH /membership/settings',
+      permissionKey: 'wellnessplus.settings.manage',
+      request: (t) => request(app).patch(`/api/${tenantSlug}/membership/settings`).set('Authorization', `Bearer ${t}`).send({ graceDays: 0 }),
+    },
+    {
+      label: 'wellnessplus.settings.manage — POST /membership/settings/benefits',
+      permissionKey: 'wellnessplus.settings.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/settings/benefits`).set('Authorization', `Bearer ${t}`).send({ nameSq: '', nameEn: '' }),
+    },
+    {
+      label: 'members.view — GET /membership/members',
+      permissionKey: 'members.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.manage — POST /membership/members',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members`).set('Authorization', `Bearer ${t}`).send({ firstName: '', lastName: '' }),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/status',
+      permissionKey: 'members.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/status`).set('Authorization', `Bearer ${t}`).send({ action: 'CLOSE' }),
+    },
+    {
+      label: 'members.manage — GET /membership/members/family/relationships',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/family/relationships`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/family',
+      permissionKey: 'members.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/family`).set('Authorization', `Bearer ${t}`).send({ relationshipId: 'x', confirmed: true, memberId: 'y' }),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/family/remove',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/family/remove`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
+      label: 'members.manage — POST /membership/members/:id/vip/request',
+      permissionKey: 'members.manage',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/vip/request`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
+      label: 'members.vip.approve — GET /membership/members/vip/requests',
+      permissionKey: 'members.vip.approve',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/vip/requests`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.vip.approve — POST /membership/members/vip/requests/:requestId/decision',
+      permissionKey: 'members.vip.approve',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/vip/requests/nonexistent/decision`).set('Authorization', `Bearer ${t}`).send({ decision: 'APPROVE' }),
+    },
+    {
+      label: 'members.import — GET /membership/employee-template.xlsx',
+      permissionKey: 'members.import',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/employee-template.xlsx`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.import — POST /membership/employee-imports',
+      permissionKey: 'members.import',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/employee-imports`).set('Authorization', `Bearer ${t}`).field('clientId', 'nonexistent'),
+    },
+    {
+      label: 'members.import — POST /membership/employee-imports/:id/confirm',
+      permissionKey: 'members.import',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/employee-imports/nonexistent/confirm`).set('Authorization', `Bearer ${t}`).send({ confirmToken: 'x' }),
+    },
+    {
+      label: 'members.import — GET /membership/employee-imports/:id/result.xlsx',
+      permissionKey: 'members.import',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/employee-imports/nonexistent/result.xlsx`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.vip.approve — POST /membership/members/:id/vip/end',
+      permissionKey: 'members.vip.approve',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/vip/end`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
+      label: 'wellnessplus.settings.manage — POST /membership/members/:id/correct-tier',
+      permissionKey: 'wellnessplus.settings.manage',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/correct-tier`).set('Authorization', `Bearer ${t}`).send({ tier: 'GOLD', endsOn: '2999-01-01', reason: 'x' }),
+    },
+    {
+      label: 'members.payments.record — GET /membership/members/:id/payments/options',
+      permissionKey: 'members.payments.record',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/members/nonexistent/payments/options`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.payments.record — POST /membership/members/:id/payments',
+      permissionKey: 'members.payments.record',
+      request: (t) =>
+        request(app).post(`/api/${tenantSlug}/membership/members/nonexistent/payments`).set('Authorization', `Bearer ${t}`).send({ kind: 'NEW', targetTier: 'SILVER', method: 'CASH', receivedOn: '2020-01-01' }),
+    },
+    {
+      label: 'members.payments.record — POST /membership/payments/:id/void',
+      permissionKey: 'members.payments.record',
+      request: (t) => request(app).post(`/api/${tenantSlug}/membership/payments/nonexistent/void`).set('Authorization', `Bearer ${t}`).send({ reason: 'x' }),
+    },
+    {
+      label: 'members.payments.view — GET /membership/payments',
+      permissionKey: 'members.payments.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/payments`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.payments.view — GET /membership/payments/export.csv',
+      permissionKey: 'members.payments.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/payments/export.csv`).set('Authorization', `Bearer ${t}`),
+    },
+    {
+      label: 'members.payments.view — GET /membership/payments/:id/receipt.pdf',
+      permissionKey: 'members.payments.view',
+      request: (t) => request(app).get(`/api/${tenantSlug}/membership/payments/nonexistent/receipt.pdf`).set('Authorization', `Bearer ${t}`),
+    },
+    {
       label: 'settings.manage — PATCH /settings/contracts',
       permissionKey: 'settings.manage',
       request: (t) =>

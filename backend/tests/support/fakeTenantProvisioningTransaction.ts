@@ -8,6 +8,7 @@ import { ISystemRoleSeeder } from '../../src/access/application/ports/ISystemRol
 import { RoleKey } from '../../src/access/domain/RoleKey';
 import { ILookupSeeder } from '../../src/lookups/application/ports/ILookupSeeder';
 import { IPricingSeeder } from '../../src/pricing/application/ports/IPricingSeeder';
+import { IMembershipSeeder } from '../../src/membership/application/ports/IMembershipSeeder';
 import { ISalesScriptSeeder } from '../../src/salesScript/application/ports/ISalesScriptSeeder';
 
 export interface TenantProvisioningHarness {
@@ -18,6 +19,7 @@ export interface TenantProvisioningHarness {
   lookupSeeder: jest.Mocked<ILookupSeeder>;
   pricingSeeder: jest.Mocked<IPricingSeeder>;
   salesScriptSeeder: jest.Mocked<ISalesScriptSeeder>;
+  membershipSeeder: jest.Mocked<IMembershipSeeder>;
 }
 
 /**
@@ -73,10 +75,12 @@ export function makeTenantProvisioningHarness(): TenantProvisioningHarness {
   const pricingSeeder = { seed: jest.fn().mockResolvedValue(undefined) } as jest.Mocked<IPricingSeeder>;
   const salesScriptSeeder = { seed: jest.fn().mockResolvedValue(undefined) } as jest.Mocked<ISalesScriptSeeder>;
 
+  const membershipSeeder = { seed: jest.fn().mockResolvedValue(undefined) } as jest.Mocked<IMembershipSeeder>;
+
   const provisioningTx: ITenantProvisioningTransaction = {
     run: <T>(work: (repos: TenantProvisioningRepos) => Promise<T>): Promise<T> =>
-      work({ tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder, salesScriptSeeder }),
+      work({ tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder, salesScriptSeeder, membershipSeeder }),
   };
 
-  return { provisioningTx, tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder, salesScriptSeeder };
+  return { provisioningTx, tenantRepo, userRepo, roleSeeder, lookupSeeder, pricingSeeder, salesScriptSeeder, membershipSeeder };
 }

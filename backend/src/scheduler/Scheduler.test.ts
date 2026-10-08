@@ -1,4 +1,5 @@
 import { Scheduler, ScheduledJob } from './Scheduler';
+import { createScheduler } from './createScheduler';
 
 const job = (overrides: Partial<ScheduledJob> = {}): ScheduledJob => ({
   name: 'test-job',
@@ -124,5 +125,13 @@ describe('Scheduler.runNamed (M3 Slice 15, scripts/run-jobs.ts)', () => {
     await scheduler.runNamed(['c', 'a']);
     expect(seen).toEqual(['a@2026-12-01T09:00:00.000Z', 'c@2026-12-01T09:00:00.000Z']);
     await expect(scheduler.runNamed(['nope'])).rejects.toThrow(/No job named nope/);
+  });
+});
+
+describe('the job list (M4 Slice 8)', () => {
+  it('FR-TIR-07, NFR-REL-02 the daily member job is registered with the other jobs', () => {
+    const names = createScheduler().jobNames();
+    expect(names).toContain('member-term');
+    expect(new Set(names).size).toBe(names.length);
   });
 });

@@ -58,7 +58,10 @@
     "Offer": "Ofertë",
     "DiscountApproval": "Miratim zbritjeje",
     "ContractSettings": "Cilësimet e kontratave",
-    "Performance": "Eksporti i performancës"
+    "Performance": "Eksporti i performancës",
+    "Member": "Anëtar",
+    "MemberPayment": "Pagesë anëtarësie",
+    "MembershipSettings": "Cilësimet e Wellness+"
   },
   "entityGroups": {
     "access": "Përdoruesit, rolet dhe hapësira e punës",
@@ -69,7 +72,8 @@
     "salesScript": "Skripti i shitjes",
     "deals": "Marrëveshjet",
     "offers": "Ofertat",
-    "discounts": "Miratimet e zbritjeve"
+    "discounts": "Miratimet e zbritjeve",
+    "membership": "Anëtarët Wellness+"
   },
   "actors": {
     "system": "Sistemi",

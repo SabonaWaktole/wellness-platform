@@ -3,13 +3,15 @@ import { ALL_RECORDS } from '../../../access/domain/RecordScope';
 import { IContractSettingsStore } from '../../../contracts/application/ports/IContractSettingsStore';
 import { IPaymentOverviewReader } from '../../../contracts/application/ports/IPaymentOverviewReader';
 import { PaymentStatus } from '../../../contracts/domain/ContractPayment';
+import { MEMBERS_REPORTS_VIEW } from '../../../membership/application/membershipPermissions';
+import type { GetMembershipReportUseCase, MembershipReport } from '../../../membership/application/reports/GetMembershipReportUseCase';
 import { Money } from '../../../pricing/domain/Money';
 import { dayKeyInZone } from '../../../shared/domain/time/tenantDay';
 import { leadCount, pipelineByStage, pipelineTotal } from '../../domain/DashboardDefinitions';
 import { salesByRange } from '../../domain/ExecutiveDefinitions';
 import { bucketsOf, InvalidPeriodError } from '../../domain/PerformancePeriod';
 import { DashboardInput, ensureDashboardKind, refuseNarrowing } from './dashboardContext';
-import { ChartPoint, count, DashboardResponse, Figure, hasNothing, money, periodOf } from './dashboardShape';
+import { ChartPoint, count, DashboardResponse, Figure, hasNothing, money, percent, periodOf } from './dashboardShape';
 import { GetPerformanceUseCase } from './GetPerformanceUseCase';
 import { MAX_SERIES_BUCKETS } from './GetPerformanceSeriesUseCase';
 import { queryFor, resolveRequestedPeriod } from './performanceAudience';
@@ -20,11 +22,43 @@ import { IPerformanceReader } from './ports/IPerformanceReader';
 const utcMidnight = (dayKey: string) => new Date(`${dayKey}T00:00:00.000Z`);
 const OPEN_STAGES = ['NEW_LEAD', 'CONTACTED', 'INTERESTED', 'OFFER_PREPARED', 'OFFER_SENT', 'FOLLOW_UP', 'NEGOTIATION'];
 
-/** The Wellness+ indicators have a place in the response and nothing in it until Milestone 4 (FR-DSH-12). */
-export type WellnessPlusSlot = never[];
+/**
+ * The Wellness+ block (FR-DSH-14): figures, one chart and one table, all taken from the reports page's own
+ * result. Revenue is absent without "Members: view payments" (FR-DSH-15).
+ */
+export interface WellnessPlusBlock {
+  figures: Figure[];
+  charts: { activePerTier: ChartPoint[] };
+  tables: { renewalsPerTier: Array<{ tier: string; due: number; renewed: number; notRenewed: number; rate: string | null }> };
+}
 
 export interface CeoDashboardResponse extends DashboardResponse {
-  wellnessPlus: WellnessPlusSlot;
+  /** Present only for a viewer with "Members: view reports"; the key is absent otherwise (FR-DSH-16). */
+  wellnessPlus?: WellnessPlusBlock;
+}
+
+const reportLink = (section: string, filters: Record<string, string> = {}) => ({ target: 'MEMBERSHIP_REPORTS' as const, filters: { section, ...filters } });
+
+/** The block from a report for All scope. Every number is read from the report, none is calculated again here. */
+export function wellnessPlusBlock(report: MembershipReport): WellnessPlusBlock {
+  const rate = report.renewals.rate === null ? null : Number(report.renewals.rate);
+  const period = { preset: report.period.preset, ...(report.period.preset === 'CUSTOM' ? { from: report.period.from, to: report.period.to } : {}) };
+  return {
+    figures: [
+      count('membersActive', 'Active members', report.active.total, 'asOfNow', reportLink('active')),
+      count('membersCorporate', 'Corporate members', report.segments.corporate.count, 'asOfNow', reportLink('segments', { segment: 'CORPORATE' })),
+      count('membersIndividual', 'Individual members', report.segments.individual.count, 'asOfNow', reportLink('segments', { segment: 'INDIVIDUAL' })),
+      count('membersNew', 'New members', report.newMembers.total, 'period', reportLink('new', period)),
+      count('membershipsNewPaid', 'New paid memberships', report.newMembers.newPaidMemberships, 'period', reportLink('new', period)),
+      count('membershipUpgrades', 'Upgrades', report.upgrades.count, 'period', reportLink('upgrades', period)),
+      count('membershipDowngrades', 'Downgrades', report.downgrades.total, 'period', reportLink('downgrades', period)),
+      percent('membershipRenewalRate', 'Renewal rate', rate, 'period', reportLink('renewals', period)),
+      count('membershipsExpiring', 'Expiring memberships', report.lists.expiring.length, 'asOfNow', reportLink('expiring')),
+      ...(report.revenue ? [money('membershipRevenue', 'Membership revenue', Money.of(report.revenue.total), 'period', reportLink('revenue', period))] : []),
+    ],
+    charts: { activePerTier: report.active.perTier.map((row) => ({ key: row.tier, label: row.tier, count: row.count })) },
+    tables: { renewalsPerTier: report.renewals.perTier },
+  };
 }
 
 /**
@@ -43,6 +77,7 @@ export class GetCeoDashboardUseCase {
     private readonly performance: GetPerformanceUseCase,
     private readonly roster: ITeamRoster,
     private readonly contractSettings: IContractSettingsStore,
+    private readonly membershipReport?: GetMembershipReportUseCase,
     private readonly now: () => Date = () => new Date()
   ) {}
 
@@ -66,6 +101,19 @@ export class GetCeoDashboardUseCase {
     const salespeople = await this.roster.salesUserIds(tenantId);
     const periodParams = { preset: params.preset, ...(params.from && params.to ? { from: params.from, to: params.to } : {}) };
     const paymentFilters = { tenantId, scope: ALL_RECORDS, today };
+    // The same use case as the reports page, for All scope and the same period (FR-DSH-14). Without the
+    // permission nothing is read, so the key stays out of the response (FR-DSH-16).
+    const wellnessPlus =
+      this.membershipReport && access.can(MEMBERS_REPORTS_VIEW)
+        ? wellnessPlusBlock(
+            await this.membershipReport.execute({
+              access,
+              tenantId,
+              timezone,
+              params: { preset: params.preset, ...(params.from && params.to ? { from: params.from, to: params.to } : {}) },
+            })
+          )
+        : null;
 
     const [team, wins, deals, revenue, recurring, contracts, overdueFollowUps, approvals, offersWaiting, companies, byStatus, allPayments] = await Promise.all([
       this.performance.execute({ tenantId, timezone, access, params: periodParams }),
@@ -160,8 +208,8 @@ export class GetCeoDashboardUseCase {
       figures,
       tables: { team: team.rows, contracts: contractRows, payments: paymentRows, companiesPerStatus: companyPoints },
       charts: { pipeline: pipelinePoints, salesPerMonth: monthPoints, companiesPerStatus: companyPoints },
-      empty: hasNothing(figures),
-      wellnessPlus: [],
+      empty: hasNothing([...figures, ...(wellnessPlus?.figures ?? [])]),
+      ...(wellnessPlus ? { wellnessPlus } : {}),
     };
   }
 }

@@ -72,6 +72,13 @@ export const NOTIFICATION_TYPES = [
   'FOLLOW_UP_ASSIGNED',
   'FOLLOW_UP_DUE',
   'FOLLOW_UP_DAILY_SUMMARY',
+
+  /*
+   * Wellness+ (M4 Slice 8). Both are time passing, so no actor. The expiring one is a daily summary
+   * per workspace (FR-TIR-11); the review one is sent once per approved VIP (FR-VIP-04).
+   */
+  'MEMBERSHIP_EXPIRING',
+  'VIP_REVIEW_DUE',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -91,6 +98,8 @@ export const NOTIFICATION_ENTITY_TYPES = [
   'OFFER',
   // M2 Slice 11: a follow-up; the UI opens "My follow-ups" on it.
   'FOLLOW_UP',
+  // M4 Slice 8: a Wellness+ member; the UI opens the member page.
+  'MEMBER',
 ] as const;
 export type NotificationEntityType = (typeof NOTIFICATION_ENTITY_TYPES)[number];
 

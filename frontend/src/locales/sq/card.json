@@ -1,0 +1,50 @@
+{
+  "brand": "Wellness+",
+  "pageTitle": "Karta e anëtarit Wellness+",
+  "loading": "Po ngarkohet karta…",
+  "memberId": "ID e anëtarit",
+  "validUntil": "E vlefshme deri më {{date}}",
+  "noExpiry": "Pa skadencë",
+  "benefitsTitle": "Përfitimet tuaja",
+  "benefitPercent": "{{percent}}%",
+  "noBenefits": "Për këtë nivel nuk ka zbritje të listuara.",
+  "qrAlt": "Kodi QR që Wellness Albania skanon për të verifikuar këtë anëtarësim",
+  "qrHelp": "Tregojeni këtë kod në klinikë.",
+  "notValid": "Anëtarësimi nuk është i vlefshëm, kontaktoni Wellness Albania",
+  "notFoundTitle": "Karta nuk u gjet",
+  "notFound": "Ky link nuk hap asnjë kartë. Kontrolloni linkun ose pyesni Wellness Albania.",
+  "replacedTitle": "Karta u zëvendësua",
+  "replaced": "Kjo kartë u zëvendësua. Kërkoni te Wellness Albania linkun e ri.",
+  "failed": "Karta nuk mund të ngarkohej. Kontrolloni lidhjen dhe provoni përsëri.",
+  "retry": "Provo përsëri",
+  "language": "Gjuha",
+  "privacy": "Wellness Albania mban emrin dhe të dhënat e anëtarësimit tuaj për të administruar anëtarësimin Wellness+. Për pyetje rreth të dhënave tuaja, kontaktoni Wellness Albania.",
+  "tier": {
+    "BRONZE": "Bronz",
+    "SILVER": "Argjend",
+    "GOLD": "Ar",
+    "VIP": "VIP"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "English",
+    "el": "Ελληνικά",
+    "it": "Italiano"
+  },
+  "lastUpdated": "Përditësuar së fundi {{when}}",
+  "today": "Sot",
+  "liveLabel": "Kartë e gjallë, data e sotme",
+  "install": {
+    "title": "Shtoje këtë kartë në ekranin kryesor",
+    "ios": "Në Safari, trokit Share, pastaj Add to Home Screen.",
+    "android": "Në Chrome, trokit menunë, pastaj Install app ose Add to Home screen."
+  },
+  "verify": {
+    "pageTitle": "Kontrolli i anëtarësimit Wellness+",
+    "loading": "Po kontrollohet karta…",
+    "failed": "Karta nuk u kontrollua. Kontrolloni lidhjen dhe provoni përsëri.",
+    "valid": "E vlefshme",
+    "notValid": "Jo e vlefshme",
+    "validUntilLabel": "E vlefshme deri më"
+  }
+}

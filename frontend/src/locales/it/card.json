@@ -1,0 +1,50 @@
+{
+  "brand": "Wellness+",
+  "pageTitle": "Tessera socio Wellness+",
+  "loading": "Caricamento della tessera…",
+  "memberId": "ID socio",
+  "validUntil": "Valida fino al {{date}}",
+  "noExpiry": "Senza scadenza",
+  "benefitsTitle": "I tuoi vantaggi",
+  "benefitPercent": "{{percent}}%",
+  "noBenefits": "Per questo livello non ci sono sconti elencati.",
+  "qrAlt": "Codice QR che Wellness Albania scansiona per verificare questa iscrizione",
+  "qrHelp": "Mostra questo codice in clinica.",
+  "notValid": "Iscrizione non valida, contatta Wellness Albania",
+  "notFoundTitle": "Tessera non trovata",
+  "notFound": "Questo link non apre nessuna tessera. Controlla il link o chiedi a Wellness Albania.",
+  "replacedTitle": "Tessera sostituita",
+  "replaced": "Questa tessera è stata sostituita. Chiedi a Wellness Albania il nuovo link.",
+  "failed": "Impossibile caricare la tessera. Controlla la connessione e riprova.",
+  "retry": "Riprova",
+  "language": "Lingua",
+  "privacy": "Wellness Albania conserva il tuo nome e i dati dell'iscrizione per gestire la tua iscrizione Wellness+. Per domande sui tuoi dati, contatta Wellness Albania.",
+  "tier": {
+    "BRONZE": "Bronzo",
+    "SILVER": "Argento",
+    "GOLD": "Oro",
+    "VIP": "VIP"
+  },
+  "languages": {
+    "sq": "Shqip",
+    "en": "English",
+    "el": "Ελληνικά",
+    "it": "Italiano"
+  },
+  "lastUpdated": "Ultimo aggiornamento {{when}}",
+  "today": "Oggi",
+  "liveLabel": "Tessera attiva, data di oggi",
+  "install": {
+    "title": "Aggiungi questa tessera alla schermata Home",
+    "ios": "In Safari, tocca Condividi, poi Aggiungi alla schermata Home.",
+    "android": "In Chrome, tocca il menu, poi Installa app o Aggiungi a schermata Home."
+  },
+  "verify": {
+    "pageTitle": "Verifica dell'abbonamento Wellness+",
+    "loading": "Verifica della tessera…",
+    "failed": "Non è stato possibile verificare la tessera. Controlla la connessione e riprova.",
+    "valid": "Valida",
+    "notValid": "Non valida",
+    "validUntilLabel": "Valida fino al"
+  }
+}

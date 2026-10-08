@@ -38,4 +38,48 @@ export function requireJwtSecret(): string {
  */
 export function assertRequiredEnv(): void {
   requireJwtSecret();
+  readPublicBaseUrl();
+}
+
+export class InvalidPublicBaseUrlError extends Error {
+  constructor(reason: string) {
+    super(`PUBLIC_BASE_URL ${reason}. Card links and QR codes are built from it, so a wrong value would issue cards that cannot be opened.`);
+    this.name = 'InvalidPublicBaseUrlError';
+  }
+}
+
+/**
+ * The one public base URL that card links and QR codes are built from
+ * (NFR-OPS-05): absolute `https://`, no trailing slash. Required in
+ * production, where a card issued with a wrong address cannot be recalled.
+ * Elsewhere it may be left unset, and `http://localhost` is accepted for
+ * development. Returns null when unset outside production.
+ */
+export function readPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+  const value = env.PUBLIC_BASE_URL?.trim();
+  if (!value) {
+    if (env.NODE_ENV === 'production') throw new InvalidPublicBaseUrlError('is required in production');
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new InvalidPublicBaseUrlError(`"${value}" is not an absolute URL`);
+  }
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  const allowedHttp = url.protocol === 'http:' && local && env.NODE_ENV !== 'production';
+  if (url.protocol !== 'https:' && !allowedHttp) throw new InvalidPublicBaseUrlError('must start with https://');
+  if (value.endsWith('/')) throw new InvalidPublicBaseUrlError('must not end with a slash');
+  if (url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) {
+    throw new InvalidPublicBaseUrlError('must be an origin only, with no path, query or fragment');
+  }
+  return value;
+}
+
+/** A public link under the configured base URL, for example `/m/<token>` (NFR-OPS-05). */
+export function buildPublicLink(path: string, env: NodeJS.ProcessEnv = process.env): string {
+  const base = readPublicBaseUrl(env);
+  if (base === null) throw new InvalidPublicBaseUrlError('is not set');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }

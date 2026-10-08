@@ -5,6 +5,7 @@ import { PrismaTenantRepository } from '../../../src/tenant/infrastructure/repos
 import { PrismaUserRepository } from '../../../src/auth/infrastructure/repositories/PrismaUserRepository';
 import { PrismaLookupSeeder } from '../../../src/lookups/infrastructure/PrismaLookupSeeder';
 import { PrismaPricingSeeder } from '../../../src/pricing/infrastructure/PrismaPricingSeeder';
+import { PrismaMembershipSeeder } from '../../../src/membership/infrastructure/PrismaMembershipSeeder';
 import { PrismaSalesScriptSeeder } from '../../../src/salesScript/infrastructure/PrismaSalesScriptSeeder';
 import { PrismaSystemRoleSeeder } from '../../../src/access/infrastructure/PrismaSystemRoleSeeder';
 import { CreateTenantWithOwnerUseCase } from '../../../src/tenant/application/use-cases/CreateTenantWithOwnerUseCase';
@@ -178,6 +179,7 @@ describe('Tenant provisioning atomicity', () => {
             lookupSeeder: new PrismaLookupSeeder(prisma),
             pricingSeeder: new PrismaPricingSeeder(prisma),
             salesScriptSeeder: new PrismaSalesScriptSeeder(prisma),
+            membershipSeeder: new PrismaMembershipSeeder(prisma),
           })
         ),
     };
