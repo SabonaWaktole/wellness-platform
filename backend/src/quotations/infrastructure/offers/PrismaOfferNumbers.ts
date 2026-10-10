@@ -30,7 +30,7 @@ export class PrismaOfferNumbers implements IOfferNumbers {
       where: { tenantId_kind_year: key },
       data: { next: { increment: 1 } },
     });
-    return formatOfferNumber(tenant?.pricingSettings?.offerNumberPrefix ?? 'OF', year, row.next - 1);
+    return formatOfferNumber(tenant?.pricingSettings?.offerNumberPrefix ?? 'MW', year, row.next - 1);
   }
 }
 
