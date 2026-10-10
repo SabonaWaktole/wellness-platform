@@ -11,9 +11,8 @@ import { handlers } from './mocks/handlers';
  * failure looks arbitrary and file-specific rather than like a missing global.
  * Importing it here means tests assert on real English text, as a user sees it.
  *
- * Production starts in Albanian (FR-LNG-01), but the component tests are
- * written against the English source catalogue, so the run is moved to English
- * here. The Albanian default has its own test: i18n/defaultLanguage.test.tsx.
+ * Production starts in English (FR-LNG-01); the default has its own test:
+ * i18n/defaultLanguage.test.tsx.
  * Resources are bundled, so the switch is synchronous and done before any test.
  */
 import i18n from './i18n';
