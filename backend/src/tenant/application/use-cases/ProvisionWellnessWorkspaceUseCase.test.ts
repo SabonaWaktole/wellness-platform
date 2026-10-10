@@ -7,7 +7,7 @@ import { IPasswordHasher } from '../../../auth/application/ports/IPasswordHasher
 import { Tenant } from '../../domain/entities/Tenant';
 
 const ALBANIA = {
-  defaultLanguage: 'sq',
+  defaultLanguage: 'en',
   locale: 'sq-AL',
   timezone: 'Europe/Tirane',
   dateFormat: 'DD.MM.YYYY',
@@ -49,7 +49,7 @@ const existingTenant = () =>
   Tenant.create({ id: 't-existing', name: 'Wellness Albania', urlSlug: 'wellness-albania', createdAt: new Date() });
 
 describe('ProvisionWellnessWorkspaceUseCase', () => {
-  it('FR-LNG-04 creates Wellness Albania in Albanian, on Tirana time, dating day.month.year, in euros', async () => {
+  it('FR-LNG-04 creates Wellness Albania in English, on Tirana time, dating day.month.year, in euros', async () => {
     const { useCase, tenantRepo, userRepo } = setup();
 
     const result = await useCase.execute({ owner });
@@ -117,7 +117,7 @@ describe('ProvisionWellnessWorkspaceUseCase', () => {
     expect(tenantRepo.setSalesWorkflow).not.toHaveBeenCalled();
   });
 
-  it('FR-LNG-04 moves an existing workspace onto the Albanian defaults when asked', async () => {
+  it('FR-LNG-04 moves an existing workspace onto the Albania defaults when asked', async () => {
     const { useCase, tenantRepo } = setup();
     tenantRepo.findBySlug.mockResolvedValue(existingTenant());
 

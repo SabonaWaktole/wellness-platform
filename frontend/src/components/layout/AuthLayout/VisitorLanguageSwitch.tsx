@@ -4,11 +4,11 @@ import { DEFAULT_LANGUAGE, LANGUAGE_LABELS, type Language } from '../../../i18n/
 import { useVisitorLanguageStore } from '../../../store/useVisitorLanguageStore';
 import styles from './AuthLayout.module.css';
 
-/** Albanian first (the default), then English; Greek and Italian are still in review. */
-const OFFERED: Language[] = ['sq', 'en'];
+/** English first (the default), then Albanian; Greek and Italian are still in review. */
+const OFFERED: Language[] = ['en', 'sq'];
 
 /**
- * Shqip / English on every signed-out screen. Each language is named in
+ * English / Shqip on every signed-out screen. Each language is named in
  * itself, so a visitor who cannot read the current one still finds theirs.
  * The choice is remembered in this browser and gives way to the user's own
  * preference once they sign in.

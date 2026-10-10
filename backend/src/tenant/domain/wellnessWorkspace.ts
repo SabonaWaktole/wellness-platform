@@ -11,7 +11,7 @@ export const WELLNESS_WORKSPACE = {
 
 /**
  * Where a Wellness Albania workspace starts (FR-LNG-01, FR-LNG-04): an
- * Albanian interface, Albanian number and date conventions, Tirana time and
+ * English interface, Albanian number and date conventions, Tirana time and
  * euros — the currency of the price lists (the micro-business pricing model,
  * the Wellness+ tiers). Every value can be changed later in the workspace
  * settings; this is only the starting point.
@@ -23,7 +23,7 @@ export const ALBANIA_WORKSPACE_DEFAULTS: {
   dateFormat: DateFormat;
   currency: string;
 } = {
-  defaultLanguage: 'sq',
+  defaultLanguage: 'en',
   locale: 'sq-AL',
   timezone: 'Europe/Tirane',
   dateFormat: 'DD.MM.YYYY',
