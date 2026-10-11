@@ -180,6 +180,9 @@ class OfferPdfDrawing {
 
     const contactStr = offer.contact ? [offer.contact.name, offer.contact.position].filter(Boolean).join(', ') : '—';
     this.drawLabeledValue(col1X, lineY, 105, this.t('contact'), contactStr);
+    if (offer.inputs.zone) {
+      this.drawLabeledValue(col2X, lineY, 115, this.t('zone'), offer.inputs.zone);
+    }
 
     return boxY + boxHeight + 10;
   }
@@ -479,8 +482,11 @@ class OfferPdfDrawing {
       doc.font('italic').fontSize(6.5).fillColor(COLOR_NAVY).text(termsPlainText, sec5X + 8, doc.y, { width: sec5W - 16 });
     }
 
-    if (offer.issuer.bankDetails) {
-      doc.font('bold').fontSize(6.5).fillColor(COLOR_MUTED).text(`${this.t('bankDetails')}: ${offer.issuer.bankDetails}`, sec5X + 8, boxY5 + boxH5 - 12, { width: sec5W - 16 });
+    const issuerFooterParts: string[] = [];
+    if (offer.issuer.nipt) issuerFooterParts.push(`${this.t('nipt')}: ${offer.issuer.nipt}`);
+    if (offer.issuer.bankDetails) issuerFooterParts.push(`${this.t('bankDetails')}: ${offer.issuer.bankDetails}`);
+    if (issuerFooterParts.length) {
+      doc.font('bold').fontSize(6.5).fillColor(COLOR_MUTED).text(issuerFooterParts.join('    '), sec5X + 8, boxY5 + boxH5 - 12, { width: sec5W - 16 });
     }
   }
 
