@@ -215,3 +215,36 @@ describe('SUP-10 tour popover: waiting for the user', () => {
     expect(screen.getByRole('heading', { name: 'Loading this part of the page…' })).toBeInTheDocument();
   });
 });
+
+describe('SUP-04 tour popover: a single control', () => {
+  it('SUP-04 shows the explanation with only Explain another and Close', () => {
+    const h = renderStep({ single: true, onAnother: vi.fn() });
+    expect(buttonNames()).toEqual(['Explain another', 'Close']);
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText(/Step \d/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(h.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('SUP-04 without a way to pick another, only Close', () => {
+    renderStep({ single: true });
+    expect(buttonNames()).toEqual(['Close']);
+  });
+
+  it('SUP-16 in pick mode the other action says Pick another', () => {
+    renderStep({ single: true, onAnother: vi.fn(), anotherLabel: 'pick' });
+    expect(buttonNames()).toEqual(['Pick another', 'Close']);
+  });
+
+  it('SUP-04 keeps the same card when the control is lost', () => {
+    renderStep({ single: true, variant: 'lost', onAnother: vi.fn() });
+    expect(screen.getByRole('heading', { name: 'This item changed or is no longer on the page' })).toBeInTheDocument();
+    expect(buttonNames()).toEqual(['Explain another', 'Close']);
+  });
+
+  it('SUP-04 shows the warning and the disabled hint of the control', () => {
+    renderStep({ single: true, status: 'disabled' });
+    expect(screen.getByRole('note')).toBeInTheDocument();
+    expect(screen.getByText('You need permission to add clients.')).toBeInTheDocument();
+  });
+});
