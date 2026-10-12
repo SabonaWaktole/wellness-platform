@@ -60,7 +60,7 @@ describe('SUP-13 useTourKeyboard: Escape', () => {
     const onClose = vi.fn();
     render(
       <Modal isOpen onClose={onClose} title="Behind">
-        <p>Content</p>
+        <p>{'Content'}</p>
       </Modal>,
     );
     const { onExit } = setup();
@@ -73,7 +73,7 @@ describe('SUP-13 useTourKeyboard: Escape', () => {
     const onClose = vi.fn();
     render(
       <Modal isOpen onClose={onClose} title="Behind">
-        <p>Content</p>
+        <p>{'Content'}</p>
       </Modal>,
     );
     const { onExit } = setup({ waiting: true });
@@ -141,6 +141,7 @@ describe('SUP-13 useTourKeyboard: Tab', () => {
 
   it('SUP-13 Tab in the middle of the card is left to the browser', () => {
     const { el } = setup();
+    el('b2').focus();
     const event = fireEvent.keyDown(el('b2'), { key: 'Tab' });
     expect(event).toBe(true);
   });

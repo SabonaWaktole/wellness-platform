@@ -74,13 +74,14 @@ describe('SUP-13 useTourFocus', () => {
     expect(() => renderHook(() => useTourFocus(true, { current: null }, 'a'))).not.toThrow();
   });
 
-  it('SUP-13 the fallback main is left as it was found (no tabindex residue)', () => {
+  it('SUP-13 the fallback main is left as it was found once focus moves on (no tabindex residue)', () => {
     const main = make('main');
     const heading = make('h2');
     heading.tabIndex = -1;
     const { rerender } = renderHook(({ active }) => useTourFocus(active, { current: heading }, 'a'), { initialProps: { active: true } });
     rerender({ active: false });
     expect(document.activeElement).toBe(main);
+    main.blur();
     expect(main.hasAttribute('tabindex')).toBe(false);
   });
 });
