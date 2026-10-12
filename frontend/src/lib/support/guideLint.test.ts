@@ -126,6 +126,19 @@ describe('SUP-05 SUP-07 SUP-12 SUP-18 guide lint: five broken guides, five disti
   });
 });
 
+describe('SUP-05 guide lint: shell guidance', () => {
+  it('SUP-05 accepts a step that borrows a shell explanation when its copy exists', () => {
+    const lookup = catalogue(['support:shell.menu.title', 'support:shell.menu.body']);
+    const guide = make([{ id: 'shellMenu', target: 'shell.menu', kind: 'control', use: 'shell.menu', scope: 'shell' }]);
+    expect(lintGuide(guide, lookup).filter((i) => i.code !== 'shell-id-reused')).toEqual([]);
+  });
+
+  it('SUP-18 reports a borrowed shell explanation that has no copy', () => {
+    const guide = make([{ id: 'shellMenu', target: 'shell.menu', kind: 'control', use: 'shell.menu', scope: 'shell' }]);
+    expect(lintGuide(guide, catalogue([])).map((i) => i.code)).toContain('missing-copy');
+  });
+});
+
 describe('SUP-02 assertGuideIntegrity', () => {
   it('SUP-02 throws with every problem listed', () => {
     const broken = make([
