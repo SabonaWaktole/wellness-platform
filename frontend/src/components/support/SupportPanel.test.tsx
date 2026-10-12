@@ -197,6 +197,15 @@ describe('SUP-13 SUP-14 SupportPanel: closing', () => {
   it('SUP-13 Escape closes it and focus returns to the launcher', async () => {
     mount();
     await open();
+    await screen.findByRole('button', { name: 'Tour this page' });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(launcher());
+  });
+
+  it('SUP-13 Escape works while the panel is still loading', async () => {
+    mount();
+    await open();
     fireEvent.keyDown(document.body, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(launcher());
@@ -230,6 +239,17 @@ describe('SUP-13 SUP-14 SupportPanel: closing', () => {
     mount();
     await open();
     fireEvent.click(screen.getByRole('button', { name: 'go elsewhere' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(useSupportStore.getState().panelOpen).toBe(false);
+  });
+
+  it('SUP-01 a panel left open on the previous page does not reappear on the next one', async () => {
+    act(() => {
+      useSupportStore.getState().openPanel();
+      useSupportStore.getState().setPanelPath('/acme/clients');
+    });
+    mount('/acme/follow-ups');
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(useSupportStore.getState().panelOpen).toBe(false);
   });

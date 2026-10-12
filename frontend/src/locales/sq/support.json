@@ -32,5 +32,20 @@
     "closed": "Turi u mbyll",
     "movedPage": "Turi u mbyll sepse kaluat në një faqe tjetër",
     "done": "Turi përfundoi. Përfunduat."
+  },
+  "panel": {
+    "title": "Ndihmë për {{page}}",
+    "tourPage": "Turi i kësaj faqeje",
+    "tourTab": "Turi i kësaj skede",
+    "resume": "Vazhdo turin (hapi {{current}} nga {{total}})",
+    "startOver": "Fillo nga fillimi",
+    "replay": "Përsërit turin",
+    "completed": "E keni përfunduar këtë tur.",
+    "noHelpTitle": "Ende nuk ka ndihmë të shkruar për {{page}}",
+    "noHelpBody": "Një tur i udhëhequr për këtë ekran po vjen. Pjesa tjetër e aplikacionit punon si zakonisht.",
+    "noPage": "Ende nuk ka ndihmë për këtë ekran",
+    "error": "Ndihma nuk mund të ngarkohej.",
+    "retry": "Provo përsëri",
+    "close": "Mbyll"
   }
 }

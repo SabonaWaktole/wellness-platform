@@ -32,5 +32,20 @@
     "closed": "Tour closed",
     "movedPage": "Tour closed because you moved to another page",
     "done": "Tour finished. You're done."
+  },
+  "panel": {
+    "title": "Help for {{page}}",
+    "tourPage": "Tour this page",
+    "tourTab": "Tour this tab",
+    "resume": "Resume tour (step {{current}} of {{total}})",
+    "startOver": "Start over",
+    "replay": "Replay tour",
+    "completed": "You've completed this tour.",
+    "noHelpTitle": "No help written for {{page}} yet",
+    "noHelpBody": "A guided tour for this screen is on its way. The rest of the application works as usual.",
+    "noPage": "No help for this screen yet",
+    "error": "Help could not be loaded.",
+    "retry": "Retry",
+    "close": "Close"
   }
 }

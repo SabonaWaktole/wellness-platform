@@ -253,6 +253,21 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await expectNoHorizontalOverflow(page, 'public verification page');
     });
 
+    // Support (docs/interactive-support-tour-plan, S03): the panel opens from the header and fits a phone.
+    test('Support panel', async ({ page }) => {
+      await page.goto(`/${TENANT}/dashboard`);
+      await expect(page).not.toHaveURL(/\/login|\/unauthorized/);
+      await page.getByRole('button', { name: /^(Help|Ndihmë)$/ }).click();
+      const panel = page.getByRole('dialog');
+      await expect(panel).toBeVisible();
+      const box = await panel.boundingBox();
+      const viewport = page.viewportSize();
+      expect(box, 'the panel has a box').not.toBeNull();
+      expect(box!.x, 'the panel starts inside the screen').toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width, 'the panel ends inside the screen').toBeLessThanOrEqual(viewport!.width);
+      await expectNoHorizontalOverflow(page, 'Support panel');
+    });
+
     for (const [screen, path] of screens) {
       test(screen, async ({ page }) => {
         await page.goto(`/${TENANT}/${path(companyId)}`);

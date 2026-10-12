@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { useSupportStore } from '../../../store/useSupportStore';
 import { resolveMediaUrl, srcSetFor } from '../../../services/mediaService';
 import { PRODUCT_NAME } from '../../../constants/brand';
 import styles from './Sidebar.module.css';
@@ -175,7 +176,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <a 
           className={styles.navItem} 
           href="#support"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault();
+            // Opens the Support panel; the mobile sidebar closes so the panel is not hidden behind it.
+            useSupportStore.getState().openPanel();
+            onClose?.();
+          }}
         >
           <HelpCircle className={styles.navIcon} size={20} />
           <span className={styles.navLabel}>{t('actions.support')}</span>

@@ -15,6 +15,13 @@ export interface SupportContext {
 
 interface SupportState {
   panelOpen: boolean;
+  /**
+   * The URL the open panel belongs to, set by the panel itself. Each page mounts its own header, so a
+   * panel left open across a navigation would reappear on the next page; a panel that finds a path
+   * other than its own closes itself.
+   */
+  panelPath: string | null;
+  setPanelPath: (path: string | null) => void;
   mode: SupportMode;
   context: SupportContext;
   openPanel: () => void;
@@ -38,11 +45,13 @@ const EMPTY_CONTEXT: SupportContext = { pageId: null, variant: null, scope: null
  */
 export const useSupportStore = create<SupportState>((set) => ({
   panelOpen: false,
+  panelPath: null,
+  setPanelPath: (path) => set({ panelPath: path }),
   mode: 'none',
   context: EMPTY_CONTEXT,
   openPanel: () => set({ panelOpen: true }),
-  closePanel: () => set({ panelOpen: false }),
-  startTour: (pageId) => set((state) => ({ panelOpen: false, mode: 'tour', context: { ...state.context, pageId } })),
+  closePanel: () => set({ panelOpen: false, panelPath: null }),
+  startTour: (pageId) => set((state) => ({ panelOpen: false, panelPath: null, mode: 'tour', context: { ...state.context, pageId } })),
   endSession: () => set((state) => ({ mode: 'none', context: { ...state.context, pageId: null } })),
   setContext: (patch) => set((state) => ({ context: { ...state.context, ...patch } })),
   clearContext: () => set((state) => ({ context: { ...state.context, variant: null, scope: null } })),
@@ -51,6 +60,6 @@ export const useSupportStore = create<SupportState>((set) => ({
 // Signing out ends everything, so the next person to sign in on this browser starts clean.
 useAuthStore.subscribe((state, previous) => {
   if (previous.user && !state.user) {
-    useSupportStore.setState({ panelOpen: false, mode: 'none', context: EMPTY_CONTEXT });
+    useSupportStore.setState({ panelOpen: false, panelPath: null, mode: 'none', context: EMPTY_CONTEXT });
   }
 });

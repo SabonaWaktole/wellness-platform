@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { ReactNode, ReactElement } from 'react';
-import { Search, HelpCircle, Settings, LogOut, Menu, X } from 'lucide-react';
+import { Search, Settings, LogOut, Menu, X } from 'lucide-react';
 import { Avatar } from '../../ui/Avatar/Avatar';
 import { ThemeToggle } from '../../ui/ThemeToggle';
 import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu';
@@ -13,6 +13,7 @@ import { ImpersonationBanner } from '../ImpersonationBanner';
 import { BrandLogo } from '../BrandLogo';
 import { usePageTitle } from '../../../hooks/usePageTitle';
 import { SalesScriptButton } from '../../salesScript/SalesScriptButton';
+import { SupportLauncher } from '../../support/SupportLauncher';
 import { useSalesScriptStore } from '../../../store/useSalesScriptStore';
 import { usePermission } from '../../../hooks/usePermission';
 import { useTranslation } from 'react-i18next';
@@ -109,9 +110,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           */}
           <NotificationBell />
           <SalesScriptButton className={styles.iconBtn} />
-          <button className={`${styles.iconBtn} ${styles.helpBtn}`} aria-label={t('header.help')}>
-            <HelpCircle size={20} />
-          </button>
+          {/* Was a dead <button> with no handler (the TD-020 family); it now opens the Support panel. */}
+          <SupportLauncher className={`${styles.iconBtn} ${styles.helpBtn}`} />
           <DropdownMenu
             align="right"
             trigger={
