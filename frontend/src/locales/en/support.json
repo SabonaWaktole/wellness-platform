@@ -1,0 +1,37 @@
+{
+  "popover": {
+    "label": "Page tour",
+    "stepOf": "Step {{current}} of {{total}}",
+    "progress": "Tour progress",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "skip": "Skip tour",
+    "exit": "Exit",
+    "when": "When to use it",
+    "warningLabel": "Be careful",
+    "disabledFallback": "This control is not available right now.",
+    "waiting": {
+      "title": "Loading this part of the page…",
+      "body": "The tour carries on as soon as it appears."
+    },
+    "lost": {
+      "title": "This item changed or is no longer on the page",
+      "body": "You can go on to the next step, go back, or leave the tour."
+    },
+    "completed": {
+      "title": "You're done",
+      "body": "You can take this tour again whenever you like from Support.",
+      "replay": "Replay",
+      "close": "Close"
+    }
+  },
+  "announce": {
+    "step": "Step {{current}} of {{total}}: {{title}}",
+    "skipped": "Skipped: {{title}} is not available right now",
+    "closed": "Tour closed",
+    "movedPage": "Tour closed because you moved to another page",
+    "done": "Tour finished. You're done.",
+    "stepsChanged": "The tour now has {{total}} steps."
+  }
+}
