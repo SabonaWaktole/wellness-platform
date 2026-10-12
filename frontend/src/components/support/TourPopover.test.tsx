@@ -180,3 +180,38 @@ describe('SUP-15 tour popover: placement', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: original });
   });
 });
+
+describe('SUP-10 tour popover: waiting for the user', () => {
+  it('SUP-10 asking the user to open something shows the step, says the tour will not click, and offers to skip the part', () => {
+    const onSkipPart = vi.fn();
+    renderStep({ variant: 'waiting', waitingFor: 'open', onSkipPart });
+    expect(screen.getByRole('heading', { name: 'Add a client' })).toBeInTheDocument();
+    expect(screen.getByText(/never clicks for you/)).toBeInTheDocument();
+    expect(buttonNames()).toEqual(['Skip this part', 'Skip tour', 'Exit']);
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this part' }));
+    expect(onSkipPart).toHaveBeenCalledTimes(1);
+  });
+
+  it('SUP-10 offers to show a part again when the user closed it early', () => {
+    renderStep({ variant: 'waiting', waitingFor: 'open', onSkipPart: vi.fn(), note: 'again' });
+    expect(screen.getByText('Want to see it again?')).toBeInTheDocument();
+  });
+
+  it('SUP-10 asking the user to close something says so, and offers no skip', () => {
+    renderStep({ variant: 'waiting', waitingFor: 'close' });
+    expect(screen.getByRole('heading', { name: 'Close it to continue' })).toBeInTheDocument();
+    expect(buttonNames()).toEqual(['Skip tour', 'Exit']);
+  });
+
+  it('SUP-10 the last step of a layer says Continue, not Finish', () => {
+    const h = renderStep({ index: 1, total: 2, lastLabel: 'continue' });
+    expect(screen.queryByRole('button', { name: 'Finish' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(h.onFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('SUP-10 waiting for the page to load is unchanged', () => {
+    renderStep({ variant: 'waiting', waitingFor: 'loading' });
+    expect(screen.getByRole('heading', { name: 'Loading this part of the page…' })).toBeInTheDocument();
+  });
+});
