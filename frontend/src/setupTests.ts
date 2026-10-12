@@ -50,6 +50,19 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
 }
 
 /**
+ * Support's target hook (`useTargetElement`) attaches a ResizeObserver to the
+ * highlighted element. jsdom has none, and has no layout for one to report, so
+ * a no-op stub is enough; tests that care about resizes install their own.
+ */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof globalThis.ResizeObserver;
+}
+
+/**
  * jsdom has no layout engine, and — unlike Element — neither Range nor Text
  * carry a getClientRects()/getBoundingClientRect() at all. ProseMirror's
  * scrollIntoView calls these on essentially every state update (via Range for
