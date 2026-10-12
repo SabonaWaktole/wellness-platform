@@ -31,7 +31,6 @@
     "skipped": "Skipped: {{title}} is not available right now",
     "closed": "Tour closed",
     "movedPage": "Tour closed because you moved to another page",
-    "done": "Tour finished. You're done.",
-    "stepsChanged": "The tour now has {{total}} steps."
+    "done": "Tour finished. You're done."
   }
 }

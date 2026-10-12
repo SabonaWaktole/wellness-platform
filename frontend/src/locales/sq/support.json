@@ -31,7 +31,6 @@
     "skipped": "U kapërcye: {{title}} nuk është i disponueshëm tani",
     "closed": "Turi u mbyll",
     "movedPage": "Turi u mbyll sepse kaluat në një faqe tjetër",
-    "done": "Turi përfundoi. Përfunduat.",
-    "stepsChanged": "Turi tani ka {{total}} hapa."
+    "done": "Turi përfundoi. Përfunduat."
   }
 }
