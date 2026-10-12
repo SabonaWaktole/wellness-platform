@@ -4,11 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '../ui/Button/Button';
+import { ControlList } from './ControlList';
+import type { Namespace } from '../../i18n/config';
+import { resolveStepCopy, type Translate } from '../../lib/support/defineGuide';
 import { loadGuide } from '../../lib/support/pageRegistry';
 import { progressUserKey, readPageProgress, writeProgress } from '../../lib/support/progressStorage';
 import { useEligibleSteps } from '../../lib/support/stepEligibility';
 import { loadSupportCopy } from '../../lib/support/supportCopy';
-import type { PageGuide } from '../../lib/support/types';
+import type { GuideStep, PageGuide } from '../../lib/support/types';
+import { useExplainableControls } from '../../lib/support/useExplainableControls';
 import { useSupportPage } from '../../lib/support/useSupportPage';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSupportStore } from '../../store/useSupportStore';
@@ -39,6 +43,7 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
   const user = useAuthStore((state) => state.user);
   const userKey = user ? progressUserKey(user) : 'anonymous';
   const titleId = useId();
+  const view = useSupportStore((state) => state.panelView);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -87,6 +92,21 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
   const guide = load.status === 'ready' ? load.guide : null;
   const eligible = useEligibleSteps(guide);
 
+  // The list of controls names them with the page's own copy, which is fetched when the list is first shown.
+  const [copyFor, setCopyFor] = useState<string | null>(null);
+  const showingControls = view === 'controls' && !!guide;
+  useEffect(() => {
+    if (!showingControls || !guide) return;
+    void loadSupportCopy(guide.namespace as Namespace).then(() => setCopyFor(guide.namespace));
+  }, [showingControls, guide]);
+  const explainable = useExplainableControls(showingControls ? guide : null);
+  const titleOf = useCallback(
+    (step: GuideStep) => (guide ? resolveStepCopy(guide, step, t as unknown as Translate).title : '') || step.id,
+    // The title changes when the page's copy arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [guide, t, copyFor],
+  );
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close(true);
@@ -125,7 +145,18 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
   };
 
   let body;
-  if (loading) {
+  if (!loading && load.status === 'ready' && canTour && showingControls) {
+    body = (
+      <ControlList
+        entries={explainable.entries}
+        loading={explainable.loading || copyFor !== guide?.namespace}
+        titleOf={titleOf}
+        onChoose={(step) => pageId && useSupportStore.getState().startSingle(pageId, step.id)}
+        onBack={() => useSupportStore.getState().setPanelView('main')}
+        onRetry={explainable.refresh}
+      />
+    );
+  } else if (loading) {
     body = <div className={styles.skeleton} aria-hidden="true" />;
   } else if (load.status === 'error') {
     body = (
@@ -178,6 +209,11 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
             </Button>
           )}
         </div>
+        <div className={styles.actions}>
+          <Button type="button" size="sm" variant="outline" onClick={() => useSupportStore.getState().setPanelView('controls')}>
+            {t('panel.explain')}
+          </Button>
+        </div>
       </>
     );
   }
@@ -191,7 +227,11 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
       tabIndex={-1}
       aria-modal="false"
       aria-busy={loading}
-      {...(loading ? { 'aria-label': tCommon('header.help') } : { 'aria-labelledby': titleId })}
+      {...(loading
+        ? { 'aria-label': tCommon('header.help') }
+        : showingControls && canTour
+          ? { 'aria-label': t('controls.title') }
+          : { 'aria-labelledby': titleId })}
     >
       {body}
       {!loading && (

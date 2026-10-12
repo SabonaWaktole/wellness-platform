@@ -61,6 +61,8 @@ const TourSessionView = () => {
           onSkipPart={session.onSkipPart}
           note={session.note}
           notice={session.notice}
+          single={session.single}
+          onAnother={session.single ? session.onAnother : undefined}
           lastLabel={session.lastLabel}
           rootRef={popoverRef}
           headingRef={headingRef}
@@ -83,7 +85,7 @@ export default function SupportHost() {
   if (mode === 'none' && !message) return null;
   return (
     <>
-      {mode === 'tour' && <TourSessionView />}
+      {(mode === 'tour' || mode === 'single') && <TourSessionView />}
       <LiveAnnouncer />
     </>
   );

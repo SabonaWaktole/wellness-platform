@@ -26,6 +26,11 @@ export interface TourPopoverProps {
   onFinish: () => void;
   onReplay: () => void;
   onClose: () => void;
+  /** Explaining one control, not touring: no progress, and only Close (and a way to pick another). */
+  single?: boolean;
+  onAnother?: () => void;
+  /** What the "another" action is called: from the list of controls, or in pick mode. */
+  anotherLabel?: 'list' | 'pick';
   /** What a `waiting` card waits for: the page to load (default), the user to open a layer, or to close it. */
   waitingFor?: 'loading' | 'open' | 'close';
   /** Leave the part of the tour that sits inside a layer the user has not opened. */
@@ -75,6 +80,9 @@ export const TourPopover = ({
   onFinish,
   onReplay,
   onClose,
+  single = false,
+  onAnother,
+  anotherLabel = 'list',
   waitingFor = 'loading',
   onSkipPart,
   note,
@@ -187,7 +195,7 @@ export const TourPopover = ({
         <p className={styles.hint}>{copy?.disabled ?? t('popover.disabledFallback')}</p>
       )}
 
-      {(variant === 'step' || variant === 'lost') && total > 0 && (
+      {!single && (variant === 'step' || variant === 'lost') && total > 0 && (
         <div className={styles.progress}>
           <span className={styles.progressText}>{t('popover.stepOf', { current: index + 1, total })}</span>
           <div
@@ -204,7 +212,18 @@ export const TourPopover = ({
       )}
 
       <div className={styles.actions}>
-        {variant === 'completed' ? (
+        {single ? (
+          <>
+            {onAnother && (
+              <Button type="button" size="sm" variant="outline" onClick={onAnother}>
+                {anotherLabel === 'pick' ? t('popover.single.pickAnother') : t('popover.single.another')}
+              </Button>
+            )}
+            <Button type="button" size="sm" onClick={onClose}>
+              {t('popover.single.close')}
+            </Button>
+          </>
+        ) : variant === 'completed' ? (
           <>
             <Button type="button" size="sm" onClick={onReplay}>
               {t('popover.completed.replay')}

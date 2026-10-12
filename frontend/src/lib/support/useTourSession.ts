@@ -46,6 +46,9 @@ export interface TourSession {
   /** Set when the user closed a layer before its part was over. */
   note: 'again' | undefined;
   onSkipPart: () => void;
+  /** Explaining one control, not touring. */
+  single: boolean;
+  onAnother: () => void;
   /** Said under the body, once, after the user tried to use a control during the tour. */
   notice: string | undefined;
   onNext: () => void;
@@ -74,6 +77,8 @@ export interface TourSession {
 export function useTourSession(): TourSession {
   const { t } = useTranslation();
   const pageId = useSupportStore((state) => state.context.pageId);
+  const single = useSupportStore((state) => state.mode === 'single');
+  const singleStepId = useSupportStore((state) => state.singleStepId);
   const { pageId: routePageId } = useSupportPage();
   const user = useAuthStore((state) => state.user);
   const userKey = user ? progressUserKey(user) : 'anonymous';
@@ -135,11 +140,18 @@ export function useTourSession(): TourSession {
         useSupportStore.getState().endSession();
         return;
       }
+      if (single) {
+        // One control, out of its group: it is looked for wherever it is on the page now.
+        const only = eligible.find((s) => s.id === singleStepId);
+        if (only) dispatch({ type: 'START', steps: [{ id: only.id }], single: true });
+        else useSupportStore.getState().endSession();
+        return;
+      }
       lastSignature.current = signature(steps);
       const saved = resume ? readPageProgress(userKey, guide.pageId, guide.version) : null;
       dispatch({ type: 'START', steps, resumeAtId: saved?.lastStepId });
     },
-    [guide, eligible, userKey],
+    [guide, eligible, userKey, single, singleStepId],
   );
   useEffect(() => {
     if (guide && machine.status === 'idle') start(true);
@@ -147,13 +159,13 @@ export function useTourSession(): TourSession {
 
   // Permissions, workflow or viewport changed under the tour: re-enter the list.
   useEffect(() => {
-    if (machine.status !== 'running' && machine.status !== 'waiting' && machine.status !== 'lost') return;
+    if (single || (machine.status !== 'running' && machine.status !== 'waiting' && machine.status !== 'lost')) return;
     const steps = eligible.map(toRef);
     const next = signature(steps);
     if (next === lastSignature.current) return;
     lastSignature.current = next;
     dispatch({ type: 'STEPS_CHANGED', steps });
-  }, [eligible, machine.status]);
+  }, [eligible, machine.status, single]);
 
   const isDesktop = useIsDesktop();
   const ref = currentStep(machine);
@@ -185,7 +197,7 @@ export function useTourSession(): TourSession {
 
   // The layer the current step opens, or is inside: watched from the moment the tour waits for the user.
   const opener = machine.status === 'waiting' && machine.reason === 'user-action' && parentId === null ? step : parentId ? (eligible.find((s) => s.id === parentId) ?? null) : null;
-  const watchId = active && opener?.opens ? opener.opens : null;
+  const watchId = active && !single && opener?.opens ? opener.opens : null;
   const layerOpen = useLayerWatcher(watchId, {
     onOpen: () => {
       const m = machineRef.current;
@@ -214,6 +226,11 @@ export function useTourSession(): TourSession {
   };
 
   const skipCurrent = (fromWaiting: boolean) => {
+    if (single) {
+      // Nothing to skip to: say that the control is gone.
+      dispatch({ type: 'TARGET_LOST' });
+      return;
+    }
     notice.current = t('announce.skipped', { ns: 'support', title: copy?.title ?? '' });
     if (fromWaiting) dispatch({ type: 'TARGET_LOST' });
     advance();
@@ -233,8 +250,8 @@ export function useTourSession(): TourSession {
     // as open through that grace.
     if (parentId !== null && watchId && (machine.status === 'running' || machine.status === 'lost') && (!layerOpen || !findLayer(document, watchId))) return;
     if (machine.status === 'running') {
-      if (parentId === null && step.opens && target.status === 'disabled') skipPart();
-      else if (parentId === null && step.opens && (target.status === 'found' || target.status === 'offscreen')) dispatch({ type: 'HOLD_FOR_USER', layerId: step.opens });
+      if (!single && parentId === null && step.opens && target.status === 'disabled') skipPart();
+      else if (!single && parentId === null && step.opens && (target.status === 'found' || target.status === 'offscreen')) dispatch({ type: 'HOLD_FOR_USER', layerId: step.opens });
       else if (target.status === 'pending') dispatch({ type: 'TARGET_PENDING' });
       else if (target.status === 'missing') skipCurrent(false);
       else if (target.status === 'lost') dispatch({ type: 'TARGET_LOST' });
@@ -283,12 +300,12 @@ export function useTourSession(): TourSession {
   // A tab step waits for the tab to be selected, and moves on when it is.
   useEffect(() => {
     const element = target.element;
-    if (machine.status !== 'running' || step?.advanceWhen !== 'selected' || !element || !fresh) return;
+    if (single || machine.status !== 'running' || step?.advanceWhen !== 'selected' || !element || !fresh) return;
     if (element.getAttribute('aria-selected') === 'true') return;
     return subscribeToDom(() => {
       if (element.getAttribute('aria-selected') === 'true') dispatch({ type: 'NEXT' });
     });
-  }, [machine.status, step?.id, step?.advanceWhen, target.element, fresh]);
+  }, [single, machine.status, step?.id, step?.advanceWhen, target.element, fresh]);
 
   // A step about something that is off screen on a phone (the sidebar) opens it first and puts it back
   // when the step changes or the tour ends. On a desktop the control is always there, so nothing is opened.
@@ -313,7 +330,9 @@ export function useTourSession(): TourSession {
   // Say where we are: on each step (with any skip notice in front), and again if the total changes.
   useEffect(() => {
     if (!running || !copy?.title) return;
-    const message = t('announce.step', { ns: 'support', current: index + 1, total, title: copy.title });
+    const message = single
+      ? t('announce.single', { ns: 'support', title: copy.title })
+      : t('announce.step', { ns: 'support', current: index + 1, total, title: copy.title });
     announce([notice.current, message].filter(Boolean).join(' '));
     notice.current = '';
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -322,6 +341,11 @@ export function useTourSession(): TourSession {
   // The tour ended: remember how, say so, and close it (a finished tour waits for its completion card to be closed).
   useEffect(() => {
     if (machine.status !== 'finished' || !guide) return;
+    if (single) {
+      // Explaining one control leaves no trace: no progress, no closing message.
+      useSupportStore.getState().endSession();
+      return;
+    }
     const now = new Date().toISOString();
     if (machine.outcome === 'completed') writeProgress(userKey, guide.pageId, { v: guide.version, completedAt: now });
     else if (machine.outcome === 'skipped') writeProgress(userKey, guide.pageId, { v: guide.version, dismissedAt: now });
@@ -356,6 +380,11 @@ export function useTourSession(): TourSession {
     lastLabel: inLastGroupStep(machine) ? 'continue' : 'finish',
     note: step && seeAgainFor === step.id ? 'again' : undefined,
     onSkipPart: skipPart,
+    single,
+    onAnother: () => {
+      useSupportStore.getState().endSession();
+      useSupportStore.getState().openPanel('controls');
+    },
     notice: blocked ? t(blocked === 'submit' ? 'popover.blockedSubmit' : 'popover.blocked', { ns: 'support' }) : undefined,
     onNext: advance,
     onBack: () => dispatch({ type: 'BACK' }),

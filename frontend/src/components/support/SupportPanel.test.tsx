@@ -277,9 +277,12 @@ describe('SUP-13 SUP-14 SupportPanel: closing', () => {
 describe('SUP-04 SupportPanel: Explain a control', () => {
   const created: HTMLElement[] = [];
   const onPage = (...ids: string[]) => {
-    const main = document.createElement('main');
-    document.body.append(main);
-    created.push(main);
+    let main = document.querySelector('main') as HTMLElement | null;
+    if (!main) {
+      main = document.createElement('main');
+      document.body.append(main);
+      created.push(main);
+    }
     for (const id of ids) {
       const node = document.createElement('button');
       node.setAttribute('data-tour', `fx.${id}`);
