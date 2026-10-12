@@ -94,31 +94,60 @@
 /* ---------------------------------------------------------------- filters */
 
 .filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+  gap: var(--spacing-md);
   padding: var(--spacing-md);
   border-bottom: 1px solid var(--border-hairline);
   background-color: var(--color-surface-container-low);
 }
 
+/* The shared inputs size themselves to 100% of their parent; in a grid row that stretches them, so let them
+ * take their natural height here. */
 .filters > * {
-  min-width: 140px;
-  flex: 1 1 140px;
+  min-width: 0;
+  height: auto;
 }
 
 .filters > .searchBox {
-  flex: 2 1 260px;
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+  .filters > .searchBox {
+    grid-column: span 2;
+  }
+}
+
+.filterChecks {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
 }
 
 .filterCheck {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: var(--font-size-body-sm);
   color: var(--text-secondary);
-  min-height: 40px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.filterCheck input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-primary);
 }
 
 .summary {

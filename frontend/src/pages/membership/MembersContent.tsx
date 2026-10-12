@@ -144,18 +144,6 @@ export const MembersContent: React.FC = () => {
               <option key={value} value={value}>{t(`source.${value}`)}</option>
             ))}
           </SelectInput>
-          <label className={styles.filterCheck}>
-            <input type="checkbox" checked={filters.expiringSoon} onChange={(e) => set('expiringSoon', e.target.checked)} />
-            {t('list.filters.expiringSoon')}
-          </label>
-          <label className={styles.filterCheck}>
-            <input type="checkbox" checked={filters.vipReviewDue} onChange={(e) => set('vipReviewDue', e.target.checked)} />
-            {t('list.filters.vipReviewDue')}
-          </label>
-          <label className={styles.filterCheck}>
-            <input type="checkbox" checked={filters.formerEmployee} onChange={(e) => setFilters((f) => ({ ...f, formerEmployee: e.target.checked, ...(e.target.checked ? {} : { formerEmployerClientId: '', leftFrom: '', leftTo: '' }) }))} />
-            {t('list.filters.formerEmployee')}
-          </label>
           {filters.formerEmployee && (
             <>
               <TextInput label={t('list.filters.leftFrom')} type="date" value={filters.leftFrom} onChange={(e) => set('leftFrom', e.target.value)} />
@@ -167,16 +155,32 @@ export const MembersContent: React.FC = () => {
               <option key={value} value={value}>{t(`list.sort.${value}`)}</option>
             ))}
           </SelectInput>
+          <div className={styles.filterChecks}>
+            <label className={styles.filterCheck}>
+              <input type="checkbox" checked={filters.expiringSoon} onChange={(e) => set('expiringSoon', e.target.checked)} />
+              {t('list.filters.expiringSoon')}
+            </label>
+            <label className={styles.filterCheck}>
+              <input type="checkbox" checked={filters.vipReviewDue} onChange={(e) => set('vipReviewDue', e.target.checked)} />
+              {t('list.filters.vipReviewDue')}
+            </label>
+            <label className={styles.filterCheck}>
+              <input type="checkbox" checked={filters.formerEmployee} onChange={(e) => setFilters((f) => ({ ...f, formerEmployee: e.target.checked, ...(e.target.checked ? {} : { formerEmployerClientId: '', leftFrom: '', leftTo: '' }) }))} />
+              {t('list.filters.formerEmployee')}
+            </label>
+          </div>
           {filtered && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setQuery('');
-                setFilters(NO_FILTERS);
-              }}
-            >
-              {t('list.filters.clear')}
-            </Button>
+            <div className={styles.filterActions}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setQuery('');
+                  setFilters(NO_FILTERS);
+                }}
+              >
+                {t('list.filters.clear')}
+              </Button>
+            </div>
           )}
         </div>
 
