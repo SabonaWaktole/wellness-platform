@@ -1,5 +1,6 @@
 import { useId, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { tourPath, tourProps } from '../../../lib/support/tourProps';
 import styles from './Tabs.module.css';
 
 export interface TabItem<T extends string = string> {
@@ -25,6 +26,8 @@ export interface TabsProps<T extends string = string> {
   /** Accessible name for the tab list. */
   label?: string;
   className?: string;
+  /** Support tour id for the tab list; each tab gets `<id>.tab.<tab id>`. */
+  tourId?: string;
 }
 
 /**
@@ -39,6 +42,7 @@ export function Tabs<T extends string = string>({
   onChange,
   label = 'Tabs',
   className = '',
+  tourId,
 }: TabsProps<T>) {
   const generatedId = useId();
   const baseId = idBase ?? generatedId;
@@ -87,6 +91,7 @@ export function Tabs<T extends string = string>({
       aria-label={label}
       className={[styles.tabList, className].filter(Boolean).join(' ')}
       onKeyDown={handleKeyDown}
+      {...tourProps(tourId)}
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeId;
@@ -106,6 +111,7 @@ export function Tabs<T extends string = string>({
             disabled={tab.disabled}
             className={[styles.tab, isActive ? styles.tabActive : ''].filter(Boolean).join(' ')}
             onClick={() => onChange(tab.id)}
+            {...tourProps(tourId && tourPath(tourId, 'tab', tab.id))}
           >
             {tab.icon && <span className={styles.tabIcon}>{tab.icon}</span>}
             <span>{tab.label}</span>

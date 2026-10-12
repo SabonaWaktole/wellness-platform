@@ -22,6 +22,8 @@ export interface ConfirmDialogProps {
   tone?: 'danger' | 'primary';
   /** Blocks confirming until the message's own inputs are complete. */
   confirmDisabled?: boolean;
+  /** Support tour id, forwarded to the dialog. */
+  tourId?: string;
 }
 
 /**
@@ -40,6 +42,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelLabel,
   tone = 'danger',
   confirmDisabled = false,
+  tourId,
 }) => {
   const { t } = useTranslation('common');
   const [isPending, setIsPending] = useState(false);
@@ -63,6 +66,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onClose={isPending ? () => undefined : onClose}
       title={title}
       maxWidth="sm"
+      tourId={tourId}
     >
       <div className={styles.content}>
         {tone === 'danger' && (

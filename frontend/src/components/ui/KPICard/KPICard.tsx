@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './KPICard.module.css';
+import { tourProps } from '../../../lib/support/tourProps';
 import { Card } from '../Card/Card';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
@@ -15,6 +16,8 @@ export interface KPICardProps {
   isPlaceholder?: boolean;
   placeholderText?: string;
   progress?: number;
+  /** Support tour id for the card. */
+  tourId?: string;
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
@@ -29,9 +32,10 @@ export const KPICard: React.FC<KPICardProps> = ({
   isPlaceholder = false,
   placeholderText = 'Coming soon',
   progress,
+  tourId,
 }) => {
   return (
-    <div className={`${styles.wrapper} ${isPlaceholder ? styles.placeholder : ''}`}>
+    <div className={`${styles.wrapper} ${isPlaceholder ? styles.placeholder : ''}`} {...tourProps(tourId)}>
       <Card className={`${styles.card} premium-card`}>
         <div className={styles.header}>
           <h3 className={styles.title}>{title}</h3>

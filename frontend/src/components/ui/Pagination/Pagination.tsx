@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { tourProps } from '../../../lib/support/tourProps';
 import styles from './Pagination.module.css';
 
 export interface PaginationProps {
@@ -13,6 +14,8 @@ export interface PaginationProps {
   /** Noun used in the "1–20 of 84 products" summary. */
   /** Defaults to the translated "items". */
   itemLabel?: string;
+  /** Support tour id for the navigation. */
+  tourId?: string;
 }
 
 /**
@@ -46,6 +49,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
   itemLabel,
+  tourId,
 }) => {
   const { t } = useTranslation('common');
   const label = itemLabel ?? t('pagination.items');
@@ -54,7 +58,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const last = Math.min(page * pageSize, total);
 
   return (
-    <nav className={styles.container} aria-label={t('pagination.label')}>
+    <nav className={styles.container} aria-label={t('pagination.label')} {...tourProps(tourId)}>
       <p className={styles.summary}>
         {total === 0
           ? t('pagination.empty', { itemLabel: label })

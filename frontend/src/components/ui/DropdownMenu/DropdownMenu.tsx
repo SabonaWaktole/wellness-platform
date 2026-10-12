@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
+import { tourProps } from '../../../lib/support/tourProps';
 import styles from './DropdownMenu.module.css';
 
 export interface DropdownMenuItemType {
@@ -11,6 +12,8 @@ export interface DropdownMenuItemType {
   danger?: boolean;
   disabled?: boolean;
   title?: string;
+  /** Support tour id for this item. The menu is portalled, so items carry their own. */
+  tourId?: string;
 }
 
 export interface DropdownMenuProps {
@@ -19,6 +22,8 @@ export interface DropdownMenuProps {
   header?: ReactNode;
   align?: 'left' | 'right';
   className?: string;
+  /** Support tour id for the open menu. */
+  menuTourId?: string;
 }
 
 /** Breathing room between the trigger and the menu. */
@@ -40,6 +45,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   header,
   align = 'right',
   className = '',
+  menuTourId,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition | null>(null);
@@ -224,6 +230,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       id={menuId}
       role="menu"
       className={dropdownClasses}
+      {...tourProps(menuTourId)}
       style={{
         top: position?.top ?? 0,
         left: position?.left ?? 0,
@@ -249,6 +256,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           onClick={() => handleItemClick(item)}
           disabled={item.disabled}
           title={item.title}
+          {...tourProps(item.tourId)}
         >
           {item.icon && <span className={styles.itemIcon}>{item.icon}</span>}
           <span>{item.label}</span>
