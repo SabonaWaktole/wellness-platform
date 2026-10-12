@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Button } from '../../ui/Button/Button';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { tourProps } from '../../../lib/support/tourProps';
+import { useSupportStore } from '../../../store/useSupportStore';
 import { resolveMediaUrl, srcSetFor } from '../../../services/mediaService';
 import { PRODUCT_NAME } from '../../../constants/brand';
 import styles from './Sidebar.module.css';
@@ -106,8 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isOpen && (
         <div className={styles.backdrop} onClick={onClose} />
       )}
-      <nav className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
-      <div className={styles.orgSection}>
+      <nav className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`} {...tourProps('shell.nav')}>
+      <div className={styles.orgSection} {...tourProps('shell.org')}>
         {/*
           The workspace logo replaces the generic building glyph once one has
           been uploaded. Read from the auth store so it appears on every screen
@@ -158,6 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (onNavItemClick) onNavItemClick(item.path || item.id);
               }}
               href={`#${item.path || item.id}`}
+              {...tourProps('shell.nav.item', { repeat: true })}
             >
               <IconComponent className={styles.navIcon} size={20} />
               <span className={styles.navLabel}>{item.label}</span>
@@ -175,7 +178,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <a 
           className={styles.navItem} 
           href="#support"
-          onClick={(e) => e.preventDefault()}
+          {...tourProps('shell.support.nav')}
+          onClick={(e) => {
+            e.preventDefault();
+            // Opens the Support panel; the mobile sidebar closes so the panel is not hidden behind it.
+            useSupportStore.getState().openPanel();
+            onClose?.();
+          }}
         >
           <HelpCircle className={styles.navIcon} size={20} />
           <span className={styles.navLabel}>{t('actions.support')}</span>
@@ -183,6 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <a 
           className={`${styles.navItem} ${styles.logoutItem}`} 
           href="#logout"
+          {...tourProps('shell.logout')}
           onClick={(e) => {
             e.preventDefault();
             if (onLogoutClick) onLogoutClick();

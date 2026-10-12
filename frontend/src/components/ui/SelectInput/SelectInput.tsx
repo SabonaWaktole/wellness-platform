@@ -1,6 +1,7 @@
 import { forwardRef, useId } from 'react';
 import type { ReactNode, SelectHTMLAttributes } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { tourProps } from '../../../lib/support/tourProps';
 import styles from './SelectInput.module.css';
 
 export interface SelectInputProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -8,11 +9,13 @@ export interface SelectInputProps extends SelectHTMLAttributes<HTMLSelectElement
   helperText?: string;
   error?: string;
   iconLeft?: ReactNode;
+  /** Support tour id for the field. Goes on the container, so the highlight covers the label and the select. */
+  tourId?: string;
 }
 
 export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
   (
-    { label, helperText, error, iconLeft, children, id, className = '', required, ...props },
+    { label, helperText, error, iconLeft, children, id, className = '', required, tourId, ...props },
     ref
   ) => {
     // useId is stable across renders, unlike a random id regenerated each time.
@@ -31,7 +34,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
       .join(' ');
 
     return (
-      <div className={`${styles.container} ${className}`}>
+      <div className={`${styles.container} ${className}`} {...tourProps(tourId)}>
         {label && (
           <label htmlFor={inputId} className={styles.label}>
             {label}

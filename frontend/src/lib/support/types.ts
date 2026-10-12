@@ -7,8 +7,11 @@
 /** A step only explains a control (default) or, rarely, lets the user try it. */
 export type StepSafety = 'explain-only' | 'try-it';
 
-/** What a step points at: one control, a whole region, or text with no anchor of its own. */
-export type StepKind = 'control' | 'region' | 'info';
+/**
+ * What a step points at. `control`, `region` and `info` are general; the rest say what the control does, which
+ * decides what a step may be allowed to do (`try-it` only for `tab | filter | field | menu | opener`).
+ */
+export type StepKind = 'control' | 'region' | 'info' | 'tab' | 'filter' | 'field' | 'menu' | 'opener' | 'submit';
 
 /** Where to look for a target: the page, the app shell, or the topmost open layer. */
 export type TargetScope = 'page' | 'shell' | 'layer';
@@ -71,6 +74,8 @@ export interface GuideStep {
   scope?: TargetScope;
   /** A state the page must be in for this step to apply (for example `empty`). */
   needs?: string;
+  /** Values interpolated into the copy, for example `{ subject: 'clients' }` for `{{subject}}`. */
+  vars?: Record<string, string>;
 }
 
 /** A step's text, read from the guide's namespace by key. Only the title and body are required. */

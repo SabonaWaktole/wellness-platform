@@ -221,6 +221,10 @@ jobs:
         working-directory: frontend
         run: npx playwright test --project=mobile-360
 
+      - name: Support panel and page tours
+        working-directory: frontend
+        run: npx playwright test --project=support
+
   # FR-BR-04: nothing a Wellness Albania user can reach, and no email the
   # system sends, may name Neva CRM, the SaaS product this edition was forked
   # from. Case-insensitive, so "NevaCRM", "Neva CRM" and "nevacrm.eu" all fail;

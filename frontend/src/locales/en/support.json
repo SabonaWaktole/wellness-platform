@@ -32,5 +32,147 @@
     "closed": "Tour closed",
     "movedPage": "Tour closed because you moved to another page",
     "done": "Tour finished. You're done."
+  },
+  "panel": {
+    "title": "Help for {{page}}",
+    "tourPage": "Tour this page",
+    "tourTab": "Tour this tab",
+    "resume": "Resume tour (step {{current}} of {{total}})",
+    "startOver": "Start over",
+    "replay": "Replay tour",
+    "completed": "You've completed this tour.",
+    "noHelpTitle": "No help written for {{page}} yet",
+    "noHelpBody": "A guided tour for this screen is on its way. The rest of the application works as usual.",
+    "noPage": "No help for this screen yet",
+    "error": "Help could not be loaded.",
+    "retry": "Retry",
+    "close": "Close"
+  },
+  "shared": {
+    "subject": "this page",
+    "search": {
+      "title": "Search {{subject}}",
+      "body": "Type part of a name, number or phrase to narrow {{subject}}. The list updates as you type; clear the box to see everything again.",
+      "when": "When you know roughly what you are looking for."
+    },
+    "filterSelect": {
+      "title": "Filter {{subject}}",
+      "body": "Choose a value to show only the matching entries. Filters can be combined, and choosing the first option clears the filter.",
+      "when": "When the list is long and you only need one group."
+    },
+    "dateRange": {
+      "title": "Choose a date range",
+      "body": "Pick a start and an end date to show only what falls between them. Leave a side empty for no limit.",
+      "when": "When you are looking at a particular week, month or period."
+    },
+    "statusChips": {
+      "title": "Filter by status",
+      "body": "Each chip shows the entries with that status. Select one to filter; select it again to clear.",
+      "when": "When you only care about entries at one stage."
+    },
+    "sortHeader": {
+      "title": "Sort by this column",
+      "body": "Select the heading to sort {{subject}} by it. Select it again to reverse the order.",
+      "when": "When you want the newest, the largest or the first alphabetically at the top."
+    },
+    "pagination": {
+      "title": "Move between pages",
+      "body": "Shows which entries you are seeing and how many there are. Use the arrows or a page number to move, and the size menu to show more or fewer at a time.",
+      "when": "When {{subject}} does not fit on one page.",
+      "disabled": "A direction is dimmed when there is nothing further that way."
+    },
+    "rowMenu": {
+      "title": "Actions for one entry",
+      "body": "Opens the actions available for this entry. What you see depends on what you are allowed to do.",
+      "when": "When you want to act on one entry without opening it.",
+      "disabled": "A dimmed action is not available for this entry right now."
+    },
+    "statusBadge": {
+      "title": "Status",
+      "body": "Shows where this entry stands right now. It changes as the work moves forward."
+    },
+    "tabs": {
+      "title": "Tabs",
+      "body": "Each tab shows a different part of {{subject}}. Select a tab to switch; the one you are on is highlighted.",
+      "when": "When the information you want is in another section."
+    },
+    "bulkSelect": {
+      "title": "Select several",
+      "body": "Tick the boxes to choose more than one entry, or the box in the header to choose everything on this page. Actions for the selection appear once something is chosen.",
+      "when": "When the same action applies to many entries.",
+      "disabled": "Some entries cannot be selected because you may not act on them."
+    },
+    "export": {
+      "title": "Export",
+      "body": "Downloads {{subject}} as a file you can open in a spreadsheet. It exports what the filters currently show.",
+      "when": "When you need the data outside the application.",
+      "disabled": "Exporting is not available right now."
+    },
+    "refresh": {
+      "title": "Refresh",
+      "body": "Loads the latest {{subject}} from the server. The page also refreshes itself after you save a change.",
+      "when": "When someone else may have changed something.",
+      "disabled": "A refresh is already in progress."
+    },
+    "backLink": {
+      "title": "Go back",
+      "body": "Returns to the previous screen. Anything you have not saved on this one is not kept.",
+      "when": "When you are done here or opened the wrong entry."
+    },
+    "saveBar": {
+      "title": "Save or discard",
+      "body": "Save stores your changes; Discard throws them away. Nothing is saved until you press Save.",
+      "when": "When you have finished filling in the form.",
+      "disabled": "Save is dimmed until the required fields are filled in correctly."
+    },
+    "confirmDialog": {
+      "title": "Confirm before it happens",
+      "body": "This window asks you to confirm because the action cannot easily be undone. Read the message, then confirm or cancel. The tour never presses these for you.",
+      "when": "Whenever you are about to delete or close something."
+    },
+    "emptyAction": {
+      "title": "Nothing here yet",
+      "body": "This list is empty. The button below starts the first entry, so you can add one straight away.",
+      "when": "The first time you use this page.",
+      "disabled": "Adding is not available to your role."
+    }
+  },
+  "shell": {
+    "menu": {
+      "title": "Menu button",
+      "body": "Opens the main menu on a phone. On a larger screen the menu is always visible on the left."
+    },
+    "nav": {
+      "title": "Main menu",
+      "body": "The places you can go. The list shows only what your role allows, so it may differ from a colleague's."
+    },
+    "navItem": {
+      "title": "A menu entry",
+      "body": "Select an entry to open that part of the application. The highlighted one is where you are now. A number beside an entry counts things waiting for you, such as overdue follow-ups."
+    },
+    "theme": {
+      "title": "Appearance",
+      "body": "Switches between light, dark and the setting of your device. It changes only how the application looks for you."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "body": "Shows what has happened that concerns you, such as assignments and approvals. A number on the bell counts the unread ones; selecting a notification opens the item it is about."
+    },
+    "script": {
+      "title": "Sales script",
+      "body": "Opens the sales script beside the page, so you can read it during a call. It stays open as you move between pages until you close it."
+    },
+    "support": {
+      "title": "Support",
+      "body": "Opens help for the page you are on: a guided tour of this page, or an explanation of one control."
+    },
+    "profile": {
+      "title": "Your profile",
+      "body": "Opens a menu with your settings and the way to sign out."
+    },
+    "logout": {
+      "title": "Log out",
+      "body": "Ends your session on this device. Anything you have not saved is not kept."
+    }
   }
 }

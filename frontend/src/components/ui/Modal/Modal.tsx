@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { modalVariants, overlayVariants } from '../../../lib/motion';
+import { tourLayerProps } from '../../../lib/support/tourProps';
 import styles from './Modal.module.css';
 
 export interface ModalProps {
@@ -12,6 +13,8 @@ export interface ModalProps {
   title: string;
   children: ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Support tour id for the dialog; also marks it as a layer so a tour scopes to it while open. */
+  tourId?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -20,6 +23,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   maxWidth = 'md',
+  tourId,
 }) => {
   const { t } = useTranslation('common');
   useEffect(() => {
@@ -46,6 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
           onClick={onClose}
           role="dialog"
           aria-modal="true"
+          {...tourLayerProps(tourId)}
           variants={overlayVariants}
           initial="hidden"
           animate="visible"

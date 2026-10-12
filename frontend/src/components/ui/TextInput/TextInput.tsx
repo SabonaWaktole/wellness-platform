@@ -1,5 +1,6 @@
 import { forwardRef, useId } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
+import { tourProps } from '../../../lib/support/tourProps';
 import styles from './TextInput.module.css';
 
 export interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -11,6 +12,8 @@ export interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
   onIconRightClick?: () => void;
   /** Accessible name for the right icon button. Required when it is interactive. */
   iconRightLabel?: string;
+  /** Support tour id for the field. Goes on the container, so the highlight covers the label, the control and the message. */
+  tourId?: string;
 }
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
@@ -26,6 +29,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       className = '',
       id,
       required,
+      tourId,
       ...props
     },
     ref
@@ -46,7 +50,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       .join(' ');
 
     return (
-      <div className={`${styles.container} ${className}`}>
+      <div className={`${styles.container} ${className}`} {...tourProps(tourId)}>
         {label && (
           <label htmlFor={inputId} className={styles.label}>
             {label}

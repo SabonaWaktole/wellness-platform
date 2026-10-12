@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ReactNode, ReactElement } from 'react';
-import { Search, HelpCircle, Settings, LogOut, Menu, X } from 'lucide-react';
+import { Search, Settings, LogOut, Menu, X } from 'lucide-react';
 import { Avatar } from '../../ui/Avatar/Avatar';
 import { ThemeToggle } from '../../ui/ThemeToggle';
 import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu';
@@ -13,9 +13,12 @@ import { ImpersonationBanner } from '../ImpersonationBanner';
 import { BrandLogo } from '../BrandLogo';
 import { usePageTitle } from '../../../hooks/usePageTitle';
 import { SalesScriptButton } from '../../salesScript/SalesScriptButton';
+import { SupportLauncher } from '../../support/SupportLauncher';
 import { useSalesScriptStore } from '../../../store/useSalesScriptStore';
 import { usePermission } from '../../../hooks/usePermission';
 import { useTranslation } from 'react-i18next';
+import { registerAdapter } from '../../../lib/support/layoutAdapters';
+import { tourProps } from '../../../lib/support/tourProps';
 
 export interface AppLayoutProps {
   children: ReactNode;
@@ -38,6 +41,31 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   usePageTitle();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+  // The Support tour may need the phone sidebar or search bar open to show a control. These hand it view
+  // state only. `open` and `close` update the ref at once, so an immediate `isOpen` is never stale.
+  const views = useRef({ sidebar: false, mobileSearch: false });
+  views.current = { sidebar: isSidebarOpen, mobileSearch: isMobileSearchOpen };
+  useEffect(() => {
+    const adapter = (name: 'sidebar' | 'mobileSearch', set: (open: boolean) => void) =>
+      registerAdapter(name, {
+        isOpen: () => views.current[name],
+        open: () => {
+          views.current[name] = true;
+          set(true);
+        },
+        close: () => {
+          views.current[name] = false;
+          set(false);
+        },
+      });
+    const offSidebar = adapter('sidebar', setIsSidebarOpen);
+    const offSearch = adapter('mobileSearch', setIsMobileSearchOpen);
+    return () => {
+      offSidebar();
+      offSearch();
+    };
+  }, []);
   // The open sales script panel takes the right of the screen; the page makes room for it (FR-SCR-02).
   const scriptPanelOpen = useSalesScriptStore((state) => state.isOpen);
   const canViewScript = usePermission('script.view');
@@ -77,6 +105,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             className={`${styles.iconBtn} ${styles.menuBtn}`} 
             onClick={() => setIsSidebarOpen(true)}
             aria-label={t('header.openMenu')}
+            {...tourProps('shell.menu')}
           >
             <Menu size={24} />
           </button>
@@ -109,13 +138,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           */}
           <NotificationBell />
           <SalesScriptButton className={styles.iconBtn} />
-          <button className={`${styles.iconBtn} ${styles.helpBtn}`} aria-label={t('header.help')}>
-            <HelpCircle size={20} />
-          </button>
+          {/* Was a dead <button> with no handler (the TD-020 family); it now opens the Support panel. */}
+          <SupportLauncher className={`${styles.iconBtn} ${styles.helpBtn}`} />
           <DropdownMenu
             align="right"
             trigger={
-              <button className={styles.profileBtn} aria-label={t('header.userProfile')}>
+              <button className={styles.profileBtn} aria-label={t('header.userProfile')} {...tourProps('shell.profile')}>
                 <Avatar
                   src={avatarSrc}
                   srcSet={avatarSrcSet}

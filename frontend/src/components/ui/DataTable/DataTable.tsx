@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useIsDesktop } from '../../../hooks/useMediaQuery';
+import { tourPath, tourProps } from '../../../lib/support/tourProps';
 import styles from './DataTable.module.css';
 
 export interface DataTableColumn<T> {
@@ -67,6 +68,10 @@ export interface DataTableProps<T> {
   sort?: DataTableSort;
   selection?: DataTableSelection;
   className?: string;
+  /** Support tour id for the table; also derives `<id>.empty`, `<id>.loading` and `<id>.sort.<column>`. */
+  tourId?: string;
+  /** Support tour id carried by every row (table) or card (phone); declared repeated. */
+  rowTourId?: string;
 }
 
 const alignClass = <T,>(column: DataTableColumn<T>) => {
@@ -88,6 +93,8 @@ export function DataTable<T>({
   sort,
   selection,
   className = '',
+  tourId,
+  rowTourId,
 }: DataTableProps<T>) {
   const { t } = useTranslation('common');
   const isEmpty = !isLoading && rows.length === 0;
@@ -162,6 +169,9 @@ export function DataTable<T>({
     return sort.direction === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />;
   };
 
+  // While loading, the skeleton says so, so a tour waits instead of deciding a control is missing.
+  const loadingProps = tourId ? { ...tourProps(tourPath(tourId, 'loading')), 'aria-busy': true } : {};
+
   const ariaSort = (columnId: string): 'ascending' | 'descending' | 'none' => {
     if (!sort || sort.field !== columnId) return 'none';
     return sort.direction === 'asc' ? 'ascending' : 'descending';
@@ -171,8 +181,8 @@ export function DataTable<T>({
 
   if (isEmpty && empty) {
     return (
-      <div className={wrapperClasses}>
-        <div className={styles.emptyState}>
+      <div className={wrapperClasses} {...tourProps(tourId)}>
+        <div className={styles.emptyState} {...tourProps(tourId && tourPath(tourId, 'empty'))}>
           {empty.icon && <div className={styles.emptyIcon}>{empty.icon}</div>}
           <p className={styles.emptyTitle}>{empty.title}</p>
           {empty.description && (
@@ -196,7 +206,7 @@ export function DataTable<T>({
 
   if (!isDesktop) {
     return (
-      <div className={wrapperClasses}>
+      <div className={wrapperClasses} {...tourProps(tourId)}>
         {selection && selectableKeys.length > 0 && !isLoading && (
           <div className={styles.cardSelectAll}>
             <label className={styles.cardSelectAllLabel}>
@@ -210,7 +220,11 @@ export function DataTable<T>({
         <div className={styles.cardList}>
           {isLoading
             ? Array.from({ length: loadingRowCount }).map((_, index) => (
-                <div key={`skeleton-card-${index}`} className={styles.card}>
+                <div
+                  key={`skeleton-card-${index}`}
+                  className={styles.card}
+                  {...loadingProps}
+                >
                   <span className={`${styles.skeleton} ${styles.skeletonCardLine}`} />
                   <span className={`${styles.skeleton} ${styles.skeletonCardLine}`} />
                 </div>
@@ -233,6 +247,7 @@ export function DataTable<T>({
                     onKeyDown={isInteractive ? (e) => handleRowKeyDown(e, row) : undefined}
                     tabIndex={isInteractive ? 0 : undefined}
                     role={isInteractive ? 'button' : undefined}
+                    {...tourProps(rowTourId, { repeat: true })}
                   >
                     {selection && (
                       <div className={styles.cardCheckbox}>
@@ -273,7 +288,7 @@ export function DataTable<T>({
   const columnCount = columns.length + (selection ? 1 : 0);
 
   return (
-    <div className={wrapperClasses}>
+    <div className={wrapperClasses} {...tourProps(tourId)}>
       <div className={styles.scrollArea}>
         <table className={tableClasses}>
           {caption && <caption className={styles.visuallyHidden}>{caption}</caption>}
@@ -304,6 +319,7 @@ export function DataTable<T>({
                           .filter(Boolean)
                           .join(' ')}
                         onClick={() => sort!.onSort(column.id)}
+                        {...tourProps(tourId && tourPath(tourId, 'sort', column.id))}
                       >
                         {column.header}
                         <span className={styles.sortIcon} aria-hidden="true">
@@ -321,7 +337,7 @@ export function DataTable<T>({
           <tbody>
             {isLoading
               ? Array.from({ length: loadingRowCount }).map((_, rowIndex) => (
-                  <tr key={`skeleton-${rowIndex}`} className={styles.skeletonRow}>
+                  <tr key={`skeleton-${rowIndex}`} className={styles.skeletonRow} {...loadingProps}>
                     {selection && (
                       <td className={styles.checkboxCell}>
                         <span className={styles.skeleton} />
@@ -350,6 +366,7 @@ export function DataTable<T>({
                       onKeyDown={isInteractive ? (e) => handleRowKeyDown(e, row) : undefined}
                       tabIndex={isInteractive ? 0 : undefined}
                       role={isInteractive ? 'button' : undefined}
+                      {...tourProps(rowTourId, { repeat: true })}
                     >
                       {selection && (
                         <td className={styles.checkboxCell}>

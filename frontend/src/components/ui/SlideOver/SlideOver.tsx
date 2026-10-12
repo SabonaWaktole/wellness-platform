@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { drawerVariants, overlayVariants } from '../../../lib/motion';
+import { tourLayerProps } from '../../../lib/support/tourProps';
 import styles from './SlideOver.module.css';
 
 export interface SlideOverProps {
@@ -11,6 +12,8 @@ export interface SlideOverProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Support tour id for the panel; also marks it as a layer so a tour scopes to it while open. */
+  tourId?: string;
 }
 
 export const SlideOver: React.FC<SlideOverProps> = ({
@@ -19,6 +22,7 @@ export const SlideOver: React.FC<SlideOverProps> = ({
   title,
   children,
   footer,
+  tourId,
 }) => {
   const { t } = useTranslation('common');
   useEffect(() => {
@@ -57,6 +61,7 @@ export const SlideOver: React.FC<SlideOverProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="slideover-title"
+            {...tourLayerProps(tourId)}
             variants={drawerVariants}
             initial="hidden"
             animate="visible"

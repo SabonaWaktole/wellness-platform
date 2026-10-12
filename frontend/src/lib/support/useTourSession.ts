@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Namespace } from '../../i18n/config';
+import { useIsDesktop } from '../../hooks/useMediaQuery';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSupportStore } from '../../store/useSupportStore';
 import type { PopoverVariant } from '../../components/support/TourPopover';
 import { announce } from './announcer';
+import { resolveStepCopy, runtimeVars } from './defineGuide';
+import { ensureOpen, isAdapterName, restoreAll } from './layoutAdapters';
 import { loadGuide } from './pageRegistry';
 import { progressUserKey, readPageProgress, writeProgress } from './progressStorage';
 import { scrollTargetIntoView } from './scrollTargetIntoView';
@@ -88,6 +91,13 @@ export function useTourSession(): TourSession {
         return;
       }
       await Promise.all([loadSupportCopy('support'), loadSupportCopy(loaded.namespace as Namespace)]);
+      // In development a broken guide is reported the moment it loads; the lint reads every catalogue, so it is not shipped.
+      if (import.meta.env.DEV) {
+        void import('./guideLint').then(({ lintGuide }) => {
+          const issues = lintGuide(loaded);
+          if (issues.length > 0) console.warn(`Support guide ${loaded.pageId} has problems:\n${issues.map((i) => i.message).join('\n')}`);
+        });
+      }
       if (!cancelled) setGuide(loaded);
     })();
     return () => {
@@ -124,6 +134,7 @@ export function useTourSession(): TourSession {
     dispatch({ type: 'STEPS_CHANGED', steps });
   }, [eligible, machine.status]);
 
+  const isDesktop = useIsDesktop();
   const ref = currentStep(machine);
   const step = ref ? (eligible.find((s) => s.id === ref.id) ?? null) : null;
   const active = machine.status === 'running' || machine.status === 'waiting' || machine.status === 'lost';
@@ -133,18 +144,7 @@ export function useTourSession(): TourSession {
   const target = useTargetElement(spec);
   const fresh = target.key === targetSpecKey(spec);
 
-  const copyKey = (part: string) => (guide && step ? `${guide.pageId}.${step.id}.${part}` : '');
-  const read = (part: string) => (guide && step ? t(copyKey(part), { ns: guide.namespace, defaultValue: '' }) : '');
-  const copy: StepCopy | null =
-    guide && step
-      ? {
-          title: read('title'),
-          body: read('body'),
-          when: read('when') || undefined,
-          warning: read('warning') || undefined,
-          disabled: read('disabled') || undefined,
-        }
-      : null;
+  const copy: StepCopy | null = guide && step ? resolveStepCopy(guide, step, t, runtimeVars(target.element)) : null;
 
   const skipCurrent = (fromWaiting: boolean) => {
     notice.current = t('announce.skipped', { ns: 'support', title: copy?.title ?? '' });
@@ -173,6 +173,15 @@ export function useTourSession(): TourSession {
     // `skipCurrent` and `copy` are derived from the values listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machine.status, step?.id, fresh, target.status, target.element]);
+
+  // A step about something that is off screen on a phone (the sidebar) opens it first and puts it back
+  // when the step changes or the tour ends. On a desktop the control is always there, so nothing is opened.
+  const needsView = active && step?.needs && isAdapterName(step.needs) ? step.needs : null;
+  useEffect(() => {
+    if (!needsView || isDesktop) return;
+    ensureOpen(needsView);
+    return () => restoreAll();
+  }, [needsView, isDesktop, step?.id]);
 
   // Route change: the tour belongs to the page it started on.
   useEffect(() => {

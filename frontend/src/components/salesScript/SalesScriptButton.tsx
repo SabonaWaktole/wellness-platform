@@ -2,6 +2,7 @@ import { ScrollText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Can } from '../auth/Can';
 import { Button } from '../ui/Button/Button';
+import { tourProps } from '../../lib/support/tourProps';
 import { useSalesScriptStore } from '../../store/useSalesScriptStore';
 
 export interface SalesScriptButtonProps {
@@ -34,7 +35,7 @@ export const SalesScriptButton = ({ className, outline = false }: SalesScriptBut
           <ScrollText size={18} aria-hidden="true" />
         </Button>
       ) : (
-        <button type="button" {...props}>
+        <button type="button" {...props} {...tourProps('shell.script')}>
           <ScrollText size={20} aria-hidden="true" />
         </button>
       )}
