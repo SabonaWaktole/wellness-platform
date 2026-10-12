@@ -8,14 +8,16 @@ import { SpotlightMask } from './SpotlightMask';
 const frame = () => act(async () => void (await new Promise((r) => requestAnimationFrame(() => r(null)))));
 const part = (name: string) => document.body.querySelector(`[data-spotlight="${name}"]`) as HTMLElement;
 
+const created: Element[] = [];
 const target = (rect = { top: 100, left: 100, width: 120, height: 32 }) => {
   const node = document.createElement('button');
   document.body.append(node);
+  created.push(node);
   return mockRect(node, rect);
 };
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  created.splice(0).forEach((node) => node.remove());
   vi.unstubAllGlobals();
 });
 

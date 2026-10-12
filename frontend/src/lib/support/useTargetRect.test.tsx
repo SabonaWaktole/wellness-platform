@@ -5,14 +5,16 @@ import { useTargetRect } from './useTargetRect';
 
 const frame = () => act(async () => void (await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))));
 
+const created: Element[] = [];
 const target = () => {
   const node = document.createElement('button');
   document.body.append(node);
+  created.push(node);
   return mockRect(node);
 };
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  created.splice(0).forEach((node) => node.remove());
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -48,6 +50,7 @@ describe('SUP-15 useTargetRect', () => {
     mockRect(node, { top: 55, left: 20, width: 30, height: 40 });
     const scroller = document.createElement('div');
     document.body.append(scroller);
+    created.push(scroller);
     scroller.dispatchEvent(new Event('scroll'));
     window.dispatchEvent(new Event('scroll'));
     await frame();
@@ -64,7 +67,7 @@ describe('SUP-15 useTargetRect', () => {
     expect(measure).toHaveBeenCalledTimes(1);
   });
 
-  it('SUP-15 re-measures when the element itself is resized', () => {
+  it('SUP-15 re-measures when the element itself is resized', async () => {
     const node = target();
     const callbacks: Array<() => void> = [];
     vi.stubGlobal('ResizeObserver', class {
@@ -76,7 +79,8 @@ describe('SUP-15 useTargetRect', () => {
     const { result } = renderHook(() => useTargetRect(node, 0));
     mockRect(node, { top: 1, left: 2, width: 99, height: 98 });
     act(() => callbacks.forEach((cb) => cb()));
-    return frame().then(() => expect(result.current).toMatchObject({ width: 99, height: 98 }));
+    await frame();
+    expect(result.current).toMatchObject({ width: 99, height: 98 });
   });
 
   it('SUP-15 binds to a replacement element', () => {

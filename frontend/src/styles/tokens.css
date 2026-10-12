@@ -325,6 +325,9 @@
   --z-modal: 80;
   --z-toast: 90;
   --z-tooltip: 100;
+  /* The Support tour's spotlight and card. Must exceed the impersonation banner's literal z-index: 1000,
+   * or a tour started while impersonating would draw underneath it. */
+  --z-tour: 1100;
 
   /* -------------------------------------------------------------------
    * Charts — a fixed categorical order, assigned by slot and never cycled.
