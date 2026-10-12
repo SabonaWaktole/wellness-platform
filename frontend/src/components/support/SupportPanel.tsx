@@ -144,6 +144,13 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
     useSupportStore.getState().startTour(pageId);
   };
 
+  // Pointing at a control works on any page: the header, the menu and the shared kinds are explained everywhere.
+  const pickButton = pageId ? (
+    <Button type="button" size="sm" variant="outline" onClick={() => useSupportStore.getState().startPick(pageId)}>
+      {t('panel.pick')}
+    </Button>
+  ) : null;
+
   let body;
   if (!loading && load.status === 'ready' && canTour && showingControls) {
     body = (
@@ -178,6 +185,7 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
           {pageId ? t('panel.noHelpTitle', { page: pageLabel }) : t('panel.noPage')}
         </h2>
         {pageId && <p className={styles.text}>{t('panel.noHelpBody')}</p>}
+        {pickButton && <div className={styles.actions}>{pickButton}</div>}
       </>
     );
   } else {
@@ -213,6 +221,7 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
           <Button type="button" size="sm" variant="outline" onClick={() => useSupportStore.getState().setPanelView('controls')}>
             {t('panel.explain')}
           </Button>
+          {pickButton}
         </div>
       </>
     );

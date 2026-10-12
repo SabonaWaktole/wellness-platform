@@ -1,3 +1,4 @@
+import type { SharedKindId } from './sharedGuidance';
 import type { StepKind } from './types';
 
 /**
@@ -11,7 +12,8 @@ const warned = new Set<string>();
 interface TourPropsOptions {
   /** The id is deliberately on many elements (rows, cards). */
   repeat?: boolean;
-  kind?: StepKind;
+  /** What the control is. A shared guidance kind (`search`, `pagination`...) lets point-and-ask explain a control that no guide mentions. */
+  kind?: StepKind | SharedKindId;
 }
 
 /**

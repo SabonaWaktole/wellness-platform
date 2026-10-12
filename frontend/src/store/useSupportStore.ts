@@ -35,6 +35,8 @@ interface SupportState {
   closePanel: () => void;
   /** Start a tour for `pageId`. The panel closes so the page is visible. */
   startTour: (pageId: string) => void;
+  /** Point-and-ask on `pageId`: any annotated control can be explained. */
+  startPick: (pageId: string) => void;
   /** Explain one control of `pageId`'s guide, without touring. */
   startSingle: (pageId: string, stepId: string) => void;
   /** Return to mode `none` without touching what the page published. */
@@ -64,6 +66,7 @@ export const useSupportStore = create<SupportState>((set) => ({
   openPanel: (view = 'main') => set({ panelOpen: true, panelView: view }),
   closePanel: () => set({ panelOpen: false, panelPath: null, panelView: 'main' }),
   startTour: (pageId) => set((state) => ({ panelOpen: false, panelPath: null, mode: 'tour', context: { ...state.context, pageId } })),
+  startPick: (pageId) => set((state) => ({ panelOpen: false, panelPath: null, panelView: 'main', mode: 'pick', context: { ...state.context, pageId } })),
   startSingle: (pageId, stepId) =>
     set((state) => ({ panelOpen: false, panelPath: null, panelView: 'main', mode: 'single', singleStepId: stepId, context: { ...state.context, pageId } })),
   endSession: () => set((state) => ({ mode: 'none', singleStepId: null, context: { ...state.context, pageId: null } })),

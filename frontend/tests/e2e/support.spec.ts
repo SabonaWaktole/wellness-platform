@@ -58,6 +58,27 @@ test.describe('Support panel', () => {
     watch.assert();
   });
 
+  // Point-and-ask works on any page, guide or not: the header and menu are explained everywhere. The click that
+  // picks the control is swallowed, so it neither navigates nor changes anything.
+  test('pointing at a control explains it, and changes no data', async ({ page }) => {
+    await page.goto(`/${TENANT}/clients`);
+    await expect(page).not.toHaveURL(/\/login|\/unauthorized/);
+    const here = page.url();
+    const watch = expectNoMutations(page);
+
+    await page.getByRole('button', { name: /^(Help|Ndihmë)$/ }).click();
+    await page.getByRole('button', { name: /^(Point at a control|Trego një kontroll)$/ }).click();
+    await expect(page.getByText(/Pick a control|Zgjidhni një kontroll/)).toBeVisible();
+
+    await page.locator('[data-tour="shell.nav.item"]').first().click();
+    await expect(page.getByRole('heading', { level: 2, name: /A menu entry|Një zë i menusë/ })).toBeVisible();
+    expect(page.url(), 'the click only explained the menu entry').toBe(here);
+
+    await page.getByRole('button', { name: /^(Close|Mbyll)$/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: /A menu entry|Një zë i menusë/ })).toBeHidden();
+    watch.assert();
+  });
+
   test('the sidebar Support item opens the same panel', async ({ page }) => {
     await page.goto(`/${TENANT}/dashboard`);
     await page.getByRole('link', { name: /^(Support|Mbështetje)$/ }).click();

@@ -202,5 +202,12 @@
     "retry": "Provo përsëri",
     "noMatch": "Asnjë kontroll nuk përputhet me “{{query}}”.",
     "everyRow": "Shfaqet në çdo rresht"
+  },
+  "pick": {
+    "banner": "Zgjidhni një kontroll. Shtypni Escape për të anuluar.",
+    "cancel": "Anulo",
+    "highlighted": "I theksuar: {{name}}",
+    "noHelpTitle": "Ende nuk ka ndihmë të shkruar për këtë kontroll",
+    "noHelpBody": "Është në faqe, por askush nuk e ka shpjeguar ende këtu."
   }
 }

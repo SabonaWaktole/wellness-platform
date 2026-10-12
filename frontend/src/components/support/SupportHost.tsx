@@ -4,10 +4,12 @@ import { useAnnouncerStore } from '../../lib/support/announcer';
 import { describeTarget } from '../../lib/support/describeTarget';
 import { useTourFocus } from '../../lib/support/useTourFocus';
 import { useTourKeyboard } from '../../lib/support/useTourKeyboard';
+import { usePickMode } from '../../lib/support/usePickMode';
 import { useTourSession } from '../../lib/support/useTourSession';
 import { useTargetRect } from '../../lib/support/useTargetRect';
 import { useSupportStore } from '../../store/useSupportStore';
 import { LiveAnnouncer } from './LiveAnnouncer';
+import { PickBanner } from './PickBanner';
 import { SpotlightMask } from './SpotlightMask';
 import { TourPopover } from './TourPopover';
 
@@ -74,6 +76,50 @@ const TourSessionView = () => {
   );
 };
 
+const noop = () => {};
+
+/** Point-and-ask: a banner while the user looks around, and a single card for the control they pick. */
+const PickSessionView = () => {
+  const pick = usePickMode();
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const shown = pick.picked !== null && pick.pickedCopy !== null;
+  const rect = useTargetRect(pick.highlight);
+
+  useTourFocus(shown, headingRef, pick.picked?.id ?? null);
+
+  return (
+    <>
+      <PickBanner candidateName={pick.candidateName} onCancel={pick.close} />
+      <SpotlightMask element={pick.highlight} />
+      {shown &&
+        createPortal(
+          <TourPopover
+            variant="step"
+            single
+            copy={pick.pickedCopy!.copy}
+            index={0}
+            total={0}
+            status={null}
+            targetRect={rect}
+            onNext={noop}
+            onBack={noop}
+            onSkip={noop}
+            onExit={pick.close}
+            onFinish={noop}
+            onReplay={noop}
+            onClose={pick.close}
+            onAnother={pick.pickAnother}
+            anotherLabel="pick"
+            rootRef={popoverRef}
+            headingRef={headingRef}
+          />,
+          document.body,
+        )}
+    </>
+  );
+};
+
 /**
  * The Support host, mounted once per shell. Renders nothing, and registers
  * nothing, until a session exists; the live region outlives the session just
@@ -86,6 +132,7 @@ export default function SupportHost() {
   return (
     <>
       {(mode === 'tour' || mode === 'single') && <TourSessionView />}
+      {mode === 'pick' && <PickSessionView />}
       <LiveAnnouncer />
     </>
   );

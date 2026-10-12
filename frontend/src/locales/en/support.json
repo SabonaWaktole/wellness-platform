@@ -202,5 +202,12 @@
     "retry": "Retry",
     "noMatch": "No control matches “{{query}}”.",
     "everyRow": "Appears on every row"
+  },
+  "pick": {
+    "banner": "Pick a control. Press Escape to cancel.",
+    "cancel": "Cancel",
+    "highlighted": "Highlighted: {{name}}",
+    "noHelpTitle": "No help written for this control yet",
+    "noHelpBody": "It is on the page, but nobody has explained it here yet."
   }
 }
