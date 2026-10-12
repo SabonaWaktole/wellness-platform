@@ -24,6 +24,14 @@
       "body": "Këtë tur mund ta bëni përsëri kurdo nga Mbështetja.",
       "replay": "Përsërit",
       "close": "Mbyll"
+    },
+    "openHint": "Hapeni vetë për të vazhduar. Turi nuk klikon kurrë për ju.",
+    "seeAgain": "Doni ta shihni sërish?",
+    "skipPart": "Kapërce këtë pjesë",
+    "continue": "Vazhdo",
+    "closeWait": {
+      "title": "Mbylleni për të vazhduar",
+      "body": "Kur ta mbyllni, turi vazhdon me hapin tjetër."
     }
   },
   "announce": {

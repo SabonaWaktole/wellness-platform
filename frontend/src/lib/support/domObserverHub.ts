@@ -7,7 +7,7 @@
  * mutations produces one callback per subscriber per animation frame.
  */
 
-const WATCHED_ATTRIBUTES = ['data-tour', 'disabled', 'aria-disabled', 'aria-hidden', 'aria-busy', 'hidden', 'class'];
+const WATCHED_ATTRIBUTES = ['data-tour', 'disabled', 'aria-disabled', 'aria-hidden', 'aria-busy', 'aria-selected', 'hidden', 'class'];
 
 interface Entry {
   notify: () => void;

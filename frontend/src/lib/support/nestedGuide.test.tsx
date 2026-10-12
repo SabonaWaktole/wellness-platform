@@ -6,6 +6,7 @@ import SupportHost from '../../components/support/SupportHost';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog/ConfirmDialog';
 import { DropdownMenu } from '../../components/ui/DropdownMenu/DropdownMenu';
 import { Modal } from '../../components/ui/Modal/Modal';
+import { Tabs } from '../../components/ui/Tabs/Tabs';
 import { SlideOver } from '../../components/ui/SlideOver/SlideOver';
 import i18n from '../../i18n';
 import { makeDomRect, ON_SCREEN } from '../../mocks/mockRect';
@@ -269,5 +270,69 @@ describe('SUP-10 the menu stays open while the tour explains it', () => {
     await headingIs('Field');
     fireEvent.mouseDown(document.body);
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+  });
+});
+
+describe('SUP-10 a tab step', () => {
+  const TabsFixture = () => {
+    const [active, setActive] = useState('a');
+    return (
+      <main>
+        <Tabs
+          tourId="fx.tabs"
+          tabs={[
+            { id: 'a', label: 'First' },
+            { id: 'b', label: 'Second' },
+          ]}
+          activeId={active}
+          onChange={setActive}
+        />
+        <p data-tour="fx.outro">{'Outro text'}</p>
+      </main>
+    );
+  };
+
+  beforeEach(() => {
+    i18n.addResourceBundle('en', 'supportSales', { clients: { list: { tabB: { title: 'Second tab', body: 'Select it.' } } } }, true, true);
+    loaders['clients.list'] = async () => ({
+      default: {
+        pageId: 'clients.list',
+        version: 1,
+        namespace: 'supportSales',
+        steps: [
+          { id: 'tabB', target: 'fx.tabs.tab.b', kind: 'tab', safety: 'try-it', advanceWhen: 'selected' },
+          { id: 'outro', target: 'fx.outro', kind: 'region' },
+        ],
+      },
+    });
+  });
+
+  it('SUP-10 waits for the user to select the tab, then moves on by itself', async () => {
+    render(
+      <MemoryRouter initialEntries={['/acme/clients']}>
+        <TabsFixture />
+        <SupportHost />
+      </MemoryRouter>,
+    );
+    act(() => useSupportStore.getState().startTour('clients.list'));
+    await waitFor(() => expect(card()).not.toBeNull());
+    await settle();
+    expect(heading()).toBe('Second tab');
+    act(() => void fireEvent.click(screen.getByRole('tab', { name: 'Second' })));
+    await headingIs('Outro');
+  });
+
+  it('SUP-10 does not move on while the tab is not selected', async () => {
+    render(
+      <MemoryRouter initialEntries={['/acme/clients']}>
+        <TabsFixture />
+        <SupportHost />
+      </MemoryRouter>,
+    );
+    act(() => useSupportStore.getState().startTour('clients.list'));
+    await waitFor(() => expect(card()).not.toBeNull());
+    await settle();
+    await settle();
+    expect(heading()).toBe('Second tab');
   });
 });

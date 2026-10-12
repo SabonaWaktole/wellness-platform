@@ -76,6 +76,13 @@ export interface GuideStep {
   needs?: string;
   /** Values interpolated into the copy, for example `{ subject: 'clients' }` for `{{subject}}`. */
   vars?: Record<string, string>;
+  /**
+   * When a step that waits for the user is done: `layer` (the default for an opener) when the layer it
+   * opens is present, `selected` when its target (a tab) becomes `aria-selected`.
+   */
+  advanceWhen?: 'layer' | 'selected';
+  /** A heading to group this control under in the "Explain a control" list. */
+  section?: string;
 }
 
 /** A step's text, read from the guide's namespace by key. Only the title and body are required. */
@@ -124,6 +131,8 @@ interface ActiveFields {
   index: number;
   /** The step whose layer the tour is inside, or null at the top level. */
   parentId: string | null;
+  /** Explaining one control, not touring: no progress, no Next or Back. */
+  single?: boolean;
 }
 
 export type MachineState =
@@ -134,7 +143,7 @@ export type MachineState =
   | { status: 'finished'; outcome: TourOutcome; lastStepId: string | null };
 
 export type MachineEvent =
-  | { type: 'START'; steps: StepRef[]; resumeAtId?: string }
+  | { type: 'START'; steps: StepRef[]; resumeAtId?: string; single?: boolean }
   | { type: 'NEXT' }
   | { type: 'BACK' }
   | { type: 'SKIP_TOUR' }
@@ -146,4 +155,6 @@ export type MachineEvent =
   | { type: 'TARGET_RESTORED' }
   | { type: 'HOLD_FOR_USER'; layerId: string }
   | { type: 'LAYER_OPENED'; group: string }
-  | { type: 'LAYER_CLOSED' };
+  | { type: 'LAYER_CLOSED' }
+  /** Leave the wait for a layer the user did not open, and go past its whole group. */
+  | { type: 'SKIP_GROUP' };

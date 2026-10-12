@@ -22,7 +22,7 @@ const TourSessionView = () => {
   useTourFocus(shown, headingRef, session.stepKey);
   useTourKeyboard({
     running: shown,
-    waiting: session.waitingForUser,
+    waiting: session.escapeToApp,
     onExit: variant === 'completed' ? session.onClose : session.onExit,
     onNext: session.onNext,
     onBack: session.onBack,
@@ -57,6 +57,10 @@ const TourSessionView = () => {
           onFinish={session.onFinish}
           onReplay={session.onReplay}
           onClose={session.onClose}
+          waitingFor={session.waitingFor}
+          onSkipPart={session.onSkipPart}
+          note={session.note}
+          lastLabel={session.lastLabel}
           rootRef={popoverRef}
           headingRef={headingRef}
           onSheetHeight={session.setSheetHeight}

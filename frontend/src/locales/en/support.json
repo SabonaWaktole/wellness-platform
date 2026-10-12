@@ -24,6 +24,14 @@
       "body": "You can take this tour again whenever you like from Support.",
       "replay": "Replay",
       "close": "Close"
+    },
+    "openHint": "Open it yourself to carry on. The tour never clicks for you.",
+    "seeAgain": "Want to see it again?",
+    "skipPart": "Skip this part",
+    "continue": "Continue",
+    "closeWait": {
+      "title": "Close it to continue",
+      "body": "When you close it, the tour carries on with the next step."
     }
   },
   "announce": {

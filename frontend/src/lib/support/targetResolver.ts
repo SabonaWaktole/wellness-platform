@@ -1,3 +1,4 @@
+import { topLayer } from './layerStack';
 import type { TargetScope, TargetSpec, TargetStatus } from './types';
 
 /**
@@ -6,7 +7,6 @@ import type { TargetScope, TargetSpec, TargetStatus } from './types';
  * every settled change, so a stale element is never held.
  */
 
-const LAYER_SELECTOR = '[role="dialog"][aria-modal="true"], [role="menu"], [data-tour-layer]';
 const BUSY_SELECTOR = '[aria-busy="true"], [data-tour-busy]';
 
 export interface Resolution {
@@ -26,10 +26,7 @@ export function scopeRoot(doc: Document, forced?: TargetScope): ParentNode {
   const main = doc.querySelector('main');
   if (forced === 'shell') return doc;
   if (forced === 'page') return main ?? doc;
-  const layers = doc.querySelectorAll(LAYER_SELECTOR);
-  // Layers are portalled to the end of the body, so the last in document order is the topmost.
-  const layer = layers.length > 0 ? layers[layers.length - 1] : null;
-  return layer ?? main ?? doc;
+  return topLayer(doc) ?? main ?? doc;
 }
 
 export function isVisible(element: Element): boolean {

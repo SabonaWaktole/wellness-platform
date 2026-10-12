@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal } from '../../components/ui/Modal/Modal';
@@ -16,6 +16,13 @@ const addLayer = (id: string) => {
   created.push(node);
   return node;
 };
+/** Advances fake time after letting the pending mutation callback run, so the hub has scheduled its frame. */
+const tick = (ms: number) =>
+  act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    vi.advanceTimersByTime(ms);
+  });
 const frames = () => act(async () => void (await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))))));
 
 afterEach(() => {
@@ -55,10 +62,10 @@ describe('SUP-10 useLayerWatcher', () => {
     const onClose = vi.fn();
     const { result } = renderHook(() => useLayerWatcher('a.dialog', { onOpen: vi.fn(), onClose }));
     layer.remove();
-    await act(async () => void vi.advanceTimersByTime(50));
+    await tick(50);
     expect(result.current).toBe(true);
     expect(onClose).not.toHaveBeenCalled();
-    await act(async () => void vi.advanceTimersByTime(LAYER_EXIT_GRACE_MS));
+    await tick(LAYER_EXIT_GRACE_MS);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(result.current).toBe(false);
   });
@@ -69,9 +76,9 @@ describe('SUP-10 useLayerWatcher', () => {
     const onClose = vi.fn();
     renderHook(() => useLayerWatcher('a.dialog', { onOpen: vi.fn(), onClose }));
     layer.remove();
-    await act(async () => void vi.advanceTimersByTime(100));
+    await tick(100);
     addLayer('a.dialog');
-    await act(async () => void vi.advanceTimersByTime(LAYER_EXIT_GRACE_MS * 2));
+    await tick(LAYER_EXIT_GRACE_MS * 2);
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -81,9 +88,9 @@ describe('SUP-10 useLayerWatcher', () => {
     const layer = addLayer('a.dialog');
     renderHook(() => useLayerWatcher('a.dialog', { onOpen, onClose: vi.fn() }));
     layer.remove();
-    await act(async () => void vi.advanceTimersByTime(LAYER_EXIT_GRACE_MS + 50));
+    await tick(LAYER_EXIT_GRACE_MS + 100);
     addLayer('a.dialog');
-    await act(async () => void vi.advanceTimersByTime(50));
+    await tick(100);
     expect(onOpen).toHaveBeenCalledTimes(2);
   });
 
@@ -114,7 +121,7 @@ describe('SUP-10 useLayerWatcher', () => {
     await frames();
     expect(onOpen).toHaveBeenCalledTimes(1);
     act(() => screen.getByRole('button', { name: 'close it' }).click());
-    await act(async () => void (await new Promise((r) => setTimeout(r, LAYER_EXIT_GRACE_MS + 900))));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    // Polled, not slept inside one act(): React holds updates back until an act scope ends, and the Modal unmounts through one.
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), { timeout: 4000 });
   }, 10000);
 });
