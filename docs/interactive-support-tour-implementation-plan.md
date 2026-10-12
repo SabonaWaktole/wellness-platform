@@ -11,6 +11,20 @@
 | Production LOC | About 19,210 lines across the phase; per-slice estimates in section 6 |
 | Date | 12.10.2026 |
 
+
+> ## If you were asked to implement a slice ("implement slice 7", "do S07")
+>
+> This file is very large and is not meant to be read whole. Do this instead:
+>
+> 1. "Slice N" means the heading `### SNN:` in section 6 (slice 7 is `### S07:`). Find it with `grep -n "^### S07:" docs/interactive-support-tour-implementation-plan.md`, then read only that section (it ends at the next `### S` heading).
+> 2. Read section **6.1** (the standard procedure PT-1 to PT-8, tests ST, acceptance SA, evidence SE) and assumptions **A1 to A9** in section 0.2.
+> 3. Read the slice's **Prerequisites** (item 5) and confirm each prerequisite slice is already merged. If one is not, stop and say so; do not build it as a side effect.
+> 4. Foundation slices (S01 to S04) are described by parts P01 to P16: see section 5.4 for the part-to-slice table, and read every part inside the slice.
+> 5. Work test-first. Apply the **File-Level Change Plan** (item 7) file by file, in the order given; follow item 8 for task order; keep to item 16 (what is excluded).
+> 6. Verify with item 13, check item 12, and report the measured production LOC next to the estimate in item 6.
+> 7. One slice = one branch `support-slice-N-<name>` and one PR. Do not implement anything from another slice, and never annotate a control listed in section 3.4.
+> 8. Control labels and conditions in page slices marked "profiled" or "extracted" in section 3 are hypotheses: re-inventory the files first (PT-2) and report differences before editing.
+
 ---
 
 ## 0. How to read this plan
