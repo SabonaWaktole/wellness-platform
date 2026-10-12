@@ -81,6 +81,14 @@ export interface PageGuide {
   steps: GuideStep[];
 }
 
+/** The measured box of a target, in viewport coordinates. */
+export interface TargetRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
 /** Where a step's element is right now. */
 export type TargetStatus = 'found' | 'disabled' | 'offscreen' | 'pending' | 'missing' | 'lost';
 

@@ -19,7 +19,7 @@ describe('SUP-06 target resolver: status of one target', () => {
   it('SUP-06 reports found for a connected, laid out element', () => {
     const { container } = render(
       <main>
-        <button data-tour="page.add" data-testid="add">Add</button>
+        <button data-tour="page.add" data-testid="add"></button>
       </main>,
     );
     const add = show(el(container, 'add'));
@@ -29,7 +29,7 @@ describe('SUP-06 target resolver: status of one target', () => {
   it('SUP-06 an element that is not laid out is not found', () => {
     render(
       <main>
-        <button data-tour="page.add">Add</button>
+        <button data-tour="page.add"></button>
       </main>,
     );
     expect(resolveTarget({ id: 'page.add' }).status).toBe('missing');
@@ -39,7 +39,7 @@ describe('SUP-06 target resolver: status of one target', () => {
     const { container } = render(
       <main>
         <div aria-hidden="true">
-          <button data-tour="page.add" data-testid="add">Add</button>
+          <button data-tour="page.add" data-testid="add"></button>
         </div>
       </main>,
     );
@@ -50,7 +50,7 @@ describe('SUP-06 target resolver: status of one target', () => {
   it('SUP-06 an element with the hidden attribute is not found', () => {
     const { container } = render(
       <main>
-        <button data-tour="page.add" data-testid="add" hidden>Add</button>
+        <button data-tour="page.add" data-testid="add" hidden></button>
       </main>,
     );
     show(el(container, 'add'));
@@ -63,7 +63,7 @@ describe('SUP-06 target resolver: status of one target', () => {
   ])('SUP-06 a %s element is reported disabled but still returned', (_name, attrs) => {
     const { container } = render(
       <main>
-        <button data-tour="page.add" data-testid="add" {...attrs}>Add</button>
+        <button data-tour="page.add" data-testid="add" {...attrs}></button>
       </main>,
     );
     const add = show(el(container, 'add'));
@@ -74,7 +74,7 @@ describe('SUP-06 target resolver: status of one target', () => {
   it('SUP-06 an element outside the viewport is reported offscreen', () => {
     const { container } = render(
       <main>
-        <button data-tour="page.add" data-testid="add">Add</button>
+        <button data-tour="page.add" data-testid="add"></button>
       </main>,
     );
     mockRect(el(container, 'add'), { top: window.innerHeight + 500, left: 10, width: 100, height: 30 });
@@ -109,7 +109,7 @@ describe('SUP-06 target resolver: status of one target', () => {
   it('SUP-06 a replacement for a vanished element is found, not lost', () => {
     const { container } = render(
       <main>
-        <button data-tour="page.add" data-testid="add">Add</button>
+        <button data-tour="page.add" data-testid="add"></button>
       </main>,
     );
     const add = show(el(container, 'add'));
@@ -122,7 +122,7 @@ describe('SUP-06 target resolver: matching', () => {
   it('SUP-06 matches one token of a space separated data-tour value', () => {
     const { container } = render(
       <main>
-        <button data-tour="page.add shared.thing" data-testid="two">x</button>
+        <button data-tour="page.add shared.thing" data-testid="two"></button>
       </main>,
     );
     const two = show(el(container, 'two'));
@@ -133,7 +133,7 @@ describe('SUP-06 target resolver: matching', () => {
   it('SUP-06 does not match a longer token that starts with the id', () => {
     const { container } = render(
       <main>
-        <button data-tour="page.addMore" data-testid="more">x</button>
+        <button data-tour="page.addMore" data-testid="more"></button>
       </main>,
     );
     show(el(container, 'more'));
@@ -145,9 +145,9 @@ describe('SUP-07 target resolver: repeated targets', () => {
   const rows = () =>
     render(
       <main>
-        <div data-tour="page.row" data-testid="r1" hidden><button data-tour="page.rowAction" data-testid="a1">a</button></div>
-        <div data-tour="page.row" data-testid="r2"><button data-tour="page.rowAction" data-testid="a2">b</button></div>
-        <div data-tour="page.row" data-testid="r3"><button data-tour="page.rowAction" data-testid="a3">c</button></div>
+        <div data-tour="page.row" data-testid="r1" hidden><button data-tour="page.rowAction" data-testid="a1"></button></div>
+        <div data-tour="page.row" data-testid="r2"><button data-tour="page.rowAction" data-testid="a2"></button></div>
+        <div data-tour="page.row" data-testid="r3"><button data-tour="page.rowAction" data-testid="a3"></button></div>
       </main>,
     );
 
@@ -186,12 +186,12 @@ describe('SUP-10 target resolver: scope', () => {
   const withDialog = () =>
     render(
       <>
-        <header data-tour="shell.search" data-testid="shell"><button>s</button></header>
+        <header data-tour="shell.search" data-testid="shell"><button></button></header>
         <main>
-          <button data-tour="page.add" data-testid="add">Add</button>
+          <button data-tour="page.add" data-testid="add"></button>
         </main>
         <div role="dialog" aria-modal="true" data-testid="dialog">
-          <button data-tour="dlg.save" data-testid="save">Save</button>
+          <button data-tour="dlg.save" data-testid="save"></button>
         </div>
       </>,
     );
