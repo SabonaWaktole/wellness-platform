@@ -1286,7 +1286,7 @@ PAGE TOURS  S19 ... S95   every page slice depends on S16 (foundation) and S18 (
 
 ## 6. Detailed slice specifications
 
-Every slice has the fifteen fields the task requires, numbered 1 to 15. Slices S01 to S16 are the foundation; S17 and S18 are the pilot gate; the rest are page tours in the order given in section 5. Shared wording for the page-slice tasks is repeated in each slice on purpose, so that a slice can be handed to an engineer on its own.
+Every slice has the fifteen fields the task requires, numbered 1 to 15, plus a sixteenth, the list of what is intentionally excluded. Item 7 is the File-Level Change Plan: for every affected file it gives the action, exact path, change instructions, implementation details, integration, removal instructions and verification. Slices S01 to S16 are the foundation; S17 and S18 are the pilot gate; the rest are page tours in the order given in section 5. Shared wording for the page-slice tasks is repeated in each slice on purpose, so that a slice can be handed to an engineer on its own.
 
 ### 6.0 Slice index, sizes and exceptions
 
@@ -1522,7 +1522,7 @@ Imperative summary per slice. **Create** = new files, **Modify** = existing file
 
 **S17. Tour the Clients list header, search and filters (pilot).**
 - Create: `src/lib/support/guides/clientsList.ts`, `src/lib/support/guides/clientsList.test.tsx`
-- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/clients/ClientListContent.tsx`, `src/components/clients/ExcelImportButton`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Read: `src/hooks/useClients.ts`, `src/locales/en/clients.json`
 - Also: Remove `'clients.list'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('clients.list.<step>')` or `tourId`. Run `npm run check:translations`.
 - Details: [S17](#s17)
@@ -2026,8 +2026,25 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-03, SUP-08, SUP-10, SUP-17.
 5. **Prerequisites:** none inside the phase. Existing functionality it builds on: nothing (new modules).
 6. **Production LOC estimate:** **~240** (within the 200 to 300 target): types.ts: GuideStep, PageGuide, TargetSpec, Requirement, StepSafety, MachineState, MachineEvent ~70; tourMachine.ts: reducer + selectors (progress, current, isLast, canBack) ~170
-7. **Files and components:**
-   - New: `src/lib/support/types.ts`, `src/lib/support/tourMachine.ts`, `src/lib/support/tourMachine.test.ts`
+7. **File-Level Change Plan** (3 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/types.ts`
+      - Change: Declare the shared types: `StepSafety`, `StepKind`, `Requirement`, `GuideStep`, `PageGuide`, `TargetStatus`, `MachineState`, `MachineEvent`.
+      - Implementation details: (new) `GuideStep` fields: id, target, kind, safety?, repeat?, within?, requires?, opens?, group?, warning?, use?, scope?, needs?. `MachineState` = idle | running{steps,index} | waiting{reason,parentIndex} | lost{index} | finished{outcome}.
+      - Integration: Imported by every later Support module; no import from the app.
+      - Removal: None: new file.
+      - Verification: Compile-time only; exercised by `tourMachine.test.ts`.
+   2. **Create** `src/lib/support/tourMachine.ts`
+      - Change: Implement `tourReducer(state, event)` and the selectors `progress`, `currentStep`, `isLast`, `canGoBack`.
+      - Implementation details: (new) `tourReducer`, `initialTourState`, events START, NEXT, BACK, SKIP_TOUR, EXIT, STEPS_CHANGED, TARGET_PENDING, TARGET_READY, TARGET_LOST, TARGET_RESTORED, HOLD_FOR_USER, LAYER_OPENED, LAYER_CLOSED.
+      - Integration: Used by `useTourSession` (S08) through `useReducer`; never touched by components directly.
+      - Removal: None: new file.
+      - Verification: Table-driven transitions in `tourMachine.test.ts`; replay test for determinism.
+   3. **Create** `src/lib/support/tourMachine.test.ts`
+      - Change: Write first. One table row per (state, event) pair; re-anchoring cases for `STEPS_CHANGED`; a source-grep test that `tourMachine.ts` and `types.ts` import nothing from react, react-dom, react-router-dom.
+      - Implementation details: Vitest `describe.each`; titles start with SUP-03, SUP-08, SUP-10.
+      - Integration: Picked up by `vitest.config.ts` (`src/**/*.{test,spec}.?(c|m)[jt]s?(x)`).
+      - Removal: None: new file.
+      - Verification: It is the verification for the two files above.
 8. **Implementation tasks (in order):**
    1. Write failing table-driven tests first (see Testing), run them and confirm they fail because `tourMachine` does not exist.
    2. Define the types. A step is `{ id, target, kind, safety, repeat?, within?, requires?, opens?, group?, use?, vars?, scope? }`; user-visible text is never stored here, only keys derived from `pageId` + `step.id` (`<pageId>.<stepId>.title|body|when|warning|disabled`). `safety` is `explain-only` (default) or `try-it`.
@@ -2064,6 +2081,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (240); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S02, S03, S04, S11. S02-S08 import `types.ts` and drive the machine through dispatched events only. Terminology fixed for the phase: Exit = keep resume point; Skip tour = dismiss.
+16. **Intentionally excluded from this slice:**
+   - No React, DOM, router or i18n imports in this slice.
+   - No resolver, overlay or store code (S02, S03, S05).
+   - No guide for any page.
 
 ### S02: Target resolver and live DOM synchronisation
 
@@ -2073,9 +2094,43 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-06, SUP-07, SUP-08, SUP-15.
 5. **Prerequisites:** S01 (Tour engine model and state machine (pure)). Existing functionality it builds on: `setupTests.ts`.
 6. **Production LOC estimate:** **~260** (within the 200 to 300 target): targetResolver.ts: selector build, scope root, visibility, disabled, pick strategy, `within`, status ~100; domObserverHub.ts: single MutationObserver, rAF-batched, subscriber set, attribute filter ~80; useTargetElement.ts: hook returning `{ element, status, rect }`, ResizeObserver, unmount cleanup ~80
-7. **Files and components:**
-   - Existing, touched: `src/setupTests.ts` (test-only: ResizeObserver stub; not counted)
-   - New: `src/lib/support/targetResolver.ts`, `src/lib/support/domObserverHub.ts`, `src/lib/support/useTargetElement.ts`, `src/lib/support/targetResolver.test.tsx`, `src/lib/support/useTargetElement.test.tsx`
+7. **File-Level Change Plan** (6 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/targetResolver.ts`
+      - Change: Resolve a target id to an element and a status. Pure functions over a root node.
+      - Implementation details: (new) `resolveTarget(spec, root)`, `scopeRoot(doc, forced?)` (topmost `[role="dialog"][aria-modal="true"]`, `[role="menu"]` or `[data-tour-layer]`, else `main`), `isVisible`, `isDisabled`, `isBusy` (ancestor `aria-busy="true"` or `[data-tour-busy]`), pick strategies `first`, `nth`, `within`.
+      - Integration: Called by `useTargetElement`; selector is `[data-tour~="<id>"]`.
+      - Removal: None: new file.
+      - Verification: `targetResolver.test.tsx` (status table).
+   2. **Create** `src/lib/support/domObserverHub.ts`
+      - Change: Single `MutationObserver` on `document.body` (childList, subtree, attributeFilter: data-tour, disabled, aria-disabled, aria-hidden, aria-busy, hidden, class), notifications batched with `requestAnimationFrame`.
+      - Implementation details: (new) `subscribeToDom(cb)` returning an unsubscribe; observer created on first subscriber, disconnected on last.
+      - Integration: Shared by `useTargetElement`, `useLayerWatcher` (S13), `useExplainableControls` (S15).
+      - Removal: None: new file.
+      - Verification: Subscriber count returns to zero after unmount.
+   3. **Create** `src/lib/support/useTargetElement.ts`
+      - Change: Hook returning `{ element, status, rect }` for a step; attaches a `ResizeObserver` to the active element.
+      - Implementation details: (new) `useTargetElement(spec, options)`.
+      - Integration: Consumed by `SpotlightMask` (S05) and `useTourSession` (S08).
+      - Removal: None: new file.
+      - Verification: `useTargetElement.test.tsx`: add, remove, replace, disable, repeat re-pick, duplicate warning once.
+   4. **Create** `src/lib/support/targetResolver.test.tsx`
+      - Change: Write first; uses a `mockRect` helper because jsdom has no layout.
+      - Implementation details: RTL render of small fixture markup.
+      - Integration: Vitest.
+      - Removal: None: new file.
+      - Verification: Verifies SUP-06/07/08.
+   5. **Create** `src/lib/support/useTargetElement.test.tsx`
+      - Change: Write first; fake timers for the 4 s busy wait.
+      - Implementation details: RTL `renderHook`.
+      - Integration: Vitest.
+      - Removal: None: new file.
+      - Verification: Verifies unsubscribe on unmount.
+   6. **Modify** `src/setupTests.ts`
+      - Change: Add a minimal `ResizeObserver` stub if one is not already defined (the file already stubs pointer capture and `IntersectionObserver` in the same style).
+      - Implementation details: Guard `if (typeof globalThis.ResizeObserver === 'undefined')`, copying the existing `IntersectionObserver` block.
+      - Integration: Global test setup referenced by `vitest.config.ts` `setupFiles`.
+      - Removal: No removal.
+      - Verification: Existing suites still pass.
 8. **Implementation tasks (in order):**
    1. Write failing tests first, run, confirm they fail for the expected reason (modules absent).
    2. Selector rule: a target id `a.b.c` resolves with `[data-tour~="a.b.c"]` (space-separated token match so one element can carry two ids). Ids are namespaced `<pageId>.<control>`; shell ids use the `shell.` prefix.
@@ -2117,6 +2172,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (260); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S05, S08, S10. S05 and S08 consume `useTargetElement`. Every later page slice may rely on `data-tour` tokens, `repeat`/`within` picking and the `pending/missing/lost` vocabulary.
+16. **Intentionally excluded from this slice:**
+   - No overlay drawing (S05) and no step policy such as skipping (S08).
+   - No change to any page or shared component.
 
 ### S03: Support store, page-context registry and route-coverage guard
 
@@ -2126,9 +2184,45 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-01, SUP-19, SUP-20.
 5. **Prerequisites:** S01 (Tour engine model and state machine (pure)). Existing functionality it builds on: `routes/index.tsx`.
 6. **Production LOC estimate:** **~270** (within the 200 to 300 target): useSupportStore.ts: panelOpen, mode (`tour|single|pick|none`), session, context `{pageId, variant, scope}`, actions ~90; routeMap.ts: ordered `{pattern, pageId | null, reason?}` for every route in the inventory + `PLANNED_PAGES` ~90; pageRegistry.ts: `resolvePageId(pathname, variant)` via `matchPath`, lazy guide loader table, `isExcluded` ~60; useSupportPage.ts: hook reading `useLocation` + store variant/scope ~30
-7. **Files and components:**
-   - Existing, touched: `src/routes/index.tsx` (read only: exported `routes` array is walked by the test)
-   - New: `src/store/useSupportStore.ts`, `src/lib/support/routeMap.ts`, `src/lib/support/pageRegistry.ts`, `src/lib/support/useSupportPage.ts`, `src/lib/support/routeMap.test.ts`, `src/store/useSupportStore.test.ts`
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/store/useSupportStore.ts`
+      - Change: Zustand store for the Support session, modelled on `useSalesScriptStore.ts`.
+      - Implementation details: (new) `useSupportStore` with panelOpen, mode (`none|tour|single|pick`), context `{pageId, variant, scope}`, actions `openPanel`, `closePanel`, `startTour`, `setContext`, `clearContext`; `useAuthStore.subscribe` clears everything when `previous.user && !state.user`, exactly as `useSalesScriptStore` does.
+      - Integration: Read by `useSupportPage` and later the host and panel.
+      - Removal: None: new file.
+      - Verification: `useSupportStore.test.ts`.
+   2. **Create** `src/lib/support/routeMap.ts`
+      - Change: Table of router patterns to page ids, plus the exclusion list and `PLANNED_PAGES`.
+      - Implementation details: (new) `ROUTE_MAP: Array<{ pattern: string; pageId: string | null; reason?: string }>`, `PLANNED_PAGES: string[]`; one entry per row of section 7.1 of the plan.
+      - Integration: Patterns are written relative to `/:tenantSlug` and match `routes/index.tsx` `path` strings.
+      - Removal: None: new file.
+      - Verification: `routeMap.test.ts` walks the exported `routes` array.
+   3. **Create** `src/lib/support/pageRegistry.ts`
+      - Change: Resolve a pathname (and dashboard variant) to a page id; hold the lazy `loaders` record.
+      - Implementation details: (new) `resolvePageId(pathname, variant?)` using `matchPath` from react-router-dom, `loaders: Record<string, () => Promise<{ default: PageGuide }>>` (empty until S17), `isExcluded`, `loadGuide(pageId)`.
+      - Integration: Used by `useSupportPage` and `useTourSession`.
+      - Removal: None: new file.
+      - Verification: Grep test: no static `guides/` import.
+   4. **Create** `src/lib/support/useSupportPage.ts`
+      - Change: Hook returning `{ pageId, scope, hasGuide, isPlanned }` from `useLocation` and the store.
+      - Implementation details: (new) `useSupportPage`.
+      - Integration: Used by the panel (S09).
+      - Removal: None: new file.
+      - Verification: Covered in the registry tests.
+   5. **Create** `src/lib/support/routeMap.test.ts`
+      - Change: Write first. Import `routes` from `../../routes` and walk it recursively; assert every full pattern is mapped or excluded; no orphan entries; every mapped page id is in `loaders` or `PLANNED_PAGES`; add `it.todo('no planned pages remain')`.
+      - Implementation details: Same technique as `src/routes/mobile360Coverage.test.ts`.
+      - Integration: Vitest.
+      - Removal: None: new file.
+      - Verification: Verifies SUP-20.
+   6. **Create** `src/store/useSupportStore.test.ts`
+      - Change: Write first: open/close, context set/clear, clear on logout.
+      - Implementation details: Follows `useAuthStore.test.ts` style.
+      - Integration: Vitest.
+      - Removal: None: new file.
+      - Verification: Verifies the store.
+   7. **Leave unchanged** `src/routes/index.tsx`
+      - Change: Read only. Its exported `routes` array is the test input; the route table is not edited.
 8. **Implementation tasks (in order):**
    1. Write failing tests first (route walker, resolver cases, store transitions).
    2. Create `useSupportStore` following `useSalesScriptStore.ts` / `useThemeStore.ts` style: plain `create`, no persistence (persistence is S04).
@@ -2165,6 +2259,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (270); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S04, S08. Every page slice adds exactly: one `loaders` line, flips one `routeMap` entry from planned to mapped, and removes the id from `PLANNED_PAGES`. S09 reads `useSupportPage()` to decide what the Support panel offers.
+16. **Intentionally excluded from this slice:**
+   - No change to `routes/index.tsx`.
+   - No guide, no launcher, no panel.
+   - No persistence (S04).
 
 ### S04: Step eligibility, progress persistence and lazy copy loader
 
@@ -2174,9 +2272,46 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-09, SUP-17, SUP-18, SUP-19.
 5. **Prerequisites:** S01 (Tour engine model and state machine (pure)); S03 (Support store, page-context registry and route-coverage guard). Existing functionality it builds on: `i18n/config.ts`, `store/useAuthStore.ts`, `frontend/scripts/check-translations.mjs`.
 6. **Production LOC estimate:** **~240** (within the 200 to 300 target): stepEligibility.ts: `requires` evaluation over `user.permissions` (key present, min scope), workflow, viewport; `useEligibleSteps` ~90; progressStorage.ts: versioned localStorage map keyed by user+tenant, safe read/write, `completed|dismissed|lastStepId` ~90; supportCopy.ts: `loadSupportCopy(ns, lng)` via `import.meta.glob`, `addResourceBundle`, reload on `languageChanged` ~60
-7. **Files and components:**
-   - Existing, touched: `src/i18n/config.ts` (NAMESPACES list), `src/store/useAuthStore.ts` (read: `permissions`, `permissionsVersion`, `tenantSalesWorkflow`), `scripts/check-translations.mjs` (read: scans `locales/<lng>/*.json`)
-   - New: `src/lib/support/stepEligibility.ts`, `src/lib/support/progressStorage.ts`, `src/lib/support/supportCopy.ts`, `src/lib/support/stepEligibility.test.ts`, `src/lib/support/progressStorage.test.ts`, `src/lib/support/supportCopy.test.ts`
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/stepEligibility.ts`
+      - Change: Decide which steps apply to the current user.
+      - Implementation details: (new) `isStepEligible(step, user, viewport)` and `useEligibleSteps(guide)`; reads `useAuthStore` `user.permissions` (key present = held; `OWN|TEAM|ALL|true` for scope), `user.tenantSalesWorkflow`, and `useMediaQuery`/`useIsDesktop` from `hooks/useMediaQuery.ts`; memoises on `permissionsVersion`.
+      - Integration: Mirrors `hooks/usePermission.ts` and the filter in `hooks/useNavigation.ts`.
+      - Removal: None: new file.
+      - Verification: `stepEligibility.test.ts` table of requirement x user.
+   2. **Create** `src/lib/support/progressStorage.ts`
+      - Change: Versioned `localStorage` store for tour progress.
+      - Implementation details: (new) `readProgress(userKey)`, `writeProgress`, key `wellness-support-progress`; every access in try/catch.
+      - Integration: Used by `useTourSession` (S08) and the panel (S09). Same convention as `store/useThemeStore.ts` (`THEME_STORAGE_KEY`).
+      - Removal: None: new file.
+      - Verification: `progressStorage.test.ts`.
+   3. **Create** `src/lib/support/supportCopy.ts`
+      - Change: Lazy-load `support*.json` per language.
+      - Implementation details: (new) `loadSupportCopy(ns)` using `import.meta.glob('../../locales/*/support*.json')` and `i18n.addResourceBundle`; re-runs on `i18n.on('languageChanged')`.
+      - Integration: Uses the `i18n` instance from `src/i18n`; never imported by `i18n/index.ts`.
+      - Removal: None: new file.
+      - Verification: `supportCopy.test.ts`: copy absent before the call, present after, present after a language switch.
+   4. **Modify** `src/i18n/config.ts`
+      - Change: Add the six namespace names to the `NAMESPACES` tuple so `Namespace` types accept them.
+      - Implementation details: Append `'support', 'supportSales', 'supportMembers', 'supportSettings', 'supportOps', 'supportAdmin'` to `NAMESPACES`.
+      - Integration: Check first that nothing iterates `NAMESPACES` to require a static resource (search `NAMESPACES` usages); `i18n/index.ts` keeps its static imports unchanged.
+      - Removal: No removal.
+      - Verification: `i18n/defaultLanguage.test.tsx` and `orthogonality.test.tsx` still pass.
+   5. **Create** `src/lib/support/stepEligibility.test.ts`
+      - Change: Write first.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-09.
+   6. **Create** `src/lib/support/progressStorage.test.ts`
+      - Change: Write first, including throwing storage.
+      - Implementation details: Vitest with a stubbed `localStorage`.
+      - Removal: None: new file.
+      - Verification: SUP-17.
+   7. **Create** `src/lib/support/supportCopy.test.ts`
+      - Change: Write first, including a grep that no static import of `support*.json` exists outside this file.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-18, SUP-19.
 8. **Implementation tasks (in order):**
    1. Write failing tests first.
    2. `Requirement` shape: `{ permission?: string | string[]; anyPermission?: string[]; minScope?: "OWN"|"TEAM"|"ALL"; workflow?: "SALES_PROCESS"|"LEGACY_QUOTATIONS"; viewport?: "desktop"|"mobile" }`. Semantics copy `usePermission` (a key is held if `permissions[key] !== undefined`) and `useNavigation` (workflow compare) so Support never disagrees with the menu.
@@ -2213,6 +2348,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (240); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S08, S11. S08 filters guides through `useEligibleSteps` and reads/writes progress. Page slices add copy to `support*.json` files without touching `i18n/index.ts`.
+16. **Intentionally excluded from this slice:**
+   - No UI.
+   - No guide copy.
+   - No server-side persistence.
+   - No change to `i18n/index.ts` static imports.
 
 ### S05: Spotlight overlay layer
 
@@ -2222,9 +2362,41 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-02, SUP-15, SUP-16.
 5. **Prerequisites:** S02 (Target resolver and live DOM synchronisation). Existing functionality it builds on: `styles/tokens.css`.
 6. **Production LOC estimate:** **~240** (within the 200 to 300 target): SpotlightMask.tsx: four-panel dim around a rounded hole, ring, `aria-hidden`, portal to body ~90; useTargetRect.ts: rect with scroll (capture) / resize / ResizeObserver, rAF-throttled ~60; SpotlightMask.module.css: backdrop, ring, transitions, reduced-motion and forced-colors rules, `--z-tour` ~90
-7. **Files and components:**
-   - Existing, touched: `src/styles/tokens.css` (add `--z-tour`; `--z-tooltip` is 100 and the impersonation banner is a literal 1000, so the token must exceed 1000)
-   - New: `src/components/support/SpotlightMask.tsx`, `src/components/support/SpotlightMask.module.css`, `src/lib/support/useTargetRect.ts`, `src/components/support/SpotlightMask.test.tsx`, `src/components/support/SpotlightMask.stories.tsx`
+7. **File-Level Change Plan** (6 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/styles/tokens.css`
+      - Change: Add `--z-tour` after `--z-tooltip: 100;` (around line 327), with a comment that it must exceed the impersonation banner's literal `z-index: 1000`.
+      - Implementation details: New custom property in the same `:root` block as `--z-base` to `--z-tooltip`.
+      - Integration: Used only by `SpotlightMask.module.css` and `TourPopover.module.css`.
+      - Removal: No removal.
+      - Verification: Visual check in Storybook story.
+   2. **Create** `src/lib/support/useTargetRect.ts`
+      - Change: Return the padded viewport rect of an element and keep it current.
+      - Implementation details: (new) `useTargetRect(element)`: window `resize`, scroll with `capture: true, passive: true` (as `DropdownMenu` does), `ResizeObserver`, hub notifications, rAF-throttled.
+      - Integration: Takes the element from `useTargetElement` (S02).
+      - Removal: None: new file.
+      - Verification: `SpotlightMask.test.tsx` with `mockRect`.
+   3. **Create** `src/components/support/SpotlightMask.tsx`
+      - Change: Render four fixed panels around a rounded hole plus a ring; portal to `document.body`; `aria-hidden`.
+      - Implementation details: (new) `SpotlightMask({ element, padding })`.
+      - Integration: Mounted by `SupportHost` (S08).
+      - Removal: None: new file.
+      - Verification: Hole equals rect; follows scroll/resize; nothing without a rect.
+   4. **Create** `src/components/support/SpotlightMask.module.css`
+      - Change: Panels, ring (2 px, existing focus colour token), transitions only under `prefers-reduced-motion: no-preference`, `@media (forced-colors: active)` rules, `z-index: var(--z-tour)`.
+      - Implementation details: CSS module, same conventions as `Tooltip.module.css` (which already has a reduced-motion block).
+      - Integration: Imported by the component.
+      - Removal: None: new file.
+      - Verification: Story and test assert class names.
+   5. **Create** `src/components/support/SpotlightMask.test.tsx`
+      - Change: Write first.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-15, SUP-16.
+   6. **Create** `src/components/support/SpotlightMask.stories.tsx`
+      - Change: Story with a fixed target, a11y addon enabled, following the `*.stories.tsx` convention.
+      - Implementation details: Storybook CSF.
+      - Removal: None: new file.
+      - Verification: Storybook a11y check.
 8. **Implementation tasks (in order):**
    1. Write failing tests first (rect stubbed).
    2. Add `--z-tour` to `tokens.css` above the banner literal; document the reason in a comment, as other tokens do.
@@ -2258,6 +2430,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (240); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S06, S08. S08 mounts the mask with the active target element. S14 adds the interaction guard; the mask itself stays purely visual.
+16. **Intentionally excluded from this slice:**
+   - The mask intercepts no clicks; blocking is S14.
+   - No popover (S06).
 
 ### S06: Tour popover: content, progress and navigation controls
 
@@ -2267,9 +2442,39 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-03, SUP-11, SUP-14, SUP-15, SUP-16.
 5. **Prerequisites:** S05 (Spotlight overlay layer). Existing functionality it builds on: `components/ui/Button/Button.tsx`, `components/ui/DropdownMenu/DropdownMenu.tsx`.
 6. **Production LOC estimate:** **~290** (within the 200 to 300 target): TourPopover.tsx: variants step | waiting | lost | completed, progress "n of N", buttons, `role="dialog"` ~140; popoverPlacement.ts: prefer side, flip, clamp with margin, arrow offset, sheet mode under 768 px ~60; TourPopover.module.css: card, sheet, arrow, reduced motion ~90
-7. **Files and components:**
-   - Existing, touched: `src/components/ui/Button/Button.tsx` (reuse as-is), `src/components/ui/DropdownMenu/DropdownMenu.tsx` (reference only for the flip/clamp placement approach; not refactored)
-   - New: `src/components/support/TourPopover.tsx`, `src/components/support/TourPopover.module.css`, `src/lib/support/popoverPlacement.ts`, `src/components/support/TourPopover.test.tsx`, `src/lib/support/popoverPlacement.test.ts`, `src/components/support/TourPopover.stories.tsx`
+7. **File-Level Change Plan** (6 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/popoverPlacement.ts`
+      - Change: Compute position, side, arrow offset or sheet mode.
+      - Implementation details: (new) `placePopover(targetRect, size, viewport, preferred)`; constants `GAP = 6`, `MARGIN = 8` as in `DropdownMenu.tsx`; `mode: 'sheet'` below 768 px.
+      - Integration: Called by `TourPopover`. `DropdownMenu` is not refactored.
+      - Removal: None: new file.
+      - Verification: `popoverPlacement.test.ts`.
+   2. **Create** `src/components/support/TourPopover.tsx`
+      - Change: Render the step card and its variants.
+      - Implementation details: (new) `TourPopover` props: step, copy, index, total, status, handlers; `role="dialog"`, `aria-modal="false"`, ids from `useId`; reuses `Button` from `components/ui/Button/Button.tsx`.
+      - Integration: Receives data from `useTourSession` (S08).
+      - Removal: None: new file.
+      - Verification: `TourPopover.test.tsx` and stories.
+   3. **Create** `src/components/support/TourPopover.module.css`
+      - Change: Card, arrow, sheet, reduced-motion.
+      - Implementation details: CSS module.
+      - Removal: None: new file.
+      - Verification: Stories.
+   4. **Create** `src/lib/support/popoverPlacement.test.ts`
+      - Change: Write first (fits below, flips above, clamps, sheet).
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-15.
+   5. **Create** `src/components/support/TourPopover.test.tsx`
+      - Change: Write first (buttons, first/last step, variants, aria ids).
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-03, SUP-14.
+   6. **Create** `src/components/support/TourPopover.stories.tsx`
+      - Change: One story per variant: step, waiting, lost, completed, sheet.
+      - Implementation details: Storybook CSF.
+      - Removal: None: new file.
+      - Verification: a11y addon.
 8. **Implementation tasks (in order):**
    1. Write failing tests first.
    2. `popoverPlacement(targetRect, popoverSize, viewport, preferred)` returns `{ top, left, side, arrow }`: prefers the requested side, flips when it does not fit, clamps within an 8 px margin (same constants as `DropdownMenu`), and returns `mode: "sheet"` below 768 px.
@@ -2307,6 +2512,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (290); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S07, S08. S07 adds focus and keyboard behaviour around this component. S13 reuses the `waiting` variant for "open the dialog to continue".
+16. **Intentionally excluded from this slice:**
+   - No focus or keyboard handling beyond button order (S07).
+   - No nested-layer waiting copy beyond the variant shell (S13).
 
 ### S07: Focus management, keyboard and screen-reader announcements
 
@@ -2316,9 +2524,50 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-13, SUP-14, SUP-10.
 5. **Prerequisites:** S06 (Tour popover: content, progress and navigation controls). Existing functionality it builds on: `components/ui/Modal/Modal.tsx`, `components/ui/SlideOver/SlideOver.tsx`.
 6. **Production LOC estimate:** **~230** (within the 200 to 300 target): useTourFocus.ts: remember launcher, focus popover on step change, restore on end ~60; useTourKeyboard.ts: capture-phase Esc, ArrowLeft/Right inside the card, Tab cycling, input guard ~80; LiveAnnouncer.tsx: polite live region, de-duplicated messages ~40; describeTarget.ts: add/restore a token in `aria-describedby` ~50
-7. **Files and components:**
-   - Existing, touched: `src/components/ui/Modal/Modal.tsx` (read: document-level Escape listener), `src/components/ui/SlideOver/SlideOver.tsx` (read: the same listener)
-   - New: `src/lib/support/useTourFocus.ts`, `src/lib/support/useTourKeyboard.ts`, `src/components/support/LiveAnnouncer.tsx`, `src/lib/support/describeTarget.ts`, `src/lib/support/useTourFocus.test.tsx`, `src/lib/support/useTourKeyboard.test.tsx`, `src/lib/support/describeTarget.test.ts`
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/useTourFocus.ts`
+      - Change: Remember `document.activeElement` on start, focus the popover heading per step, restore on end (fall back to `main`).
+      - Implementation details: (new) `useTourFocus(active, headingRef)`.
+      - Integration: Wired in `useTourSession`/`SupportHost` (S08).
+      - Removal: None: new file.
+      - Verification: `useTourFocus.test.tsx`.
+   2. **Create** `src/lib/support/useTourKeyboard.ts`
+      - Change: One capture-phase `keydown` listener while a tour runs: Esc exits and `stopPropagation()` (not while `waiting`), arrows move only inside the popover and never in inputs, Tab cycles inside the popover.
+      - Implementation details: (new) `useTourKeyboard({ running, waiting, onExit, onNext, onBack, popoverRef })`.
+      - Integration: Must run before the document-level Escape listeners in `Modal.tsx` and `SlideOver.tsx` (they register on `document` in the bubble phase).
+      - Removal: None: new file.
+      - Verification: `useTourKeyboard.test.tsx` including a real `Modal` behind the tour.
+   3. **Create** `src/components/support/LiveAnnouncer.tsx`
+      - Change: `role="status"` region with de-duplicated messages.
+      - Implementation details: (new) `LiveAnnouncer`, `announce(message)` through a small store or context.
+      - Integration: Mounted inside `SupportHost`.
+      - Removal: None: new file.
+      - Verification: Test text and de-duplication.
+   4. **Create** `src/lib/support/describeTarget.ts`
+      - Change: Append the body id to the target's `aria-describedby` and restore the exact previous value.
+      - Implementation details: (new) `describeTarget(element, id)` returning a cleanup.
+      - Integration: Called by the host per step.
+      - Removal: None: new file.
+      - Verification: `describeTarget.test.ts`.
+   5. **Create** `src/lib/support/useTourFocus.test.tsx`
+      - Change: Write first.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-13.
+   6. **Create** `src/lib/support/useTourKeyboard.test.tsx`
+      - Change: Write first.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-13.
+   7. **Create** `src/lib/support/describeTarget.test.ts`
+      - Change: Write first.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-14.
+   8. **Leave unchanged** `src/components/ui/Modal/Modal.tsx`
+      - Change: Read only: confirms the Escape listener is on `document` (`handleEscape`) and there is no focus trap.
+   9. **Leave unchanged** `src/components/ui/SlideOver/SlideOver.tsx`
+      - Change: Read only: same listener pattern.
 8. **Implementation tasks (in order):**
    1. Write failing tests first.
    2. `useTourFocus`: store `document.activeElement` at start; on each step focus the popover heading (`tabIndex=-1`); on end restore to the stored element if still connected, else to `main`.
@@ -2353,6 +2602,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (230); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S08. S08 wires these hooks into the host. S13 relies on the Esc arbitration rule.
+16. **Intentionally excluded from this slice:**
+   - No Modal/SlideOver changes: Esc is arbitrated from the tour side only.
+   - No page work.
 
 ### S08: Support host: session orchestration and mounting
 
@@ -2362,9 +2614,47 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-02, SUP-03, SUP-06, SUP-08, SUP-15, SUP-17, SUP-19.
 5. **Prerequisites:** S03 (Support store, page-context registry and route-coverage guard); S04 (Step eligibility, progress persistence and lazy copy loader); S05 (Spotlight overlay layer); S06 (Tour popover: content, progress and navigation controls); S07 (Focus management, keyboard and screen-reader announcements); S02 (Target resolver and live DOM synchronisation). Existing functionality it builds on: `routes/TenantGuard.tsx`, `pages/shell/SuperAdminShell.tsx`, `components/panels/SalesScriptPanel/SalesScriptPanel.tsx`.
 6. **Production LOC estimate:** **~250** (within the 200 to 300 target): SupportHost.tsx: lazy mount, composes mask + popover + announcer, portal ~60; useTourSession.ts: machine + resolver + eligibility + progress; skip/wait/lost policy; route-change end ~150; scrollTargetIntoView.ts: reduced-motion-aware `scrollIntoView`, sticky-header offset, sheet clearance ~30; TenantGuard.tsx / SuperAdminShell.tsx mounts (`React.lazy` + `Suspense`) ~10
-7. **Files and components:**
-   - Existing, touched: `src/routes/TenantGuard.tsx`, `src/pages/shell/SuperAdminShell.tsx`, `src/components/panels/SalesScriptPanel/SalesScriptPanel.tsx` (pattern reference)
-   - New: `src/components/support/SupportHost.tsx`, `src/lib/support/useTourSession.ts`, `src/lib/support/scrollTargetIntoView.ts`, `src/components/support/SupportHost.test.tsx`, `src/lib/support/useTourSession.test.tsx`
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/useTourSession.ts`
+      - Change: The orchestration hook.
+      - Implementation details: (new) `useTourSession()`: `useReducer(tourReducer)`, `useEligibleSteps`, `useTargetElement`, `loadGuide`, `scrollTargetIntoView`, `readProgress/writeProgress`, route-change end via `useSupportPage`.
+      - Integration: Reads and writes `useSupportStore`.
+      - Removal: None: new file.
+      - Verification: `useTourSession.test.tsx` with a fixture guide.
+   2. **Create** `src/lib/support/scrollTargetIntoView.ts`
+      - Change: Scroll an element into view, honouring reduced motion and leaving room for the sticky header (`--z-header` bar) and the mobile sheet.
+      - Implementation details: (new) `scrollTargetIntoView(el, { sheetHeight })`.
+      - Integration: Called by `useTourSession`.
+      - Removal: None: new file.
+      - Verification: Unit test.
+   3. **Create** `src/components/support/SupportHost.tsx`
+      - Change: Compose `SpotlightMask`, `TourPopover`, `LiveAnnouncer`; render null with no session.
+      - Implementation details: (new) `SupportHost`; exported through `React.lazy` wrapper `SupportHostLazy` (new).
+      - Integration: Mounted by `TenantGuard` and `SuperAdminShell`.
+      - Removal: None: new file.
+      - Verification: `SupportHost.test.tsx`.
+   4. **Modify** `src/routes/TenantGuard.tsx`
+      - Change: Render the lazy host next to `<SalesScriptPanelHost />` inside the existing fragment, wrapped in `Suspense fallback={null}`.
+      - Implementation details: Import `SupportHostLazy`; add `<Suspense fallback={null}><SupportHostLazy /></Suspense>` after `<SalesScriptPanelHost />`.
+      - Integration: Same reason the sales script panel lives here: the route stays mounted while pages change.
+      - Removal: No removal.
+      - Verification: `routes/guards.test.tsx` still passes; a new assertion that the host mounts under a tenant route.
+   5. **Modify** `src/pages/shell/SuperAdminShell.tsx`
+      - Change: Render the same lazy host once, next to the existing `AppLayout` return, so all six `/admin*` routes get it.
+      - Implementation details: Wrap the returned `AppLayout` in a fragment and add the host.
+      - Integration: The shell is shared by `/admin`, `/admin/dashboard`, `/admin/tenants`, `/admin/people`, `/admin/setting`, `/admin/profile` (`routes/index.tsx` lines 843-912).
+      - Removal: No removal.
+      - Verification: A shell test (extend `SuperAdminShell.stories.tsx` is not enough): add a small test in `SupportHost.test.tsx`.
+   6. **Create** `src/lib/support/useTourSession.test.tsx`
+      - Change: Write first: fixture tour, missing/pending/lost/disabled/replaced target, route change, Exit then resume, cleanup of listeners and attributes.
+      - Implementation details: RTL + fake timers.
+      - Removal: None: new file.
+      - Verification: SUP-02, 03, 06, 08, 17, 19.
+   7. **Create** `src/components/support/SupportHost.test.tsx`
+      - Change: Write first: renders null with no session and registers zero observers.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-19.
 8. **Implementation tasks (in order):**
    1. Write failing tests first using a fixture guide registered through the test seam of `pageRegistry` (no real page guide exists yet).
    2. `useTourSession` policy, as testable functions: on entering a step resolve its target; `found/disabled` -> show; `offscreen` -> `scrollTargetIntoView` then show; `pending` -> `waiting(loading)` for at most 4 s; `missing` (or pending timeout) -> announce "Skipped" and advance (or finish if it was the last); `lost` -> machine `lost`, and if the same id reappears within the session the step is restored.
@@ -2402,6 +2692,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (250); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S09, S12, S13. S09 only needs to call `useSupportStore.getState().startTour()` to start a real tour. S13 and S14 extend `useTourSession` rather than replacing it.
+16. **Intentionally excluded from this slice:**
+   - No launcher or panel (S09).
+   - No nested-layer logic (S13) and no read-only guard (S14).
+   - No real page guide: tests use a fixture guide.
 
 ### S09: Support launcher and contextual help panel
 
@@ -2411,9 +2705,74 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-01, SUP-03, SUP-14, SUP-15, SUP-17, SUP-18.
 5. **Prerequisites:** S08 (Support host: session orchestration and mounting). Existing functionality it builds on: `components/layout/AppLayout/AppLayout.tsx`, `components/layout/Sidebar/Sidebar.tsx`, `locales/en/common.json`.
 6. **Production LOC estimate:** **~270** (within the 200 to 300 target): SupportLauncher.tsx: icon button + `openPanel`, `aria-expanded`, shared by header and sidebar ~40; SupportPanel.tsx: title of current page/tab, actions, status line, no-guide and planned-page states, Esc/outside close, close on route change ~130; SupportPanel.module.css: anchored popover, bottom sheet under 768 px, reduced motion ~80; AppLayout.tsx / Sidebar.tsx / playwright.config.ts edits ~20
-7. **Files and components:**
-   - Existing, touched: `src/components/layout/AppLayout/AppLayout.tsx` (header help button), `src/components/layout/Sidebar/Sidebar.tsx` (bottom "Support" link), `src/locales/en/common.json` (`header.help`, `actions.support` already exist), `src/i18n/config.ts` (add `support` namespace name), `playwright.config.ts`, `tests/e2e/mobile360.spec.ts`
-   - New: `src/components/support/SupportLauncher.tsx`, `src/components/support/SupportPanel.tsx`, `src/components/support/SupportPanel.module.css`, `src/locales/en/support.json`, `src/locales/sq/support.json`, `tests/e2e/support.spec.ts`, `src/components/support/SupportPanel.test.tsx`
+7. **File-Level Change Plan** (12 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/components/support/SupportLauncher.tsx`
+      - Change: Icon button with `aria-haspopup="dialog"` and `aria-expanded`, opening the panel.
+      - Implementation details: (new) `SupportLauncher({ className })`.
+      - Integration: Rendered by `AppLayout`.
+      - Removal: None: new file.
+      - Verification: Panel test + AppLayout test.
+   2. **Create** `src/components/support/SupportPanel.tsx`
+      - Change: Anchored panel (bottom sheet under 768 px): heading for the current page or tab, Tour this page / this tab, Resume (step n of N), Replay, "no help yet" for planned pages, error with Retry if the chunk fails.
+      - Implementation details: (new) `SupportPanel`; uses `useSupportPage`, `useSupportStore`, `readProgress`, `loadSupportCopy('support')`, `useTranslation('support')`.
+      - Integration: Closes on route change, outside click, Escape; focus returns to the launcher.
+      - Removal: None: new file.
+      - Verification: `SupportPanel.test.tsx`; Playwright case.
+   3. **Create** `src/components/support/SupportPanel.module.css`
+      - Change: Panel and sheet styles with reduced-motion.
+      - Implementation details: CSS module.
+      - Removal: None: new file.
+      - Verification: Story/visual.
+   4. **Modify** `src/components/layout/AppLayout/AppLayout.tsx`
+      - Change: Replace the dead help button with `<SupportLauncher className={styles.iconBtn} />`.
+      - Implementation details: Locate the `<button className={`${styles.iconBtn} ${styles.helpBtn}`} aria-label={t('header.help')}>` containing `<HelpCircle size={20} />`; keep the `helpBtn` class so existing layout rules still apply; import `SupportLauncher`.
+      - Integration: The button currently has no `onClick`; the launcher calls `useSupportStore.getState().openPanel()`.
+      - Removal: Remove only the bare `<button … helpBtn …>` element. Safe because it has no handler and no other code references it (`helpBtn` is a CSS class in `AppLayout.module.css`, which stays).
+      - Verification: Extend `AppLayout.test.tsx`: the Help button opens the panel; existing tests unchanged.
+   5. **Modify** `src/components/layout/Sidebar/Sidebar.tsx`
+      - Change: Make the bottom "Support" item open the panel and close the mobile sidebar.
+      - Implementation details: Locate the `<a className={styles.navItem} href="#support" onClick={(e) => e.preventDefault()}>`; replace the handler with `useSupportStore.getState().openPanel(); onClose?.()`.
+      - Integration: The component already receives `onClose` and reads `useAuthStore` directly, so reading a store is consistent.
+      - Removal: Remove the no-op `preventDefault`-only handler: safe because nothing else listens to `#support` (searched `src`).
+      - Verification: Extend `Sidebar.test.tsx`: clicking Support opens the panel.
+   6. **Modify** `src/i18n/config.ts`
+      - Change: Nothing further: the namespace names were added in S04.
+      - Removal: No removal.
+   7. **Create** `src/locales/en/support.json`
+      - Change: Panel strings: title, tourThisPage, tourThisTab, resume, replay, noHelpYet, loading, retry, close, completed, stepOfN.
+      - Implementation details: JSON.
+      - Integration: Loaded by `loadSupportCopy`.
+      - Removal: None: new file.
+      - Verification: `check:translations`.
+   8. **Create** `src/locales/sq/support.json`
+      - Change: Albanian equivalents of every key above (required by `check-translations.mjs`).
+      - Implementation details: JSON.
+      - Removal: None: new file.
+      - Verification: `check:translations`.
+   9. **Modify** `playwright.config.ts`
+      - Change: Add project `support` (desktop Chrome, `dependencies: ['setup']`, `testMatch: /support\.spec\.ts/`) after `desktop`; add `/support\.spec\.ts/` to the `chromium` project `testIgnore`.
+      - Implementation details: Entry in the `projects` array beside `desktop`.
+      - Integration: Same `setup` dependency and `ADMIN_STATE` session as `desktop`.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support` lists the spec.
+   10. **Create** `tests/e2e/support.spec.ts`
+      - Change: Table-driven spec; first row opens Support on the dashboard and asserts the panel; skipped without `E2E_ADMIN_PASSWORD` like `mobile360.spec.ts`.
+      - Implementation details: `test.describe` with a `PAGES` array.
+      - Integration: Uses `./support/sessions` (`ADMIN_STATE`).
+      - Removal: None: new file.
+      - Verification: The case itself.
+   11. **Modify** `tests/e2e/mobile360.spec.ts`
+      - Change: Add one case: open Support at 360 px, assert no horizontal overflow using the existing `expectNoHorizontalOverflow(page, screen)`.
+      - Implementation details: Add inside the existing `test.describe` after the `screens` loop.
+      - Integration: Reuses the helper at the top of the file.
+      - Removal: No removal.
+      - Verification: CI `e2e-mobile` job.
+   12. **Modify** `.github/workflows/ci.yml`
+      - Change: In the `e2e-mobile` job, add a step `npx playwright test --project=support` next to the mobile-360 step (the step named "Every M1, M2 and M3 screen at 360 px").
+      - Implementation details: Copy the existing step's `working-directory: frontend`.
+      - Integration: Same job, same seeded backend.
+      - Removal: No removal.
+      - Verification: CI run.
 8. **Implementation tasks (in order):**
    1. Write failing tests first (panel states, launcher wiring, sidebar link no longer `preventDefault`-dead).
    2. `SupportLauncher` replaces the `<button className={helpBtn}>` in `AppLayout.tsx`; keep the existing class and `aria-label` (`header.help`), add `aria-haspopup="dialog"`, `aria-expanded`. The Sidebar "Support" item calls the same store action (also closing the mobile sidebar).
@@ -2451,6 +2810,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (270); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S15. Every page slice from S17 makes its page appear in this panel simply by registering a guide. S15 adds the "Explain a control" action to this panel.
+16. **Intentionally excluded from this slice:**
+   - No "Explain a control" entry yet (S15).
+   - No page guides.
+   - The inert header search input and sidebar "New entry" button are not touched.
 
 ### S10: Annotation pass-through on shared UI components
 
@@ -2460,9 +2823,88 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-05, SUP-07.
 5. **Prerequisites:** S02 (Target resolver and live DOM synchronisation). Existing functionality it builds on: `components/ui/DataTable/DataTable.tsx`, `components/ui/Tabs/Tabs.tsx`, `components/ui/Pagination/*`.
 6. **Production LOC estimate:** **~175** (just under the target (150 to 199)): tourProps.ts: builds `{ "data-tour": id, "data-tour-repeat"?: true }`, dev check of id format `^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9-]*)+$` ~30; DataTable: `rowTourId`, `tourId` on wrapper/header/sort/empty/loading; both desktop table and mobile card layouts ~45; Tabs / Pagination / Card / KPICard: `tourId` (+ per-tab ids `<id>.tab.<tab>`) ~35; DropdownMenu item `tourId`; Modal / SlideOver / ConfirmDialog `tourId` on the dialog root ~40; TextInput / SelectInput: `tourId` on the field container (label + control), not only the `<input>` ~25
-7. **Files and components:**
-   - Existing, touched: `src/components/ui/DataTable/DataTable.tsx`, `src/components/ui/Tabs/Tabs.tsx`, `src/components/ui/Pagination/*`, `src/components/ui/DropdownMenu/DropdownMenu.tsx`, `src/components/ui/Modal/Modal.tsx`, `src/components/ui/SlideOver/SlideOver.tsx`, `src/components/ui/ConfirmDialog/ConfirmDialog.tsx`, `src/components/ui/Card/*`, `src/components/ui/KPICard/*`, `src/components/ui/TextInput/TextInput.tsx`, `src/components/ui/SelectInput/SelectInput.tsx`
-   - New: `src/lib/support/tourProps.ts`, `src/lib/support/tourProps.test.ts`
+7. **File-Level Change Plan** (16 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/tourProps.ts`
+      - Change: Typed attribute helper.
+      - Implementation details: (new) `tourProps(id, { repeat?, kind? })` returning `{ 'data-tour': id, 'data-tour-repeat'?: '' , 'data-tour-kind'?: kind }`; dev-only format check of the id.
+      - Integration: Spread onto `Button`, `TextInput` etc. (they spread rest props) or onto plain elements.
+      - Removal: None: new file.
+      - Verification: `tourProps.test.ts`.
+   2. **Create** `src/lib/support/tourProps.test.ts`
+      - Change: Write first.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: Id grammar.
+   3. **Modify** `src/components/ui/DataTable/DataTable.tsx`
+      - Change: Add optional `tourId` and `rowTourId` to `DataTableProps<T>`; apply `data-tour={rowTourId}` + `data-tour-repeat` on both the desktop `<tr key={key} …>` and the mobile card `div` (the one with `role={isInteractive ? 'button' : undefined}`); `<id>` on the wrapper `div`, `<id>.empty` on the `styles.emptyState` div, `<id>.loading` + `aria-busy="true"` on skeleton rows, `<id>.sort.<column.id>` on sortable header buttons.
+      - Implementation details: The component already renders exactly one layout (`useIsDesktop()`); both branches get the attribute.
+      - Integration: Existing `DataTable.stories.tsx`; new test file below.
+      - Removal: No removal: purely additive.
+      - Verification: No removal.
+   4. **Create** `src/components/ui/DataTable/DataTable.test.tsx`
+      - Change: Write first: 3 then 20 rows share one id in table and card layouts; omitted prop adds nothing.
+      - Implementation details: RTL with `useIsDesktop` mocked.
+      - Removal: None: new file.
+      - Verification: SUP-07.
+   5. **Modify** `src/components/ui/Tabs/Tabs.tsx`
+      - Change: Add `tourId?: string` to `TabsProps`; put `data-tour={tourId}` on the `role="tablist"` div and `data-tour={`${tourId}.tab.${tab.id}`}` on each tab button.
+      - Implementation details: Edit the returned JSX in `Tabs`.
+      - Integration: Does not touch the existing `id={`${baseId}-tab-${tab.id}`}` ids.
+      - Removal: No removal.
+      - Verification: New `Tabs.test.tsx`.
+   6. **Create** `src/components/ui/Tabs/Tabs.test.tsx`
+      - Change: Write first.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-05.
+   7. **Modify** `src/components/ui/Pagination/Pagination.tsx`
+      - Change: Add `tourId?: string` to `PaginationProps`; apply to the root `<nav>`.
+      - Implementation details: Edit the returned `nav`.
+      - Removal: No removal.
+      - Verification: New test.
+   8. **Modify** `src/components/ui/DropdownMenu/DropdownMenu.tsx`
+      - Change: Add `tourId?: string` to `DropdownMenuItemType`; render `data-tour` on the item element built from `items` (near line 222-262); add optional `menuTourId` prop on the menu root.
+      - Implementation details: The menu is portalled via `createPortal`; items need their own attribute.
+      - Integration: Portal content is outside the trigger, hence per-item ids.
+      - Removal: No removal.
+      - Verification: New test with the real component.
+   9. **Modify** `src/components/ui/Modal/Modal.tsx`
+      - Change: Add `tourId?: string`; set `data-tour={tourId}` and `data-tour-layer` on the `motion.div` with `role="dialog"`.
+      - Implementation details: Edit the overlay element.
+      - Integration: S13 uses `data-tour-layer` to scope.
+      - Removal: No removal.
+      - Verification: New test.
+   10. **Modify** `src/components/ui/SlideOver/SlideOver.tsx`
+      - Change: Same on the `motion.div className={styles.panel}`; do not change `aria-labelledby="slideover-title"` (unrelated).
+      - Implementation details: Edit the panel element.
+      - Removal: No removal.
+      - Verification: New test.
+   11. **Modify** `src/components/ui/ConfirmDialog/ConfirmDialog.tsx`
+      - Change: Add `tourId?: string` and forward it to the `Modal` it renders.
+      - Implementation details: Pass-through prop.
+      - Integration: Reuses Modal change.
+      - Removal: No removal.
+      - Verification: New test.
+   12. **Modify** `src/components/ui/TextInput/TextInput.tsx`
+      - Change: Add `tourId?: string`; put `data-tour` on the container `div className={`${styles.container} ${className}`}`.
+      - Implementation details: Destructure `tourId` so it does not reach `<input {...props}>`.
+      - Integration: Label, control and message end up inside the highlight.
+      - Removal: No removal.
+      - Verification: New test.
+   13. **Modify** `src/components/ui/SelectInput/SelectInput.tsx`
+      - Change: Same as `TextInput`.
+      - Implementation details: Container div around the `<select {...props}>`.
+      - Removal: No removal.
+      - Verification: New test.
+   14. **Modify** `src/components/ui/KPICard/KPICard.tsx`
+      - Change: Add `tourId?: string` on the root; the card is used by `InventoryList`, `WarehouseList`, `SuperAdminDashboard`, `BusinessOwnerDashboard` and `StaffDashboard` (found by searching imports).
+      - Implementation details: Root of the component (wraps `Card`, which spreads props).
+      - Removal: No removal.
+      - Verification: New test.
+   15. **Leave unchanged** `src/components/ui/Card/Card.tsx`
+      - Change: Already spreads `...props` onto its `div`; `data-tour` works without a change.
+   16. **Leave unchanged** `src/components/ui/Button/Button.tsx`
+      - Change: Already spreads `...props` onto the `button`.
 8. **Implementation tasks (in order):**
    1. Write failing tests first for each component (attribute present on the correct element, absent when the prop is omitted).
    2. `DataTable`: `rowTourId` adds `data-tour` and `data-tour-repeat` to every `<tr>` and every mobile card (only one layout renders at a time, existing behaviour); `tourId` adds `<id>` on the wrapper, `<id>.empty` on the empty state, `<id>.loading` plus `aria-busy="true"` on the skeleton, and `<id>.sort.<column>` on sortable headers.
@@ -2496,6 +2938,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (175); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S11, S12, S13. Page slices annotate with `{...tourProps("clients.list.add")}` or `tourId=` props only; no new wrapper elements.
+16. **Intentionally excluded from this slice:**
+   - No behaviour, markup order or class change in any shared component.
+   - No page annotation (page slices).
+   - `Card` needs no change: it already spreads rest props onto its `div`.
 
 ### S11: Shared guidance library and guide-authoring helpers
 
@@ -2505,9 +2951,51 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-05, SUP-07, SUP-12, SUP-18.
 5. **Prerequisites:** S01 (Tour engine model and state machine (pure)); S04 (Step eligibility, progress persistence and lazy copy loader); S10 (Annotation pass-through on shared UI components). Existing functionality it builds on: `locales/en/support.json and sq/support.json`.
 6. **Production LOC estimate:** **~280** (within the 200 to 300 target): sharedGuidance.ts: ~16 shared control kinds (search, filter select, date range, status chips, sortable header, pagination, row-actions menu, status badge, tabs, bulk select, export, refresh, back link, save/discard bar, confirm dialog, empty-state action) ~100; defineGuide.ts: typed `definePageGuide`, key derivation, `resolveStepCopy` with `{{subject}}` interpolation and runtime vars (e.g. dialog title read from `aria-labelledby`) ~60; guideLint.ts: unique ids, `repeat` declared for rows, destructive => explain-only, `try-it` only for openers/tabs/filters/fields, keys present in en and sq, shell ids not reused ~60; stepFactories.ts: `listPageSteps`, `formPageSteps`, `detailHeaderSteps` (used by 10+, 6+ and 8+ pages respectively) ~60
-7. **Files and components:**
-   - Existing, touched: `src/locales/en/support.json and sq/support.json (shared keys)`
-   - New: `src/lib/support/sharedGuidance.ts`, `src/lib/support/defineGuide.ts`, `src/lib/support/guideLint.ts`, `src/lib/support/stepFactories.ts`, `src/lib/support/sharedGuidance.test.ts`, `src/lib/support/guideLint.test.ts`
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/sharedGuidance.ts`
+      - Change: Registry of reusable control kinds.
+      - Implementation details: (new) `SHARED: Record<string, { kind, safety, warning?, disabledHint? }>` for search, filterSelect, dateRange, statusChips, sortHeader, pagination, rowMenu, statusBadge, tabs, bulkSelect, export, refresh, backLink, saveBar, confirmDialog, emptyAction.
+      - Integration: Steps reference it with `use: 'shared.<kind>'`.
+      - Removal: None: new file.
+      - Verification: `sharedGuidance.test.ts`.
+   2. **Create** `src/lib/support/defineGuide.ts`
+      - Change: Typed guide builder and copy resolution.
+      - Implementation details: (new) `definePageGuide(config)`, `copyKeys(pageId, stepId)`, `resolveStepCopy(step, t, vars)` with `{{subject}}` interpolation and runtime vars (for example the visible dialog title from `aria-labelledby`).
+      - Integration: Used by every guide file.
+      - Removal: None: new file.
+      - Verification: Tests in the lint file.
+   3. **Create** `src/lib/support/guideLint.ts`
+      - Change: Lint a guide: unique step ids, valid target ids, `repeat` for `.row`/`.card`/`.item` targets, `warning` implies explain-only, `try-it` only for opener/tab/filter/field/menu kinds, every derived key present in `en` and `sq`.
+      - Implementation details: (new) `lintGuide(guide)` and `assertGuideIntegrity(guide)` (throws).
+      - Integration: Called by each page test and by a dev startup check.
+      - Removal: None: new file.
+      - Verification: `guideLint.test.ts` with five deliberately broken guides.
+   4. **Create** `src/lib/support/stepFactories.ts`
+      - Change: Step families used by 10+, 6+ and 8+ pages.
+      - Implementation details: (new) `listPageSteps(prefix, opts)`, `formPageSteps(prefix, opts)`, `detailHeaderSteps(prefix, opts)`.
+      - Integration: Pages import and override.
+      - Removal: None: new file.
+      - Verification: Factory snapshot tests.
+   5. **Create** `src/lib/support/sharedGuidance.test.ts`
+      - Change: Write first.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-05, SUP-18.
+   6. **Create** `src/lib/support/guideLint.test.ts`
+      - Change: Write first.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-07, SUP-12.
+   7. **Modify** `src/locales/en/support.json`
+      - Change: Add the `shared.*` keys for every shared kind (title, body, when, disabled).
+      - Implementation details: JSON.
+      - Removal: No removal.
+      - Verification: `check:translations`.
+   8. **Modify** `src/locales/sq/support.json`
+      - Change: Albanian equivalents.
+      - Implementation details: JSON.
+      - Removal: No removal.
+      - Verification: `check:translations`.
 8. **Implementation tasks (in order):**
    1. Write failing tests first (lint rules with deliberately broken guides).
    2. Each shared kind: `{ kind, safety, titleKey, bodyKey, whenKey?, disabledKey?, warning? }` with copy in `support.json` under `shared.*`.
@@ -2541,6 +3029,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (280); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S12, S15. Page slices import `definePageGuide`, `listPageSteps` etc. and run `assertGuideIntegrity(guide)` in their test. New shared kinds are added here only when a second page needs them.
+16. **Intentionally excluded from this slice:**
+   - No page-specific wording.
+   - No new control family without a second page needing it.
 
 ### S12: Application shell chrome: annotations, layout adapters and shell guide
 
@@ -2550,9 +3041,56 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-02, SUP-05, SUP-09, SUP-15.
 5. **Prerequisites:** S08 (Support host: session orchestration and mounting); S10 (Annotation pass-through on shared UI components); S11 (Shared guidance library and guide-authoring helpers). Existing functionality it builds on: `components/layout/AppLayout/AppLayout.tsx`, `components/layout/Sidebar/Sidebar.tsx`, `hooks/useNavigation.ts`.
 6. **Production LOC estimate:** **~230** (within the 200 to 300 target): AppLayout / Sidebar / bell / script button / theme toggle annotations ~30; layoutAdapters.ts: register/unregister `{ open, close, isOpen }` per area (`sidebar`, `mobileSearch`), restore-on-exit snapshot ~70; guides/shell.ts: ~10 steps (brand/menu button, sidebar nav region, one exemplar nav item, theme, notifications, sales script (permission), Support, profile menu, log out) ~90; AppLayout effect registering adapters; step `needs` handling in `useTourSession` ~40
-7. **Files and components:**
-   - Existing, touched: `src/components/layout/AppLayout/AppLayout.tsx`, `src/components/layout/Sidebar/Sidebar.tsx`, `src/hooks/useNavigation.ts` (read: items filtered by permission and `tenantSalesWorkflow`), `src/components/notifications/NotificationBell.tsx`, `src/components/salesScript/SalesScriptButton.tsx`, `src/components/ui/ThemeToggle`
-   - New: `src/lib/support/layoutAdapters.ts`, `src/lib/support/guides/shell.ts`, `src/lib/support/guides/shell.test.tsx`
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/components/layout/AppLayout/AppLayout.tsx`
+      - Change: Annotate: menu button `shell.menu` (the `Menu` button with `aria-label={t('header.openMenu')}`), profile `DropdownMenu` trigger `shell.profile`, the Support launcher `shell.support`; register the sidebar and mobile-search adapters in a `useEffect` using `setIsSidebarOpen` and `setIsMobileSearchOpen`.
+      - Implementation details: Existing state `isSidebarOpen`, `isMobileSearchOpen` stays where it is.
+      - Integration: Adapters are read by `useTourSession` through `layoutAdapters.ts`.
+      - Removal: No removal.
+      - Verification: Extend `AppLayout.test.tsx`.
+   2. **Modify** `src/components/layout/Sidebar/Sidebar.tsx`
+      - Change: Annotate: nav `<nav>` `shell.nav`, each nav `<a>` `shell.nav.item` (repeat), org section `shell.org`, Support item `shell.support.nav`, Log out `shell.logout`. Do not annotate the "New entry" `Button`.
+      - Implementation details: The `navItems.map` renders the repeated anchors.
+      - Integration: Items are already filtered by `useNavigation` (permission and workflow), so the DOM reflects the user.
+      - Removal: No removal.
+      - Verification: Extend `Sidebar.test.tsx`.
+   3. **Modify** `src/components/notifications/NotificationBell.tsx`
+      - Change: Annotate the bell button `shell.notifications`.
+      - Implementation details: The `<button … aria-label=…>` near line 87.
+      - Removal: No removal.
+      - Verification: Extend `NotificationBell.test.tsx`.
+   4. **Modify** `src/components/salesScript/SalesScriptButton.tsx`
+      - Change: Annotate `shell.script` (rendered only with `script.view`).
+      - Implementation details: Existing button.
+      - Removal: No removal.
+      - Verification: Test in guide test.
+   5. **Modify** `src/components/ui/ThemeToggle/ThemeToggle.tsx`
+      - Change: Annotate `shell.theme` on the toggle `button` (the one with `type="button"` near line 44).
+      - Implementation details: Pass-through of `className`/props as it already does.
+      - Removal: No removal.
+      - Verification: Guide test.
+   6. **Create** `src/lib/support/layoutAdapters.ts`
+      - Change: Registry of view-state adapters with snapshot/restore.
+      - Implementation details: (new) `registerAdapter(name, { isOpen, open, close })`, `ensureOpen(name)`, `restoreAll()`.
+      - Integration: Called by `useTourSession` for steps with `needs`.
+      - Removal: None: new file.
+      - Verification: `layoutAdapters.test.ts`.
+   7. **Create** `src/lib/support/guides/shell.ts`
+      - Change: The shell guide (about 9 steps) exported as `shellSteps` and `includeShell()`; comments record the two excluded controls and why.
+      - Implementation details: (new) steps for menu, nav, nav item, theme, notifications, script, support, profile, logout.
+      - Integration: Page guides opt in with `includeShell()`.
+      - Removal: None: new file.
+      - Verification: `shell.test.tsx`.
+   8. **Create** `src/lib/support/guides/shell.test.tsx`
+      - Change: Write first, including mobile width opening and restoring the sidebar.
+      - Implementation details: RTL with `matchMedia` stub.
+      - Removal: None: new file.
+      - Verification: SUP-15.
+   9. **Modify** `src/lib/support/useTourSession.ts`
+      - Change: Honour `needs` (call `ensureOpen` before resolving; `restoreAll` on step change and end).
+      - Implementation details: Extend the step-entry function.
+      - Removal: No removal.
+      - Verification: Covered by shell test.
 8. **Implementation tasks (in order):**
    1. Write failing tests first.
    2. Annotate: `shell.menu` (mobile menu button), `shell.nav` (the nav section), `shell.nav.item` (`repeat`, one per rendered item), `shell.theme`, `shell.notifications`, `shell.script` (only rendered with `script.view`), `shell.support`, `shell.profile`, `shell.logout`, `shell.org`.
@@ -2588,6 +3126,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (230); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. Page guides may `includeShell()`; the SuperAdmin pages reuse the same chrome. Layout `needs` mechanism is available to any step.
+16. **Intentionally excluded from this slice:**
+   - The header search `<input>` and the sidebar "New entry" button are deliberately not annotated (they are inert).
+   - No page guide.
 
 ### S13: Nested layers: dialogs, drawers, menus and tabs
 
@@ -2597,9 +3138,40 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-10, SUP-08, SUP-13.
 5. **Prerequisites:** S08 (Support host: session orchestration and mounting); S10 (Annotation pass-through on shared UI components). Existing functionality it builds on: `lib/support/useTourSession.ts`, `components/ui/DropdownMenu/DropdownMenu.tsx`, `components/ui/Modal/Modal.tsx, SlideOver.tsx, ConfirmDialog.tsx`.
 6. **Production LOC estimate:** **~270** (within the 200 to 300 target): layerStack.ts: topmost-layer detection (`role=dialog|menu`, `data-tour-layer`), layer ids from `data-tour` ~70; useLayerWatcher.ts: hub-driven `LAYER_OPENED/CLOSED` events, 600 ms grace for exit animations ~60; useTourSession.ts extension: `opens`/`group`/`advanceWhen`, hold-for-user, return to parent, Esc rule ~110; TourPopover waiting-for-user variant copy wiring ~30
-7. **Files and components:**
-   - Existing, touched: `src/lib/support/useTourSession.ts` (extends), `src/components/ui/DropdownMenu/DropdownMenu.tsx` (menu is portalled to `body`; closes on outside click), `src/components/ui/Modal/Modal.tsx, SlideOver.tsx, ConfirmDialog.tsx`
-   - New: `src/lib/support/layerStack.ts`, `src/lib/support/useLayerWatcher.ts`, `src/lib/support/layerStack.test.ts`, `src/lib/support/nestedGuide.test.tsx`
+7. **File-Level Change Plan** (6 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/layerStack.ts`
+      - Change: Detect the topmost open layer and its id.
+      - Implementation details: (new) `topLayer(doc)`, `layerId(el)` from `data-tour`/`data-tour-layer`.
+      - Integration: Used by the resolver scope (S02) and the watcher.
+      - Removal: None: new file.
+      - Verification: `layerStack.test.ts`.
+   2. **Create** `src/lib/support/useLayerWatcher.ts`
+      - Change: Hub-driven LAYER_OPENED / LAYER_CLOSED events with a 600 ms exit grace for `AnimatePresence`.
+      - Implementation details: (new) `useLayerWatcher(onOpen, onClose)`.
+      - Integration: Used by `useTourSession`.
+      - Removal: None: new file.
+      - Verification: Test with the real `Modal`.
+   3. **Modify** `src/lib/support/useTourSession.ts`
+      - Change: Add opener/group handling: `opens` -> `HOLD_FOR_USER`; `group` steps run scoped to the layer; close returns to parent; "Skip this part"; opener disabled/missing skips the group; Esc rule (yield while waiting).
+      - Implementation details: Extend the step-entry function and the effect that listens to the watcher.
+      - Integration: Uses `useTourKeyboard` option `waiting`.
+      - Removal: No removal.
+      - Verification: `nestedGuide.test.tsx`.
+   4. **Modify** `src/components/support/TourPopover.tsx`
+      - Change: Wire the waiting-for-user copy ("Open X to continue", "Skip this part") into the existing `waiting` variant.
+      - Implementation details: Existing variant prop.
+      - Removal: No removal.
+      - Verification: Popover test.
+   5. **Create** `src/lib/support/layerStack.test.ts`
+      - Change: Write first.
+      - Implementation details: Vitest.
+      - Removal: None: new file.
+      - Verification: SUP-10.
+   6. **Create** `src/lib/support/nestedGuide.test.tsx`
+      - Change: Write first with real `DropdownMenu`, `Modal`, `SlideOver`, `ConfirmDialog`: open, close, close early, never open, opener disabled, Esc in three modes, exit animation not read as lost.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-10, SUP-13.
 8. **Implementation tasks (in order):**
    1. Write failing tests first with a fixture page whose button opens a fixture dialog.
    2. Step fields: `opens: "<layerId>"` marks an opener (`safety: "try-it"` required); `group: "<layerId>"` marks steps that belong inside that layer; `advanceWhen` defaults to "layer `<layerId>` present".
@@ -2635,6 +3207,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (270); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S14. Page slices declare `opens`/`group` in data only; no page writes layer logic.
+16. **Intentionally excluded from this slice:**
+   - No page-specific hand-off definitions.
+   - No change to Modal/SlideOver/DropdownMenu behaviour.
 
 ### S14: Explain-only enforcement and safety watchdog
 
@@ -2644,9 +3219,34 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-12, SUP-13.
 5. **Prerequisites:** S13 (Nested layers: dialogs, drawers, menus and tabs). Existing functionality it builds on: `lib/support/useTourSession.ts`.
 6. **Production LOC estimate:** **~180** (just under the target (150 to 199)): interactionGuard.ts: capture listeners for `click`, `pointerdown`, `mousedown`, `touchstart`, `keydown` (Enter/Space on explain-only targets), `submit`, `dragstart`; allow-list = popover, current `try-it` target subtree, active layer when waiting ~120; useTourSession.ts: install/remove guard per step, message "Exit the tour to use this control", announce once ~40; Dev-time assertion: a destructive step reaching runtime as `try-it` throws in development ~20
-7. **Files and components:**
-   - Existing, touched: `src/lib/support/useTourSession.ts` (installs the guard)
-   - New: `src/lib/support/interactionGuard.ts`, `src/lib/support/interactionGuard.test.tsx`, `tests/e2e/support/noMutations.ts`
+7. **File-Level Change Plan** (5 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/interactionGuard.ts`
+      - Change: Capture-phase listeners that cancel `click`, `pointerdown`, `mousedown`, `touchstart`, Enter/Space `keydown` on an explain-only target, `submit`, `dragstart`; allow-list = popover, current try-it target subtree, active layer while waiting.
+      - Implementation details: (new) `installGuard(getAllow)` returning a remover.
+      - Integration: Installed/removed by `useTourSession` on every step and on every end path.
+      - Removal: None: new file.
+      - Verification: `interactionGuard.test.tsx` (spies on Delete, Save, a form).
+   2. **Modify** `src/lib/support/useTourSession.ts`
+      - Change: Install the guard per step; show/announce "Exit the tour to use this control" once; throw in development if a `warning` step is `try-it`.
+      - Implementation details: Step-entry function.
+      - Removal: No removal.
+      - Verification: Guard tests.
+   3. **Create** `tests/e2e/support/noMutations.ts`
+      - Change: Playwright helper `expectNoMutations(page, { allow })` failing on POST/PUT/PATCH/DELETE during a tour; allow-list for read-only POST endpoints.
+      - Implementation details: (new) exported function using `page.route`/`page.on('request')`.
+      - Integration: Imported by `tests/e2e/support.spec.ts` (next to the existing `support/provision.ts` and `support/sessions.ts`).
+      - Removal: None: new file.
+      - Verification: One case in `support.spec.ts`.
+   4. **Create** `src/lib/support/interactionGuard.test.tsx`
+      - Change: Write first, including a source grep that `.click(`, `.submit(`, `dispatchEvent(` do not appear under `src/lib/support`.
+      - Implementation details: RTL + fs read.
+      - Removal: None: new file.
+      - Verification: SUP-12.
+   5. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add a case that starts a fixture/dashboard tour and asserts `expectNoMutations`.
+      - Implementation details: Add to the table.
+      - Removal: No removal.
+      - Verification: Playwright.
 8. **Implementation tasks (in order):**
    1. Write failing tests first (a fixture page with Delete, Save and a form).
    2. While a tour is `running`, the guard cancels (`preventDefault` + `stopPropagation`) any `click`/`pointerdown`/`mousedown`/`touchstart` whose target is outside the allow-list. The allow-list is: the tour UI; the subtree of the current step's target **only if** `safety: "try-it"`; the active layer when `waiting`.
@@ -2682,6 +3282,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (180); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S15. This closes the foundation. Page slices declare `warning`/`explain-only`; they cannot weaken it.
+16. **Intentionally excluded from this slice:**
+   - No definition changes (lint is S11).
+   - No page work.
 
 ### S15: Explain a control: control list
 
@@ -2691,9 +3294,49 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-04, SUP-05, SUP-07, SUP-11, SUP-14.
 5. **Prerequisites:** S09 (Support launcher and contextual help panel); S11 (Shared guidance library and guide-authoring helpers); S14 (Explain-only enforcement and safety watchdog). Existing functionality it builds on: `components/support/SupportPanel.tsx`, `lib/support/tourMachine.ts`.
 6. **Production LOC estimate:** **~240** (within the 200 to 300 target): useExplainableControls.ts: steps of the active guide whose target resolves now and whose eligibility passes; dedupes repeated instances to one entry; groups by section ~70; ControlList.tsx: searchable list with keyboard support, "Show me" -> single mode, back to list ~100; ControlList.module.css ~40; Machine/session `single` mode: one step, highlight + popover, Close ~30
-7. **Files and components:**
-   - Existing, touched: `src/components/support/SupportPanel.tsx`, `src/lib/support/tourMachine.ts` (add the single-step mode)
-   - New: `src/lib/support/useExplainableControls.ts`, `src/components/support/ControlList.tsx`, `src/components/support/ControlList.module.css`, `src/components/support/ControlList.test.tsx`, `src/lib/support/useExplainableControls.test.tsx`
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/useExplainableControls.ts`
+      - Change: Return the steps whose targets resolve now and pass eligibility; collapse repeated targets to one entry; group by section; update from the DOM hub.
+      - Implementation details: (new) `useExplainableControls(guide)`.
+      - Integration: Uses `useEligibleSteps`, `subscribeToDom`.
+      - Removal: None: new file.
+      - Verification: Hook test.
+   2. **Create** `src/components/support/ControlList.tsx`
+      - Change: Searchable `role="listbox"` list with arrow-key navigation; Enter starts single mode.
+      - Implementation details: (new) `ControlList`.
+      - Integration: Rendered inside `SupportPanel`.
+      - Removal: None: new file.
+      - Verification: Component test.
+   3. **Create** `src/components/support/ControlList.module.css`
+      - Change: List styles.
+      - Implementation details: CSS module.
+      - Removal: None: new file.
+      - Verification: Story.
+   4. **Modify** `src/components/support/SupportPanel.tsx`
+      - Change: Add the "Explain a control" action and the list view with Back.
+      - Implementation details: New view state in the panel.
+      - Removal: No removal.
+      - Verification: Panel tests.
+   5. **Modify** `src/lib/support/tourMachine.ts`
+      - Change: Add `mode: single` handling (one step, Close, no progress).
+      - Implementation details: New reducer branch + selector.
+      - Removal: No removal.
+      - Verification: Machine table rows.
+   6. **Modify** `src/lib/support/useTourSession.ts`
+      - Change: Support starting a session with one step.
+      - Implementation details: Start path.
+      - Removal: No removal.
+      - Verification: Session test.
+   7. **Create** `src/lib/support/useExplainableControls.test.tsx`
+      - Change: Write first (20 rows -> 1 entry, loading then filled, permission gated).
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-04, 07, 09, 11.
+   8. **Create** `src/components/support/ControlList.test.tsx`
+      - Change: Write first.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-14.
 8. **Implementation tasks (in order):**
    1. Write failing tests first.
    2. `useExplainableControls(guide)` returns entries for steps whose target is `found|disabled` in the current DOM and whose `requires` pass; repeated targets collapse to one entry flagged "appears on every row". Entries for controls that do not exist now (e.g. a Clear button when no filter is active) are *not* listed; the list updates live from the observer hub.
@@ -2727,6 +3370,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (240); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks S16. Every guide step is automatically an explainable control; page slices add nothing for this feature.
+16. **Intentionally excluded from this slice:**
+   - No pick mode (S16).
+   - No per-page work: every guide step is automatically explainable.
 
 ### S16: Explain a control: pick mode
 
@@ -2736,9 +3382,34 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** **infrastructure only**. No page tour is implemented or extended. Requirements served: SUP-04, SUP-05, SUP-13, SUP-14.
 5. **Prerequisites:** S15 (Explain a control: control list). Existing functionality it builds on: `components/support/SupportPanel.tsx`.
 6. **Production LOC estimate:** **~200** (within the 200 to 300 target): usePickMode.ts: pointer highlight of the nearest `[data-tour]` ancestor, click/Enter to select, keyboard cycling over visible annotated targets, Esc to leave ~120; PickBanner.tsx: "Pick a control · Esc to cancel", live-announced current candidate ~50; Fallback copy resolution: step copy -> shared kind -> "No help written for this control yet" (never invented text) ~30
-7. **Files and components:**
-   - Existing, touched: `src/components/support/SupportPanel.tsx`
-   - New: `src/lib/support/usePickMode.ts`, `src/components/support/PickBanner.tsx`, `src/lib/support/usePickMode.test.tsx`, `src/components/support/PickBanner.test.tsx`
+7. **File-Level Change Plan** (5 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/usePickMode.ts`
+      - Change: Pointer highlight of the nearest `[data-tour]` ancestor, click/Enter select (swallowed by the guard), Tab/Shift+Tab cycling, Esc leaves; fallback copy chain step -> shared kind -> "No help written for this control yet".
+      - Implementation details: (new) `usePickMode()`.
+      - Integration: Reuses `SpotlightMask` and `TourPopover` single mode.
+      - Removal: None: new file.
+      - Verification: `usePickMode.test.tsx`.
+   2. **Create** `src/components/support/PickBanner.tsx`
+      - Change: "Pick a control. Esc to cancel" bar with live-announced candidate.
+      - Implementation details: (new) `PickBanner`.
+      - Integration: Mounted by `SupportHost` in pick mode.
+      - Removal: None: new file.
+      - Verification: `PickBanner.test.tsx`.
+   3. **Modify** `src/components/support/SupportPanel.tsx`
+      - Change: Add the "Point at a control" action.
+      - Implementation details: Panel actions list.
+      - Removal: No removal.
+      - Verification: Panel test.
+   4. **Create** `src/lib/support/usePickMode.test.tsx`
+      - Change: Write first: hover, click swallowed, keyboard, touch, fallback card.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-04, 05, 13.
+   5. **Create** `src/components/support/PickBanner.test.tsx`
+      - Change: Write first.
+      - Implementation details: RTL.
+      - Removal: None: new file.
+      - Verification: SUP-14.
 8. **Implementation tasks (in order):**
    1. Write failing tests first.
    2. Pointer: `pointermove` highlights the nearest ancestor carrying `data-tour` (using the same mask); click selects it and is swallowed by the guard so the control itself does not fire.
@@ -2771,6 +3442,9 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** the red-then-green commit history; the Vitest report for the listed test files; for slices with UI, Storybook stories passing the a11y addon; the measured production LOC next to the estimate (200); and the observable behaviour stated under Runtime behavior.
 15. **Dependencies and handoff:** unblocks all page slices (first: S17); it is a foundation or gate slice. End of foundation. S17 starts the pilot page and doubles as the gate that validates the mechanism on real data.
+16. **Intentionally excluded from this slice:**
+   - No new guide content.
+   - No Escape change outside pick mode.
 
 #### Page tours: Pilot gate and Sales workflow
 
@@ -2782,13 +3456,70 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Clients list** (`clients.list`; `/:tenantSlug/clients`); slice 1 of 2. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode). Existing code it relies on, unchanged since planning: `pages/clients/ClientListPage.tsx`, `pages/clients/ClientListContent.tsx`, `components/ui/DataTable/DataTable.tsx`, `components/ui/DropdownMenu/DropdownMenu.tsx`.
 6. **Production LOC estimate:** **~190** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 17 steps x 8 = 136 + 15 annotation sites x 2 = 30 + `data-tour-state` markers on the filter row and empty branches so later slices can tell "no filters" from "filters active" 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): 
-   - Existing, read only: `src/hooks/useClients.ts` (read), `src/locales/en/clients.json` (read: `list.*` keys the labels come from)
-   - New: `src/lib/support/guides/clientsList.ts`, `src/lib/support/guides/clientsList.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (12 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/clientsList.ts`
+      - Change: Create the page guide with the 17 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'clients.list', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'clients.list.<id>', kind, safety, … }`. Steps in state-only elements: `filterBar`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['clients.list']` in `pageRegistry.ts`; copy keys resolve to `supportSales:clients.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/clientsList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/clientsList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'clients.list': () => import('./guides/clientsList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'clients.list'` on the entries for `clients` and delete `'clients.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/clients/ClientListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L67 permission check [companies.delete]; L76 permission check [companies.view]; L315 DropdownMenu (list.actionsFor); L317 button (list.actionsFor); L367 Button; L375 Button (list.addClient); L386 TextInput (list.searchPlaceholder); L396 SelectInput (list.filter); L410 Button; L424 SelectInput (list.filters.businessType); L437 SelectInput (list.filters.riskLevel); L450 SelectInput (list.filters.area); L463 SelectInput (list.filters.city); L477 SelectInput (list.filters.salesperson); L490 SelectInput (list.filters.status); L503 Button (list.filters.needsCompletion); L512 Button (list.filters.clear); L520 role=alert; L524 DataTable (list.caption); L532 DataTable empty prop (list.emptyArchived); L543 Button (list.addClient); L560 Button (list.prev) [DO NOT ANNOTATE: static disabled, section 3.4]; L563 Button (list.next) [DO NOT ANNOTATE: static disabled, section 3.4]; L570 ConfirmDialog (list.deleteClientTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/clients/ClientListContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/clients/ExcelImportButton/ExcelImportButton.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `IMPORT_ACCEPT`, `ExcelImportButton`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L82 Button; L93 button (import.downloadTemplate); L97 input; L109 role=alert; L116 role=status (import.summary).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/clients/ExcelImportButton/ExcelImportButton.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Leave unchanged** `src/hooks/useClients.ts`
+      - Change: Read only, to find the labels, data shapes and conditions the steps depend on. Do not edit.
+   8. **Leave unchanged** `src/locales/en/clients.json`
+      - Change: Read only: `list.*` keys the labels come from. Do not edit.
+   9. **Leave unchanged** `src/pages/clients/ClientListPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   10. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `clients.list.<step>.title` and `.body` for these steps: `title`, `import`, `filterToggle`, `add`, `search`, `reach`, `archivedToggle`, `filterBar`, `fBusinessType`, `fRisk`, `fArea`, `fCity`, `fSalesperson`, `fStatus`, `needsCompletion`, `clear`, `count`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `clients.list.<step>.title` and `.body` for these steps in Albanian: `title`, `import`, `filterToggle`, `add`, `search`, `reach`, `archivedToggle`, `filterBar`, `fBusinessType`, `fRisk`, `fArea`, `fCity`, `fSalesperson`, `fStatus`, `needsCompletion`, `clear`, `count`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'clients.list', route: 'clients' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "clients.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/clientsList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
-   2. **PT-2 Re-inventory** (evidence: read in context during planning; re-read to catch drift): the files in item 7.
+   2. **PT-2 Re-inventory** (evidence: read in context during planning; re-read to catch drift): `src/pages/clients/ClientListContent.tsx`.
    3. **PT-3 Annotate** about 15 sites in those files. Includes: `data-tour-state` markers on the filter row and empty branches so later slices can tell "no filters" from "filters active".
    4. **PT-4 Write the guide**: 17 steps, in tour order (`<id>` becomes the copy key `supportSales:clients.list.<id>.title|body`):
       - `title` — breadcrumb, heading and subtitle (info)
@@ -2823,7 +3554,7 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
    - SUP-09: permission, scope or workflow variants of the steps that carry `needs` or a scope rule.
    - Render `ClientListContent` (msw) with the host: tour reaches every step for an ALL-scope user with `companies.delete`, skips `reach` for OWN scope, skips `archivedToggle` without `companies.delete`, skips the filter steps while the bar is hidden, skips `clear` until a filter is chosen.
    - Pilot gate test: with 0, 1 and 25 clients the same eligible-step ids result for this slice (no data-driven steps).
-   - Regression: existing tests of the touched files pass unchanged.
+   - Regression: existing tests of `ClientListContent.tsx` pass unchanged.
 12. **Acceptance criteria:** SA-1 to SA-4 and:
    - Support -> Tour this page works on /clients for a real seeded workspace.
    - Pilot review checklist is ticked in the PR: bundle delta of the main chunk is zero; guide and copy load only after Support opens; Esc, focus and reduced-motion behave.
@@ -2831,7 +3562,7 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
    ```
    cd frontend
-   npx vitest run src/lib/support/guides/clientsList
+   npx vitest run src/lib/support/guides/clientsList src/pages/clients src/components/clients
    npm run typecheck
    npm run lint
    npm run check:translations
@@ -2841,6 +3572,12 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 190.
 15. **Dependencies and handoff:** unblocks S18. Later slices of this page extend the same guide and may rely on the ids `clients.list.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Clients list, which belong to S18 (Clients list: states, rows, row menu and archive / restore).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Previous / Next buttons (static `disabled`, not wired): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S18: Clients list: states, rows, row menu and archive / restore
 
@@ -2850,9 +3587,45 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Clients list** (`clients.list`; `/:tenantSlug/clients`); slice 2 of 2. Not infrastructure.
 5. **Prerequisites:** S17 (Clients list: header, search and filters (pilot)). Existing code it relies on, unchanged since planning: `pages/clients/ClientListPage.tsx`, `pages/clients/ClientListContent.tsx`, `components/ui/DataTable/DataTable.tsx`, `components/ui/DropdownMenu/DropdownMenu.tsx`.
 6. **Production LOC estimate:** **~232** (within the 200 to 300 target): 6 extend the guide and registration + 21 steps x 8 = 168 + 19 annotation sites x 2 = 38 + Group wiring for the menu and archive dialog (`opens`/`group`), `tourId` on the `DropdownMenu` items and `ConfirmDialog` 20. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/clients/ClientListContent.tsx` (row, menu, empty branches, dialog)
-   - Extended: `src/lib/support/guides/clientsList.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/clientsList.ts`
+      - Change: Extend the page guide with the 21 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'clients.list', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'clients.list.<id>', kind, safety, … }`. Steps in state-only elements: `loading`, `error`, `emptyFirst`, `emptyNoMatch`, `emptyArchived`. Eligibility (`requires`): `companies.delete`. Hand-offs (`opens`/`group`): `menu`, `archive`.
+      - Integration: Loaded lazily through `loaders['clients.list']` in `pageRegistry.ts`; copy keys resolve to `supportSales:clients.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/clientsList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/clientsList.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `companies.delete`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/clients/ClientListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L67 permission check [companies.delete]; L76 permission check [companies.view]; L315 DropdownMenu (list.actionsFor); L317 button (list.actionsFor); L367 Button; L375 Button (list.addClient); L386 TextInput (list.searchPlaceholder); L396 SelectInput (list.filter); L410 Button; L424 SelectInput (list.filters.businessType); L437 SelectInput (list.filters.riskLevel); L450 SelectInput (list.filters.area); L463 SelectInput (list.filters.city); L477 SelectInput (list.filters.salesperson); L490 SelectInput (list.filters.status); L503 Button (list.filters.needsCompletion); L512 Button (list.filters.clear); L520 role=alert; L524 DataTable (list.caption); L532 DataTable empty prop (list.emptyArchived); L543 Button (list.addClient); L560 Button (list.prev) [DO NOT ANNOTATE: static disabled, section 3.4]; L563 Button (list.next) [DO NOT ANNOTATE: static disabled, section 3.4]; L570 ConfirmDialog (list.deleteClientTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/clients/ClientListContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   4. **Leave unchanged** `src/pages/clients/ClientListPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   5. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `clients.list.<step>.title` and `.body` for these steps: `loading`, `error`, `emptyFirst`, `emptyNoMatch`, `emptyArchived`, `table`, `columns`, `row`, `rowName`, `incompleteBadge`, `rowStatus`, `rowValidity`, `rowAssigned`, `rowRisk`, `rowMenu`, `menuView`, `menuArchive`, `menuRestore`, `archiveDialog`, `archiveConfirm`, `archiveCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   6. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `clients.list.<step>.title` and `.body` for these steps in Albanian: `loading`, `error`, `emptyFirst`, `emptyNoMatch`, `emptyArchived`, `table`, `columns`, `row`, `rowName`, `incompleteBadge`, `rowStatus`, `rowValidity`, `rowAssigned`, `rowRisk`, `rowMenu`, `menuView`, `menuArchive`, `menuRestore`, `archiveDialog`, `archiveConfirm`, `archiveCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'clients.list', route: 'clients' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "clients.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/clientsList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: read in context during planning; re-read to catch drift): the files in item 7.
@@ -2920,6 +3693,12 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 232.
 15. **Dependencies and handoff:** unblocks all page slices (first: S19); it is a foundation or gate slice. After this slice **Clients list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Clients list, which belong to S17 (Clients list: header, search and filters (pilot)).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Previous / Next buttons (static `disabled`, not wired): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S19: Client form: fields, contacts, custom fields and create-deal option
 
@@ -2929,9 +3708,87 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Client form (create and edit)** (`clients.form`; `/:tenantSlug/clients/new`, `/:tenantSlug/clients/:clientId/edit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/clients/ClientFormPage.tsx`, `pages/clients/ClientFormContent.tsx`, `pages/clients/ContactPersonsEditor.tsx`, `components/ui/CustomFieldInput`.
 6. **Production LOC estimate:** **~212** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + Mode-dependent copy and safety via `vars.mode` for two routes sharing one guide, including the edit-mode contact editor being explain-only 12 + `FormRenderer` annotation of each rendered control (`tenantField`); the renderer is shared with the public form and the builder, so the id is applied only when it renders in the client form 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/clients/ClientFormContent.tsx`, `src/pages/clients/ContactPersonsEditor.tsx`, `src/components/forms/FormRenderer`
-   - New: `src/lib/support/guides/clientsForm.ts`, `src/lib/support/guides/clientsForm.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (14 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/clientsForm.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'clients.form', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'clients.form.<id>', kind, safety, … }`. Steps in state-only elements: `errorBanner`, `tenantForm`, `requiredErrors`, `profileErrors`. Eligibility (`requires`): `deals.edit`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['clients.form']` in `pageRegistry.ts`; copy keys resolve to `supportSales:clients.form.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/clientsForm.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/clientsForm.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `deals.edit`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'clients.form': () => import('./guides/clientsForm')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'clients.form'` on the entries for `clients/new`, `clients/:clientId/edit` and delete `'clients.form'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/clients/ClientFormContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientFormContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L68 permission check [deals.edit]; L300 form (form.editTitle); L310 Button; L313 Button; L354 SelectInput (form.profile.businessType); L380 TextInput (form.profile.employeeCount); L397 SelectInput (form.profile.area); L418 SelectInput (form.profile.city); L440 TextInput (form.profile.streetAddress); L452 TextInput (form.profile.taxId); L465 TextInput (form.profile.website); L509 input (form.firstDeal.label); L531 TextareaInput (form.notesLabel).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/clients/ClientFormContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/clients/ContactPersonsEditor.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContactPersonsEditor`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L68 button (form.contacts.remove); L71 aria-label (form.contacts.remove); L79 TextInput (form.contacts.name); L86 TextInput (form.contacts.position); L91 TextInput (form.contacts.phone); L96 TextInput (form.contacts.email); L104 Button (form.contacts.add); L164 input; L179 button (form.contacts.remove); L182 aria-label (form.contacts.remove); L190 TextInput (form.contacts.name); L195 TextInput (form.contacts.position); L200 TextInput (form.contacts.phone); L205 TextInput (form.contacts.email); L215 select (form.profile.choose); L225 Button (form.contacts.remove); L228 Button (form.contacts.cancel); L239 TextInput (form.contacts.name); L244 TextInput (form.contacts.position); L249 TextInput (form.contacts.phone); L254 TextInput (form.contacts.email); L261 Button (form.contacts.save); L264 Button (form.contacts.cancel); L270 Button (form.contacts.add).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/clients/ContactPersonsEditor.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Modify** `src/components/forms/FormRenderer/FormPageRenderer.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FormPageRenderer`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/forms/FormRenderer/FormRenderer.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FormRenderer`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/forms/FormRenderer/FormRenderer.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   9. **Modify** `src/components/forms/FormRenderer/PrintableForm.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PrintableForm`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L30 button (print.back); L35 button (print.action).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/forms/FormRenderer/PrintableForm.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   10. **Modify** `src/components/forms/FormRenderer/ScaledPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ScaledPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   11. **Leave unchanged** `src/pages/clients/ClientFormPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   12. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `clients.form.<step>.title` and `.body` for these steps: `mode`, `cancel`, `submit`, `errorBanner`, `tenantForm`, `tenantField`, `requiredErrors`, `profile`, `businessType`, `profileFields`, `city`, `profileErrors`, `contacts`, `addContact`, `contactRow`, `removeContact`, `firstDeal`, `notes`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   13. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `clients.form.<step>.title` and `.body` for these steps in Albanian: `mode`, `cancel`, `submit`, `errorBanner`, `tenantForm`, `tenantField`, `requiredErrors`, `profile`, `businessType`, `profileFields`, `city`, `profileErrors`, `contacts`, `addContact`, `contactRow`, `removeContact`, `firstDeal`, `notes`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   14. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'clients.form', route: 'clients/new' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "clients.form"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/clientsForm.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: read in context during planning; re-read to catch drift): `src/pages/clients/ClientFormContent.tsx`, `src/pages/clients/ContactPersonsEditor.tsx`.
@@ -2991,6 +3848,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 212.
 15. **Dependencies and handoff:** unblocks S76, S77. After this slice **Client form (create and edit) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S20: Follow-ups: tabs, filters, list and actions
 
@@ -3000,9 +3861,75 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Follow-ups** (`followUps`; `/:tenantSlug/follow-ups`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/followUps/FollowUpsPage.tsx`, `pages/followUps/FollowUpsContent.tsx`, `components/followUps/FollowUpList.tsx`, `components/followUps/FollowUpActionModals.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~202** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + Annotations in `FollowUpActionModals`; the list and its buttons are annotated with the client detail slice and reused here 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/followUps/FollowUpsContent.tsx`, `src/components/followUps/FollowUpList.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpActionModals.tsx`
-   - New: `src/lib/support/guides/followUps.ts`, `src/lib/support/guides/followUps.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (12 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/followUps.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'followUps', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.tabs`. Each step: `{ id, target: 'followUps.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): `followups.manage`. Hand-offs (`opens`/`group`): `action`.
+      - Integration: Loaded lazily through `loaders['followUps']` in `pageRegistry.ts`; copy keys resolve to `supportSales:followUps.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/followUps.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/followUps.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `followups.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'followUps': () => import('./guides/followUps')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'followUps'` on the entries for `follow-ups` and delete `'followUps'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/followUps/FollowUpsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('followUps.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L31 permission check [calendar.view]; L32 permission check [followups.manage]; L100 Tabs (title); L142 SelectInput (team.salesperson); L154 input (team.overdueOnly).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/followUps/FollowUpsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/followUps/FollowUpList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('followUps.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L46 permission check [followups.manage]; L47 permission check [followups.manage]; L104 Link (item.openCompany); L115 Link (item.openDeal); L125 aria-label (actions.label); L126 Button (actions.complete); L129 Button (actions.reschedule); L132 Button (actions.cancel); L136 Button (actions.reassign).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/followUps/FollowUpQuickButtons.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('followUps.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpQuickButtons`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L39 permission check [followups.manage]; L65 aria-label (quick.label); L74 Button (quick.intervalAria); L78 aria-label (quick.intervalAria); L86 Button (quick.custom).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/followUps/FollowUpActionModals.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('followUps.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RescheduleFollowUpModal`, `CancelFollowUpModal`, `ReassignFollowUpModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L62 Modal (reschedule.title); L65 TextInput (form.date); L66 TextInput (form.time); L68 TextareaInput (reschedule.reason); L70 role=alert; L75 Button (form.cancel); L78 Button (reschedule.save); L120 Modal (cancel.title); L122 TextareaInput (cancel.reason); L124 Button (cancel.keep); L127 Button (cancel.save); L166 Modal (reassign.title); L168 SelectInput (reassign.label); L181 Button (form.cancel); L184 Button (reassign.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Leave unchanged** `src/pages/followUps/FollowUpsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   10. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `followUps.<step>.title` and `.body` for these steps: `tabs`, `tabMine`, `tabTeam`, `salesperson`, `overdueOnly`, `list`, `item`, `itemOverdue`, `itemCompany`, `complete`, `reschedule`, `cancel`, `reassign`, `actionModals`, `modalFields`, `modalConfirm`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `followUps.<step>.title` and `.body` for these steps in Albanian: `tabs`, `tabMine`, `tabTeam`, `salesperson`, `overdueOnly`, `list`, `item`, `itemOverdue`, `itemCompany`, `complete`, `reschedule`, `cancel`, `reassign`, `actionModals`, `modalFields`, `modalConfirm`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'followUps', route: 'follow-ups' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "followUps"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/followUps.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/followUps/FollowUpsContent.tsx`, `src/components/followUps/FollowUpList.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpActionModals.tsx`.
@@ -3063,6 +3990,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 202.
 15. **Dependencies and handoff:** unblocks S23. After this slice **Follow-ups is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S21: Calendar: toolbar, views, team filter, overdue section and page states
 
@@ -3072,9 +4003,81 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Calendar (appointments, follow-ups, contract dates)** (`appointments`; `/:tenantSlug/appointments`); slice 1 of 2. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/appointments/AppointmentsPage.tsx`, `pages/appointments/CalendarContent.tsx`, `components/calendar/CalendarToolbar.tsx`, `components/calendar/CalendarMonthView.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~230** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 21 steps x 8 = 168 + 19 annotation sites x 2 = 38 + View-state markers on the three renderings 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/appointments/CalendarContent.tsx`, `src/components/calendar/CalendarToolbar.tsx`, `src/components/calendar/CalendarMonthView.tsx`, `src/components/calendar/CalendarTimeGrid.tsx`, `src/components/calendar/CalendarAgenda.tsx`
-   - New: `src/lib/support/guides/appointments.ts`, `src/lib/support/guides/appointments.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (13 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/appointments.ts`
+      - Change: Create the page guide with the 21 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'appointments', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'appointments.<id>', kind, safety, … }`. Steps in state-only elements: `viewMonth`, `viewTimeGrid`, `viewAgenda`, `emptyPeriod`, `loadNotice`, `overdue`. Eligibility (`requires`): `activities.add`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['appointments']` in `pageRegistry.ts`; copy keys resolve to `supportSales:appointments.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/appointments.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/appointments.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `activities.add`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'appointments': () => import('./guides/appointments')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'appointments'` on the entries for `appointments` and delete `'appointments'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/appointments/CalendarContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CalendarContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L56 permission check [calendar.view]; L57 permission check [activities.add]; L58 permission check [followups.manage]; L172 aria-label (calendar.legend); L186 role=alert (calendar.error); L191 role=status (calendar.loading).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/appointments/CalendarContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/calendar/CalendarToolbar.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CalendarToolbar`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L22 aria-label (calendar.toolbar); L24 button (calendar.previous) [DO NOT ANNOTATE: static disabled, section 3.4]; L27 button (calendar.today); L30 button (calendar.next) [DO NOT ANNOTATE: static disabled, section 3.4]; L38 aria-label (calendar.viewLabel); L40 button; L52 Button (calendar.plan).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/calendar/CalendarMonthView.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CalendarMonthView`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L40 aria-label (calendar.month); L59 button (calendar.openDay); L63 aria-label (calendar.openDay); L75 button (calendar.more).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/calendar/CalendarTimeGrid.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CalendarTimeGrid`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L89 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Modify** `src/components/calendar/CalendarAgenda.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CalendarAgenda`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L73 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Leave unchanged** `src/pages/appointments/AppointmentsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   11. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `appointments.<step>.title` and `.body` for these steps: `toolbar`, `previous`, `today`, `next`, `rangeTitle`, `viewSwitch`, `viewMonth`, `viewTimeGrid`, `viewAgenda`, `dayCell`, `dayHead`, `moreButton`, `plan`, `legend`, `emptyPeriod`, `loadNotice`, `teamFilter`, `personChip`, `allChip`, `overdue`, `overdueItem`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `appointments.<step>.title` and `.body` for these steps in Albanian: `toolbar`, `previous`, `today`, `next`, `rangeTitle`, `viewSwitch`, `viewMonth`, `viewTimeGrid`, `viewAgenda`, `dayCell`, `dayHead`, `moreButton`, `plan`, `legend`, `emptyPeriod`, `loadNotice`, `teamFilter`, `personChip`, `allChip`, `overdue`, `overdueItem`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   13. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'appointments', route: 'appointments' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "appointments"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/appointments.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/appointments/CalendarContent.tsx`, `src/components/calendar/CalendarToolbar.tsx`, `src/components/calendar/CalendarMonthView.tsx`, `src/components/calendar/CalendarTimeGrid.tsx`, `src/components/calendar/CalendarAgenda.tsx`.
@@ -3137,6 +4140,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 230.
 15. **Dependencies and handoff:** unblocks S22. Later slices of this page extend the same guide and may rely on the ids `appointments.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Calendar (appointments, follow-ups, contract dates), which belong to S22 (Calendar: items, detail panel, Plan activity and rescheduling).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S22: Calendar: items, detail panel, Plan activity and rescheduling
 
@@ -3146,9 +4154,81 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Calendar (appointments, follow-ups, contract dates)** (`appointments`; `/:tenantSlug/appointments`); slice 2 of 2. Not infrastructure.
 5. **Prerequisites:** S21 (Calendar: toolbar, views, team filter, overdue section and page states); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/appointments/AppointmentsPage.tsx`, `pages/appointments/CalendarContent.tsx`, `components/calendar/CalendarToolbar.tsx`, `components/calendar/CalendarMonthView.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~298** (within the 200 to 300 target): 6 extend the guide and registration + 27 steps x 8 = 216 + 24 annotation sites x 2 = 48 + Annotations inside `AppointmentDetailPanel` (shared by two item kinds) 14 + Annotations in `PlanActivityDialog` and `RescheduleItemDialog` 14. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/components/calendar/CalendarChip.tsx`, `src/components/calendar/ContractDateChip.tsx`, `src/components/calendar/TeamFilter.tsx`, `src/components/calendar/OverdueSection.tsx`, `src/components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`, `src/components/calendar/PlanActivityDialog.tsx`, `src/components/calendar/RescheduleItemDialog.tsx`
-   - Extended: `src/lib/support/guides/appointments.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (13 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/appointments.ts`
+      - Change: Extend the page guide with the 27 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'appointments', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'appointments.<id>', kind, safety, … }`. Steps in state-only elements: none. Eligibility (`requires`): `followups.manage`. Hand-offs (`opens`/`group`): `detail`, `plan`, `reschedule`.
+      - Integration: Loaded lazily through `loaders['appointments']` in `pageRegistry.ts`; copy keys resolve to `supportSales:appointments.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/appointments.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/appointments.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `followups.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/components/calendar/CalendarChip.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CalendarChip`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L31 button; L45 aria-label (calendar.itemLabel).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/components/calendar/ContractDateChip.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractDateChip`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L26 button; L32 aria-label (calendar.contract.itemLabel).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/components/calendar/TeamFilter.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TeamFilter`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L25 aria-label (calendar.team.label); L27 button (calendar.team.everyone); L31 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/calendar/OverdueSection.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `OverdueSection`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L34 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AppointmentDetailPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L64 permission check [followups.manage]; L65 permission check [activities.add]; L150 Button (detail.markConfirmed); L155 Button (detail.completedDone); L160 Button (detail.edit); L163 Button (detail.reschedule); L166 Button (detail.cancel); L175 Button (detail.complete); L179 Button (detail.reschedule); L182 Button (detail.cancel); L191 SlideOver (detail.title); L198 role=alert; L204 TextInput (detail.cancelReasonPlaceholder); L206 Button (detail.back); L209 Button (detail.cancelledDone); L249 Link; L256 Link.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/panels/AppointmentDetailPanel/AppointmentDetailPanel.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   8. **Modify** `src/components/calendar/PlanActivityDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DEFAULT_START`, `PlanActivityDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L62 permission check [activities.add]; L232 Modal (plan.type); L234 SelectInput (plan.type); L249 Button (plan.companyChange); L256 TextInput (plan.companySearch); L269 button; L282 SelectInput (plan.deal); L294 SelectInput (plan.contact); L306 TextInput (plan.date); L307 TextInput (plan.start); L308 TextInput (plan.end); L316 TextInput (plan.place); L320 SelectInput (plan.salesperson); L334 TextareaInput (plan.notes); L337 role=alert; L342 Button (plan.cancel); L345 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/calendar/PlanActivityDialog.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   9. **Modify** `src/components/calendar/RescheduleItemDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('appointments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RescheduleItemDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L65 Modal (reschedule.title); L68 TextInput (plan.date); L69 TextInput (plan.start); L71 TextareaInput (reschedule.reason); L73 role=alert; L78 Button (plan.cancel); L81 Button (reschedule.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Leave unchanged** `src/pages/appointments/AppointmentsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   11. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `appointments.<step>.title` and `.body` for these steps: `chip`, `chipKinds`, `detailPanel`, `detailStatus`, `detailEdit`, `detailReschedule`, `detailCancel`, `detailCancelReason`, `detailFollowUp`, `planDialog`, `planType`, `planCompany`, `planMatch`, `planDeal`, `planContact`, `planDate`, `planStart`, `planEnd`, `planPlace`, `planOwner`, `planError`, `planSave`, `planCancel`, `rescheduleDialog`, `rescheduleFields`, `rescheduleSave`, `drag`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `appointments.<step>.title` and `.body` for these steps in Albanian: `chip`, `chipKinds`, `detailPanel`, `detailStatus`, `detailEdit`, `detailReschedule`, `detailCancel`, `detailCancelReason`, `detailFollowUp`, `planDialog`, `planType`, `planCompany`, `planMatch`, `planDeal`, `planContact`, `planDate`, `planStart`, `planEnd`, `planPlace`, `planOwner`, `planError`, `planSave`, `planCancel`, `rescheduleDialog`, `rescheduleFields`, `rescheduleSave`, `drag`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   13. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'appointments', route: 'appointments' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "appointments"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/appointments.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/components/calendar/CalendarChip.tsx`, `src/components/calendar/ContractDateChip.tsx`, `src/components/calendar/TeamFilter.tsx`, `src/components/calendar/OverdueSection.tsx`, `src/components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`.
@@ -3219,6 +4299,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 298.
 15. **Dependencies and handoff:** unblocks S24. After this slice **Calendar (appointments, follow-ups, contract dates) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Calendar (appointments, follow-ups, contract dates), which belong to S21 (Calendar: toolbar, views, team filter, overdue section and page states).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S23: Client detail: header, action bar, summary, custom fields and follow-ups panel
 
@@ -3228,9 +4313,75 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Client detail** (`clients.detail`; `/:tenantSlug/clients/:clientId`); slice 1 of 3. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S20 (Follow-ups: tabs, filters, list and actions). Existing code it relies on, unchanged since planning: `pages/clients/ClientDetailPage.tsx`, `pages/clients/ClientDetailContent.tsx`, `components/followUps/FollowUpsPanel.tsx`, `components/calendar/PlanActivityDialog.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~212** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + Annotate `FollowUpsPanel`, `FollowUpQuickButtons` and `FollowUpList` once with component-scoped ids (`followUps.*`); the deal page and the follow-ups page reuse them 14 + `vars` for company name interpolation in the first step 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/clients/ClientDetailContent.tsx`, `src/components/followUps/FollowUpsPanel.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpList.tsx`
-   - New: `src/lib/support/guides/clientsDetail.ts`, `src/lib/support/guides/clientsDetail.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (12 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/clientsDetail.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'clients.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'clients.detail.<id>', kind, safety, … }`. Steps in state-only elements: `duplicateNotice`, `followUpsEmpty`, `notFound`. Eligibility (`requires`): `offers.edit`, `members.import`, `script.view`, `calendar.view`, `activities.add`, `followups.manage`. Hand-offs (`opens`/`group`): `menu`.
+      - Integration: Loaded lazily through `loaders['clients.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:clients.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/clientsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/clientsDetail.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `offers.edit`, `members.import`, `script.view`, `calendar.view`, `activities.add`, `followups.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'clients.detail': () => import('./guides/clientsDetail')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'clients.detail'` on the entries for `clients/:clientId` and delete `'clients.detail'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/clients/ClientDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L104 permission check [contracts.validity.view]; L105 permission check [deals.view]; L106 permission check [offers.edit]; L107 permission check [members.import]; L109 permission check [members.view]; L114 permission check [activities.add]; L115 permission check [notes.add]; L208 role=status (detail.duplicateNameWarning); L242 Button (detail.calculatePrice); L245 aria-label (detail.calculatePrice); L254 Button (detail.employeeUpload); L257 aria-label (detail.employeeUpload); L264 Button (detail.editAria); L267 aria-label (detail.editAria); L273 Button (detail.emailAria); L276 aria-label (detail.emailAria); L282 DropdownMenu (detail.moreAria); L285 Button (detail.moreAria); L430 button (detail.customFieldSettingsAria); L433 aria-label (detail.customFieldSettingsAria); L474 Tabs (detail.sectionsLabel); L509 Button (detail.channels.${channel}); L531 Button (detail.newAppointment); L543 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/clients/ClientDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/followUps/FollowUpsPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpsPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L36 permission check [calendar.view]; L37 permission check [activities.add]; L74 Button (section.plan).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/followUps/FollowUpQuickButtons.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpQuickButtons`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L39 permission check [followups.manage]; L65 aria-label (quick.label); L74 Button (quick.intervalAria); L78 aria-label (quick.intervalAria); L86 Button (quick.custom).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/followUps/FollowUpList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L46 permission check [followups.manage]; L47 permission check [followups.manage]; L104 Link (item.openCompany); L115 Link (item.openDeal); L125 aria-label (actions.label); L126 Button (actions.complete); L129 Button (actions.reschedule); L132 Button (actions.cancel); L136 Button (actions.reassign).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Leave unchanged** `src/pages/clients/ClientDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   10. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `clients.detail.<step>.title` and `.body` for these steps: `title`, `duplicateNotice`, `calculatePrice`, `employeeUpload`, `edit`, `email`, `more`, `moreItems`, `scriptButton`, `summary`, `contactsList`, `customFields`, `customFieldSettings`, `followUpsPanel`, `followUpOpeners`, `followUpItem`, `followUpsEmpty`, `notFound`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `clients.detail.<step>.title` and `.body` for these steps in Albanian: `title`, `duplicateNotice`, `calculatePrice`, `employeeUpload`, `edit`, `email`, `more`, `moreItems`, `scriptButton`, `summary`, `contactsList`, `customFields`, `customFieldSettings`, `followUpsPanel`, `followUpOpeners`, `followUpItem`, `followUpsEmpty`, `notFound`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'clients.detail', route: 'clients/:clientId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "clients.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/clientsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/clients/ClientDetailContent.tsx`, `src/components/followUps/FollowUpsPanel.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpList.tsx`.
@@ -3289,6 +4440,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 212.
 15. **Dependencies and handoff:** unblocks S24. Later slices of this page extend the same guide and may rely on the ids `clients.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Client detail, which belong to S24 (Client detail: timeline, activity logging and the appointments tab); S25 (Client detail: deals and Wellness+ tabs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S24: Client detail: timeline, activity logging and the appointments tab
 
@@ -3298,9 +4454,63 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Client detail** (`clients.detail`; `/:tenantSlug/clients/:clientId`); slice 2 of 3. Not infrastructure.
 5. **Prerequisites:** S23 (Client detail: header, action bar, summary, custom fields and follow-ups panel); S18 (Clients list: states, rows, row menu and archive / restore); S22 (Calendar: items, detail panel, Plan activity and rescheduling). Existing code it relies on, unchanged since planning: `pages/clients/ClientDetailPage.tsx`, `pages/clients/ClientDetailContent.tsx`, `components/followUps/FollowUpsPanel.tsx`, `components/calendar/PlanActivityDialog.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~274** (within the 200 to 300 target): 6 extend the guide and registration + 24 steps x 8 = 192 + 22 annotation sites x 2 = 44 + `ActivityDialog` annotation of its fields and footer (component is shared with the deal page, so ids are namespaced under `activity.*` and reused there) 22 + Tab-scope wiring for the tabs of this slice 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/clients/ClientDetailContent.tsx`, `src/components/clients/CompanyTimeline.tsx`, `src/components/activities/ActivityDialog.tsx`, `src/components/clients/ClientContractsTab.tsx`
-   - Extended: `src/lib/support/guides/clientsDetail.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/clientsDetail.ts`
+      - Change: Extend the page guide with the 24 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'clients.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.tabs`, `shared.statusBadge`. Each step: `{ id, target: 'clients.detail.<id>', kind, safety, … }`. Steps in state-only elements: `timelineEmpty`, `appointmentsEmpty`, `contractsEmpty`. Eligibility (`requires`): `notes.add`, `followups.manage`, `contracts.validity.view`. Hand-offs (`opens`/`group`): `activity`, `plan`, `detail`.
+      - Integration: Loaded lazily through `loaders['clients.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:clients.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/clientsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/clientsDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `notes.add`, `followups.manage`, `contracts.validity.view`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/clients/ClientDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L104 permission check [contracts.validity.view]; L105 permission check [deals.view]; L106 permission check [offers.edit]; L107 permission check [members.import]; L109 permission check [members.view]; L114 permission check [activities.add]; L115 permission check [notes.add]; L208 role=status (detail.duplicateNameWarning); L242 Button (detail.calculatePrice); L245 aria-label (detail.calculatePrice); L254 Button (detail.employeeUpload); L257 aria-label (detail.employeeUpload); L264 Button (detail.editAria); L267 aria-label (detail.editAria); L273 Button (detail.emailAria); L276 aria-label (detail.emailAria); L282 DropdownMenu (detail.moreAria); L285 Button (detail.moreAria); L430 button (detail.customFieldSettingsAria); L433 aria-label (detail.customFieldSettingsAria); L474 Tabs (detail.sectionsLabel); L509 Button (detail.channels.${channel}); L531 Button (detail.newAppointment); L543 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/clients/ClientDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   4. **Modify** `src/components/clients/CompanyTimeline.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CompanyTimeline`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L139 Button (activity.edit); L280 aria-label (detail.timeline.filtersLabel); L281 button; L290 button; L304 role=alert (detail.timeline.loadError); L333 Button (detail.timeline.loadingMore).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/clients/CompanyTimeline.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   5. **Modify** `src/components/activities/ActivityDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ActivityDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L76 permission check [notes.add]; L77 permission check [activities.add]; L78 permission check [deals.view]; L79 permission check [followups.manage]; L200 SlideOver (activity.editTitle); L207 Button; L211 Button (activity.save); L214 Button (activity.save); L223 role=status (activity.saved); L231 role=alert; L238 aria-label (activity.type); L243 button; L259 TextInput (activity.occurredAt); L270 SelectInput (activity.contact); L286 SelectInput (activity.result); L304 SelectInput (activity.deal); L317 TextareaInput (activity.clientFeedback); L318 TextareaInput (activity.nextAction); L322 TextareaInput (activity.note).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/activities/ActivityDialog.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/clients/ClientContractsTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientContractsTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L57 Button (clientTab.newContract); L107 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/clients/ClientContractsTab.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Leave unchanged** `src/pages/clients/ClientDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   8. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `clients.detail.<step>.title` and `.body` for these steps: `tabs`, `timelineItem`, `timelineEmpty`, `channelButton`, `addNote`, `activityDialog`, `activityResult`, `activityWhen`, `activityNotes`, `activityFollowUp`, `activitySave`, `activityCancel`, `tabAppointments`, `appointmentsList`, `appointmentItem`, `appointmentsEmpty`, `schedule`, `planRecap`, `detailRecap`, `tabContracts`, `contractsList`, `contractsEmpty`, `contractRowLink`, `contractsStatus`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `clients.detail.<step>.title` and `.body` for these steps in Albanian: `tabs`, `timelineItem`, `timelineEmpty`, `channelButton`, `addNote`, `activityDialog`, `activityResult`, `activityWhen`, `activityNotes`, `activityFollowUp`, `activitySave`, `activityCancel`, `tabAppointments`, `appointmentsList`, `appointmentItem`, `appointmentsEmpty`, `schedule`, `planRecap`, `detailRecap`, `tabContracts`, `contractsList`, `contractsEmpty`, `contractRowLink`, `contractsStatus`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'clients.detail', route: 'clients/:clientId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "clients.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/clientsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/clients/ClientDetailContent.tsx`, `src/components/clients/CompanyTimeline.tsx`, `src/components/activities/ActivityDialog.tsx`, `src/components/clients/ClientContractsTab.tsx`.
@@ -3368,6 +4578,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 274.
 15. **Dependencies and handoff:** unblocks S25, S30. Later slices of this page extend the same guide and may rely on the ids `clients.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Client detail, which belong to S23 (Client detail: header, action bar, summary, custom fields and follow-ups panel); S25 (Client detail: deals and Wellness+ tabs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S25: Client detail: deals and Wellness+ tabs
 
@@ -3377,9 +4592,63 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Client detail** (`clients.detail`; `/:tenantSlug/clients/:clientId`); slice 3 of 3. Not infrastructure.
 5. **Prerequisites:** S24 (Client detail: timeline, activity logging and the appointments tab); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/clients/ClientDetailPage.tsx`, `pages/clients/ClientDetailContent.tsx`, `components/followUps/FollowUpsPanel.tsx`, `components/calendar/PlanActivityDialog.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~158** (just under the target (150 to 199)): 6 extend the guide and registration + 14 steps x 8 = 112 + 13 annotation sites x 2 = 26 + Annotate `MemberBadges` and `RemoveFromCompanyDialog` (shared with the members pages) with component-scoped ids 14. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/components/clients/ClientDealsTab.tsx`, `src/pages/membership/CompanyWellnessTab.tsx`, `src/pages/membership/MemberBadges.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`
-   - Extended: `src/lib/support/guides/clientsDetail.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/clientsDetail.ts`
+      - Change: Extend the page guide with the 14 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'clients.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'clients.detail.<id>', kind, safety, … }`. Steps in state-only elements: `dealsEmpty`, `wellnessEmpty`, `wellnessNoContract`. Eligibility (`requires`): `deals.view`, `deals.edit`, `members.view`, `members.import`. Hand-offs (`opens`/`group`): `wellness`.
+      - Integration: Loaded lazily through `loaders['clients.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:clients.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/clientsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/clientsDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `deals.view`, `deals.edit`, `members.view`, `members.import`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/components/clients/ClientDealsTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientDealsTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L47 Button (newDeal); L59 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/clients/ClientDealsTab.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   4. **Modify** `src/pages/membership/CompanyWellnessTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CompanyWellnessTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L90 Button (companyTab.upload); L97 aria-label (companyTab.perTier); L106 Button (companyTab.removeSelected); L118 input (companyTab.selectAll); L131 input (companyTab.select); L140 button; L160 Button (companyTab.openInList); L175 button; L191 role=alert (companyTab.cardLinksFailed); L220 Button (companyTab.cardLinks).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/pages/membership/MemberBadges.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TierBadge`, `StatusBadge`, `ExpiringBadge`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/membership/RemoveFromCompanyDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('clients.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RemoveFromCompanyDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L58 Modal (removeEmployer.helpMany); L61 TextInput (removeEmployer.leftOn); L72 TextareaInput (removeEmployer.reason); L83 role=alert (removeEmployer.cancel); L86 Button (removeEmployer.cancel); L87 Button (removeEmployer.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Leave unchanged** `src/pages/clients/ClientDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   8. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `clients.detail.<step>.title` and `.body` for these steps: `tabDeals`, `dealsList`, `dealItem`, `dealsEmpty`, `newDeal`, `tabWellness`, `wellnessSummary`, `wellnessTable`, `wellnessRow`, `wellnessUpload`, `wellnessEmpty`, `wellnessDialog`, `wellnessDialogActions`, `wellnessNoContract`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `clients.detail.<step>.title` and `.body` for these steps in Albanian: `tabDeals`, `dealsList`, `dealItem`, `dealsEmpty`, `newDeal`, `tabWellness`, `wellnessSummary`, `wellnessTable`, `wellnessRow`, `wellnessUpload`, `wellnessEmpty`, `wellnessDialog`, `wellnessDialogActions`, `wellnessNoContract`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'clients.detail', route: 'clients/:clientId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "clients.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/clientsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/components/clients/ClientDealsTab.tsx`, `src/pages/membership/CompanyWellnessTab.tsx`, `src/pages/membership/MemberBadges.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`.
@@ -3430,6 +4699,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 158.
 15. **Dependencies and handoff:** unblocks S47, S52. After this slice **Client detail is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Client detail, which belong to S23 (Client detail: header, action bar, summary, custom fields and follow-ups panel); S24 (Client detail: timeline, activity logging and the appointments tab).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S26: Pricing screen: inputs, calculation, warnings and save
 
@@ -3439,9 +4713,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Pricing screen (offer builder)** (`pricing.offer`; `/:tenantSlug/deals/:dealId/pricing`, `/:tenantSlug/clients/:clientId/pricing`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/pricing/PricingContent.tsx`.
 6. **Production LOC estimate:** **~214** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 19 steps x 8 = 152 + 17 annotation sites x 2 = 34 + `vars` for entry mode and derived values read from the summary region 12. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/pricing/PricingContent.tsx`, `src/pages/pricing/pricingScreenError.ts`
-   - New: `src/lib/support/guides/pricingOffer.ts`, `src/lib/support/guides/pricingOffer.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/pricingOffer.ts`
+      - Change: Create the page guide with the 19 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'pricing.offer', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'pricing.offer.<id>', kind, safety, … }`. Steps in state-only elements: `warnings`. Eligibility (`requires`): `script.view`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['pricing.offer']` in `pageRegistry.ts`; copy keys resolve to `supportSales:pricing.offer.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/pricingOffer.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/pricingOffer.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `script.view`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'pricing.offer': () => import('./guides/pricingOffer')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'pricing.offer'` on the entries for `deals/:dealId/pricing`, `clients/:clientId/pricing` and delete `'pricing.offer'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/pricing/PricingContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('pricing.offer.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PricingContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L103 permission check [commercial.view]; L104 permission check [companies.edit]; L107 permission check [discounts.approve]; L305 Link (back.deal); L320 role=alert; L333 SelectInput (deal); L345 TextInput (employees); L357 input (alsoUpdateCompany); L368 SelectInput (businessType); L394 Link (editCompany); L398 SelectInput (zone); L414 SelectInput (frequency); L424 SelectInput (package); L433 aria-label (packageServices); L441 TextInput (discount); L451 TextInput (manualPrice); L464 TextareaInput (reasonPlaceholder); L476 SelectInput (contact); L491 TextareaInput (note); L545 Link (incomplete.link); L558 role=alert (aboveCap); L571 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/pricing/PricingContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/pricing/pricingScreenError.ts`
+      - Change: Open the file and annotate the elements the steps name.
+      - Implementation details: (non-component module: read it to find the render site)
+      - Integration: Consumed by the page components listed in section 3.
+      - Removal: No removal.
+      - Verification: Guide test.
+   7. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `pricing.offer.<step>.title` and `.body` for these steps: `entry`, `scriptButton`, `dealSelect`, `employees`, `employeeBand`, `businessType`, `businessTypeRisk`, `zone`, `frequency`, `package`, `packageServices`, `extraFields`, `contact`, `discount`, `summary`, `warnings`, `approval`, `save`, `saveDisabled`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `pricing.offer.<step>.title` and `.body` for these steps in Albanian: `entry`, `scriptButton`, `dealSelect`, `employees`, `employeeBand`, `businessType`, `businessTypeRisk`, `zone`, `frequency`, `package`, `packageServices`, `extraFields`, `contact`, `discount`, `summary`, `warnings`, `approval`, `save`, `saveDisabled`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'pricing.offer', route: 'deals/:dealId/pricing' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "pricing.offer"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/pricingOffer.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/pricing/PricingContent.tsx`, `src/pages/pricing/pricingScreenError.ts`.
@@ -3498,6 +4824,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 214.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Pricing screen (offer builder) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S27: Discount approvals
 
@@ -3507,9 +4837,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Discount approvals** (`approvals`; `/:tenantSlug/approvals`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/approvals/ApprovalsPage.tsx`, `pages/approvals/ApprovalsContent.tsx`.
 6. **Production LOC estimate:** **~140** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 12 steps x 8 = 96 + 11 annotation sites x 2 = 22 + `ApprovalsContent` row actions annotation (controls read at slice start) 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/approvals/ApprovalsContent.tsx`
-   - New: `src/lib/support/guides/approvals.ts`, `src/lib/support/guides/approvals.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/approvals.ts`
+      - Change: Create the page guide with the 12 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'approvals', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.pagination`. Each step: `{ id, target: 'approvals.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['approvals']` in `pageRegistry.ts`; copy keys resolve to `supportSales:approvals.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/approvals.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/approvals.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'approvals': () => import('./guides/approvals')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'approvals'` on the entries for `approvals` and delete `'approvals'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/approvals/ApprovalsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('approvals.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ApprovalsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L99 DataTable; L105 DataTable empty prop (approvalsList.empty); L114 Pagination.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/approvals/ApprovalsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Leave unchanged** `src/pages/approvals/ApprovalsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `approvals.<step>.title` and `.body` for these steps: `title`, `table`, `row`, `rowOffer`, `rowDiscount`, `rowRequester`, `rowActions`, `columns`, `pagination`, `empty`, `error`, `denied`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `approvals.<step>.title` and `.body` for these steps in Albanian: `title`, `table`, `row`, `rowOffer`, `rowDiscount`, `rowRequester`, `rowActions`, `columns`, `pagination`, `empty`, `error`, `denied`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'approvals', route: 'approvals' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "approvals"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/approvals.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/approvals/ApprovalsContent.tsx`.
@@ -3560,6 +4938,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 140.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Discount approvals is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S28: Offers list
 
@@ -3569,9 +4951,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Offers list** (`offers`; `/:tenantSlug/offers`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/offers/OfferList.tsx`, `pages/offers/OfferListContent.tsx`.
 6. **Production LOC estimate:** **~172** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 16 steps x 8 = 128 + 14 annotation sites x 2 = 28. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/offers/OfferListContent.tsx`
-   - New: `src/lib/support/guides/offers.ts`, `src/lib/support/guides/offers.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/offers.ts`
+      - Change: Create the page guide with the 16 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'offers', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`, `shared.pagination`. Each step: `{ id, target: 'offers.<id>', kind, safety, … }`. Steps in state-only elements: `emptyFirst`, `emptyNoMatch`, `error`. Eligibility (`requires`): `commercial.view`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['offers']` in `pageRegistry.ts`; copy keys resolve to `supportSales:offers.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/offers.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/offers.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `commercial.view`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'offers': () => import('./guides/offers')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'offers'` on the entries for `offers` and delete `'offers'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/offers/OfferListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('offers.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `OfferListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L38 permission check [commercial.view]; L156 TextInput (list.searchLabel); L164 aria-label (list.statuses); L166 button; L173 SelectInput (list.salesperson); L182 TextInput (list.createdFrom); L183 TextInput (list.createdTo); L187 Button (list.clear); L197 DataTable; L203 DataTable empty prop (list.emptyFiltered); L212 Pagination.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/offers/OfferListContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `offers.<step>.title` and `.body` for these steps: `title`, `search`, `statusChips`, `statusChip`, `salesperson`, `createdFrom`, `createdTo`, `clear`, `table`, `row`, `rowStatus`, `rowValue`, `pagination`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `offers.<step>.title` and `.body` for these steps in Albanian: `title`, `search`, `statusChips`, `statusChip`, `salesperson`, `createdFrom`, `createdTo`, `clear`, `table`, `row`, `rowStatus`, `rowValue`, `pagination`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'offers', route: 'offers' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "offers"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/offers.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/offers/OfferListContent.tsx`.
@@ -3627,6 +5055,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 172.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Offers list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S29: Deal form
 
@@ -3636,9 +5068,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Deal form (create and edit)** (`deals.form`; `/:tenantSlug/deals/new`, `/:tenantSlug/deals/:dealId/edit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/deals/DealFormContent.tsx`.
 6. **Production LOC estimate:** **~154** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 14 steps x 8 = 112 + 13 annotation sites x 2 = 26. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/deals/DealFormContent.tsx`
-   - New: `src/lib/support/guides/dealsForm.ts`, `src/lib/support/guides/dealsForm.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dealsForm.ts`
+      - Change: Create the page guide with the 14 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'deals.form', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'deals.form.<id>', kind, safety, … }`. Steps in state-only elements: `companyChosen`, `formError`, `fieldErrors`. Eligibility (`requires`): `companies.reassign`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['deals.form']` in `pageRegistry.ts`; copy keys resolve to `supportSales:deals.form.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dealsForm.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dealsForm.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `companies.reassign`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'deals.form': () => import('./guides/dealsForm')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'deals.form'` on the entries for `deals/new`, `deals/:dealId/edit` and delete `'deals.form'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/deals/DealFormContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealFormContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L43 permission check [companies.reassign]; L144 form (breadcrumb); L159 Button (form.companyChange); L166 TextInput (form.companySearch); L179 button; L192 SelectInput (form.type); L199 TextInput (form.expectedClose); L208 TextInput (form.title); L219 SelectInput (form.salesperson); L231 TextareaInput (form.notes); L241 role=alert; L247 Button (form.cancel); L250 Button (form.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/deals/DealFormContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `deals.form.<step>.title` and `.body` for these steps: `mode`, `companySearch`, `companyMatch`, `companyChosen`, `changeCompany`, `type`, `title`, `value`, `salesperson`, `notes`, `formError`, `fieldErrors`, `cancel`, `save`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `deals.form.<step>.title` and `.body` for these steps in Albanian: `mode`, `companySearch`, `companyMatch`, `companyChosen`, `changeCompany`, `type`, `title`, `value`, `salesperson`, `notes`, `formError`, `fieldErrors`, `cancel`, `save`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'deals.form', route: 'deals/new' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "deals.form"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dealsForm.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/deals/DealFormContent.tsx`.
@@ -3690,6 +5168,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 154.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Deal form (create and edit) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S30: Deal detail: header, stage, history, activities and the follow-ups panel
 
@@ -3699,9 +5181,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Deal detail** (`deals.detail`; `/:tenantSlug/deals/:dealId`); slice 1 of 3. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S24 (Client detail: timeline, activity logging and the appointments tab). Existing code it relies on, unchanged since planning: `pages/deals/DealDetailContent.tsx`, `pages/deals/DealClosingModals.tsx`, `pages/deals/DealActivitiesSection.tsx`, `pages/deals/DealOffersSection.tsx`.
 6. **Production LOC estimate:** **~230** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 21 steps x 8 = 168 + 19 annotation sites x 2 = 38 + Open / won / lost mode markers on the action bar 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/deals/DealDetailContent.tsx`
-   - New: `src/lib/support/guides/dealsDetail.ts`, `src/lib/support/guides/dealsDetail.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dealsDetail.ts`
+      - Change: Create the page guide with the 21 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'deals.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'deals.detail.<id>', kind, safety, … }`. Steps in state-only elements: `stateBanner`, `activitiesEmpty`. Eligibility (`requires`): `deals.reopen`, `deals.edit`, `companies.reassign`, `deals.delete`, `script.view`, `activities.add`. Hand-offs (`opens`/`group`): `menu`.
+      - Integration: Loaded lazily through `loaders['deals.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:deals.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dealsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dealsDetail.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `deals.reopen`, `deals.edit`, `companies.reassign`, `deals.delete`, `script.view`, `activities.add`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'deals.detail': () => import('./guides/dealsDetail')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'deals.detail'` on the entries for `deals/:dealId` and delete `'deals.detail'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/deals/DealDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L51 permission check [deals.edit]; L52 permission check [companies.reassign]; L53 permission check [deals.delete]; L54 permission check [deals.reopen]; L87 Link (detail.back); L156 Link (detail.back); L164 Link; L172 Link (renewal.of); L182 Button (win.action); L185 Button (lose.action); L191 Button (reopen.action); L196 Button (detail.edit); L201 DropdownMenu (detail.actions); L204 Button (detail.actions); L222 SelectInput (detail.moveTo); L257 Button; L323 Link (contract.open); L326 Button (contract.create); L448 Modal (detail.reassignTitle); L450 SelectInput (detail.reassignLabel); L463 Button (form.cancel); L466 Button (detail.reassignConfirm); L474 ConfirmDialog (detail.deleteTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/deals/DealDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `deals.detail.<step>.title` and `.body` for these steps: `title`, `stateBanner`, `win`, `winDisabled`, `lose`, `reopen`, `edit`, `actionsMenu`, `actionReassign`, `actionDelete`, `stageSelect`, `summary`, `historyItem`, `scriptButton`, `activitiesSection`, `addActivity`, `activity`, `activityDetails`, `activityEdit`, `activitiesEmpty`, `followUpsPanel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `deals.detail.<step>.title` and `.body` for these steps in Albanian: `title`, `stateBanner`, `win`, `winDisabled`, `lose`, `reopen`, `edit`, `actionsMenu`, `actionReassign`, `actionDelete`, `stageSelect`, `summary`, `historyItem`, `scriptButton`, `activitiesSection`, `addActivity`, `activity`, `activityDetails`, `activityEdit`, `activitiesEmpty`, `followUpsPanel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'deals.detail', route: 'deals/:dealId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "deals.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dealsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/deals/DealDetailContent.tsx`.
@@ -3762,6 +5290,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 230.
 15. **Dependencies and handoff:** unblocks S31. Later slices of this page extend the same guide and may rely on the ids `deals.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Deal detail, which belong to S31 (Deal detail: offers section and the per-offer action bar); S32 (Deal detail: win, lose, reopen, reassign and delete dialogs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S31: Deal detail: offers section and the per-offer action bar
 
@@ -3771,9 +5304,67 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Deal detail** (`deals.detail`; `/:tenantSlug/deals/:dealId`); slice 2 of 3. Not infrastructure.
 5. **Prerequisites:** S30 (Deal detail: header, stage, history, activities and the follow-ups panel); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/deals/DealDetailContent.tsx`, `pages/deals/DealClosingModals.tsx`, `pages/deals/DealActivitiesSection.tsx`, `pages/deals/DealOffersSection.tsx`.
 6. **Production LOC estimate:** **~242** (within the 200 to 300 target): 6 extend the guide and registration + 24 steps x 8 = 192 + 22 annotation sites x 2 = 44. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/deals/DealOffersSection.tsx`, `src/components/offers/OfferActions.tsx`, `src/pages/deals/DealActivitiesSection.tsx`, `src/components/activities/ActivityDetails.tsx`, `src/components/activities/useCanEditActivity.ts`
-   - Extended: `src/lib/support/guides/dealsDetail.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/dealsDetail.ts`
+      - Change: Extend the page guide with the 24 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'deals.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'deals.detail.<id>', kind, safety, … }`. Steps in state-only elements: `offersEmpty`. Eligibility (`requires`): `offers.edit`, `discounts.approve`. Hand-offs (`opens`/`group`): `offer`.
+      - Integration: Loaded lazily through `loaders['deals.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:deals.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dealsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/dealsDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `offers.edit`, `discounts.approve`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/deals/DealOffersSection.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealOffersSection`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L51 permission check [commercial.view]; L52 permission check [offers.edit]; L100 Button (offers.calculate); L112 aria-label (detail.offers).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/deals/DealOffersSection.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   4. **Modify** `src/components/offers/OfferActions.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `OfferActions`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L129 Button (actions.preview); L132 SelectInput (actions.language); L141 Button (actions.download); L146 Button (actions.edit); L151 Button (done.ready); L160 Button (actions.markSent); L165 Button (actions.markAccepted); L170 Button (actions.markRejected); L175 Button (actions.revise); L180 Button (actions.approve); L185 Button (actions.reject); L190 Button (actions.withdraw); L196 role=status (approval.waitingManual); L207 ConfirmDialog (sent.title); L219 TextInput (sent.date); L231 ConfirmDialog (accepted.title); L242 TextareaInput (response.note); L247 ConfirmDialog (rejected.title); L258 TextareaInput (response.note); L263 ConfirmDialog (revise.title); L273 ConfirmDialog (approval.approveManualTitle); L300 TextInput; L314 TextareaInput (approval.comment); L327 ConfirmDialog (approval.rejectManualTitle); L343 TextareaInput (approval.comment); L356 ConfirmDialog (approval.withdrawTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/pages/deals/DealActivitiesSection.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealActivitiesSection`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L31 permission check [activities.add]; L32 permission check [notes.add]; L68 Button; L95 Button (activity.edit).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/activities/ActivityDetails.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ActivityDetails`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/activities/useCanEditActivity.ts`
+      - Change: Open the file and annotate the elements the steps name.
+      - Implementation details: (non-component module: read it to find the render site)
+      - Integration: Consumed by the page components listed in section 3.
+      - Removal: No removal.
+      - Verification: Guide test.
+   8. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `deals.detail.<step>.title` and `.body` for these steps: `offersSection`, `offersEmpty`, `offer`, `offerOpen`, `offerPricing`, `createContract`, `offerWin`, `offerActionsBar`, `preview`, `offerLanguage`, `download`, `editOffer`, `submitApproval`, `send`, `accept`, `reject`, `revise`, `approveDiscount`, `rejectDiscount`, `withdraw`, `offerDialogs`, `offerDialogFields`, `offerDialogConfirm`, `offerNotice`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `deals.detail.<step>.title` and `.body` for these steps in Albanian: `offersSection`, `offersEmpty`, `offer`, `offerOpen`, `offerPricing`, `createContract`, `offerWin`, `offerActionsBar`, `preview`, `offerLanguage`, `download`, `editOffer`, `submitApproval`, `send`, `accept`, `reject`, `revise`, `approveDiscount`, `rejectDiscount`, `withdraw`, `offerDialogs`, `offerDialogFields`, `offerDialogConfirm`, `offerNotice`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'deals.detail', route: 'deals/:dealId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "deals.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dealsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/deals/DealOffersSection.tsx`, `src/components/offers/OfferActions.tsx`, `src/pages/deals/DealActivitiesSection.tsx`, `src/components/activities/ActivityDetails.tsx`, `src/components/activities/useCanEditActivity.ts`.
@@ -3834,6 +5425,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 242.
 15. **Dependencies and handoff:** unblocks S32. Later slices of this page extend the same guide and may rely on the ids `deals.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Deal detail, which belong to S30 (Deal detail: header, stage, history, activities and the follow-ups panel); S32 (Deal detail: win, lose, reopen, reassign and delete dialogs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S32: Deal detail: win, lose, reopen, reassign and delete dialogs
 
@@ -3843,9 +5439,49 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Deal detail** (`deals.detail`; `/:tenantSlug/deals/:dealId`); slice 3 of 3. Not infrastructure.
 5. **Prerequisites:** S31 (Deal detail: offers section and the per-offer action bar); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/deals/DealDetailContent.tsx`, `pages/deals/DealClosingModals.tsx`, `pages/deals/DealActivitiesSection.tsx`, `pages/deals/DealOffersSection.tsx`.
 6. **Production LOC estimate:** **~198** (just under the target (150 to 199)): 6 extend the guide and registration + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + Annotations across `DealClosingModals` (component-scoped `dealClosing.*`, reused by the pipeline board) and the two inline dialogs in `DealDetailContent` 16. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/deals/DealClosingModals.tsx`, `src/pages/deals/DealDetailContent.tsx`
-   - Extended: `src/lib/support/guides/dealsDetail.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/dealsDetail.ts`
+      - Change: Extend the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'deals.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'deals.detail.<id>', kind, safety, … }`. Steps in state-only elements: none. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `win`, `lose`, `reopen`, `reassign`, `delete`, `all`.
+      - Integration: Loaded lazily through `loaders['deals.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:deals.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dealsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/dealsDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/deals/DealClosingModals.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `WinDealModal`, `LoseDealModal`, `ReopenDealModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L93 Modal (win.title); L95 role=alert (win.noOffer); L97 aria-label (win.fromOffer); L121 TextInput (win.closingDate); L124 input (win.closeFollowUps); L129 Button (form.cancel); L132 Button (win.confirm); L171 Modal (lose.title); L174 SelectInput (lose.reason); L184 TextareaInput (lose.note); L186 Button (form.cancel); L189 Button (lose.confirm); L226 Modal (reopen.title); L228 SelectInput (reopen.stage); L235 TextareaInput (reopen.comment); L237 Button (form.cancel); L240 Button (reopen.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/pages/deals/DealDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('deals.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L51 permission check [deals.edit]; L52 permission check [companies.reassign]; L53 permission check [deals.delete]; L54 permission check [deals.reopen]; L87 Link (detail.back); L156 Link (detail.back); L164 Link; L172 Link (renewal.of); L182 Button (win.action); L185 Button (lose.action); L191 Button (reopen.action); L196 Button (detail.edit); L201 DropdownMenu (detail.actions); L204 Button (detail.actions); L222 SelectInput (detail.moveTo); L257 Button; L323 Link (contract.open); L326 Button (contract.create); L448 Modal (detail.reassignTitle); L450 SelectInput (detail.reassignLabel); L463 Button (form.cancel); L466 Button (detail.reassignConfirm); L474 ConfirmDialog (detail.deleteTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/deals/DealDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   5. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `deals.detail.<step>.title` and `.body` for these steps: `winDialog`, `winFromOffer`, `winDate`, `winCloseFollowUps`, `winConfirm`, `loseDialog`, `loseReason`, `loseConfirm`, `reopenDialog`, `reopenStage`, `reopenComment`, `reopenConfirm`, `reassignDialog`, `reassignOwner`, `reassignConfirm`, `deleteDialog`, `deleteConfirm`, `dialogCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   6. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `deals.detail.<step>.title` and `.body` for these steps in Albanian: `winDialog`, `winFromOffer`, `winDate`, `winCloseFollowUps`, `winConfirm`, `loseDialog`, `loseReason`, `loseConfirm`, `reopenDialog`, `reopenStage`, `reopenComment`, `reopenConfirm`, `reassignDialog`, `reassignOwner`, `reassignConfirm`, `deleteDialog`, `deleteConfirm`, `dialogCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'deals.detail', route: 'deals/:dealId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "deals.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dealsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/deals/DealClosingModals.tsx`, `src/pages/deals/DealDetailContent.tsx`.
@@ -3899,6 +5535,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 198.
 15. **Dependencies and handoff:** unblocks S33. After this slice **Deal detail is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Deal detail, which belong to S30 (Deal detail: header, stage, history, activities and the follow-ups panel); S31 (Deal detail: offers section and the per-offer action bar).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S33: Pipeline board: columns, cards, move menu and load more
 
@@ -3908,9 +5549,69 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Pipeline board** (`pipeline.board`; `/:tenantSlug/pipeline`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S32 (Deal detail: win, lose, reopen, reassign and delete dialogs). Existing code it relies on, unchanged since planning: `pages/deals/DealsPage.tsx`, `pages/deals/PipelineBoardContent.tsx`, `pages/deals/PipelineViewSwitch.tsx`, `pages/deals/DealMarkers.tsx`.
 6. **Production LOC estimate:** **~198** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + `DealMarkers` and column annotations 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/deals/PipelineBoardContent.tsx`, `src/pages/deals/PipelineViewSwitch.tsx`, `src/pages/deals/DealMarkers.tsx`
-   - New: `src/lib/support/guides/pipelineBoard.ts`, `src/lib/support/guides/pipelineBoard.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (11 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/pipelineBoard.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'pipeline.board', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'pipeline.board.<id>', kind, safety, … }`. Steps in state-only elements: `boardEmpty`, `error`. Eligibility (`requires`): `deals.edit`, `commercial.view`. Hand-offs (`opens`/`group`): `menu`, `closing`.
+      - Integration: Loaded lazily through `loaders['pipeline.board']` in `pageRegistry.ts`; copy keys resolve to `supportSales:pipeline.board.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/pipelineBoard.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/pipelineBoard.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `deals.edit`, `commercial.view`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'pipeline.board': () => import('./guides/pipelineBoard')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'pipeline.board'` on the entries for `pipeline` and delete `'pipeline.board'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/deals/PipelineBoardContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('pipeline.board.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PipelineBoardContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L43 permission check [deals.edit]; L127 Button (newDeal); L146 aria-label (board.columnLabel); L194 Button (board.loadMore); L280 DropdownMenu (board.moveTo); L284 button (board.moveToFor); L301 Link.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/deals/PipelineBoardContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/deals/PipelineViewSwitch.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('pipeline.board.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PipelineViewSwitch`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L16 aria-label (views.label); L18 Link.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/deals/DealMarkers.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('pipeline.board.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealMarkers`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Leave unchanged** `src/pages/deals/DealsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   9. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `pipeline.board.<step>.title` and `.body` for these steps: `title`, `viewSwitch`, `newDeal`, `board`, `column`, `columnCount`, `columnEmpty`, `card`, `cardCompany`, `cardValue`, `cardMarkers`, `cardMenu`, `cardMenuItems`, `loadMore`, `moveToClosed`, `closingRecap`, `boardEmpty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `pipeline.board.<step>.title` and `.body` for these steps in Albanian: `title`, `viewSwitch`, `newDeal`, `board`, `column`, `columnCount`, `columnEmpty`, `card`, `cardCompany`, `cardValue`, `cardMarkers`, `cardMenu`, `cardMenuItems`, `loadMore`, `moveToClosed`, `closingRecap`, `boardEmpty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'pipeline.board', route: 'pipeline' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "pipeline.board"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/pipelineBoard.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/deals/PipelineBoardContent.tsx`, `src/pages/deals/PipelineViewSwitch.tsx`, `src/pages/deals/DealMarkers.tsx`.
@@ -3968,6 +5669,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 198.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Pipeline board is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S34: Pipeline list: filters, table and pagination
 
@@ -3977,9 +5682,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Pipeline list** (`pipeline.list`; `/:tenantSlug/pipeline/list`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/deals/DealListContent.tsx`, `pages/deals/PipelineViewSwitch.tsx`.
 6. **Production LOC estimate:** **~232** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 22 steps x 8 = 176 + 20 annotation sites x 2 = 40. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/deals/DealListContent.tsx`
-   - New: `src/lib/support/guides/pipelineList.ts`, `src/lib/support/guides/pipelineList.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/pipelineList.ts`
+      - Change: Create the page guide with the 22 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'pipeline.list', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`, `shared.pagination`. Each step: `{ id, target: 'pipeline.list.<id>', kind, safety, … }`. Steps in state-only elements: `emptyFirst`, `emptyNoMatch`, `error`. Eligibility (`requires`): `deals.edit`, `commercial.view`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['pipeline.list']` in `pageRegistry.ts`; copy keys resolve to `supportSales:pipeline.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/pipelineList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/pipelineList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `deals.edit`, `commercial.view`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'pipeline.list': () => import('./guides/pipelineList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'pipeline.list'` on the entries for `pipeline/list` and delete `'pipeline.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/deals/DealListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('pipeline.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DealListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L54 permission check [commercial.view]; L55 permission check [deals.view]; L214 Button (newDeal); L223 TextInput (list.searchLabel); L232 aria-label (list.stages); L234 button; L245 aria-label (list.types); L247 button; L261 SelectInput (list.salesperson); L270 SelectInput (list.businessType); L278 SelectInput (list.area); L293 SelectInput (list.city); L301 TextInput (list.closeFrom); L302 TextInput (list.closeTo); L308 TextInput (list.${key}); L320 Button (list.clear); L330 DataTable; L337 DataTable empty prop (list.emptyFiltered); L346 Pagination.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/deals/DealListContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `pipeline.list.<step>.title` and `.body` for these steps: `viewSwitch`, `newDeal`, `search`, `stageChips`, `stageChip`, `typeChips`, `typeChip`, `salesperson`, `businessType`, `area`, `city`, `closeFrom`, `closeTo`, `clear`, `table`, `row`, `rowValue`, `rowStage`, `pagination`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `pipeline.list.<step>.title` and `.body` for these steps in Albanian: `viewSwitch`, `newDeal`, `search`, `stageChips`, `stageChip`, `typeChips`, `typeChip`, `salesperson`, `businessType`, `area`, `city`, `closeFrom`, `closeTo`, `clear`, `table`, `row`, `rowValue`, `rowStage`, `pagination`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'pipeline.list', route: 'pipeline/list' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "pipeline.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/pipelineList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/deals/DealListContent.tsx`.
@@ -4041,6 +5792,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 232.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Pipeline list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S35: Quotations list
 
@@ -4050,9 +5805,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Quotations list (legacy workflow)** (`quotations.list`; `/:tenantSlug/quotations`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/quotations/QuotationList.tsx`, `pages/quotations/QuotationListContent.tsx`.
 6. **Production LOC estimate:** **~144** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 13 steps x 8 = 104 + 12 annotation sites x 2 = 24. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/quotations/QuotationListContent.tsx`
-   - New: `src/lib/support/guides/quotationsList.ts`, `src/lib/support/guides/quotationsList.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/quotationsList.ts`
+      - Change: Create the page guide with the 13 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'quotations.list', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'quotations.list.<id>', kind, safety, … }`. Steps in state-only elements: `emptyFirst`, `emptyNoMatch`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `menu`.
+      - Integration: Loaded lazily through `loaders['quotations.list']` in `pageRegistry.ts`; copy keys resolve to `supportSales:quotations.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/quotationsList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/quotationsList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'quotations.list': () => import('./guides/quotationsList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'quotations.list'` on the entries for `quotations` and delete `'quotations.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/quotations/QuotationListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('quotations.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `QuotationListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L33 permission check [commercial.view]; L41 permission check [quotations.approve]; L105 Button (list.createQuotation); L116 button (list.tabAll); L122 button (list.tabDraft); L129 button (list.tabPending); L136 button (list.tabSent); L142 button (list.tabCompleted); L150 TextInput (list.searchPlaceholder); L173 Button (list.createQuotation); L221 DropdownMenu; L223 button (list.viewDetails); L248 Button; L251 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `quotations.list.<step>.title` and `.body` for these steps: `title`, `newQuotation`, `statusFilters`, `statusFilter`, `search`, `table`, `row`, `rowStatus`, `rowMenu`, `rowMenuItems`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `quotations.list.<step>.title` and `.body` for these steps in Albanian: `title`, `newQuotation`, `statusFilters`, `statusFilter`, `search`, `table`, `row`, `rowStatus`, `rowMenu`, `rowMenuItems`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'quotations.list', route: 'quotations' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "quotations.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/quotationsList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/quotations/QuotationListContent.tsx`.
@@ -4105,6 +5906,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 144.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Quotations list (legacy workflow) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Previous / Next buttons (static `disabled`): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S36: Quotation form (create and edit)
 
@@ -4114,9 +5920,67 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Quotation form (create and edit)** (`quotations.form`; `/:tenantSlug/quotations/new`, `/:tenantSlug/quotations/:id/edit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/quotations/CreateQuotation.tsx`, `pages/quotations/EditQuotation.tsx`, `pages/quotations/QuotationFormContent.tsx`.
 6. **Production LOC estimate:** **~154** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 14 steps x 8 = 112 + 13 annotation sites x 2 = 26. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/quotations/QuotationFormContent.tsx`, `src/pages/quotations/CreateQuotation.tsx`, `src/pages/quotations/EditQuotation.tsx`
-   - New: `src/lib/support/guides/quotationsForm.ts`, `src/lib/support/guides/quotationsForm.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/quotationsForm.ts`
+      - Change: Create the page guide with the 14 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'quotations.form', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'quotations.form.<id>', kind, safety, … }`. Steps in state-only elements: none. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['quotations.form']` in `pageRegistry.ts`; copy keys resolve to `supportSales:quotations.form.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/quotationsForm.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/quotationsForm.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'quotations.form': () => import('./guides/quotationsForm')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'quotations.form'` on the entries for `quotations/new`, `quotations/:id/edit` and delete `'quotations.form'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/quotations/QuotationFormContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('quotations.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `QuotationFormContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L115 form (breadcrumb); L126 Button (form.save); L127 Button (form.save); L149 SelectInput; L164 TextInput; L179 Button (form.addRow); L210 SelectInput; L236 SelectInput; L256 TextInput; L275 TextInput; L291 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/quotations/CreateQuotation.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('quotations.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CreateQuotation`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/quotations/EditQuotation.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('quotations.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `EditQuotation`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `quotations.form.<step>.title` and `.body` for these steps: `mode`, `client`, `validity`, `lines`, `lineRow`, `lineProduct`, `lineWarehouse`, `lineQuantity`, `linePrice`, `addLine`, `removeLine`, `totals`, `cancel`, `save`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `quotations.form.<step>.title` and `.body` for these steps in Albanian: `mode`, `client`, `validity`, `lines`, `lineRow`, `lineProduct`, `lineWarehouse`, `lineQuantity`, `linePrice`, `addLine`, `removeLine`, `totals`, `cancel`, `save`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'quotations.form', route: 'quotations/new' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "quotations.form"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/quotationsForm.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/quotations/QuotationFormContent.tsx`, `src/pages/quotations/CreateQuotation.tsx`, `src/pages/quotations/EditQuotation.tsx`.
@@ -4166,6 +6030,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 154.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Quotation form (create and edit) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S37: Quotation detail
 
@@ -4175,9 +6043,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Quotation detail** (`quotations.detail`; `/:tenantSlug/quotations/:id`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/quotations/QuotationDetail.tsx`, `pages/quotations/QuotationDetailContent.tsx`.
 6. **Production LOC estimate:** **~164** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 15 steps x 8 = 120 + 14 annotation sites x 2 = 28. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/quotations/QuotationDetailContent.tsx`
-   - New: `src/lib/support/guides/quotationsDetail.ts`, `src/lib/support/guides/quotationsDetail.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/quotationsDetail.ts`
+      - Change: Create the page guide with the 15 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'quotations.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'quotations.detail.<id>', kind, safety, … }`. Steps in state-only elements: `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['quotations.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:quotations.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/quotationsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/quotationsDetail.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'quotations.detail': () => import('./guides/quotationsDetail')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'quotations.detail'` on the entries for `quotations/:id` and delete `'quotations.detail'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/quotations/QuotationDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('quotations.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `QuotationDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L27 permission check [commercial.view]; L170 button; L189 Button (detail.edit); L192 Button (detail.returnToDraft); L195 Button (detail.submit); L198 Button (detail.approve); L201 Button (detail.markAccepted); L204 Button (detail.markRejected); L207 Button (detail.expire); L211 Button; L221 Button; L247 Button (share.downloadPdf); L259 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/quotations/QuotationDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `quotations.detail.<step>.title` and `.body` for these steps: `back`, `status`, `edit`, `returnToDraft`, `submit`, `approve`, `markAccepted`, `markRejected`, `expire`, `share`, `convert`, `download`, `lines`, `totals`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `quotations.detail.<step>.title` and `.body` for these steps in Albanian: `back`, `status`, `edit`, `returnToDraft`, `submit`, `approve`, `markAccepted`, `markRejected`, `expire`, `share`, `convert`, `download`, `lines`, `totals`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'quotations.detail', route: 'quotations/:id' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "quotations.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/quotationsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/quotations/QuotationDetailContent.tsx`.
@@ -4229,6 +6143,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 164.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Quotation detail is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S38: Invoices list
 
@@ -4238,9 +6156,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Invoices list** (`invoices.list`; `/:tenantSlug/invoices`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/invoices/InvoiceList.tsx`, `pages/invoices/InvoiceListContent.tsx`.
 6. **Production LOC estimate:** **~134** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 12 steps x 8 = 96 + 11 annotation sites x 2 = 22. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/invoices/InvoiceListContent.tsx`
-   - New: `src/lib/support/guides/invoicesList.ts`, `src/lib/support/guides/invoicesList.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/invoicesList.ts`
+      - Change: Create the page guide with the 12 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'invoices.list', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'invoices.list.<id>', kind, safety, … }`. Steps in state-only elements: `emptyFirst`, `emptyNoMatch`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `menu`.
+      - Integration: Loaded lazily through `loaders['invoices.list']` in `pageRegistry.ts`; copy keys resolve to `supportSales:invoices.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/invoicesList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/invoicesList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'invoices.list': () => import('./guides/invoicesList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'invoices.list'` on the entries for `invoices` and delete `'invoices.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/invoices/InvoiceListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('invoices.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InvoiceListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L26 permission check [commercial.view]; L80 button (list.tabAll); L90 TextInput (list.searchPlaceholder); L152 DropdownMenu; L154 button (list.viewDetails); L176 button; L177 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/invoices/InvoiceListContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `invoices.list.<step>.title` and `.body` for these steps: `title`, `search`, `table`, `row`, `rowStatus`, `rowTotal`, `rowMenu`, `rowMenuItems`, `emptyFirst`, `emptyNoMatch`, `error`, `back`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `invoices.list.<step>.title` and `.body` for these steps in Albanian: `title`, `search`, `table`, `row`, `rowStatus`, `rowTotal`, `rowMenu`, `rowMenuItems`, `emptyFirst`, `emptyNoMatch`, `error`, `back`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'invoices.list', route: 'invoices' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "invoices.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/invoicesList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/invoices/InvoiceListContent.tsx`.
@@ -4292,6 +6256,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 134.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Invoices list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Previous / Next buttons (static `disabled`): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S39: Invoice detail
 
@@ -4301,9 +6270,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Invoice detail** (`invoices.detail`; `/:tenantSlug/invoices/:id`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/invoices/InvoiceDetail.tsx`, `pages/invoices/InvoiceDetailContent.tsx`.
 6. **Production LOC estimate:** **~104** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 9 steps x 8 = 72 + 8 annotation sites x 2 = 16. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/invoices/InvoiceDetailContent.tsx`
-   - New: `src/lib/support/guides/invoicesDetail.ts`, `src/lib/support/guides/invoicesDetail.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/invoicesDetail.ts`
+      - Change: Create the page guide with the 9 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'invoices.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'invoices.detail.<id>', kind, safety, … }`. Steps in state-only elements: `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['invoices.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:invoices.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/invoicesDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/invoicesDetail.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'invoices.detail': () => import('./guides/invoicesDetail')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'invoices.detail'` on the entries for `invoices/:id` and delete `'invoices.detail'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/invoices/InvoiceDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('invoices.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InvoiceDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L24 permission check [commercial.view]; L105 button; L122 Button (detail.send); L125 Button (detail.markPaid); L128 Button (detail.void); L130 Button (detail.downloadPdf); L137 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `invoices.detail.<step>.title` and `.body` for these steps: `back`, `status`, `send`, `markPaid`, `void`, `download`, `lines`, `totals`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `invoices.detail.<step>.title` and `.body` for these steps in Albanian: `back`, `status`, `send`, `markPaid`, `void`, `download`, `lines`, `totals`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'invoices.detail', route: 'invoices/:id' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "invoices.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/invoicesDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/invoices/InvoiceDetailContent.tsx`.
@@ -4348,6 +6363,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 104.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Invoice detail is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S40: Contracts list
 
@@ -4357,9 +6376,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Contracts list** (`contracts.list`; `/:tenantSlug/contracts`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/contracts/ContractList.tsx`, `pages/contracts/ContractListContent.tsx`.
 6. **Production LOC estimate:** **~172** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 16 steps x 8 = 128 + 14 annotation sites x 2 = 28. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/contracts/ContractListContent.tsx`
-   - New: `src/lib/support/guides/contractsList.ts`, `src/lib/support/guides/contractsList.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/contractsList.ts`
+      - Change: Create the page guide with the 16 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'contracts.list', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'contracts.list.<id>', kind, safety, … }`. Steps in state-only elements: `emptyFirst`, `emptyNoMatch`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `menu`.
+      - Integration: Loaded lazily through `loaders['contracts.list']` in `pageRegistry.ts`; copy keys resolve to `supportSales:contracts.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/contractsList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/contractsList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'contracts.list': () => import('./guides/contractsList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'contracts.list'` on the entries for `contracts` and delete `'contracts.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/contracts/ContractListContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('contracts.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractListContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L75 permission check [commercial.view]; L76 permission check [payments.view]; L180 Button (list.newContract); L195 button; L205 TextInput (list.searchPlaceholder); L215 SelectInput (list.filterValidity); L221 SelectInput (list.filterSalesperson); L229 TextInput (list.filterEndsFrom); L230 TextInput (list.filterEndsTo); L233 input (list.filterOverdue); L343 DropdownMenu; L345 button; L372 button; L375 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/contracts/ContractListContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `contracts.list.<step>.title` and `.body` for these steps: `title`, `newContract`, `search`, `validity`, `salesperson`, `endsFrom`, `endsTo`, `onlyOverdue`, `table`, `row`, `rowValidity`, `rowMenu`, `rowMenuItems`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `contracts.list.<step>.title` and `.body` for these steps in Albanian: `title`, `newContract`, `search`, `validity`, `salesperson`, `endsFrom`, `endsTo`, `onlyOverdue`, `table`, `row`, `rowValidity`, `rowMenu`, `rowMenuItems`, `emptyFirst`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'contracts.list', route: 'contracts' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "contracts.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/contractsList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/contracts/ContractListContent.tsx`.
@@ -4416,6 +6481,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 172.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Contracts list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Previous / Next buttons (static `disabled`): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S41: Contract form
 
@@ -4425,9 +6495,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Contract form (create and edit)** (`contracts.form`; `/:tenantSlug/contracts/new`, `/:tenantSlug/contracts/:contractId/edit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/contracts/ContractFormPage.tsx`, `pages/contracts/ContractFormContent.tsx`.
 6. **Production LOC estimate:** **~134** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 12 steps x 8 = 96 + 11 annotation sites x 2 = 22. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/contracts/ContractFormContent.tsx`
-   - New: `src/lib/support/guides/contractsForm.ts`, `src/lib/support/guides/contractsForm.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/contractsForm.ts`
+      - Change: Create the page guide with the 12 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'contracts.form', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'contracts.form.<id>', kind, safety, … }`. Steps in state-only elements: `fieldErrors`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['contracts.form']` in `pageRegistry.ts`; copy keys resolve to `supportSales:contracts.form.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/contractsForm.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/contractsForm.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'contracts.form': () => import('./guides/contractsForm')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'contracts.form'` on the entries for `contracts/new`, `contracts/:contractId/edit` and delete `'contracts.form'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/contracts/ContractFormContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('contracts.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractFormContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L204 form (form.client); L207 SelectInput (form.client); L250 TextInput (form.planName); L258 TextInput (form.amount); L270 SelectInput (form.billingPeriod); L285 SelectInput (form.assignedUserId); L299 TextInput (form.startsAt); L308 TextInput (form.endsAt); L318 TextInput (form.renewalDate); L327 TextareaInput (form.notes); L352 Button (form.cancel); L355 Button (form.submitEdit).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/contracts/ContractFormPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `contracts.form.<step>.title` and `.body` for these steps: `mode`, `company`, `deal`, `startDate`, `endDate`, `value`, `paymentTerms`, `schedule`, `notes`, `fieldErrors`, `cancel`, `save`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `contracts.form.<step>.title` and `.body` for these steps in Albanian: `mode`, `company`, `deal`, `startDate`, `endDate`, `value`, `paymentTerms`, `schedule`, `notes`, `fieldErrors`, `cancel`, `save`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'contracts.form', route: 'contracts/new' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "contracts.form"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/contractsForm.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/contracts/ContractFormContent.tsx`.
@@ -4474,6 +6592,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 134.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Contract form (create and edit) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S42: Contract detail: lifecycle, terms, documents, notes, history and reason dialogs
 
@@ -4483,9 +6605,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Contract detail** (`contracts.detail`; `/:tenantSlug/contracts/:contractId`); slice 1 of 2. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/contracts/ContractDetail.tsx`, `pages/contracts/ContractDetailContent.tsx`, `components/contracts/ContractPaymentsCard.tsx`.
 6. **Production LOC estimate:** **~290** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 27 steps x 8 = 216 + 24 annotation sites x 2 = 48 + Annotations for the hidden file input trigger and both dialogs 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/contracts/ContractDetailContent.tsx`
-   - New: `src/lib/support/guides/contractsDetail.ts`, `src/lib/support/guides/contractsDetail.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/contractsDetail.ts`
+      - Change: Create the page guide with the 27 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'contracts.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'contracts.detail.<id>', kind, safety, … }`. Steps in state-only elements: `notFound`, `documentsEmpty`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `confirm`, `reason`.
+      - Integration: Loaded lazily through `loaders['contracts.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:contracts.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/contractsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/contractsDetail.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'contracts.detail': () => import('./guides/contractsDetail')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'contracts.detail'` on the entries for `contracts/:contractId` and delete `'contracts.detail'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/contracts/ContractDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('contracts.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L241 Button (detail.edit); L250 Button (detail.refreshFromDeal); L255 Button (detail.markPendingSignature); L260 Button (detail.replaceDocument); L265 Button (detail.activate); L270 Button (detail.reinstate); L275 Button (detail.suspend); L280 Button (detail.startRenewal); L285 Button (detail.renew); L290 Button (detail.cancel); L305 role=alert; L326 button; L354 button (detail.openDeal); L437 button (detail.renews); L454 button (detail.renewedBy); L469 button (detail.openRenewalDeal); L517 Button (detail.uploadDocument); L528 button; L546 input; L617 ConfirmDialog (detail.markPendingSignature); L626 ConfirmDialog (detail.activate); L636 Modal (detail.suspend); L648 TextareaInput (detail.reasonLabel); L655 Button; L658 Button (detail.confirmReason).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/contracts/ContractDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `contracts.detail.<step>.title` and `.body` for these steps: `title`, `warning`, `edit`, `markPendingSignature`, `activate`, `suspend`, `reinstate`, `startRenewal`, `renew`, `cancelContract`, `terms`, `dealLink`, `notFound`, `documents`, `uploadButton`, `fileRow`, `fileRemove`, `documentsEmpty`, `notes`, `historyItem`, `confirmDialog`, `confirmMessage`, `confirmOk`, `reasonDialog`, `reasonLabel`, `reasonConfirm`, `reasonCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `contracts.detail.<step>.title` and `.body` for these steps in Albanian: `title`, `warning`, `edit`, `markPendingSignature`, `activate`, `suspend`, `reinstate`, `startRenewal`, `renew`, `cancelContract`, `terms`, `dealLink`, `notFound`, `documents`, `uploadButton`, `fileRow`, `fileRemove`, `documentsEmpty`, `notes`, `historyItem`, `confirmDialog`, `confirmMessage`, `confirmOk`, `reasonDialog`, `reasonLabel`, `reasonConfirm`, `reasonCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'contracts.detail', route: 'contracts/:contractId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "contracts.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/contractsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/contracts/ContractDetailContent.tsx`.
@@ -4555,6 +6723,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 290.
 15. **Dependencies and handoff:** unblocks S43. Later slices of this page extend the same guide and may rely on the ids `contracts.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Contract detail, which belong to S43 (Contract detail: instalment schedule card, drawer and add-instalment dialog).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S43: Contract detail: instalment schedule card, drawer and add-instalment dialog
 
@@ -4564,9 +6737,49 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Contract detail** (`contracts.detail`; `/:tenantSlug/contracts/:contractId`); slice 2 of 2. Not infrastructure.
 5. **Prerequisites:** S42 (Contract detail: lifecycle, terms, documents, notes, history and reason dialogs); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/contracts/ContractDetail.tsx`, `pages/contracts/ContractDetailContent.tsx`, `components/contracts/ContractPaymentsCard.tsx`.
 6. **Production LOC estimate:** **~282** (within the 200 to 300 target): 6 extend the guide and registration + 26 steps x 8 = 208 + 23 annotation sites x 2 = 46 + Annotate `ContractPaymentsCard` (table rows, drawer modes, forms) with component-scoped ids 22. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/components/contracts/ContractPaymentsCard.tsx`, `src/pages/contracts/ContractDetailContent.tsx`
-   - Extended: `src/lib/support/guides/contractsDetail.ts`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/contractsDetail.ts`
+      - Change: Extend the page guide with the 26 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'contracts.detail', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'contracts.detail.<id>', kind, safety, … }`. Steps in state-only elements: `instalmentsEmpty`. Eligibility (`requires`): `payments.view`. Hand-offs (`opens`/`group`): `instalment`, `add`.
+      - Integration: Loaded lazily through `loaders['contracts.detail']` in `pageRegistry.ts`; copy keys resolve to `supportSales:contracts.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/contractsDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/contractsDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `payments.view`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/components/contracts/ContractPaymentsCard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('contracts.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractPaymentsCard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L97 permission check [payments.view]; L258 Button; L276 Button; L292 role=alert (payments.exportFailed); L363 Button (payments.open); L374 SlideOver (payments.drawerTitle); L419 Button (payments.recordInvoice); L424 Button (payments.markPending); L433 Button (payments.recordReceipt); L438 Button (payments.reverseReceipt); L443 Button (payments.correctStatus); L449 Button (payments.change); L452 Button (payments.remove); L461 role=alert; L467 form; L477 TextInput (payments.invoiceNumber); L478 TextInput (payments.invoiceDate); L482 TextInput (payments.receiptAmount); L493 TextInput (payments.receivedOn); L494 SelectInput (payments.methodLabel); L504 SelectInput (payments.correctTo); L514 TextInput (payments.dueDate); L516 TextInput (payments.amount); L518 TextareaInput (payments.note); L522 TextareaInput (payments.reason); L530 role=alert; L535 Button (payments.confirm); L538 Button (payments.confirm); L569 Modal (payments.addTitle); L571 TextInput (payments.dueDate); L572 TextInput (payments.amount); L574 TextInput (payments.note); L577 TextareaInput (payments.reason); L581 role=alert; L586 Button (payments.save); L589 Button (payments.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/contracts/ContractPaymentsCard.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   4. **Modify** `src/pages/contracts/ContractDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('contracts.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L241 Button (detail.edit); L250 Button (detail.refreshFromDeal); L255 Button (detail.markPendingSignature); L260 Button (detail.replaceDocument); L265 Button (detail.activate); L270 Button (detail.reinstate); L275 Button (detail.suspend); L280 Button (detail.startRenewal); L285 Button (detail.renew); L290 Button (detail.cancel); L305 role=alert; L326 button; L354 button (detail.openDeal); L437 button (detail.renews); L454 button (detail.renewedBy); L469 button (detail.openRenewalDeal); L517 Button (detail.uploadDocument); L528 button; L546 input; L617 ConfirmDialog (detail.markPendingSignature); L626 ConfirmDialog (detail.activate); L636 Modal (detail.suspend); L648 TextareaInput (detail.reasonLabel); L655 Button; L658 Button (detail.confirmReason).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/contracts/ContractDetailContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   5. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `contracts.detail.<step>.title` and `.body` for these steps: `paymentsCard`, `exportInstalments`, `addInstalment`, `instalmentRow`, `instalmentStatus`, `instalmentOpen`, `drawer`, `actionInvoice`, `actionSecondary`, `actionReceipt`, `actionReverse`, `actionCorrect`, `actionEdit`, `actionRemove`, `formInvoice`, `formReceipt`, `formCorrect`, `formEdit`, `formSubmit`, `formCancel`, `drawerError`, `addDialog`, `addFields`, `addConfirm`, `cardError`, `instalmentsEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   6. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `contracts.detail.<step>.title` and `.body` for these steps in Albanian: `paymentsCard`, `exportInstalments`, `addInstalment`, `instalmentRow`, `instalmentStatus`, `instalmentOpen`, `drawer`, `actionInvoice`, `actionSecondary`, `actionReceipt`, `actionReverse`, `actionCorrect`, `actionEdit`, `actionRemove`, `formInvoice`, `formReceipt`, `formCorrect`, `formEdit`, `formSubmit`, `formCancel`, `drawerError`, `addDialog`, `addFields`, `addConfirm`, `cardError`, `instalmentsEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'contracts.detail', route: 'contracts/:contractId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "contracts.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/contractsDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/components/contracts/ContractPaymentsCard.tsx`, `src/pages/contracts/ContractDetailContent.tsx`.
@@ -4634,6 +6847,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 282.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Contract detail is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Contract detail, which belong to S42 (Contract detail: lifecycle, terms, documents, notes, history and reason dialogs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S44: Payments overview
 
@@ -4643,9 +6861,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Payments overview** (`payments`; `/:tenantSlug/payments`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/payments/PaymentsOverview.tsx`, `pages/payments/PaymentsOverviewContent.tsx`.
 6. **Production LOC estimate:** **~198** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + `exporting` state hint (export disabled while running or with zero rows) 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/payments/PaymentsOverviewContent.tsx`
-   - New: `src/lib/support/guides/payments.ts`, `src/lib/support/guides/payments.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/payments.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'payments', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`, `shared.pagination`. Each step: `{ id, target: 'payments.<id>', kind, safety, … }`. Steps in state-only elements: `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['payments']` in `pageRegistry.ts`; copy keys resolve to `supportSales:payments.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/payments.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/payments.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'payments': () => import('./guides/payments')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'payments'` on the entries for `payments` and delete `'payments'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/payments/PaymentsOverviewContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('payments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PaymentsOverviewContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L70 permission check [commercial.view]; L138 Button (exportCsv); L145 TextInput (filterSearch); L152 SelectInput (filterStatus); L160 SelectInput (filterSalesperson); L168 TextInput (filterDueFrom); L169 TextInput (filterDueTo); L170 SelectInput (filterArea); L185 SelectInput (filterCity); L194 input (filterDueNotInvoiced); L200 aria-label (totalsLabel); L218 role=alert (failed); L293 Pagination (items).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/payments/PaymentsOverviewContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `payments.<step>.title` and `.body` for these steps: `title`, `export`, `search`, `status`, `salesperson`, `dueFrom`, `dueTo`, `extraFilter`, `city`, `dueNotInvoiced`, `totals`, `table`, `row`, `rowStatus`, `rowInvoice`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `payments.<step>.title` and `.body` for these steps in Albanian: `title`, `export`, `search`, `status`, `salesperson`, `dueFrom`, `dueTo`, `extraFilter`, `city`, `dueNotInvoiced`, `totals`, `table`, `row`, `rowStatus`, `rowInvoice`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'payments', route: 'payments' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "payments"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/payments.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/payments/PaymentsOverviewContent.tsx`.
@@ -4704,6 +6968,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 198.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Payments overview is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S45: Renewals: windows, filters, table, row actions and the not-renewing dialog
 
@@ -4713,9 +6981,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Renewals** (`renewals`; `/:tenantSlug/renewals`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/renewals/Renewals.tsx`, `pages/renewals/RenewalsContent.tsx`.
 6. **Production LOC estimate:** **~212** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 20 steps x 8 = 160 + 18 annotation sites x 2 = 36. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/renewals/RenewalsContent.tsx`
-   - New: `src/lib/support/guides/renewals.ts`, `src/lib/support/guides/renewals.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/renewals.ts`
+      - Change: Create the page guide with the 20 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'renewals', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.tabs`, `shared.statusBadge`, `shared.pagination`. Each step: `{ id, target: 'renewals.<id>', kind, safety, … }`. Steps in state-only elements: `actionsColumn`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `notRenewing`.
+      - Integration: Loaded lazily through `loaders['renewals']` in `pageRegistry.ts`; copy keys resolve to `supportSales:renewals.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/renewals.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/renewals.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'renewals': () => import('./guides/renewals')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'renewals'` on the entries for `renewals` and delete `'renewals'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/renewals/RenewalsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('renewals.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RenewalsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L158 Tabs (tabsLabel); L162 TextInput (filterSearch); L170 SelectInput (filterSalesperson); L183 role=alert (failed); L202 aria-label (columnActions); L248 button; L260 button; L285 Button (startRenewal); L290 Button (markNotRenewing); L295 Button (undoNotRenewing); L309 Pagination (items); L366 Modal (notRenewing.title); L369 SelectInput (notRenewing.reason); L379 TextareaInput (notRenewing.note); L381 Button (notRenewing.cancel); L384 Button (notRenewing.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/renewals/RenewalsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `renewals.<step>.title` and `.body` for these steps: `title`, `windowTabs`, `tab`, `search`, `salesperson`, `table`, `row`, `rowEnd`, `rowState`, `actionsColumn`, `startRenewal`, `notRenewing`, `undo`, `dialog`, `dialogReason`, `dialogSave`, `dialogCancel`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `renewals.<step>.title` and `.body` for these steps in Albanian: `title`, `windowTabs`, `tab`, `search`, `salesperson`, `table`, `row`, `rowEnd`, `rowState`, `actionsColumn`, `startRenewal`, `notRenewing`, `undo`, `dialog`, `dialogReason`, `dialogSave`, `dialogCancel`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'renewals', route: 'renewals' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "renewals"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/renewals.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/renewals/RenewalsContent.tsx`.
@@ -4778,6 +7092,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 212.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Renewals is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S46: Performance: comparison, filters, export, person detail and records dialog
 
@@ -4787,9 +7105,67 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Performance** (`performance`; `/:tenantSlug/performance`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/performance/Performance.tsx`, `pages/performance/PerformanceContent.tsx`, `pages/performance/PerformanceDetail.tsx`, `pages/performance/PerformanceRecordsDialog.tsx`.
 6. **Production LOC estimate:** **~290** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 28 steps x 8 = 224 + 25 annotation sites x 2 = 50. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/performance/PerformanceContent.tsx`, `src/pages/performance/PerformanceDetail.tsx`, `src/pages/performance/PerformanceRecordsDialog.tsx`
-   - New: `src/lib/support/guides/performance.ts`, `src/lib/support/guides/performance.test.tsx`. Touched: `locales/{en,sq}/supportSales.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/performance.ts`
+      - Change: Create the page guide with the 28 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'performance', version: 1, namespace: 'supportSales', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.pagination`. Each step: `{ id, target: 'performance.<id>', kind, safety, … }`. Steps in state-only elements: `delta`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `detail`, `records`.
+      - Integration: Loaded lazily through `loaders['performance']` in `pageRegistry.ts`; copy keys resolve to `supportSales:performance.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/performance.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/performance.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'performance': () => import('./guides/performance')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'performance'` on the entries for `performance` and delete `'performance'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/performance/PerformanceContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('performance.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PerformanceContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L37 permission check [commercial.view]; L109 button (openRecords); L112 aria-label (openRecords); L143 Button (exportCsv); L146 Button (exportPdf); L154 SelectInput (filterPeriod); L163 TextInput (filterFrom); L164 TextInput (filterTo); L168 input (compare); L177 button; L188 button (allSalespeople); L208 role=alert (failed); L241 button (deactivated).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/performance/PerformanceContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/performance/PerformanceDetail.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('performance.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PerformanceDetail`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L71 aria-label (detailTitle); L74 Button (closeDetail); L79 SelectInput (grain); L84 SelectInput (chartIndicator); L92 aria-label (viewLabel); L93 button (viewChart); L96 button (viewTable); L103 role=alert (failed); L105 aria-label (chartLabel).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/performance/PerformanceRecordsDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('performance.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PerformanceRecordsDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L82 Modal; L101 role=alert (recordsFailed); L140 Pagination (records).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/locales/en/supportSales.json`
+      - Change: Add `performance.<step>.title` and `.body` for these steps: `title`, `exportCsv`, `exportPdf`, `period`, `customRange`, `compare`, `picker`, `pickerClear`, `table`, `column`, `personRow`, `personLink`, `figureButton`, `delta`, `empty`, `error`, `detail`, `detailClose`, `grain`, `indicator`, `viewToggle`, `chart`, `detailTable`, `detailError`, `recordsDialog`, `recordsTable`, `recordsPagination`, `recordsClose`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSales.json`
+      - Change: Add `performance.<step>.title` and `.body` for these steps in Albanian: `title`, `exportCsv`, `exportPdf`, `period`, `customRange`, `compare`, `picker`, `pickerClear`, `table`, `column`, `personRow`, `personLink`, `figureButton`, `delta`, `empty`, `error`, `detail`, `detailClose`, `grain`, `indicator`, `viewToggle`, `chart`, `detailTable`, `detailError`, `recordsDialog`, `recordsTable`, `recordsPagination`, `recordsClose`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSales')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'performance', route: 'performance' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "performance"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/performance.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/performance/PerformanceContent.tsx`, `src/pages/performance/PerformanceDetail.tsx`, `src/pages/performance/PerformanceRecordsDialog.tsx`.
@@ -4861,6 +7237,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 290.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Performance is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 #### Page tours: Wellness+ membership
 
@@ -4872,10 +7252,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Members list** (`members.list`; `/:tenantSlug/members`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S25 (Client detail: deals and Wellness+ tabs). Existing code it relies on, unchanged since planning: `pages/membership/MembersList.tsx`, `pages/membership/MembersContent.tsx`, `pages/membership/MemberBadges.tsx`.
 6. **Production LOC estimate:** **~232** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 22 steps x 8 = 176 + 20 annotation sites x 2 = 40. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/MembersContent.tsx`
-   - Existing, read only: `src/pages/membership/MemberBadges.tsx` (read: annotated with the client detail Wellness+ tab)
-   - New: `src/lib/support/guides/membersList.ts`, `src/lib/support/guides/membersList.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersList.ts`
+      - Change: Create the page guide with the 22 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.list', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.pagination`. Each step: `{ id, target: 'members.list.<id>', kind, safety, … }`. Steps in state-only elements: `leftRange`, `empty`, `emptyNoMatch`. Eligibility (`requires`): `members.manage`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['members.list']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `members.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.list': () => import('./guides/membersList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.list'` on the entries for `members` and delete `'members.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/MembersContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MembersContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L106 Button (list.new); L116 TextInput (list.searchLabel); L124 SelectInput (list.filters.tier); L130 SelectInput (list.filters.status); L136 SelectInput (list.filters.validity); L141 SelectInput (list.filters.source); L149 TextInput (list.filters.leftFrom); L150 TextInput (list.filters.leftTo); L153 SelectInput (list.sortBy); L160 input (list.filters.expiringSoon); L164 input (list.filters.vipReviewDue); L168 input (list.filters.formerEmployee); L174 Button; L187 role=status (list.total); L207 role=alert (list.loadFailed); L256 Pagination.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/membership/MemberBadges.tsx`
+      - Change: Read only: annotated with the client detail Wellness+ tab. Do not edit.
+   7. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.list.<step>.title` and `.body` for these steps: `title`, `newMember`, `search`, `tier`, `status`, `validity`, `source`, `leftRange`, `sortBy`, `expiringSoon`, `vipReviewDue`, `formerEmployee`, `clear`, `table`, `row`, `rowNumber`, `rowTier`, `rowStatus`, `pagination`, `empty`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.list.<step>.title` and `.body` for these steps in Albanian: `title`, `newMember`, `search`, `tier`, `status`, `validity`, `source`, `leftRange`, `sortBy`, `expiringSoon`, `vipReviewDue`, `formerEmployee`, `clear`, `table`, `row`, `rowNumber`, `rowTier`, `rowStatus`, `pagination`, `empty`, `emptyNoMatch`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.list', route: 'members' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/MembersContent.tsx`.
@@ -4938,6 +7365,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 232.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Members list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S48: Member form (register and edit)
 
@@ -4947,9 +7378,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Member form (register and edit)** (`members.form`; `/:tenantSlug/members/new`, `/:tenantSlug/members/:memberId/edit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/MemberFormPage.tsx`, `pages/membership/MemberFormContent.tsx`.
 6. **Production LOC estimate:** **~192** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/MemberFormContent.tsx`
-   - New: `src/lib/support/guides/membersForm.ts`, `src/lib/support/guides/membersForm.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersForm.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.form', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.form.<id>', kind, safety, … }`. Steps in state-only elements: `identifierRule`, `formError`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `duplicate`.
+      - Integration: Loaded lazily through `loaders['members.form']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.form.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersForm.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersForm.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.form': () => import('./guides/membersForm')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.form'` on the entries for `members/new`, `members/:memberId/edit` and delete `'members.form'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/MemberFormContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MemberFormContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L122 form (form.editTitle); L132 TextInput (form.firstName); L133 TextInput (form.lastName); L134 TextInput (form.dateOfBirth); L135 TextInput (form.phone); L136 TextInput (form.email); L137 SelectInput (form.language); L142 SelectInput (form.city); L148 role=alert (form.errors.identifier); L150 TextareaInput (form.note); L153 role=alert (form.errors.generic); L155 Button (form.cancel); L156 Button (form.saving); L161 Modal (duplicate.title); L171 Button (duplicate.open); L176 Button (duplicate.cancel); L177 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/membership/MemberFormPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.form.<step>.title` and `.body` for these steps: `mode`, `noTier`, `firstName`, `lastName`, `dateOfBirth`, `phone`, `email`, `identifierRule`, `language`, `city`, `noMedical`, `formError`, `cancel`, `save`, `duplicateDialog`, `duplicateOpen`, `duplicateSave`, `duplicateCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.form.<step>.title` and `.body` for these steps in Albanian: `mode`, `noTier`, `firstName`, `lastName`, `dateOfBirth`, `phone`, `email`, `identifierRule`, `language`, `city`, `noMedical`, `formError`, `cancel`, `save`, `duplicateDialog`, `duplicateOpen`, `duplicateSave`, `duplicateCancel`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.form', route: 'members/new' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.form"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersForm.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/MemberFormContent.tsx`.
@@ -5003,6 +7482,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 192.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Member form (register and edit) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S49: Member detail: header, action bar and the overview, terms, history and note tabs
 
@@ -5012,9 +7495,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Member detail** (`members.detail`; `/:tenantSlug/members/:memberId`); slice 1 of 4. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/MemberDetailPage.tsx`, `pages/membership/MemberDetailContent.tsx`, `pages/membership/FamilyTab.tsx`, `pages/membership/VipTab.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~290** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 28 steps x 8 = 224 + 25 annotation sites x 2 = 50. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/MemberDetailContent.tsx`
-   - New: `src/lib/support/guides/membersDetail.ts`, `src/lib/support/guides/membersDetail.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersDetail.ts`
+      - Change: Create the page guide with the 28 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.detail', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.tabs`. Each step: `{ id, target: 'members.detail.<id>', kind, safety, … }`. Steps in state-only elements: `loading`, `notFound`, `termsEmpty`. Eligibility (`requires`): `members.payments.record`, `members.manage`. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['members.detail']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersDetail.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `members.payments.record`, `members.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.detail': () => import('./guides/membersDetail')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.detail'` on the entries for `members/:memberId` and delete `'members.detail'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/MemberDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MemberDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L138 role=status (detail.back); L142 role=alert (detail.back); L143 Button (detail.back); L185 Button (payments.record); L190 Button (detail.correctTier.button); L195 Button (removeEmployer.button); L200 Button (card.button); L204 Button (detail.edit); L208 Button (detail.actions.${a}); L234 Tabs (detail.tabs.label); L335 button (payments.openReceipt); L361 Button (payments.tab.void); L542 Modal (payments.voidDialog.title); L545 TextareaInput (payments.voidDialog.reason); L555 role=alert (payments.voidDialog.${voidError}); L557 Button (payments.voidDialog.cancel); L558 Button (payments.voidDialog.confirm); L563 Modal (detail.statusDialog.${action}); L567 TextareaInput (detail.statusDialog.reason); L577 role=alert (detail.statusDialog.failed); L579 Button (detail.statusDialog.cancel); L580 Button (detail.statusDialog.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/membership/MemberDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps: `title`, `badges`, `recordPayment`, `correctTier`, `removeFromCompany`, `card`, `edit`, `statusActions`, `closeMember`, `tabs`, `back`, `loading`, `notFound`, `tabOverview`, `overviewFields`, `effectiveTier`, `tabTerms`, `termsTable`, `termRow`, `termSource`, `termsEmpty`, `tabHistory`, `tierHistory`, `statusHistory`, `tabNote`, `noteWarning`, `noteField`, `noteSave`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps in Albanian: `title`, `badges`, `recordPayment`, `correctTier`, `removeFromCompany`, `card`, `edit`, `statusActions`, `closeMember`, `tabs`, `back`, `loading`, `notFound`, `tabOverview`, `overviewFields`, `effectiveTier`, `tabTerms`, `termsTable`, `termRow`, `termSource`, `termsEmpty`, `tabHistory`, `tierHistory`, `statusHistory`, `tabNote`, `noteWarning`, `noteField`, `noteSave`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.detail', route: 'members/:memberId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/MemberDetailContent.tsx`.
@@ -5086,6 +7617,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 290.
 15. **Dependencies and handoff:** unblocks S50. Later slices of this page extend the same guide and may rely on the ids `members.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Member detail, which belong to S50 (Member detail: payments and VIP tabs, receipt, void and decision dialogs); S51 (Member detail: family tab); S52 (Member detail: record payment, correct tier, remove from company, card and status dialogs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S50: Member detail: payments and VIP tabs, receipt, void and decision dialogs
 
@@ -5095,9 +7631,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Member detail** (`members.detail`; `/:tenantSlug/members/:memberId`); slice 2 of 4. Not infrastructure.
 5. **Prerequisites:** S49 (Member detail: header, action bar and the overview, terms, history and note tabs); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/MemberDetailPage.tsx`, `pages/membership/MemberDetailContent.tsx`, `pages/membership/FamilyTab.tsx`, `pages/membership/VipTab.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~290** (within the 200 to 300 target): 6 extend the guide and registration + 29 steps x 8 = 232 + 26 annotation sites x 2 = 52. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/MemberDetailContent.tsx`, `src/pages/membership/VipTab.tsx`, `src/pages/membership/VipDecisionDialog.tsx`
-   - Extended: `src/lib/support/guides/membersDetail.ts`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/membersDetail.ts`
+      - Change: Extend the page guide with the 29 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.detail', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.detail.<id>', kind, safety, … }`. Steps in state-only elements: `paymentsEmpty`, `ownRequest`, `vipEmpty`. Eligibility (`requires`): `members.payments.view`, `members.manage`, `members.vip.approve`. Hand-offs (`opens`/`group`): `void`, `request`, `decision`.
+      - Integration: Loaded lazily through `loaders['members.detail']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/membersDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `members.payments.view`, `members.manage`, `members.vip.approve`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/membership/MemberDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MemberDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L138 role=status (detail.back); L142 role=alert (detail.back); L143 Button (detail.back); L185 Button (payments.record); L190 Button (detail.correctTier.button); L195 Button (removeEmployer.button); L200 Button (card.button); L204 Button (detail.edit); L208 Button (detail.actions.${a}); L234 Tabs (detail.tabs.label); L335 button (payments.openReceipt); L361 Button (payments.tab.void); L542 Modal (payments.voidDialog.title); L545 TextareaInput (payments.voidDialog.reason); L555 role=alert (payments.voidDialog.${voidError}); L557 Button (payments.voidDialog.cancel); L558 Button (payments.voidDialog.confirm); L563 Modal (detail.statusDialog.${action}); L567 TextareaInput (detail.statusDialog.reason); L577 role=alert (detail.statusDialog.failed); L579 Button (detail.statusDialog.cancel); L580 Button (detail.statusDialog.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/pages/membership/VipTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `VipTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L80 Button (vip.request); L81 Button (vip.end); L131 Button (vip.decide.approve); L132 Button (vip.decide.reject); L145 Modal (vip.endDialog.title); L148 TextareaInput (vip.reason); L158 role=alert (vip.cancel); L160 Button (vip.cancel); L161 Button (vip.endDialog.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/pages/membership/VipDecisionDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `VipDecisionDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L46 Modal (vip.decide.requestedWith); L50 TextareaInput; L60 role=alert (vip.decide.cancel); L62 Button (vip.decide.cancel); L63 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/membership/MemberDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps: `tabPayments`, `paymentsTable`, `paymentRow`, `receiptLink`, `voidedMarker`, `voidButton`, `voidDialog`, `voidReason`, `voidError`, `voidConfirm`, `voidCancel`, `paymentsEmpty`, `paymentsHidden`, `tabVip`, `vipStatus`, `requestsTable`, `requestRow`, `requestStatus`, `requestVip`, `requestDialog`, `requestReason`, `requestSave`, `approve`, `reject`, `decisionDialog`, `decisionComment`, `decisionConfirm`, `ownRequest`, `vipEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps in Albanian: `tabPayments`, `paymentsTable`, `paymentRow`, `receiptLink`, `voidedMarker`, `voidButton`, `voidDialog`, `voidReason`, `voidError`, `voidConfirm`, `voidCancel`, `paymentsEmpty`, `paymentsHidden`, `tabVip`, `vipStatus`, `requestsTable`, `requestRow`, `requestStatus`, `requestVip`, `requestDialog`, `requestReason`, `requestSave`, `approve`, `reject`, `decisionDialog`, `decisionComment`, `decisionConfirm`, `ownRequest`, `vipEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'members.detail', route: 'members/:memberId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/MemberDetailContent.tsx`, `src/pages/membership/VipTab.tsx`, `src/pages/membership/VipDecisionDialog.tsx`.
@@ -5169,6 +7753,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 290.
 15. **Dependencies and handoff:** unblocks S51, S57. Later slices of this page extend the same guide and may rely on the ids `members.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Member detail, which belong to S49 (Member detail: header, action bar and the overview, terms, history and note tabs); S51 (Member detail: family tab); S52 (Member detail: record payment, correct tier, remove from company, card and status dialogs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S51: Member detail: family tab
 
@@ -5178,9 +7767,45 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Member detail** (`members.detail`; `/:tenantSlug/members/:memberId`); slice 3 of 4. Not infrastructure.
 5. **Prerequisites:** S50 (Member detail: payments and VIP tabs, receipt, void and decision dialogs); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/MemberDetailPage.tsx`, `pages/membership/MemberDetailContent.tsx`, `pages/membership/FamilyTab.tsx`, `pages/membership/VipTab.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~216** (within the 200 to 300 target): 6 extend the guide and registration + 20 steps x 8 = 160 + 18 annotation sites x 2 = 36 + Annotations in `FamilyTab` dialogs (11 inputs) 14. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/FamilyTab.tsx`
-   - Extended: `src/lib/support/guides/membersDetail.ts`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/membersDetail.ts`
+      - Change: Extend the page guide with the 20 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.detail', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.detail.<id>', kind, safety, … }`. Steps in state-only elements: `familyEmpty`, `notPrincipal`. Eligibility (`requires`): `members.manage`. Hand-offs (`opens`/`group`): `add`, `remove`.
+      - Integration: Loaded lazily through `loaders['members.detail']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/membersDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `members.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/membership/FamilyTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FamilyTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L90 button; L106 Button (family.remove); L130 button (validity.valid); L144 Button (family.add); L190 Modal (family.removeDialog.title); L193 TextareaInput (family.removeDialog.reason); L203 role=alert (family.removeDialog.failed); L205 Button (family.removeDialog.cancel); L206 Button (family.removeDialog.confirm); L308 Modal (family.addDialog.title); L310 SelectInput (family.addDialog.mode); L324 TextInput (form.firstName); L325 TextInput (form.lastName); L326 TextInput (form.dateOfBirth); L327 TextInput (form.phone); L328 TextInput (form.email); L332 TextInput (family.addDialog.search); L334 SelectInput (family.addDialog.member); L344 SelectInput (family.addDialog.relationship); L360 input; L371 role=alert (family.addDialog.cancel); L373 Button (family.addDialog.cancel); L374 Button (family.addDialog.save); L379 Modal (duplicate.title); L390 Button (duplicate.cancel); L391 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Leave unchanged** `src/pages/membership/MemberDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   5. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps: `tabFamily`, `principal`, `familyTable`, `familyRow`, `relationship`, `familyEmpty`, `addFamily`, `addDialog`, `addMode`, `addRelationship`, `addConfirmTick`, `addFields`, `addSearch`, `addMatch`, `addSave`, `removeFamily`, `removeDialog`, `removeConfirm`, `notPrincipal`, `familyDiscount`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   6. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps in Albanian: `tabFamily`, `principal`, `familyTable`, `familyRow`, `relationship`, `familyEmpty`, `addFamily`, `addDialog`, `addMode`, `addRelationship`, `addConfirmTick`, `addFields`, `addSearch`, `addMatch`, `addSave`, `removeFamily`, `removeDialog`, `removeConfirm`, `notPrincipal`, `familyDiscount`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'members.detail', route: 'members/:memberId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/FamilyTab.tsx`.
@@ -5240,6 +7865,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 216.
 15. **Dependencies and handoff:** unblocks S52. Later slices of this page extend the same guide and may rely on the ids `members.detail.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Member detail, which belong to S49 (Member detail: header, action bar and the overview, terms, history and note tabs); S50 (Member detail: payments and VIP tabs, receipt, void and decision dialogs); S52 (Member detail: record payment, correct tier, remove from company, card and status dialogs).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S52: Member detail: record payment, correct tier, remove from company, card and status dialogs
 
@@ -5249,9 +7879,69 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Member detail** (`members.detail`; `/:tenantSlug/members/:memberId`); slice 4 of 4. Not infrastructure.
 5. **Prerequisites:** S51 (Member detail: family tab); S18 (Clients list: states, rows, row menu and archive / restore); S25 (Client detail: deals and Wellness+ tabs). Existing code it relies on, unchanged since planning: `pages/membership/MemberDetailPage.tsx`, `pages/membership/MemberDetailContent.tsx`, `pages/membership/FamilyTab.tsx`, `pages/membership/VipTab.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~222** (within the 200 to 300 target): 6 extend the guide and registration + 20 steps x 8 = 160 + 18 annotation sites x 2 = 36 + Annotations across `RecordPaymentModal`, `CorrectTierDialog`, `RemoveFromCompanyDialog`, `MemberCardDialog` and the status Modal 20. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/RecordPaymentModal.tsx`, `src/pages/membership/CorrectTierDialog.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`, `src/pages/membership/MemberCardDialog.tsx`, `src/pages/membership/MemberDetailContent.tsx`
-   - Extended: `src/lib/support/guides/membersDetail.ts`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (11 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/membersDetail.ts`
+      - Change: Extend the page guide with the 20 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.detail', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.detail.<id>', kind, safety, … }`. Steps in state-only elements: none. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `pay`, `correct`, `leave`, `card`, `status`.
+      - Integration: Loaded lazily through `loaders['members.detail']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.detail.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersDetail.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/membersDetail.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/membership/RecordPaymentModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RecordPaymentModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L103 Modal (payments.drawer.title); L105 TextInput (payments.drawer.receivedOn); L114 role=status (payments.drawer.noOptions); L115 role=alert (payments.drawer.loadFailed); L118 SelectInput (payments.drawer.option); L129 aria-label (payments.drawer.quote); L168 SelectInput (payments.drawer.method); L173 TextareaInput (payments.drawer.note); L175 role=alert (payments.drawer.${saveError}); L177 Button (payments.drawer.cancel); L178 Button (payments.drawer.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/pages/membership/CorrectTierDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CorrectTierDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L51 Modal (detail.correctTier.title); L54 SelectInput (detail.correctTier.tier); L58 TextInput (detail.correctTier.endsOn); L68 TextareaInput (detail.correctTier.reason); L78 role=alert (detail.correctTier.failed); L80 Button (detail.correctTier.cancel); L81 Button (detail.correctTier.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/pages/membership/RemoveFromCompanyDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RemoveFromCompanyDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L58 Modal (removeEmployer.helpMany); L61 TextInput (removeEmployer.leftOn); L72 TextareaInput (removeEmployer.reason); L83 role=alert (removeEmployer.cancel); L86 Button (removeEmployer.cancel); L87 Button (removeEmployer.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/membership/MemberCardDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MemberCardDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L101 Modal (card.title); L103 role=status (card.loadFailed); L104 role=alert (card.loadFailed); L116 input (card.replaced); L119 role=status (card.replaced); L120 role=alert (card.replaceFailed); L121 role=status (card.copied); L124 Button (card.copy); L125 Button (card.printCard); L126 Button (card.printA6); L127 Button (card.replace); L134 Modal (card.replaceDialog.title); L138 Button (card.replaceDialog.cancel); L139 Button (card.replaceDialog.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/membership/MemberDetailContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.detail.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MemberDetailContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L138 role=status (detail.back); L142 role=alert (detail.back); L143 Button (detail.back); L185 Button (payments.record); L190 Button (detail.correctTier.button); L195 Button (removeEmployer.button); L200 Button (card.button); L204 Button (detail.edit); L208 Button (detail.actions.${a}); L234 Tabs (detail.tabs.label); L335 button (payments.openReceipt); L361 Button (payments.tab.void); L542 Modal (payments.voidDialog.title); L545 TextareaInput (payments.voidDialog.reason); L555 role=alert (payments.voidDialog.${voidError}); L557 Button (payments.voidDialog.cancel); L558 Button (payments.voidDialog.confirm); L563 Modal (detail.statusDialog.${action}); L567 TextareaInput (detail.statusDialog.reason); L577 role=alert (detail.statusDialog.failed); L579 Button (detail.statusDialog.cancel); L580 Button (detail.statusDialog.confirm).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Leave unchanged** `src/pages/membership/MemberDetailPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   9. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps: `paymentDrawer`, `payKind`, `payTier`, `payMethod`, `payDate`, `payAmount`, `payWarnings`, `paySave`, `correctDialog`, `correctTier`, `correctReason`, `correctSave`, `removeRecap`, `cardDialog`, `cardCopy`, `cardPrint`, `cardReplace`, `statusDialog`, `statusReason`, `statusConfirm`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.detail.<step>.title` and `.body` for these steps in Albanian: `paymentDrawer`, `payKind`, `payTier`, `payMethod`, `payDate`, `payAmount`, `payWarnings`, `paySave`, `correctDialog`, `correctTier`, `correctReason`, `correctSave`, `removeRecap`, `cardDialog`, `cardCopy`, `cardPrint`, `cardReplace`, `statusDialog`, `statusReason`, `statusConfirm`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'members.detail', route: 'members/:memberId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.detail"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersDetail.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/RecordPaymentModal.tsx`, `src/pages/membership/CorrectTierDialog.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`, `src/pages/membership/MemberCardDialog.tsx`, `src/pages/membership/MemberDetailContent.tsx`.
@@ -5307,6 +7997,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 222.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Member detail is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Member detail, which belong to S49 (Member detail: header, action bar and the overview, terms, history and note tabs); S50 (Member detail: payments and VIP tabs, receipt, void and decision dialogs); S51 (Member detail: family tab).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S53: Membership payments
 
@@ -5316,9 +8011,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Membership payments** (`members.payments`; `/:tenantSlug/members/payments`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/MemberPaymentsPage.tsx`, `pages/membership/MemberPaymentsContent.tsx`.
 6. **Production LOC estimate:** **~182** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 17 steps x 8 = 136 + 15 annotation sites x 2 = 30. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/MemberPaymentsContent.tsx`
-   - New: `src/lib/support/guides/membersPayments.ts`, `src/lib/support/guides/membersPayments.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersPayments.ts`
+      - Change: Create the page guide with the 17 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.payments', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.pagination`. Each step: `{ id, target: 'members.payments.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['members.payments']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.payments.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersPayments.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersPayments.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.payments': () => import('./guides/membersPayments')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.payments'` on the entries for `members/payments` and delete `'members.payments'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/MemberPaymentsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.payments.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MemberPaymentsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L105 Button (payments.page.exportCsv); L113 TextInput (payments.page.from); L114 TextInput (payments.page.to); L115 SelectInput (payments.page.tier); L121 SelectInput (payments.page.kind); L127 SelectInput (payments.page.method); L133 SelectInput (payments.page.status); L139 Button (list.filters.clear); L146 role=status (payments.page.summary); L168 role=alert (payments.page.loadFailed); L183 button (payments.openReceipt); L220 Pagination.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/membership/MemberPaymentsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.payments.<step>.title` and `.body` for these steps: `title`, `export`, `from`, `to`, `tier`, `kind`, `method`, `status`, `clear`, `summary`, `table`, `row`, `receiptLink`, `voidedMarker`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.payments.<step>.title` and `.body` for these steps in Albanian: `title`, `export`, `from`, `to`, `tier`, `kind`, `method`, `status`, `clear`, `summary`, `table`, `row`, `receiptLink`, `voidedMarker`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.payments', route: 'members/payments' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.payments"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersPayments.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/MemberPaymentsContent.tsx`.
@@ -5374,6 +8117,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 182.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Membership payments is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S54: Membership reports
 
@@ -5383,9 +8130,63 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Membership reports** (`members.reports`; `/:tenantSlug/members/reports`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/reports/MembershipReportsPage.tsx`, `pages/membership/reports/MembershipReportsContent.tsx`, `pages/membership/reports/reportSections.ts`.
 6. **Production LOC estimate:** **~190** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 17 steps x 8 = 136 + 15 annotation sites x 2 = 30 + `data-report` section ids mapped onto `tourId` for the generated sections 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/reports/MembershipReportsContent.tsx`, `src/pages/membership/reports/reportSections.ts`
-   - New: `src/lib/support/guides/membersReports.ts`, `src/lib/support/guides/membersReports.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersReports.ts`
+      - Change: Create the page guide with the 17 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.reports', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.reports.<id>', kind, safety, … }`. Steps in state-only elements: `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['members.reports']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.reports.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersReports.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersReports.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.reports': () => import('./guides/membersReports')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.reports'` on the entries for `members/reports` and delete `'members.reports'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/reports/MembershipReportsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.reports.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MembershipReportsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L48 aria-label (reports.view); L50 button (reports.${choice}); L56 Button (reports.exportSection); L127 Button (reports.exportSection); L148 Link; L282 SelectInput (reports.filters.tier); L290 SelectInput (reports.filters.segment); L295 SelectInput (reports.filters.employer); L303 SelectInput (reports.filters.area); L311 SelectInput (reports.filters.city); L320 Button (list.filters.clear); L328 role=alert (reports.page.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/membership/reports/reportSections.ts`
+      - Change: Open the file and annotate the elements the steps name.
+      - Implementation details: (non-component module: read it to find the render site)
+      - Integration: Consumed by the page components listed in section 3.
+      - Removal: No removal.
+      - Verification: Guide test.
+   7. **Leave unchanged** `src/pages/membership/reports/MembershipReportsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   8. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.reports.<step>.title` and `.body` for these steps: `title`, `tier`, `segment`, `employer`, `area`, `city`, `clear`, `section`, `sectionToggle`, `sectionExport`, `sectionChart`, `sectionTable`, `list`, `listExport`, `listEmpty`, `error`, `definitions`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.reports.<step>.title` and `.body` for these steps in Albanian: `title`, `tier`, `segment`, `employer`, `area`, `city`, `clear`, `section`, `sectionToggle`, `sectionExport`, `sectionChart`, `sectionTable`, `list`, `listExport`, `listEmpty`, `error`, `definitions`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.reports', route: 'members/reports' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.reports"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersReports.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/reports/MembershipReportsContent.tsx`, `src/pages/membership/reports/reportSections.ts`.
@@ -5440,6 +8241,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 190.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Membership reports is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S55: Verify member (Reception)
 
@@ -5449,9 +8254,69 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Verify member (Reception)** (`members.verify`; `/:tenantSlug/members/verify`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/VerifyMemberPage.tsx`, `pages/membership/verify/VerifyMemberContent.tsx`, `pages/membership/verify/QrScanner.tsx`, `pages/membership/verify/ReceptionResult.tsx`.
 6. **Production LOC estimate:** **~144** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 13 steps x 8 = 104 + 12 annotation sites x 2 = 24. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/verify/VerifyMemberContent.tsx`, `src/pages/membership/verify/QrScanner.tsx`, `src/pages/membership/verify/ReceptionResult.tsx`
-   - New: `src/lib/support/guides/membersVerify.ts`, `src/lib/support/guides/membersVerify.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (11 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersVerify.ts`
+      - Change: Create the page guide with the 13 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.verify', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.verify.<id>', kind, safety, … }`. Steps in state-only elements: `result`, `resultActions`, `checking`, `noMatches`, `failed`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['members.verify']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.verify.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersVerify.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersVerify.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.verify': () => import('./guides/membersVerify')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.verify'` on the entries for `members/verify` and delete `'members.verify'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/verify/VerifyMemberContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.verify.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `VerifyMemberContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L92 button (verify.scan); L95 form (verify.searchLabel); L98 input (verify.search); L99 button (verify.search); L103 role=status (verify.checking); L104 role=alert (verify.failed); L108 role=status (verify.noMatches); L115 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/membership/verify/QrScanner.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.verify.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `QrScanner`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L110 role=alert (verify.cameraLabel); L113 aria-label (verify.cameraLabel); L114 role=status (verify.notACard); L117 button (verify.stopScan).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/membership/verify/QrScanner.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Modify** `src/pages/membership/verify/ReceptionResult.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.verify.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ReceptionResult`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L42 role=status (verify.notFound); L43 button (verify.another); L52 role=status (verify.valid); L86 button (verify.identityConfirmed); L89 button (verify.identityMismatch); L93 role=status (verify.identityFailed); L94 role=alert (verify.identityFailed); L96 button (verify.another).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Leave unchanged** `src/pages/membership/VerifyMemberPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   9. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.verify.<step>.title` and `.body` for these steps: `title`, `scan`, `scanPermission`, `search`, `query`, `submit`, `candidates`, `candidate`, `result`, `resultActions`, `checking`, `noMatches`, `failed`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.verify.<step>.title` and `.body` for these steps in Albanian: `title`, `scan`, `scanPermission`, `search`, `query`, `submit`, `candidates`, `candidate`, `result`, `resultActions`, `checking`, `noMatches`, `failed`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.verify', route: 'members/verify' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.verify"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersVerify.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/verify/VerifyMemberContent.tsx`, `src/pages/membership/verify/QrScanner.tsx`, `src/pages/membership/verify/ReceptionResult.tsx`.
@@ -5502,6 +8367,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 144.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Verify member (Reception) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S56: Employee upload
 
@@ -5511,9 +8380,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Employee upload** (`members.employeeUpload`; `/:tenantSlug/members/employee-upload`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/membership/EmployeeUploadPage.tsx`, `pages/membership/EmployeeUploadContent.tsx`.
 6. **Production LOC estimate:** **~230** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 21 steps x 8 = 168 + 19 annotation sites x 2 = 38 + Stage markers (`idle | preview | outcome`) on the three regions 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/EmployeeUploadContent.tsx`
-   - New: `src/lib/support/guides/membersEmployeeUpload.ts`, `src/lib/support/guides/membersEmployeeUpload.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersEmployeeUpload.ts`
+      - Change: Create the page guide with the 21 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.employeeUpload', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'members.employeeUpload.<id>', kind, safety, … }`. Steps in state-only elements: `companyChosen`, `noContract`, `preview`, `outcome`, `error`, `historyEmpty`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['members.employeeUpload']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.employeeUpload.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersEmployeeUpload.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersEmployeeUpload.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.employeeUpload': () => import('./guides/membersEmployeeUpload')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.employeeUpload'` on the entries for `members/employee-upload` and delete `'members.employeeUpload'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/EmployeeUploadContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.employeeUpload.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `EmployeeUploadContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L174 Button (employees.template); L187 Button (employees.change); L192 TextInput (employees.search); L204 button; L216 input; L229 Button (employees.upload); L234 role=alert; L242 aria-label (employees.preview.counts); L267 Button (employees.confirm); L268 Button (employees.cancel); L275 role=status (employees.result.title); L280 Button (employees.result.download); L281 Button (employees.result.another); L314 Button (employees.result.download).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/membership/EmployeeUploadPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.employeeUpload.<step>.title` and `.body` for these steps: `title`, `template`, `companySearch`, `companyMatch`, `companyChosen`, `noContract`, `file`, `upload`, `preview`, `previewTable`, `previewRow`, `confirm`, `cancel`, `outcome`, `downloadResult`, `another`, `history`, `historyRow`, `historyDownload`, `error`, `historyEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.employeeUpload.<step>.title` and `.body` for these steps in Albanian: `title`, `template`, `companySearch`, `companyMatch`, `companyChosen`, `noContract`, `file`, `upload`, `preview`, `previewTable`, `previewRow`, `confirm`, `cancel`, `outcome`, `downloadResult`, `another`, `history`, `historyRow`, `historyDownload`, `error`, `historyEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.employeeUpload', route: 'members/employee-upload' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.employeeUpload"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersEmployeeUpload.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/EmployeeUploadContent.tsx`.
@@ -5572,6 +8489,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 230.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Employee upload is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S57: VIP requests
 
@@ -5581,9 +8502,63 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **VIP requests** (`members.vipRequests`; `/:tenantSlug/members/vip-requests`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S50 (Member detail: payments and VIP tabs, receipt, void and decision dialogs). Existing code it relies on, unchanged since planning: `pages/membership/VipRequestsPage.tsx`, `pages/membership/VipRequestsContent.tsx`, `pages/membership/VipDecisionDialog.tsx`.
 6. **Production LOC estimate:** **~164** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 15 steps x 8 = 120 + 14 annotation sites x 2 = 28. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/membership/VipRequestsContent.tsx`, `src/pages/membership/VipDecisionDialog.tsx`
-   - New: `src/lib/support/guides/membersVipRequests.ts`, `src/lib/support/guides/membersVipRequests.test.tsx`. Touched: `locales/{en,sq}/supportMembers.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/membersVipRequests.ts`
+      - Change: Create the page guide with the 15 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'members.vipRequests', version: 1, namespace: 'supportMembers', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.pagination`. Each step: `{ id, target: 'members.vipRequests.<id>', kind, safety, … }`. Steps in state-only elements: `ownRequest`, `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `decision`.
+      - Integration: Loaded lazily through `loaders['members.vipRequests']` in `pageRegistry.ts`; copy keys resolve to `supportMembers:members.vipRequests.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/membersVipRequests.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/membersVipRequests.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'members.vipRequests': () => import('./guides/membersVipRequests')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'members.vipRequests'` on the entries for `members/vip-requests` and delete `'members.vipRequests'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/membership/VipRequestsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.vipRequests.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `VipRequestsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L72 SelectInput (vip.columns.status); L81 role=alert (vip.list.loadFailed); L101 button (vip.status.${r.status}); L115 Button (vip.decide.approve); L116 Button (vip.decide.reject); L128 Pagination.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/membership/VipDecisionDialog.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('members.vipRequests.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `VipDecisionDialog`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L46 Modal (vip.decide.requestedWith); L50 TextareaInput; L60 role=alert (vip.decide.cancel); L62 Button (vip.decide.cancel); L63 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Leave unchanged** `src/pages/membership/VipRequestsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   8. **Modify** `src/locales/en/supportMembers.json`
+      - Change: Add `members.vipRequests.<step>.title` and `.body` for these steps: `title`, `status`, `table`, `row`, `memberLink`, `requestedBy`, `approve`, `reject`, `decisionDialog`, `decisionComment`, `decisionConfirm`, `ownRequest`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportMembers.json`
+      - Change: Add `members.vipRequests.<step>.title` and `.body` for these steps in Albanian: `title`, `status`, `table`, `row`, `memberLink`, `requestedBy`, `approve`, `reject`, `decisionDialog`, `decisionComment`, `decisionConfirm`, `ownRequest`, `pagination`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportMembers')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'members.vipRequests', route: 'members/vip-requests' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "members.vipRequests"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/membersVipRequests.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/membership/VipRequestsContent.tsx`, `src/pages/membership/VipDecisionDialog.tsx`.
@@ -5639,6 +8614,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 164.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **VIP requests is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 #### Page tours: Settings and form builder
 
@@ -5650,9 +8629,67 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Company** (`settings.company`; `/:tenantSlug/settings`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/AccountSettingsPage.tsx`, `components/layout/SettingsLayout/SettingsLayout.tsx`.
 6. **Production LOC estimate:** **~186** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 16 steps x 8 = 128 + 14 annotation sites x 2 = 28 + `SettingsLayout` nav annotation (items repeat per rendered section) 10 + `LanguagePicker` annotated with component-scoped ids (`language.*`), reused by the profile and platform settings pages 4. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/AccountSettingsPage.tsx`, `src/components/settings/LanguagePicker.tsx`, `src/components/layout/SettingsLayout/SettingsLayout.tsx`
-   - New: `src/lib/support/guides/settingsCompany.ts`, `src/lib/support/guides/settingsCompany.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsCompany.ts`
+      - Change: Create the page guide with the 16 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.company', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.company.<id>', kind, safety, … }`. Steps in state-only elements: `savedNotice`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.company']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.company.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsCompany.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsCompany.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.company': () => import('./guides/settingsCompany')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.company'` on the entries for `settings` and delete `'settings.company'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/AccountSettingsPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.company.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AccountSettingsPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L114 permission check [settings.manage]; L198 aria-label (breadcrumb); L262 TextInput (company.profile.nameLabel); L269 TextInput (company.profile.registrationNumberLabel); L279 TextInput (company.profile.addressLabel); L287 TextInput (company.profile.city); L294 TextInput (company.profile.state); L301 TextInput (company.profile.postalCode); L317 TextInput (company.profile.contactEmailLabel); L325 TextInput (company.profile.contactPhoneLabel); L348 select; L372 select; L397 select; L420 select; L469 input; L489 Button; L492 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/AccountSettingsPage.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/settings/LanguagePicker.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.company.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `LanguagePicker`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L41 select.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/settings/LanguagePicker.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Modify** `src/components/layout/SettingsLayout/SettingsLayout.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.company.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `SettingsLayout`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L88 Link; L114 Link.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/layout/SettingsLayout/SettingsLayout.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   8. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.company.<step>.title` and `.body` for these steps: `sectionNav`, `breadcrumb`, `companyName`, `address`, `city`, `state`, `postalCode`, `contactFields`, `optionSelects`, `language`, `toggle`, `discard`, `discardDisabled`, `save`, `savedNotice`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.company.<step>.title` and `.body` for these steps in Albanian: `sectionNav`, `breadcrumb`, `companyName`, `address`, `city`, `state`, `postalCode`, `contactFields`, `optionSelects`, `language`, `toggle`, `discard`, `discardDisabled`, `save`, `savedNotice`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.company', route: 'settings' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.company"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsCompany.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/AccountSettingsPage.tsx`, `src/components/settings/LanguagePicker.tsx`, `src/components/layout/SettingsLayout/SettingsLayout.tsx`.
@@ -5705,6 +8742,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 186.
 15. **Dependencies and handoff:** unblocks S59, S93. After this slice **Settings: Company is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S59: Settings: My profile
 
@@ -5714,9 +8755,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: My profile** (`settings.profile`; `/:tenantSlug/settings/profile`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S58 (Settings: Company). Existing code it relies on, unchanged since planning: `pages/settings/profile/ProfilePage.tsx`.
 6. **Production LOC estimate:** **~164** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 15 steps x 8 = 120 + 14 annotation sites x 2 = 28. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/profile/ProfilePage.tsx`
-   - New: `src/lib/support/guides/settingsProfile.ts`, `src/lib/support/guides/settingsProfile.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsProfile.ts`
+      - Change: Create the page guide with the 15 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.profile', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.profile.<id>', kind, safety, … }`. Steps in state-only elements: `profileError`, `passwordError`, `saved`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.profile']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.profile.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsProfile.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsProfile.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.profile': () => import('./guides/settingsProfile')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.profile'` on the entries for `settings/profile` and delete `'settings.profile'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/profile/ProfilePage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.profile.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ProfilePage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L150 aria-label (breadcrumb); L205 form (profile.firstName); L207 TextInput (profile.firstName); L213 TextInput (profile.lastName); L221 TextInput (profile.email); L234 TextInput (profile.phone); L256 Button; L280 form (profile.currentPassword); L281 TextInput (profile.currentPassword); L288 TextInput (profile.newPassword); L295 TextInput (profile.confirmPassword); L305 Button (profile.changePasswordTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.profile.<step>.title` and `.body` for these steps: `breadcrumb`, `avatar`, `firstName`, `lastName`, `email`, `phone`, `language`, `saveProfile`, `currentPassword`, `newPassword`, `confirmPassword`, `changePassword`, `profileError`, `passwordError`, `saved`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.profile.<step>.title` and `.body` for these steps in Albanian: `breadcrumb`, `avatar`, `firstName`, `lastName`, `email`, `phone`, `language`, `saveProfile`, `currentPassword`, `newPassword`, `confirmPassword`, `changePassword`, `profileError`, `passwordError`, `saved`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.profile', route: 'settings/profile' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.profile"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsProfile.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/profile/ProfilePage.tsx`.
@@ -5766,6 +8853,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 164.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: My profile is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S60: Settings: Team
 
@@ -5775,9 +8866,69 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Team** (`settings.team`; `/:tenantSlug/settings/team`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/team/TeamSettingsPage.tsx`, `pages/settings/team/TeamSettingsContent.tsx`, `pages/settings/team/InviteMemberModal.tsx`, `pages/settings/team/EditMemberModal.tsx`.
 6. **Production LOC estimate:** **~220** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 20 steps x 8 = 160 + 18 annotation sites x 2 = 36 + Annotations in `InviteMemberModal` and `EditMemberModal` 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/team/TeamSettingsContent.tsx`, `src/pages/settings/team/InviteMemberModal.tsx`, `src/pages/settings/team/EditMemberModal.tsx`
-   - New: `src/lib/support/guides/settingsTeam.ts`, `src/lib/support/guides/settingsTeam.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (11 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsTeam.ts`
+      - Change: Create the page guide with the 20 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.team', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'settings.team.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): `users.manage`. Hand-offs (`opens`/`group`): `invite`, `edit`, `confirm`.
+      - Integration: Loaded lazily through `loaders['settings.team']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.team.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsTeam.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsTeam.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility for `users.manage`, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.team': () => import('./guides/settingsTeam')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.team'` on the entries for `settings/team` and delete `'settings.team'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/team/TeamSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.team.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TeamSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L52 permission check [users.manage]; L121 Button (team.inviteMember); L166 Button (team.editAria); L170 aria-label (team.editAria); L178 Button (team.reactivateAria); L182 aria-label (team.reactivateAria); L187 Button (team.deactivateAria); L191 aria-label (team.deactivateAria); L235 Button (team.cancelInvitation); L266 ConfirmDialog (team.deactivate.title); L295 SelectInput (team.deactivate.reassignTo); L325 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/team/TeamSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/settings/team/InviteMemberModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.team.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InviteMemberModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L66 Modal (team.invite.title); L67 form (team.invite.email); L68 TextInput (team.invite.email); L77 SelectInput (team.invite.role); L83 SelectInput (team.invite.warehouse); L96 Button (team.invite.submit); L97 Button (team.invite.submit).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/settings/team/EditMemberModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.team.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `EditMemberModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L59 Modal (team.edit.title); L61 form (team.edit.role); L62 SelectInput (team.edit.role); L69 SelectInput (team.edit.warehouse); L77 Button; L78 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Leave unchanged** `src/pages/settings/team/TeamSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   9. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.team.<step>.title` and `.body` for these steps: `title`, `invite`, `table`, `row`, `rowRole`, `rowStatus`, `edit`, `deactivate`, `reactivate`, `inviteModal`, `inviteEmail`, `inviteRole`, `inviteSend`, `editModal`, `editRole`, `editSave`, `confirmDialog`, `confirmOk`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.team.<step>.title` and `.body` for these steps in Albanian: `title`, `invite`, `table`, `row`, `rowRole`, `rowStatus`, `edit`, `deactivate`, `reactivate`, `inviteModal`, `inviteEmail`, `inviteRole`, `inviteSend`, `editModal`, `editRole`, `editSave`, `confirmDialog`, `confirmOk`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.team', route: 'settings/team' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.team"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsTeam.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/team/TeamSettingsContent.tsx`, `src/pages/settings/team/InviteMemberModal.tsx`, `src/pages/settings/team/EditMemberModal.tsx`.
@@ -5838,6 +8989,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 220.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Team is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S61: Settings: Roles and permissions
 
@@ -5847,9 +9002,63 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Roles and permissions** (`settings.roles`; `/:tenantSlug/settings/roles`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/roles/RolesSettingsPage.tsx`, `pages/settings/roles/RolesSettingsContent.tsx`, `pages/settings/roles/RoleNameModal.tsx`.
 6. **Production LOC estimate:** **~222** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 20 steps x 8 = 160 + 18 annotation sites x 2 = 36 + `permission`/`scope` ids generated from the catalogue key (`permission.<key>`) 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/roles/RolesSettingsContent.tsx`, `src/pages/settings/roles/RoleNameModal.tsx`
-   - New: `src/lib/support/guides/settingsRoles.ts`, `src/lib/support/guides/settingsRoles.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsRoles.ts`
+      - Change: Create the page guide with the 20 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.roles', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.roles.<id>', kind, safety, … }`. Steps in state-only elements: `dirty`, `loadFailed`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `name`, `delete`.
+      - Integration: Loaded lazily through `loaders['settings.roles']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.roles.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsRoles.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsRoles.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.roles': () => import('./guides/settingsRoles')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.roles'` on the entries for `settings/roles` and delete `'settings.roles'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/roles/RolesSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.roles.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RolesSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L128 role=alert (roles.loadFailed); L142 aria-label (roles.listLabel); L147 button; L170 Button (roles.copy); L176 Button (roles.rename); L180 Button; L209 input; L225 select (roles.scopeLabel); L252 Button; L262 Button (roles.save); L291 ConfirmDialog (roles.deleteConfirm.title); L300 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/roles/RolesSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/settings/roles/RoleNameModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.roles.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RoleNameModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L54 Modal (roles.copyModal.nameSq); L55 form (roles.copyModal.nameSq); L57 TextInput (roles.copyModal.nameSq); L64 TextInput (roles.copyModal.nameEn); L71 role=alert; L73 Button; L74 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Leave unchanged** `src/pages/settings/roles/RolesSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   8. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.roles.<step>.title` and `.body` for these steps: `roleList`, `role`, `systemRole`, `copy`, `rename`, `delete`, `matrix`, `group`, `permission`, `scope`, `dirty`, `save`, `saveDisabled`, `discard`, `nameDialog`, `nameField`, `nameSave`, `deleteDialog`, `deleteOk`, `loadFailed`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.roles.<step>.title` and `.body` for these steps in Albanian: `roleList`, `role`, `systemRole`, `copy`, `rename`, `delete`, `matrix`, `group`, `permission`, `scope`, `dirty`, `save`, `saveDisabled`, `discard`, `nameDialog`, `nameField`, `nameSave`, `deleteDialog`, `deleteOk`, `loadFailed`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.roles', route: 'settings/roles' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.roles"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsRoles.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/roles/RolesSettingsContent.tsx`, `src/pages/settings/roles/RoleNameModal.tsx`.
@@ -5910,6 +9119,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 222.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Roles and permissions is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S62: Settings: Lists, all seven tabs
 
@@ -5919,9 +9132,105 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Lists** (`settings.lists`; `/:tenantSlug/settings/lists/:list?`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/lists/ListsSettingsPage.tsx`, `pages/settings/lists/ListsSettingsContent.tsx`, `components/settings/LookupListEditor`, `pages/settings/lists/AreasList.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~294** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 26 steps x 8 = 208 + 23 annotation sites x 2 = 46 + `LookupListEditor` annotations with component-scoped ids (`lookupList.*`), shared with the other tabs and with the pricing packages panel 14 + Annotations for the five list components 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/lists/ListsSettingsContent.tsx`, `src/components/settings/LookupListEditor`, `src/pages/settings/lists/RiskLevelsList.tsx`, `src/pages/settings/lists/BusinessTypesList.tsx`, `src/pages/settings/lists/AreasList.tsx`, `src/pages/settings/lists/CitiesList.tsx`, `src/pages/settings/lists/FollowUpIntervalsList.tsx`, `src/pages/settings/lists/LostReasonsList.tsx`, `src/pages/settings/lists/ActivityResultsList.tsx`
-   - New: `src/lib/support/guides/settingsLists.ts`, `src/lib/support/guides/settingsLists.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (17 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsLists.ts`
+      - Change: Create the page guide with the 26 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.lists', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.tabs`. Each step: `{ id, target: 'settings.lists.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`, `empty`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `area`.
+      - Integration: Loaded lazily through `loaders['settings.lists']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.lists.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsLists.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsLists.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.lists': () => import('./guides/settingsLists')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.lists'` on the entries for `settings/lists/:list?` and delete `'settings.lists'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/lists/ListsSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ListsSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L70 permission check [settings.manage]; L81 Tabs (lists.title).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/lists/ListsSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/components/settings/LookupListEditor/LookupListEditor.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `LookupListEditor`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L146 input (lists.columns.nameSq); L149 aria-label (lists.columns.nameSq); L158 input (lists.columns.nameEn); L161 aria-label (lists.columns.nameEn); L182 Button (lists.save); L186 Button (lists.cancel); L198 role=alert; L249 button (lists.moveUp); L254 aria-label (lists.moveUp); L258 button (lists.moveDown); L263 aria-label (lists.moveDown); L290 button (lists.edit); L295 aria-label (lists.edit); L299 button; L309 button; L317 aria-label (lists.delete); L340 Button (lists.add); L346 ConfirmDialog (lists.deleteConfirm.title); L356 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/settings/LookupListEditor/LookupListEditor.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Modify** `src/pages/settings/lists/RiskLevelsList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RiskLevelsList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L26 input; L46 input; L56 role=alert (lists.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/pages/settings/lists/BusinessTypesList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `BusinessTypesList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L38 select (lists.chooseRiskLevel); L58 role=alert (lists.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Modify** `src/pages/settings/lists/AreasList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AreasList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L67 role=alert (lists.loadFailed); L83 ConfirmDialog (lists.cascadeConfirm.title); L96 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Modify** `src/pages/settings/lists/CitiesList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CitiesList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L45 select (lists.chooseArea); L65 role=alert (lists.loadFailed); L72 select (lists.columns.area); L76 aria-label (lists.columns.area).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   11. **Modify** `src/pages/settings/lists/FollowUpIntervalsList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FollowUpIntervalsList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L25 input; L46 role=alert (lists.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   12. **Modify** `src/pages/settings/lists/LostReasonsList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `LostReasonsList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L21 role=alert (lists.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   13. **Modify** `src/pages/settings/lists/ActivityResultsList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.lists.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ActivityResultsList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L21 role=alert (lists.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   14. **Leave unchanged** `src/pages/settings/lists/ListsSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   15. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.lists.<step>.title` and `.body` for these steps: `tabs`, `tab`, `editor`, `addRow`, `itemRow`, `itemLabels`, `itemOrder`, `itemActive`, `itemSave`, `riskScore`, `btParent`, `empty`, `error`, `areaRow`, `areaDialog`, `areaDialogActions`, `cityAreaFilter`, `cityRow`, `cityDisabled`, `intervalDays`, `lostReasonRow`, `tabActivityResults`, `activityResultRow`, `activityResultKind`, `empty`, `inUse`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   16. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.lists.<step>.title` and `.body` for these steps in Albanian: `tabs`, `tab`, `editor`, `addRow`, `itemRow`, `itemLabels`, `itemOrder`, `itemActive`, `itemSave`, `riskScore`, `btParent`, `empty`, `error`, `areaRow`, `areaDialog`, `areaDialogActions`, `cityAreaFilter`, `cityRow`, `cityDisabled`, `intervalDays`, `lostReasonRow`, `tabActivityResults`, `activityResultRow`, `activityResultKind`, `empty`, `inUse`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   17. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.lists', route: 'settings/lists/:list?' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.lists"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsLists.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/lists/ListsSettingsContent.tsx`, `src/pages/settings/lists/RiskLevelsList.tsx`, `src/pages/settings/lists/BusinessTypesList.tsx`, `src/pages/settings/lists/AreasList.tsx`, `src/pages/settings/lists/CitiesList.tsx`.
@@ -5991,6 +9300,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 294.
 15. **Dependencies and handoff:** unblocks S65. After this slice **Settings: Lists is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S63: Settings: Sales script
 
@@ -6000,9 +9313,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Sales script** (`settings.salesScript`; `/:tenantSlug/settings/sales-script`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/salesScript/SalesScriptSettingsPage.tsx`, `pages/settings/salesScript/SalesScriptSettingsContent.tsx`.
 6. **Production LOC estimate:** **~182** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 17 steps x 8 = 136 + 15 annotation sites x 2 = 30. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/salesScript/SalesScriptSettingsContent.tsx`
-   - New: `src/lib/support/guides/settingsSalesScript.ts`, `src/lib/support/guides/settingsSalesScript.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsSalesScript.ts`
+      - Change: Create the page guide with the 17 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.salesScript', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.salesScript.<id>', kind, safety, … }`. Steps in state-only elements: `preview`, `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `publish`, `version`.
+      - Integration: Loaded lazily through `loaders['settings.salesScript']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.salesScript.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsSalesScript.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsSalesScript.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.salesScript': () => import('./guides/settingsSalesScript')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.salesScript'` on the entries for `settings/sales-script` and delete `'settings.salesScript'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/salesScript/SalesScriptSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.salesScript.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `SalesScriptSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L117 role=alert (salesScript.loadFailed); L134 role=status (salesScript.draftStatus); L146 aria-label (salesScript.language); L148 button (salesScript.languages.${lang}); L153 aria-label (salesScript.mode); L154 button (salesScript.edit); L157 button (salesScript.preview); L166 aria-label (salesScript.previewLabel); L181 Button (salesScript.draftSaved); L184 Button (salesScript.publish); L219 Button (salesScript.viewVersion); L222 aria-label (salesScript.viewVersion); L227 Button (salesScript.restoreVersion); L230 aria-label (salesScript.restoreVersion); L243 Modal (salesScript.versionName); L254 aria-label (salesScript.languages.${lang}); L268 ConfirmDialog (salesScript.restoreTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/salesScript/SalesScriptSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Leave unchanged** `src/pages/settings/salesScript/SalesScriptSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.salesScript.<step>.title` and `.body` for these steps: `languageSwitch`, `modeSwitch`, `sections`, `sectionEditor`, `preview`, `saveDraft`, `publish`, `publishConfirm`, `publishOk`, `history`, `version`, `viewVersion`, `restoreVersion`, `versionModal`, `versionLanguages`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.salesScript.<step>.title` and `.body` for these steps in Albanian: `languageSwitch`, `modeSwitch`, `sections`, `sectionEditor`, `preview`, `saveDraft`, `publish`, `publishConfirm`, `publishOk`, `history`, `version`, `viewVersion`, `restoreVersion`, `versionModal`, `versionLanguages`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.salesScript', route: 'settings/sales-script' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.salesScript"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsSalesScript.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/salesScript/SalesScriptSettingsContent.tsx`.
@@ -6060,6 +9421,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 182.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Sales script is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S64: Settings: Pricing, tabs, employee bands, risk surcharges, frequencies, zones and discount cap
 
@@ -6069,9 +9434,93 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Pricing** (`settings.pricing`; `/:tenantSlug/settings/pricing/:tab?`); slice 1 of 2. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/pricing/PricingSettingsPage.tsx`, `pages/settings/pricing/PricingSettingsContent.tsx`, `pages/settings/pricing/pricingTabs.ts`.
 6. **Production LOC estimate:** **~286** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 27 steps x 8 = 216 + 24 annotation sites x 2 = 48 + `PricingSettingsContent` tab panel scoping (`scope.tab` from the route) 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/pricing/PricingSettingsContent.tsx`, `src/pages/settings/pricing/EmployeeBandsPanel.tsx`, `src/pages/settings/pricing/RiskSurchargesPanel.tsx`, `src/pages/settings/pricing/pricingTabs.ts`, `src/pages/settings/pricing/VisitFrequenciesPanel.tsx`, `src/pages/settings/pricing/PriceZonesPanel.tsx`, `src/pages/settings/pricing/DiscountCapPanel.tsx`
-   - New: `src/lib/support/guides/settingsPricing.ts`, `src/lib/support/guides/settingsPricing.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (15 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsPricing.ts`
+      - Change: Create the page guide with the 27 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.pricing', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.tabs`. Each step: `{ id, target: 'settings.pricing.<id>', kind, safety, … }`. Steps in state-only elements: `overlapRule`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `band`.
+      - Integration: Loaded lazily through `loaders['settings.pricing']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.pricing.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsPricing.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsPricing.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.pricing': () => import('./guides/settingsPricing')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.pricing'` on the entries for `settings/pricing/:tab?` and delete `'settings.pricing'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/pricing/PricingSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PricingSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L57 Tabs (pricing.title); L70 role=alert (pricing.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/pricing/PricingSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/settings/pricing/EmployeeBandsPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `EmployeeBandsPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L88 input; L102 Button (lists.save); L106 Button (lists.cancel); L118 role=alert; L162 button (pricing.editBand); L167 aria-label (pricing.editBand); L171 button; L181 button; L189 aria-label (pricing.deleteBand); L206 Button (pricing.addBand); L212 ConfirmDialog; L231 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/settings/pricing/RiskSurchargesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RiskSurchargesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L68 input; L82 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/pages/settings/pricing/pricingTabs.ts`
+      - Change: Open the file and annotate the elements the steps name.
+      - Implementation details: (non-component module: read it to find the render site)
+      - Integration: Consumed by the page components listed in section 3.
+      - Removal: No removal.
+      - Verification: Guide test.
+   9. **Modify** `src/pages/settings/pricing/VisitFrequenciesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `VisitFrequenciesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L28 select (pricing.pricingTypes.PERCENT); L40 input; L49 input.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Modify** `src/pages/settings/pricing/PriceZonesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PriceZonesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L34 input; L42 Button (pricing.zoneCities.button); L46 aria-label (pricing.zoneCities.button); L173 select (pricing.zoneCities.allAreas); L189 input; L198 role=alert; L203 Button (pricing.zoneCities.save); L206 Button (pricing.zoneCities.cancel).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   11. **Modify** `src/pages/settings/pricing/DiscountCapPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DiscountCapPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L35 form; L44 input (pricing.save); L46 Button (pricing.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   12. **Leave unchanged** `src/pages/settings/pricing/PricingSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   13. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.pricing.<step>.title` and `.body` for these steps: `tabs`, `tab`, `bandsTable`, `bandRow`, `bandBounds`, `bandPrice`, `addBand`, `bandDialog`, `bandDialogSave`, `removeBand`, `riskTable`, `riskRow`, `riskPercent`, `riskSave`, `overlapRule`, `frequencyRow`, `frequencyFields`, `frequencySave`, `zoneRow`, `zoneName`, `zoneAreas`, `zoneMultiplier`, `addZone`, `zoneRemove`, `capInput`, `capSave`, `capEffect`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   14. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.pricing.<step>.title` and `.body` for these steps in Albanian: `tabs`, `tab`, `bandsTable`, `bandRow`, `bandBounds`, `bandPrice`, `addBand`, `bandDialog`, `bandDialogSave`, `removeBand`, `riskTable`, `riskRow`, `riskPercent`, `riskSave`, `overlapRule`, `frequencyRow`, `frequencyFields`, `frequencySave`, `zoneRow`, `zoneName`, `zoneAreas`, `zoneMultiplier`, `addZone`, `zoneRemove`, `capInput`, `capSave`, `capEffect`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   15. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.pricing', route: 'settings/pricing/:tab?' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.pricing"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsPricing.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/pricing/PricingSettingsContent.tsx`, `src/pages/settings/pricing/EmployeeBandsPanel.tsx`, `src/pages/settings/pricing/RiskSurchargesPanel.tsx`, `src/pages/settings/pricing/pricingTabs.ts`, `src/pages/settings/pricing/VisitFrequenciesPanel.tsx`.
@@ -6142,6 +9591,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 286.
 15. **Dependencies and handoff:** unblocks S65. Later slices of this page extend the same guide and may rely on the ids `settings.pricing.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Settings: Pricing, which belong to S65 (Settings: Pricing, services, packages, offer wording and test calculator).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S65: Settings: Pricing, services, packages, offer wording and test calculator
 
@@ -6151,9 +9605,69 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Pricing** (`settings.pricing`; `/:tenantSlug/settings/pricing/:tab?`); slice 2 of 2. Not infrastructure.
 5. **Prerequisites:** S64 (Settings: Pricing, tabs, employee bands, risk surcharges, frequencies, zones and discount cap); S18 (Clients list: states, rows, row menu and archive / restore); S62 (Settings: Lists, all seven tabs). Existing code it relies on, unchanged since planning: `pages/settings/pricing/PricingSettingsPage.tsx`, `pages/settings/pricing/PricingSettingsContent.tsx`, `pages/settings/pricing/pricingTabs.ts`.
 6. **Production LOC estimate:** **~232** (within the 200 to 300 target): 6 extend the guide and registration + 23 steps x 8 = 184 + 21 annotation sites x 2 = 42. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/pricing/ServicesPanel.tsx`, `src/pages/settings/pricing/PackagesPanel.tsx`, `src/pages/settings/pricing/descriptionColumns.tsx`, `src/pages/settings/pricing/OfferSettingsPanel.tsx`, `src/pages/settings/pricing/TestCalculatorPanel.tsx`
-   - Extended: `src/lib/support/guides/settingsPricing.ts`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (11 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/settingsPricing.ts`
+      - Change: Extend the page guide with the 23 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.pricing', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.pricing.<id>', kind, safety, … }`. Steps in state-only elements: `calcResult`, `calcWarning`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `service`.
+      - Integration: Loaded lazily through `loaders['settings.pricing']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.pricing.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsPricing.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/settingsPricing.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/settings/pricing/ServicesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ServicesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L74 ConfirmDialog (pricing.services.deactivateTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/pages/settings/pricing/PackagesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PackagesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L47 Button (pricing.packages.servicesButton); L51 aria-label (pricing.packages.servicesButton); L66 input; L92 Button (pricing.packages.makeDefaultFor); L96 aria-label (pricing.packages.makeDefaultFor); L110 role=alert (pricing.tabs.packages); L197 aria-label (pricing.packages.inPackage); L208 button (lists.moveUp); L213 aria-label (lists.moveUp); L217 button (lists.moveDown); L222 aria-label (lists.moveDown); L226 button (pricing.packages.remove); L230 aria-label (pricing.packages.remove); L246 input; L254 role=alert; L259 Button (pricing.packages.save); L262 Button (pricing.zoneCities.cancel).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/pages/settings/pricing/descriptionColumns.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `descriptionColumns`, `descriptionValues`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L16 textarea.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/settings/pricing/OfferSettingsPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `OfferSettingsPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L86 textarea; L94 input; L103 role=alert; L111 form; L146 aria-label (pricing.offer.language); L148 button (pricing.offer.languages.${lang}); L168 Button (pricing.save).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/settings/pricing/TestCalculatorPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.pricing.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TestCalculatorPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L47 select (pricing.calculator.choose); L60 form; L69 input; L98 Button (pricing.calculator.calculate); L105 role=alert; L111 aria-label (pricing.calculator.result).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Leave unchanged** `src/pages/settings/pricing/PricingSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   9. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.pricing.<step>.title` and `.body` for these steps: `serviceTable`, `serviceRow`, `serviceDescription`, `serviceDialog`, `serviceDialogSave`, `addService`, `packageTable`, `packageRow`, `packageServices`, `packageMove`, `packageEdit`, `packageRemove`, `packageFields`, `addPackage`, `packageSave`, `offerIssuer`, `offerValidity`, `offerFooter`, `offerSave`, `calcInputs`, `calcRun`, `calcResult`, `calcWarning`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.pricing.<step>.title` and `.body` for these steps in Albanian: `serviceTable`, `serviceRow`, `serviceDescription`, `serviceDialog`, `serviceDialogSave`, `addService`, `packageTable`, `packageRow`, `packageServices`, `packageMove`, `packageEdit`, `packageRemove`, `packageFields`, `addPackage`, `packageSave`, `offerIssuer`, `offerValidity`, `offerFooter`, `offerSave`, `calcInputs`, `calcRun`, `calcResult`, `calcWarning`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'settings.pricing', route: 'settings/pricing/:tab?' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.pricing"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsPricing.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/pricing/ServicesPanel.tsx`, `src/pages/settings/pricing/PackagesPanel.tsx`, `src/pages/settings/pricing/descriptionColumns.tsx`, `src/pages/settings/pricing/OfferSettingsPanel.tsx`, `src/pages/settings/pricing/TestCalculatorPanel.tsx`.
@@ -6220,6 +9734,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 232.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Pricing is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Settings: Pricing, which belong to S64 (Settings: Pricing, tabs, employee bands, risk surcharges, frequencies, zones and discount cap).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S66: Settings: Statuses
 
@@ -6229,9 +9748,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Statuses** (`settings.statuses`; `/:tenantSlug/settings/statuses`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/statuses/StatusesSettingsPage.tsx`, `pages/settings/statuses/StatusesSettingsContent.tsx`.
 6. **Production LOC estimate:** **~154** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 14 steps x 8 = 112 + 13 annotation sites x 2 = 26. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/statuses/StatusesSettingsContent.tsx`
-   - New: `src/lib/support/guides/settingsStatuses.ts`, `src/lib/support/guides/settingsStatuses.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsStatuses.ts`
+      - Change: Create the page guide with the 14 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.statuses', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.statuses.<id>', kind, safety, … }`. Steps in state-only elements: `staleSaved`, `error`, `loadFailed`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.statuses']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.statuses.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsStatuses.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsStatuses.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.statuses': () => import('./guides/settingsStatuses')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.statuses'` on the entries for `settings/statuses` and delete `'settings.statuses'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/statuses/StatusesSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.statuses.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `StatusesSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L51 role=alert (statuses.loadFailed); L105 role=alert (statuses.columns.order); L122 input (statuses.columns.labelSq); L129 input (statuses.columns.labelEn); L143 Button (statuses.save); L146 Button (statuses.cancel); L157 Button (statuses.moveUp); L160 aria-label (statuses.moveUp); L166 Button (statuses.moveDown); L169 aria-label (statuses.moveDown); L191 Button (statuses.edit); L194 aria-label (statuses.edit); L263 input; L277 Button (statuses.staleDeals.saveAria); L288 role=alert (statuses.staleDeals.saved); L292 role=status (statuses.staleDeals.saved).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/statuses/StatusesSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Leave unchanged** `src/pages/settings/statuses/StatusesSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.statuses.<step>.title` and `.body` for these steps: `title`, `row`, `labelSq`, `labelEn`, `edit`, `rowSave`, `rowCancel`, `moveUp`, `moveDown`, `staleDays`, `staleSave`, `staleSaved`, `error`, `loadFailed`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.statuses.<step>.title` and `.body` for these steps in Albanian: `title`, `row`, `labelSq`, `labelEn`, `edit`, `rowSave`, `rowCancel`, `moveUp`, `moveDown`, `staleDays`, `staleSave`, `staleSaved`, `error`, `loadFailed`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.statuses', route: 'settings/statuses' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.statuses"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsStatuses.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/statuses/StatusesSettingsContent.tsx`.
@@ -6282,6 +9849,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 154.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Statuses is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S67: Settings: Wellness+
 
@@ -6291,9 +9862,81 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Wellness+** (`settings.wellnessPlus`; `/:tenantSlug/settings/wellness-plus/:tab?`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/wellnessPlus/WellnessPlusSettingsPage.tsx`, `pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`, `pages/settings/wellnessPlus/TiersPanel.tsx`, `pages/settings/wellnessPlus/RulesPanel.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~242** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 23 steps x 8 = 184 + 21 annotation sites x 2 = 42. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`, `src/pages/settings/wellnessPlus/TiersPanel.tsx`, `src/pages/settings/wellnessPlus/RulesPanel.tsx`, `src/pages/settings/wellnessPlus/RelationshipsPanel.tsx`, `src/pages/settings/wellnessPlus/BenefitsPanel.tsx`
-   - New: `src/lib/support/guides/settingsWellnessPlus.ts`, `src/lib/support/guides/settingsWellnessPlus.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (13 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsWellnessPlus.ts`
+      - Change: Create the page guide with the 23 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.wellnessPlus', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.wellnessPlus.<id>', kind, safety, … }`. Steps in state-only elements: `readOnly`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.wellnessPlus']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.wellnessPlus.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsWellnessPlus.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsWellnessPlus.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.wellnessPlus': () => import('./guides/settingsWellnessPlus')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.wellnessPlus'` on the entries for `settings/wellness-plus/:tab?` and delete `'settings.wellnessPlus'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.wellnessPlus.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `WELLNESS_PLUS_TABS`, `WellnessPlusSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L56 Tabs (wellnessPlus.title); L71 role=alert (wellnessPlus.loadFailed).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/wellnessPlus/WellnessPlusSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/settings/wellnessPlus/TiersPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.wellnessPlus.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TiersPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L71 form; L83 input; L96 Button (wellnessPlus.save); L100 role=alert; L105 role=status (wellnessPlus.saved).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/settings/wellnessPlus/RulesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.wellnessPlus.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RulesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L59 form; L71 input; L88 Button (wellnessPlus.save); L92 role=alert; L97 role=status (wellnessPlus.saved).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/pages/settings/wellnessPlus/RelationshipsPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.wellnessPlus.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RelationshipsPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L54 role=alert (wellnessPlus.loading); L75 Button (wellnessPlus.deactivate); L85 form; L94 input (wellnessPlus.nameEn); L98 input (wellnessPlus.relationships.add); L100 Button (wellnessPlus.relationships.add); L104 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Modify** `src/pages/settings/wellnessPlus/BenefitsPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.wellnessPlus.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `BenefitsPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L75 role=alert (wellnessPlus.loading); L105 input; L121 Button (wellnessPlus.deactivate); L131 role=alert (wellnessPlus.benefits.addTitle); L135 form; L144 input (wellnessPlus.nameEn); L148 input (wellnessPlus.benefits.add); L150 Button (wellnessPlus.benefits.add).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Leave unchanged** `src/pages/settings/wellnessPlus/WellnessPlusSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   11. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.wellnessPlus.<step>.title` and `.body` for these steps: `tabs`, `tabTiers`, `tierRow`, `tierFee`, `tierTerm`, `tierLabels`, `tierSave`, `tabRules`, `familyDiscount`, `graceDays`, `windowDays`, `prefixes`, `rulesSave`, `tabRelationships`, `relationshipRow`, `addRelationship`, `tabBenefits`, `benefitGrid`, `benefitRow`, `benefitCell`, `addService`, `readOnly`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.wellnessPlus.<step>.title` and `.body` for these steps in Albanian: `tabs`, `tabTiers`, `tierRow`, `tierFee`, `tierTerm`, `tierLabels`, `tierSave`, `tabRules`, `familyDiscount`, `graceDays`, `windowDays`, `prefixes`, `rulesSave`, `tabRelationships`, `relationshipRow`, `addRelationship`, `tabBenefits`, `benefitGrid`, `benefitRow`, `benefitCell`, `addService`, `readOnly`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   13. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.wellnessPlus', route: 'settings/wellness-plus/:tab?' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.wellnessPlus"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsWellnessPlus.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`, `src/pages/settings/wellnessPlus/TiersPanel.tsx`, `src/pages/settings/wellnessPlus/RulesPanel.tsx`, `src/pages/settings/wellnessPlus/RelationshipsPanel.tsx`, `src/pages/settings/wellnessPlus/BenefitsPanel.tsx`.
@@ -6355,6 +9998,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 242.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Wellness+ is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S68: Settings: Contracts and payments
 
@@ -6364,9 +10011,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Contracts and payments** (`settings.contracts`; `/:tenantSlug/settings/contracts`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/contracts/ContractSettingsPage.tsx`, `pages/settings/contracts/ContractSettingsContent.tsx`.
 6. **Production LOC estimate:** **~84** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 7 steps x 8 = 56 + 6 annotation sites x 2 = 12. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/contracts/ContractSettingsContent.tsx`
-   - New: `src/lib/support/guides/settingsContracts.ts`, `src/lib/support/guides/settingsContracts.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsContracts.ts`
+      - Change: Create the page guide with the 7 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.contracts', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.contracts.<id>', kind, safety, … }`. Steps in state-only elements: `saved`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.contracts']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.contracts.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsContracts.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsContracts.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.contracts': () => import('./guides/settingsContracts')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.contracts'` on the entries for `settings/contracts` and delete `'settings.contracts'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/contracts/ContractSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.contracts.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContractSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L98 role=alert (contractSettings.loading); L103 form; L115 input; L132 Button (contractSettings.save); L135 role=alert (contractSettings.saved); L136 role=status (contractSettings.saved).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/contracts/ContractSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Leave unchanged** `src/pages/settings/contracts/ContractSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.contracts.<step>.title` and `.body` for these steps: `title`, `field`, `fieldHelp`, `save`, `saveDisabled`, `saved`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.contracts.<step>.title` and `.body` for these steps in Albanian: `title`, `field`, `fieldHelp`, `save`, `saveDisabled`, `saved`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.contracts', route: 'settings/contracts' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.contracts"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsContracts.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/contracts/ContractSettingsContent.tsx`.
@@ -6409,6 +10104,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 84.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Contracts and payments is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S69: Settings: Audit log
 
@@ -6418,9 +10117,63 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Audit log** (`settings.audit`; `/:tenantSlug/settings/audit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/audit/AuditLogSettingsPage.tsx`, `pages/settings/audit/AuditLogContent.tsx`, `pages/settings/audit/AuditEntryDetail.tsx`.
 6. **Production LOC estimate:** **~182** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 17 steps x 8 = 136 + 15 annotation sites x 2 = 30. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/audit/AuditLogContent.tsx`, `src/pages/settings/audit/AuditEntryDetail.tsx`
-   - New: `src/lib/support/guides/settingsAudit.ts`, `src/lib/support/guides/settingsAudit.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsAudit.ts`
+      - Change: Create the page guide with the 17 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.audit', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.pagination`. Each step: `{ id, target: 'settings.audit.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `entry`.
+      - Integration: Loaded lazily through `loaders['settings.audit']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.audit.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsAudit.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsAudit.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.audit': () => import('./guides/settingsAudit')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.audit'` on the entries for `settings/audit` and delete `'settings.audit'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/audit/AuditLogContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.audit.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AuditLogContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L150 Button (export); L158 input (filters.to); L162 input (filters.user); L164 SelectInput (filters.user); L175 SelectInput (filters.entityType); L193 SelectInput (filters.action); L206 role=alert (loadFailed); L209 DataTable; L216 DataTable empty prop (empty.title); L218 Pagination (detail.title); L222 SlideOver (detail.title).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/audit/AuditLogContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/pages/settings/audit/AuditEntryDetail.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.audit.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AuditEntryDetail`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Leave unchanged** `src/pages/settings/audit/AuditLogSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   8. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.audit.<step>.title` and `.body` for these steps: `title`, `export`, `from`, `to`, `entityType`, `action`, `user`, `table`, `row`, `rowWhen`, `rowActor`, `pagination`, `drawer`, `drawerDiff`, `drawerClose`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.audit.<step>.title` and `.body` for these steps in Albanian: `title`, `export`, `from`, `to`, `entityType`, `action`, `user`, `table`, `row`, `rowWhen`, `rowActor`, `pagination`, `drawer`, `drawerDiff`, `drawerClose`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.audit', route: 'settings/audit' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.audit"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsAudit.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/audit/AuditLogContent.tsx`, `src/pages/settings/audit/AuditEntryDetail.tsx`.
@@ -6477,6 +10230,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 182.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Audit log is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S70: Settings: Integrations
 
@@ -6486,9 +10243,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Integrations** (`settings.integrations`; `/:tenantSlug/settings/integrations`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/IntegrationsPage.tsx`.
 6. **Production LOC estimate:** **~114** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 10 steps x 8 = 80 + 9 annotation sites x 2 = 18. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/IntegrationsPage.tsx`
-   - New: `src/lib/support/guides/settingsIntegrations.ts`, `src/lib/support/guides/settingsIntegrations.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsIntegrations.ts`
+      - Change: Create the page guide with the 10 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.integrations', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.integrations.<id>', kind, safety, … }`. Steps in state-only elements: `ownerNotice`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.integrations']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.integrations.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsIntegrations.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsIntegrations.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.integrations': () => import('./guides/settingsIntegrations')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.integrations'` on the entries for `settings/integrations` and delete `'settings.integrations'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/IntegrationsPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.integrations.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `IntegrationsPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L50 permission check [integrations.manage]; L176 button; L196 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.integrations.<step>.title` and `.body` for these steps: `title`, `breadcrumb`, `ownerNotice`, `provider`, `status`, `connectedSince`, `connect`, `disconnect`, `processing`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.integrations.<step>.title` and `.body` for these steps in Albanian: `title`, `breadcrumb`, `ownerNotice`, `provider`, `status`, `connectedSince`, `connect`, `disconnect`, `processing`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.integrations', route: 'settings/integrations' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.integrations"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsIntegrations.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/IntegrationsPage.tsx`.
@@ -6535,6 +10338,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 114.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Integrations is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S71: Settings: Client management, custom fields
 
@@ -6544,9 +10351,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Client management** (`settings.clientManagement`; `/:tenantSlug/settings/client-management`); slice 1 of 2. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/ClientSettingsPage.tsx`, `pages/settings/ClientSettingsContent.tsx`, `pages/settings/ClientFormsTab.tsx`.
 6. **Production LOC estimate:** **~240** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 22 steps x 8 = 176 + 20 annotation sites x 2 = 40 + Annotations in the slide-over body 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/ClientSettingsContent.tsx`
-   - New: `src/lib/support/guides/settingsClientManagement.ts`, `src/lib/support/guides/settingsClientManagement.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsClientManagement.ts`
+      - Change: Create the page guide with the 22 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.clientManagement', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.clientManagement.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `field`, `delete`.
+      - Integration: Loaded lazily through `loaders['settings.clientManagement']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.clientManagement.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsClientManagement.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsClientManagement.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.clientManagement': () => import('./guides/settingsClientManagement')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.clientManagement'` on the entries for `settings/client-management` and delete `'settings.clientManagement'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/ClientSettingsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.clientManagement.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientSettingsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L182 button (clientManagement.tabCustomFields); L188 button (clientManagement.tabForm); L210 Button (clientManagement.addField); L246 button (clientManagement.moveUpAria); L254 button (clientManagement.moveDownAria); L262 button (clientManagement.editFieldAria); L269 button (clientManagement.deleteFieldAria); L299 SlideOver (clientManagement.editFieldTitle); L305 Button; L308 Button; L319 role=alert (clientManagement.fieldName); L323 TextInput (clientManagement.fieldName); L329 SelectInput (clientManagement.fieldType); L348 button (clientManagement.removeOptionAria); L351 aria-label (clientManagement.removeOptionAria); L360 TextInput (clientManagement.optionsPlaceholder); L371 Button (clientManagement.addOption); L378 SelectInput (clientManagement.role); L399 input; L413 ConfirmDialog (clientManagement.deleteFieldTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/ClientSettingsContent.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Leave unchanged** `src/pages/settings/ClientSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.clientManagement.<step>.title` and `.body` for these steps: `tabs`, `tabFields`, `importFields`, `addField`, `fieldTable`, `fieldRow`, `fieldMoveUp`, `fieldMoveDown`, `fieldEdit`, `fieldDelete`, `slideOver`, `fieldLabel`, `fieldType`, `fieldOptions`, `optionAdd`, `optionRemove`, `fieldRequired`, `fieldEntity`, `fieldSave`, `deleteConfirm`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.clientManagement.<step>.title` and `.body` for these steps in Albanian: `tabs`, `tabFields`, `importFields`, `addField`, `fieldTable`, `fieldRow`, `fieldMoveUp`, `fieldMoveDown`, `fieldEdit`, `fieldDelete`, `slideOver`, `fieldLabel`, `fieldType`, `fieldOptions`, `optionAdd`, `optionRemove`, `fieldRequired`, `fieldEntity`, `fieldSave`, `deleteConfirm`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.clientManagement', route: 'settings/client-management' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.clientManagement"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsClientManagement.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/ClientSettingsContent.tsx`.
@@ -6610,6 +10465,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 240.
 15. **Dependencies and handoff:** unblocks S72. Later slices of this page extend the same guide and may rely on the ids `settings.clientManagement.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Settings: Client management, which belong to S72 (Settings: Client management, forms tab).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S72: Settings: Client management, forms tab
 
@@ -6619,9 +10479,45 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Client management** (`settings.clientManagement`; `/:tenantSlug/settings/client-management`); slice 2 of 2. Not infrastructure.
 5. **Prerequisites:** S71 (Settings: Client management, custom fields); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/ClientSettingsPage.tsx`, `pages/settings/ClientSettingsContent.tsx`, `pages/settings/ClientFormsTab.tsx`.
 6. **Production LOC estimate:** **~192** (just under the target (150 to 199)): 6 extend the guide and registration + 19 steps x 8 = 152 + 17 annotation sites x 2 = 34. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/ClientFormsTab.tsx`
-   - Extended: `src/lib/support/guides/settingsClientManagement.ts`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (7 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/settingsClientManagement.ts`
+      - Change: Extend the page guide with the 19 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.clientManagement', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.clientManagement.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `create`, `template`, `confirm`.
+      - Integration: Loaded lazily through `loaders['settings.clientManagement']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.clientManagement.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsClientManagement.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/settingsClientManagement.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/settings/ClientFormsTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.clientManagement.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ClientFormsTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L107 Button (formBuilder.newFromTemplate); L114 Button (formBuilder.createForm); L121 role=alert; L123 role=alert; L143 Button (formBuilder.makeIntake); L152 Button (submissions.title); L160 Button (formBuilder.duplicate); L163 Button (formBuilder.saveAsTemplate); L167 Button (formBuilder.delete); L183 Modal (formBuilder.createForm); L185 TextInput (formBuilder.formName); L191 role=alert (formBuilder.cancel); L193 Button (formBuilder.cancel); L196 Button (formBuilder.creating); L203 Modal (formBuilder.templatePickerTitle); L211 role=alert (formBuilder.noTemplates); L220 Button (formBuilder.useTemplate); L223 Button (formBuilder.delete); L234 ConfirmDialog (formBuilder.deleteFormTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/ClientFormsTab.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   4. **Leave unchanged** `src/pages/settings/ClientSettingsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   5. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.clientManagement.<step>.title` and `.body` for these steps: `tabForms`, `createForm`, `fromTemplate`, `formRow`, `formEdit`, `formSubmissions`, `formDuplicate`, `formSaveTemplate`, `formDelete`, `createDialog`, `createName`, `createOk`, `templateDialog`, `templateRow`, `templateUse`, `templateDelete`, `confirmDelete`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   6. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.clientManagement.<step>.title` and `.body` for these steps in Albanian: `tabForms`, `createForm`, `fromTemplate`, `formRow`, `formEdit`, `formSubmissions`, `formDuplicate`, `formSaveTemplate`, `formDelete`, `createDialog`, `createName`, `createOk`, `templateDialog`, `templateRow`, `templateUse`, `templateDelete`, `confirmDelete`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'settings.clientManagement', route: 'settings/client-management' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.clientManagement"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsClientManagement.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/settings/ClientFormsTab.tsx`.
@@ -6681,6 +10577,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 192.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Client management is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Settings: Client management, which belong to S71 (Settings: Client management, custom fields).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S73: Settings: Notifications
 
@@ -6690,9 +10591,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Notifications** (`settings.notifications`; `/:tenantSlug/settings/notifications`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/NotificationSettingsPage.tsx`.
 6. **Production LOC estimate:** **~144** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 13 steps x 8 = 104 + 12 annotation sites x 2 = 24. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/NotificationSettingsPage.tsx`
-   - New: `src/lib/support/guides/settingsNotifications.ts`, `src/lib/support/guides/settingsNotifications.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsNotifications.ts`
+      - Change: Create the page guide with the 13 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.notifications', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.notifications.<id>', kind, safety, … }`. Steps in state-only elements: `readOnlyNotice`, `saved`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['settings.notifications']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.notifications.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsNotifications.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsNotifications.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.notifications': () => import('./guides/settingsNotifications')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.notifications'` on the entries for `settings/notifications` and delete `'settings.notifications'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/NotificationSettingsPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.notifications.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `NotificationSettingsPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L72 permission check [settings.manage]; L161 aria-label (breadcrumb); L195 input; L222 input; L244 input; L269 input; L283 select; L319 input; L341 input; L351 input; L370 input; L384 input; L405 input; L422 input; L439 Button; L442 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/settings/NotificationSettingsPage.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.notifications.<step>.title` and `.body` for these steps: `breadcrumb`, `readOnlyNotice`, `masterToggle`, `eventToggles`, `recipientToggles`, `timing`, `digest`, `quietHours`, `channelToggles`, `discard`, `save`, `saved`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.notifications.<step>.title` and `.body` for these steps in Albanian: `breadcrumb`, `readOnlyNotice`, `masterToggle`, `eventToggles`, `recipientToggles`, `timing`, `digest`, `quietHours`, `channelToggles`, `discard`, `save`, `saved`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.notifications', route: 'settings/notifications' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.notifications"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsNotifications.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/NotificationSettingsPage.tsx`.
@@ -6741,6 +10688,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 144.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Notifications is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S74: Settings: Warehouses
 
@@ -6750,9 +10701,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Warehouses** (`settings.warehouses`; `/:tenantSlug/settings/warehouses`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/inventory/WarehouseList/WarehouseList.tsx`, `components/inventory/WarehouseTable`, `components/inventory/WarehouseFormModal`.
 6. **Production LOC estimate:** **~134** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 12 steps x 8 = 96 + 11 annotation sites x 2 = 22. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/inventory/WarehouseList/WarehouseList.tsx`, `src/components/inventory/WarehouseFormModal`
-   - New: `src/lib/support/guides/settingsWarehouses.ts`, `src/lib/support/guides/settingsWarehouses.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsWarehouses.ts`
+      - Change: Create the page guide with the 12 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.warehouses', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.warehouses.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `form`, `confirm`.
+      - Integration: Loaded lazily through `loaders['settings.warehouses']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.warehouses.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsWarehouses.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsWarehouses.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.warehouses': () => import('./guides/settingsWarehouses')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.warehouses'` on the entries for `settings/warehouses` and delete `'settings.warehouses'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/inventory/WarehouseList/WarehouseList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.warehouses.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `WarehouseList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L84 permission check [inventory.manage]; L94 button (warehouses.addButton); L103 KPICard (warehouses.totalActive); L110 KPICard (warehouses.capacityUsed); L117 KPICard (warehouses.hubTraffic); L183 aria-label (warehouses.breadcrumbSettings).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/inventory/WarehouseFormModal/WarehouseFormModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.warehouses.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `WarehouseFormModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L45 Modal; L51 form (warehouses.formNameLabel); L53 TextInput (warehouses.formNameLabel); L62 TextareaInput (warehouses.formAddressLabel); L73 Button (warehouses.saveFacility); L76 Button (warehouses.saveFacility).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.warehouses.<step>.title` and `.body` for these steps: `breadcrumb`, `add`, `table`, `row`, `rowEdit`, `rowDelete`, `formModal`, `formFields`, `formSave`, `deleteConfirm`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.warehouses.<step>.title` and `.body` for these steps in Albanian: `breadcrumb`, `add`, `table`, `row`, `rowEdit`, `rowDelete`, `formModal`, `formFields`, `formSave`, `deleteConfirm`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.warehouses', route: 'settings/warehouses' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.warehouses"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsWarehouses.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/inventory/WarehouseList/WarehouseList.tsx`.
@@ -6804,6 +10807,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 134.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Warehouses is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S75: Settings: Categories
 
@@ -6813,9 +10820,67 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Settings: Categories** (`settings.categories`; `/:tenantSlug/settings/categories`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/inventory/CategoryList/CategoryList.tsx`, `components/inventory/CategoryFormModal`, `components/inventory/DeleteCategoryModal`.
 6. **Production LOC estimate:** **~154** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 14 steps x 8 = 112 + 13 annotation sites x 2 = 26. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/inventory/CategoryList/CategoryList.tsx`, `src/components/inventory/CategoryFormModal`, `src/components/inventory/DeleteCategoryModal`
-   - New: `src/lib/support/guides/settingsCategories.ts`, `src/lib/support/guides/settingsCategories.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/settingsCategories.ts`
+      - Change: Create the page guide with the 14 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'settings.categories', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'settings.categories.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `form`, `delete`.
+      - Integration: Loaded lazily through `loaders['settings.categories']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:settings.categories.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/settingsCategories.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/settingsCategories.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'settings.categories': () => import('./guides/settingsCategories')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'settings.categories'` on the entries for `settings/categories` and delete `'settings.categories'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/inventory/CategoryList/CategoryList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.categories.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CategoryList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L44 permission check [inventory.manage]; L156 input (categories.showArchived); L159 button (categories.newCategory); L208 button (categories.edit); L211 button (categories.delete); L214 button (categories.moreSoon); L251 button (categories.cleaningUp).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/inventory/CategoryFormModal/CategoryFormModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.categories.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CategoryFormModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L45 Modal; L51 form (categories.formNameLabel); L53 TextInput (categories.formNameLabel); L62 TextareaInput (categories.formDescriptionLabel); L72 Button (categories.saveCategory); L75 Button (categories.saveCategory).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/inventory/DeleteCategoryModal/DeleteCategoryModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('settings.categories.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DeleteCategoryModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L24 Modal (categories.deleteTitle); L46 Button; L51 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `settings.categories.<step>.title` and `.body` for these steps: `breadcrumb`, `showArchived`, `add`, `table`, `row`, `rowEdit`, `rowDelete`, `formModal`, `formFields`, `formSave`, `deleteModal`, `archivedMarker`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `settings.categories.<step>.title` and `.body` for these steps in Albanian: `breadcrumb`, `showArchived`, `add`, `table`, `row`, `rowEdit`, `rowDelete`, `formModal`, `formFields`, `formSave`, `deleteModal`, `archivedMarker`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'settings.categories', route: 'settings/categories' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "settings.categories"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/settingsCategories.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/inventory/CategoryList/CategoryList.tsx`.
@@ -6870,6 +10935,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 154.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Settings: Categories is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Per-row "more" button (`disabled`, "coming soon"): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S76: Form submissions
 
@@ -6879,9 +10949,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Form submissions** (`forms.submissions`; `/:tenantSlug/settings/client-management/forms/:formId/submissions`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S19 (Client form: fields, contacts, custom fields and create-deal option). Existing code it relies on, unchanged since planning: `pages/settings/FormSubmissionsPage.tsx`, `pages/settings/FormSubmissionsContent.tsx`.
 6. **Production LOC estimate:** **~124** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 11 steps x 8 = 88 + 10 annotation sites x 2 = 20. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/FormSubmissionsContent.tsx`
-   - New: `src/lib/support/guides/formsSubmissions.ts`, `src/lib/support/guides/formsSubmissions.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/formsSubmissions.ts`
+      - Change: Create the page guide with the 11 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'forms.submissions', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'forms.submissions.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `detail`.
+      - Integration: Loaded lazily through `loaders['forms.submissions']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:forms.submissions.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/formsSubmissions.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/formsSubmissions.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'forms.submissions': () => import('./guides/formsSubmissions')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'forms.submissions'` on the entries for `settings/client-management/forms/:formId/submissions` and delete `'forms.submissions'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/FormSubmissionsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.submissions.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FormSubmissionsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L99 Button (submissions.backToForm); L110 Button; L120 role=alert (submissions.loading); L148 Button (submissions.view); L163 Button; L175 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/settings/FormSubmissionsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `forms.submissions.<step>.title` and `.body` for these steps: `back`, `formTitle`, `actions`, `table`, `row`, `rowView`, `overlay`, `overlayPrint`, `overlayClose`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `forms.submissions.<step>.title` and `.body` for these steps in Albanian: `back`, `formTitle`, `actions`, `table`, `row`, `rowView`, `overlay`, `overlayPrint`, `overlayClose`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'forms.submissions', route: 'settings/client-management/forms/:formId/submissions' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "forms.submissions"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/formsSubmissions.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/FormSubmissionsContent.tsx`.
@@ -6930,6 +11048,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 124.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Form submissions is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S77: Form builder: entry point, title bar, status bar, ribbon Home and Insert tabs
 
@@ -6939,10 +11061,93 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Form builder** (`forms.builder`; `/:tenantSlug/settings/client-management/forms/:formId`); slice 1 of 3. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S19 (Client form: fields, contacts, custom fields and create-deal option). Existing code it relies on, unchanged since planning: `pages/settings/FormBuilderPage.tsx`, `components/forms/canvas/FormBuilder.tsx`, `components/forms/canvas/ribbon/*`, `components/forms/canvas/PageRail.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~289** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 24 steps x 8 = 192 + 22 annotation sites x 2 = 44 + `SupportHost` mount in `FormBuilderPage` and a Help `RibbonButton`/title-bar button calling the store (the builder is full-screen, outside `AppLayout`) 25 + `RibbonButton tourId` prop and group annotations 12. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/settings/FormBuilderPage.tsx`, `src/components/forms/canvas/ribbon/TitleBar.tsx`, `src/components/forms/canvas/ribbon/StatusBar.tsx`, `src/components/forms/canvas/ribbon/HomeTab.tsx`, `src/components/forms/canvas/ribbon/InsertTab.tsx`, `src/components/forms/canvas/ribbon/RibbonButton.tsx`, `src/components/forms/registry/FormattingToolbar`
-   - Existing, read only: `src/components/forms/canvas/keyboard.ts` (read)
-   - New: `src/lib/support/guides/formsBuilder.ts`, `src/lib/support/guides/formsBuilder.test.tsx`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (15 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/formsBuilder.ts`
+      - Change: Create the page guide with the 24 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'forms.builder', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'forms.builder.<id>', kind, safety, … }`. Steps in state-only elements: `saveStatus`, `disabledWhy`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['forms.builder']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:forms.builder.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/formsBuilder.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/formsBuilder.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'forms.builder': () => import('./guides/formsBuilder')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'forms.builder'` on the entries for `settings/client-management/forms/:formId` and delete `'forms.builder'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/settings/FormBuilderPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FormBuilderPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/forms/canvas/ribbon/TitleBar.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TitleBar`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L117 button (formBuilder.back); L122 DropdownMenu (formBuilder.file); L125 button (formBuilder.file); L139 aria-label (formBuilder.ribbon.undoGroup); L140 button (formBuilder.undo); L144 aria-label (formBuilder.undo); L149 button (formBuilder.redo); L153 aria-label (formBuilder.redo); L178 Button; L188 Button.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/forms/canvas/ribbon/StatusBar.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `StatusBar`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L109 button (formBuilder.retry); L128 button (formBuilder.zoomOut); L132 aria-label (formBuilder.zoomOut); L137 DropdownMenu; L141 button (formBuilder.zoomLevel); L144 aria-label (formBuilder.zoomLevel); L151 button (formBuilder.zoomIn); L155 aria-label (formBuilder.zoomIn).
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/forms/canvas/ribbon/HomeTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `HomeTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Modify** `src/components/forms/canvas/ribbon/InsertTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InsertTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Modify** `src/components/forms/canvas/ribbon/RibbonButton.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RibbonButton`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L45 button.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   11. **Modify** `src/components/forms/registry/FormattingToolbar.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FormattingToolbar`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L97 aria-label (formattingToolbar.label); L103 select (formattingToolbar.paragraphStyle); L115 select (formattingToolbar.fontFamily); L127 select (formattingToolbar.fontSize); L188 input; L197 input; L204 select (formattingToolbar.lineHeight); L239 button.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/forms/registry/FormattingToolbar.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   12. **Leave unchanged** `src/components/forms/canvas/keyboard.ts`
+      - Change: Read only, to find the labels, data shapes and conditions the steps depend on. Do not edit.
+   13. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `forms.builder.<step>.title` and `.body` for these steps: `supportEntry`, `back`, `formName`, `saveStatus`, `saveNow`, `undo`, `redo`, `ribbonTabs`, `statusBar`, `zoomOut`, `zoomLevel`, `zoomIn`, `shortcuts`, `tabHome`, `paste`, `cut`, `copy`, `duplicate`, `formatting`, `selectAll`, `tabInsert`, `blankPage`, `insertItem`, `disabledWhy`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   14. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `forms.builder.<step>.title` and `.body` for these steps in Albanian: `supportEntry`, `back`, `formName`, `saveStatus`, `saveNow`, `undo`, `redo`, `ribbonTabs`, `statusBar`, `zoomOut`, `zoomLevel`, `zoomIn`, `shortcuts`, `tabHome`, `paste`, `cut`, `copy`, `duplicate`, `formatting`, `selectAll`, `tabInsert`, `blankPage`, `insertItem`, `disabledWhy`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   15. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'forms.builder', route: 'settings/client-management/forms/:formId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "forms.builder"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/formsBuilder.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/settings/FormBuilderPage.tsx`, `src/components/forms/canvas/ribbon/TitleBar.tsx`, `src/components/forms/canvas/ribbon/StatusBar.tsx`, `src/components/forms/canvas/ribbon/HomeTab.tsx`, `src/components/forms/canvas/ribbon/InsertTab.tsx`.
@@ -7008,6 +11213,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 289.
 15. **Dependencies and handoff:** unblocks S78. Later slices of this page extend the same guide and may rely on the ids `forms.builder.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Form builder, which belong to S78 (Form builder: ribbon Layout and contextual tabs, and the properties panel); S79 (Form builder: page rail, canvas, add menu and context menu).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S78: Form builder: ribbon Layout and contextual tabs, and the properties panel
 
@@ -7017,9 +11227,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Form builder** (`forms.builder`; `/:tenantSlug/settings/client-management/forms/:formId`); slice 2 of 3. Not infrastructure.
 5. **Prerequisites:** S77 (Form builder: entry point, title bar, status bar, ribbon Home and Insert tabs); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/FormBuilderPage.tsx`, `components/forms/canvas/FormBuilder.tsx`, `components/forms/canvas/ribbon/*`, `components/forms/canvas/PageRail.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~296** (within the 200 to 300 target): 6 extend the guide and registration + 28 steps x 8 = 224 + 25 annotation sites x 2 = 50 + Annotations in `PropertiesPanel` (562 lines) 16. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/components/forms/canvas/ribbon/LayoutTab.tsx`, `src/components/forms/canvas/ribbon/ContextualTab.tsx`, `src/components/forms/canvas/PropertiesPanel.tsx`
-   - Extended: `src/lib/support/guides/formsBuilder.ts`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/formsBuilder.ts`
+      - Change: Extend the page guide with the 28 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'forms.builder', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'forms.builder.<id>', kind, safety, … }`. Steps in state-only elements: `contextualTab`, `editLabel`, `formatPane`, `alignGroup`, `distribute`, `arrange`, `noSelection`, `size`, `text`, `fieldKey`, `required`, `options`, `style`, `image`, `sectionProps`, `validation`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['forms.builder']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:forms.builder.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/formsBuilder.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/formsBuilder.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/components/forms/canvas/ribbon/LayoutTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `LayoutTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/components/forms/canvas/ribbon/ContextualTab.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContextualTab`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/components/forms/canvas/PropertiesPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PropertiesPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L100 TextInput (formBuilder.sectionTitle); L175 TextInput (formBuilder.label); L182 SelectInput (formBuilder.fieldType); L208 SelectInput (formBuilder.control); L245 SelectInput (formBuilder.optionColumns); L268 SelectInput (formBuilder.fieldLayout); L290 SelectInput (formBuilder.density); L308 TextInput (formBuilder.placeholder); L316 input (formBuilder.required); L338 TextInput (formBuilder.dataKey); L362 button (formBuilder.editOnPage); L370 TextInput (formBuilder.imageAlt); L387 SelectInput (formBuilder.dividerOrientation); L474 button (formBuilder.closePane); L524 TextInput (formBuilder.width); L530 TextInput (formBuilder.height); L543 TextInput (formBuilder.horizontal); L549 TextInput (formBuilder.vertical).
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/settings/FormBuilderPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `forms.builder.<step>.title` and `.body` for these steps: `tabLayout`, `pageGroup`, `duplicatePage`, `movePageUp`, `movePageDown`, `deletePage`, `removeEmptyPages`, `viewGroup`, `navigationPane`, `contextualTab`, `editLabel`, `formatPane`, `alignGroup`, `distribute`, `arrange`, `panel`, `noSelection`, `tabs`, `size`, `text`, `fieldKey`, `required`, `options`, `style`, `image`, `sectionProps`, `validation`, `binding`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `forms.builder.<step>.title` and `.body` for these steps in Albanian: `tabLayout`, `pageGroup`, `duplicatePage`, `movePageUp`, `movePageDown`, `deletePage`, `removeEmptyPages`, `viewGroup`, `navigationPane`, `contextualTab`, `editLabel`, `formatPane`, `alignGroup`, `distribute`, `arrange`, `panel`, `noSelection`, `tabs`, `size`, `text`, `fieldKey`, `required`, `options`, `style`, `image`, `sectionProps`, `validation`, `binding`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'forms.builder', route: 'settings/client-management/forms/:formId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "forms.builder"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/formsBuilder.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/components/forms/canvas/ribbon/LayoutTab.tsx`, `src/components/forms/canvas/ribbon/ContextualTab.tsx`, `src/components/forms/canvas/PropertiesPanel.tsx`.
@@ -7087,6 +11345,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 296.
 15. **Dependencies and handoff:** unblocks S79. Later slices of this page extend the same guide and may rely on the ids `forms.builder.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Form builder, which belong to S77 (Form builder: entry point, title bar, status bar, ribbon Home and Insert tabs); S79 (Form builder: page rail, canvas, add menu and context menu).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S79: Form builder: page rail, canvas, add menu and context menu
 
@@ -7096,9 +11359,75 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Form builder** (`forms.builder`; `/:tenantSlug/settings/client-management/forms/:formId`); slice 3 of 3. Not infrastructure.
 5. **Prerequisites:** S78 (Form builder: ribbon Layout and contextual tabs, and the properties panel); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/settings/FormBuilderPage.tsx`, `components/forms/canvas/FormBuilder.tsx`, `components/forms/canvas/ribbon/*`, `components/forms/canvas/PageRail.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~210** (within the 200 to 300 target): 6 extend the guide and registration + 19 steps x 8 = 152 + 17 annotation sites x 2 = 34 + Annotations in `PageRail`, `AddMenu`, `FormCanvas`, `CanvasSection`, `CanvasElement` 18. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/components/forms/canvas/PageRail.tsx`, `src/components/forms/canvas/AddMenu.tsx`, `src/components/forms/canvas/FormCanvas.tsx`, `src/components/forms/canvas/CanvasSection.tsx`, `src/components/forms/canvas/CanvasElement.tsx`, `src/components/ui/ContextMenu`
-   - Extended: `src/lib/support/guides/formsBuilder.ts`. Touched: `locales/{en,sq}/supportSettings.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (12 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/formsBuilder.ts`
+      - Change: Extend the page guide with the 19 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'forms.builder', version: 1, namespace: 'supportSettings', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'forms.builder.<id>', kind, safety, … }`. Steps in state-only elements: `emptyPage`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `add`, `context`.
+      - Integration: Loaded lazily through `loaders['forms.builder']` in `pageRegistry.ts`; copy keys resolve to `supportSettings:forms.builder.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/formsBuilder.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/formsBuilder.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/components/forms/canvas/PageRail.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PageRail`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L43 aria-label (pageRail.label); L46 button (pageRail.addPage); L54 button (pageRail.goToPage); L59 aria-label (pageRail.goToPage); L80 button (pageRail.movePageUp); L84 aria-label (pageRail.movePageUp); L89 button (pageRail.movePageDown); L93 aria-label (pageRail.movePageDown); L98 button (pageRail.duplicatePage); L101 aria-label (pageRail.duplicatePage); L106 button (pageRail.deletePage); L110 aria-label (pageRail.deletePage); L121 button (pageRail.removeEmptyPages).
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/components/forms/canvas/AddMenu.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AddMenu`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L65 button (addMenu.addItem); L69 aria-label (addMenu.addItem); L82 button (addMenu.addItem); L87 aria-label (addMenu.addItem); L110 input; L116 aria-label (addMenu.uploadImage); L120 role=alert.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/components/forms/canvas/FormCanvas.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `FormCanvas`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/forms/canvas/CanvasSection.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CanvasSection`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L132 input (formBuilder.sectionTitle); L137 aria-label (formBuilder.sectionTitle); L153 button (formBuilder.removeSection); L156 aria-label (formBuilder.removeSection).
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/forms/canvas/CanvasElement.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CanvasElement`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L147 input; L155 aria-label (formBuilder.label); L162 button (formBuilder.removeItem); L165 aria-label (formBuilder.removeItem).
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/ui/ContextMenu/ContextMenu.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('forms.builder.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ContextMenu`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L159 button.
+      - Integration: The component is rendered by `FormBuilder`, which has its own chrome and no `AppLayout`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/ui/ContextMenu/ContextMenu.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   9. **Leave unchanged** `src/pages/settings/FormBuilderPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   10. **Modify** `src/locales/en/supportSettings.json`
+      - Change: Add `forms.builder.<step>.title` and `.body` for these steps: `rail`, `railAdd`, `railPage`, `railMove`, `railDuplicate`, `railDelete`, `canvas`, `section`, `element`, `selectionHandles`, `drag`, `inlineEdit`, `addMenu`, `addSection`, `addComponent`, `addImage`, `contextMenu`, `contextItems`, `emptyPage`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `src/locales/sq/supportSettings.json`
+      - Change: Add `forms.builder.<step>.title` and `.body` for these steps in Albanian: `rail`, `railAdd`, `railPage`, `railMove`, `railDuplicate`, `railDelete`, `canvas`, `section`, `element`, `selectionHandles`, `drag`, `inlineEdit`, `addMenu`, `addSection`, `addComponent`, `addImage`, `contextMenu`, `contextItems`, `emptyPage`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportSettings')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   12. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'forms.builder', route: 'settings/client-management/forms/:formId' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "forms.builder"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/formsBuilder.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/components/forms/canvas/PageRail.tsx`, `src/components/forms/canvas/AddMenu.tsx`, `src/components/forms/canvas/FormCanvas.tsx`, `src/components/forms/canvas/CanvasSection.tsx`, `src/components/forms/canvas/CanvasElement.tsx`.
@@ -7155,6 +11484,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 210.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Form builder is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Form builder, which belong to S77 (Form builder: entry point, title bar, status bar, ribbon Home and Insert tabs); S78 (Form builder: ribbon Layout and contextual tabs, and the properties panel).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 #### Page tours: Dashboards, reports, inventory, notifications
 
@@ -7166,9 +11500,97 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Dashboard: Sales User** (`dashboard.salesUser`; `/:tenantSlug/dashboard (role = SALES_USER)`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/dashboard/SalesUserDashboard.tsx`, `pages/dashboard/RoleDashboardFrame.tsx`, `pages/dashboard/PeriodSelector.tsx`, `pages/dashboard/RefreshBar.tsx` and the other files in section 3.
 6. **Production LOC estimate:** **~190** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 16 steps x 8 = 128 + 14 annotation sites x 2 = 28 + `useSupportContext({ variant })` calls in `DashboardLanding` (and the fallback variants) so `dashboard.<variant>` is resolved 12 + `RoleDashboardFrame` props `showPeriod`/`showLocation` reflected as step eligibility 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/SalesUserDashboard.tsx`, `src/pages/dashboard/RoleDashboardFrame.tsx`, `src/pages/dashboard/PeriodSelector.tsx`, `src/pages/dashboard/RefreshBar.tsx`, `src/pages/dashboard/KpiTile.tsx`, `src/pages/dashboard/ChartWithTable.tsx`, `src/pages/dashboard/EmptyState.tsx`, `src/pages/dashboard/DashboardLanding.tsx`
-   - New: `src/lib/support/guides/dashboardSalesUser.ts`, `src/lib/support/guides/dashboardSalesUser.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (15 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dashboardSalesUser.ts`
+      - Change: Create the page guide with the 16 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'dashboard.salesUser', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'dashboard.salesUser.<id>', kind, safety, … }`. Steps in state-only elements: `customDates`, `empty`, `loading`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['dashboard.salesUser']` in `pageRegistry.ts`; copy keys resolve to `supportOps:dashboard.salesUser.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dashboardSalesUser.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dashboardSalesUser.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'dashboard.salesUser': () => import('./guides/dashboardSalesUser')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'dashboard.salesUser'` on the entries for `dashboard` and delete `'dashboard.salesUser'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/SalesUserDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `SalesUserDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/dashboard/RoleDashboardFrame.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RoleDashboardFrame`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L69 SelectInput (role.area); L77 SelectInput (role.city); L90 role=alert (role.loadFailed); L101 KpiTile (role.pipelineChart).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/pages/dashboard/PeriodSelector.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PeriodSelector`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L22 SelectInput (role.period); L31 TextInput (role.from); L32 TextInput (role.to).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/pages/dashboard/RefreshBar.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `RefreshBar`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L21 Button (role.refresh).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Modify** `src/pages/dashboard/KpiTile.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `KpiTile`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L37 Link (role.openList).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   10. **Modify** `src/pages/dashboard/ChartWithTable.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ChartWithTable`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L29 aria-label (role.view); L31 button (role.${choice}).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   11. **Modify** `src/pages/dashboard/EmptyState.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `EmptyState`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L10 role=status (role.emptyTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   12. **Modify** `src/pages/dashboard/DashboardLanding.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesUser.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `DashboardLanding`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   13. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `dashboard.salesUser.<step>.title` and `.body` for these steps: `title`, `refresh`, `calculatedAt`, `period`, `customDates`, `area`, `city`, `tiles`, `tile`, `tilePeriod`, `chart`, `chartToggle`, `chartTable`, `empty`, `error`, `loading`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   14. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `dashboard.salesUser.<step>.title` and `.body` for these steps in Albanian: `title`, `refresh`, `calculatedAt`, `period`, `customDates`, `area`, `city`, `tiles`, `tile`, `tilePeriod`, `chart`, `chartToggle`, `chartTable`, `empty`, `error`, `loading`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   15. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'dashboard.salesUser', route: 'dashboard' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)` with the read-only POST endpoints of this page in the allow-list; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "dashboard.salesUser"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dashboardSalesUser.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: read in context during planning; re-read to catch drift): `src/pages/dashboard/SalesUserDashboard.tsx`, `src/pages/dashboard/RoleDashboardFrame.tsx`, `src/pages/dashboard/PeriodSelector.tsx`, `src/pages/dashboard/RefreshBar.tsx`, `src/pages/dashboard/KpiTile.tsx`.
@@ -7223,6 +11645,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 190.
 15. **Dependencies and handoff:** unblocks S81, S82, S83. After this slice **Dashboard: Sales User is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S81: Dashboard: Sales Manager
 
@@ -7232,9 +11658,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Dashboard: Sales Manager** (`dashboard.salesManager`; `/:tenantSlug/dashboard (role = SALES_MANAGER)`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S80 (Dashboard: Sales User and the shared role-dashboard frame). Existing code it relies on, unchanged since planning: `pages/dashboard/SalesManagerDashboard.tsx`.
 6. **Production LOC estimate:** **~118** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 9 steps x 8 = 72 + 8 annotation sites x 2 = 16 + `includeFrame()` helper shared with the other role dashboards 14. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/SalesManagerDashboard.tsx`
-   - New: `src/lib/support/guides/dashboardSalesManager.ts`, `src/lib/support/guides/dashboardSalesManager.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dashboardSalesManager.ts`
+      - Change: Create the page guide with the 9 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'dashboard.salesManager', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'dashboard.salesManager.<id>', kind, safety, … }`. Steps in state-only elements: `valueColumn`, `followUpsColumn`, `reasons`, `tableEmpty`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['dashboard.salesManager']` in `pageRegistry.ts`; copy keys resolve to `supportOps:dashboard.salesManager.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dashboardSalesManager.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dashboardSalesManager.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'dashboard.salesManager': () => import('./guides/dashboardSalesManager')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'dashboard.salesManager'` on the entries for `dashboard` and delete `'dashboard.salesManager'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/SalesManagerDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.salesManager.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `SalesManagerDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L40 SelectInput (role.salesperson); L53 aria-label (role.perSalesperson).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `dashboard.salesManager.<step>.title` and `.body` for these steps: `frameRecap`, `salesperson`, `perSalesperson`, `personRow`, `numericColumns`, `valueColumn`, `followUpsColumn`, `reasons`, `tableEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `dashboard.salesManager.<step>.title` and `.body` for these steps in Albanian: `frameRecap`, `salesperson`, `perSalesperson`, `personRow`, `numericColumns`, `valueColumn`, `followUpsColumn`, `reasons`, `tableEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'dashboard.salesManager', route: 'dashboard' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "dashboard.salesManager"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dashboardSalesManager.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/dashboard/SalesManagerDashboard.tsx`.
@@ -7279,6 +11751,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 118.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Dashboard: Sales Manager is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S82: Dashboard: Administrator
 
@@ -7288,9 +11764,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Dashboard: Administrator** (`dashboard.administrator`; `/:tenantSlug/dashboard (role = ADMINISTRATOR)`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S80 (Dashboard: Sales User and the shared role-dashboard frame). Existing code it relies on, unchanged since planning: `pages/dashboard/AdministratorDashboard.tsx`.
 6. **Production LOC estimate:** **~104** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 9 steps x 8 = 72 + 8 annotation sites x 2 = 16. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/AdministratorDashboard.tsx`
-   - New: `src/lib/support/guides/dashboardAdministrator.ts`, `src/lib/support/guides/dashboardAdministrator.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dashboardAdministrator.ts`
+      - Change: Create the page guide with the 9 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'dashboard.administrator', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'dashboard.administrator.<id>', kind, safety, … }`. Steps in state-only elements: none. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['dashboard.administrator']` in `pageRegistry.ts`; copy keys resolve to `supportOps:dashboard.administrator.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dashboardAdministrator.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dashboardAdministrator.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'dashboard.administrator': () => import('./guides/dashboardAdministrator')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'dashboard.administrator'` on the entries for `dashboard` and delete `'dashboard.administrator'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/AdministratorDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.administrator.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AdministratorDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L23 permission check [audit.view]; L37 aria-label (role.admin.pricing); L69 aria-label (role.admin.usersPerRole); L95 aria-label (role.admin.attention); L117 aria-label (role.admin.recentChanges); L120 Link (role.admin.fullLog).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `dashboard.administrator.<step>.title` and `.body` for these steps: `frameRecap`, `pricingPanel`, `usersPanel`, `userRow`, `attentionPanel`, `attentionItem`, `changesPanel`, `changeRow`, `panelEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `dashboard.administrator.<step>.title` and `.body` for these steps in Albanian: `frameRecap`, `pricingPanel`, `usersPanel`, `userRow`, `attentionPanel`, `attentionItem`, `changesPanel`, `changeRow`, `panelEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'dashboard.administrator', route: 'dashboard' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "dashboard.administrator"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dashboardAdministrator.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/dashboard/AdministratorDashboard.tsx`.
@@ -7334,6 +11856,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 104.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Dashboard: Administrator is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S83: Dashboard: CEO
 
@@ -7343,9 +11869,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Dashboard: CEO** (`dashboard.ceo`; `/:tenantSlug/dashboard (role = CEO)`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S80 (Dashboard: Sales User and the shared role-dashboard frame). Existing code it relies on, unchanged since planning: `pages/dashboard/CeoDashboard.tsx`.
 6. **Production LOC estimate:** **~124** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 11 steps x 8 = 88 + 10 annotation sites x 2 = 20. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/CeoDashboard.tsx`
-   - New: `src/lib/support/guides/dashboardCeo.ts`, `src/lib/support/guides/dashboardCeo.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dashboardCeo.ts`
+      - Change: Create the page guide with the 11 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'dashboard.ceo', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'dashboard.ceo.<id>', kind, safety, … }`. Steps in state-only elements: none. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['dashboard.ceo']` in `pageRegistry.ts`; copy keys resolve to `supportOps:dashboard.ceo.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dashboardCeo.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dashboardCeo.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'dashboard.ceo': () => import('./guides/dashboardCeo')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'dashboard.ceo'` on the entries for `dashboard` and delete `'dashboard.ceo'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/CeoDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.ceo.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CeoDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L52 aria-label (role.ceo.team); L91 aria-label (role.ceo.contracts); L119 aria-label (role.ceo.payments); L154 aria-label (role.ceo.wellnessPlus); L158 KpiTile (role.ceo.wellnessPlusActive); L162 aria-label (role.ceo.wellnessPlusRenewals).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `dashboard.ceo.<step>.title` and `.body` for these steps: `frameRecap`, `teamPanel`, `teamRow`, `contractsPanel`, `contractRow`, `paymentsPanel`, `paymentRow`, `wellnessBlock`, `wellnessRenewals`, `wellnessRow`, `panelEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `dashboard.ceo.<step>.title` and `.body` for these steps in Albanian: `frameRecap`, `teamPanel`, `teamRow`, `contractsPanel`, `contractRow`, `paymentsPanel`, `paymentRow`, `wellnessBlock`, `wellnessRenewals`, `wellnessRow`, `panelEmpty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'dashboard.ceo', route: 'dashboard' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "dashboard.ceo"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dashboardCeo.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/dashboard/CeoDashboard.tsx`.
@@ -7392,6 +11964,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 124.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Dashboard: CEO is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S84: Dashboard: Business owner (fallback)
 
@@ -7401,9 +11977,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Dashboard: Business owner (fallback)** (`dashboard.legacyOwner`; `/:tenantSlug/dashboard (fallback, scope ALL)`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/dashboard/BusinessOwnerDashboard.tsx`, `pages/shell/BusinessOwnerShell.tsx`.
 6. **Production LOC estimate:** **~114** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 10 steps x 8 = 80 + 9 annotation sites x 2 = 18. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/BusinessOwnerDashboard.tsx`, `src/pages/shell/BusinessOwnerShell.tsx`
-   - New: `src/lib/support/guides/dashboardLegacyOwner.ts`, `src/lib/support/guides/dashboardLegacyOwner.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dashboardLegacyOwner.ts`
+      - Change: Create the page guide with the 10 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'dashboard.legacyOwner', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'dashboard.legacyOwner.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `loading`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['dashboard.legacyOwner']` in `pageRegistry.ts`; copy keys resolve to `supportOps:dashboard.legacyOwner.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dashboardLegacyOwner.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dashboardLegacyOwner.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'dashboard.legacyOwner': () => import('./guides/dashboardLegacyOwner')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'dashboard.legacyOwner'` on the entries for `dashboard` and delete `'dashboard.legacyOwner'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/BusinessOwnerDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.legacyOwner.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `BusinessOwnerDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L48 Button (viewSchedule); L51 Button (newAppointmentFull); L65 KPICard; L75 KPICard; L89 KPICard; L105 KPICard; L180 Button (viewAllActivity).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/shell/BusinessOwnerShell.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.legacyOwner.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `BusinessOwnerShell`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `dashboard.legacyOwner.<step>.title` and `.body` for these steps: `title`, `viewAppointments`, `plan`, `statCards`, `recent`, `recentItem`, `viewAll`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `dashboard.legacyOwner.<step>.title` and `.body` for these steps in Albanian: `title`, `viewAppointments`, `plan`, `statCards`, `recent`, `recentItem`, `viewAll`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'dashboard.legacyOwner', route: 'dashboard' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "dashboard.legacyOwner"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dashboardLegacyOwner.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/dashboard/BusinessOwnerDashboard.tsx`, `src/pages/shell/BusinessOwnerShell.tsx`.
@@ -7449,6 +12077,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 114.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Dashboard: Business owner (fallback) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S85: Dashboard: Staff (fallback)
 
@@ -7458,9 +12090,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Dashboard: Staff (fallback)** (`dashboard.legacyStaff`; `/:tenantSlug/dashboard (fallback, scope OWN / TEAM)`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/dashboard/StaffDashboard.tsx`, `pages/shell/StaffShell.tsx`.
 6. **Production LOC estimate:** **~134** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 12 steps x 8 = 96 + 11 annotation sites x 2 = 22. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/StaffDashboard.tsx`, `src/pages/shell/StaffShell.tsx`
-   - New: `src/lib/support/guides/dashboardLegacyStaff.ts`, `src/lib/support/guides/dashboardLegacyStaff.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/dashboardLegacyStaff.ts`
+      - Change: Create the page guide with the 12 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'dashboard.legacyStaff', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'dashboard.legacyStaff.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `loading`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['dashboard.legacyStaff']` in `pageRegistry.ts`; copy keys resolve to `supportOps:dashboard.legacyStaff.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/dashboardLegacyStaff.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/dashboardLegacyStaff.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'dashboard.legacyStaff': () => import('./guides/dashboardLegacyStaff')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'dashboard.legacyStaff'` on the entries for `dashboard` and delete `'dashboard.legacyStaff'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/StaffDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.legacyStaff.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `StaffDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L81 button; L89 button; L112 Button (exportReport); L115 Button (exportReport); L124 KPICard (kpiNewClients); L141 KPICard (kpiAssignedClients); L161 KPICard (kpiOpenFollowUps); L187 Button (viewCalendar); L235 button; L245 button; L256 button; L305 Button (viewAllActivity).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/shell/StaffShell.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('dashboard.legacyStaff.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `StaffShell`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `dashboard.legacyStaff.<step>.title` and `.body` for these steps: `title`, `scheduleFilter`, `export`, `viewCalendar`, `scheduleTable`, `scheduleRow`, `activityItem`, `viewAll`, `summaryCards`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `dashboard.legacyStaff.<step>.title` and `.body` for these steps in Albanian: `title`, `scheduleFilter`, `export`, `viewCalendar`, `scheduleTable`, `scheduleRow`, `activityItem`, `viewAll`, `summaryCards`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'dashboard.legacyStaff', route: 'dashboard' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "dashboard.legacyStaff"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/dashboardLegacyStaff.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/dashboard/StaffDashboard.tsx`, `src/pages/shell/StaffShell.tsx`.
@@ -7508,6 +12192,12 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 134.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Dashboard: Staff (fallback) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Disabled schedule button (`disabled`, no handler): left unannotated and unexplained (section 3.4).
+   - `StaffScheduleTable` coming-soon buttons: view calendar, per-row more, call, directions, mark complete (`disabled`): left unannotated and unexplained (section 3.4).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S86: Notifications page
 
@@ -7517,9 +12207,57 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Notifications** (`notifications`; `/:tenantSlug/notifications`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/notifications/NotificationsPage.tsx`, `pages/notifications/NotificationsContent.tsx`.
 6. **Production LOC estimate:** **~94** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 8 steps x 8 = 64 + 7 annotation sites x 2 = 14. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/notifications/NotificationsContent.tsx`
-   - New: `src/lib/support/guides/notifications.ts`, `src/lib/support/guides/notifications.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/notifications.ts`
+      - Change: Create the page guide with the 8 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'notifications', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'notifications.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `loading`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['notifications']` in `pageRegistry.ts`; copy keys resolve to `supportOps:notifications.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/notifications.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/notifications.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'notifications': () => import('./guides/notifications')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'notifications'` on the entries for `notifications` and delete `'notifications'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/notifications/NotificationsContent.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('notifications.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `NotificationsContent`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L63 Button (markAllRead); L82 button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Leave unchanged** `src/pages/notifications/NotificationsPage.tsx`
+      - Change: Page wrapper that mounts `AppLayout` and `Sidebar`; it needs no change because the launcher (S09) and host (S08) are already mounted by `AppLayout`/`TenantGuard`.
+   7. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `notifications.<step>.title` and `.body` for these steps: `title`, `markAllRead`, `list`, `item`, `unreadMarker`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `notifications.<step>.title` and `.body` for these steps in Albanian: `title`, `markAllRead`, `list`, `item`, `unreadMarker`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'notifications', route: 'notifications' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "notifications"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/notifications.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/notifications/NotificationsContent.tsx`.
@@ -7563,6 +12301,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 94.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Notifications is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S87: Reports
 
@@ -7572,9 +12314,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Reports** (`reports`; `/:tenantSlug/reports`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/ReportsPage.tsx`.
 6. **Production LOC estimate:** **~172** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 16 steps x 8 = 128 + 14 annotation sites x 2 = 28. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/ReportsPage.tsx`
-   - New: `src/lib/support/guides/reports.ts`, `src/lib/support/guides/reports.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/reports.ts`
+      - Change: Create the page guide with the 16 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'reports', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'reports.<id>', kind, safety, … }`. Steps in state-only elements: `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['reports']` in `pageRegistry.ts`; copy keys resolve to `supportOps:reports.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/reports.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/reports.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'reports': () => import('./guides/reports')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'reports'` on the entries for `reports` and delete `'reports'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/ReportsPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('reports.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ReportsPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L163 aria-label (reports.loadingAria); L186 Button (reports.refresh); L189 Button; L202 role=alert; L208 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/pages/ReportsPage.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   6. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `reports.<step>.title` and `.body` for these steps: `title`, `refresh`, `secondaryAction`, `monthlyRevenue`, `clientDistribution`, `inventoryValue`, `itemsHeld`, `appointmentStats`, `clientTrend`, `staffTable`, `staffRow`, `lowStock`, `lowStockRow`, `loading`, `error`, `empty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `reports.<step>.title` and `.body` for these steps in Albanian: `title`, `refresh`, `secondaryAction`, `monthlyRevenue`, `clientDistribution`, `inventoryValue`, `itemsHeld`, `appointmentStats`, `clientTrend`, `staffTable`, `staffRow`, `lowStock`, `lowStockRow`, `loading`, `error`, `empty`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'reports', route: 'reports' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "reports"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/reports.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/ReportsPage.tsx`.
@@ -7627,6 +12415,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 172.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Reports is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S88: Inventory list: header, filters and states
 
@@ -7636,9 +12428,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Inventory list** (`inventory.list`; `/:tenantSlug/inventory`); slice 1 of 2. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/inventory/InventoryList/InventoryList.tsx`, `components/inventory/StockAdjustmentPanel`.
 6. **Production LOC estimate:** **~154** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 14 steps x 8 = 112 + 13 annotation sites x 2 = 26. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/inventory/InventoryList/InventoryList.tsx`
-   - New: `src/lib/support/guides/inventoryList.ts`, `src/lib/support/guides/inventoryList.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/inventoryList.ts`
+      - Change: Create the page guide with the 14 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'inventory.list', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'inventory.list.<id>', kind, safety, … }`. Steps in state-only elements: `loading`, `error`, `emptyFirst`, `emptyFiltered`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['inventory.list']` in `pageRegistry.ts`; copy keys resolve to `supportOps:inventory.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/inventoryList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/inventoryList.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'inventory.list': () => import('./guides/inventoryList')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'inventory.list'` on the entries for `inventory` and delete `'inventory.list'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/inventory/InventoryList/InventoryList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InventoryList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L243 Button (list.addProduct); L254 KPICard; L261 TextInput (list.searchPlaceholder); L267 aria-label (list.searchAria); L270 SelectInput (list.filterCategoryAria); L274 aria-label (list.filterCategoryAria); L284 SelectInput (list.filterWarehouseAria); L288 aria-label (list.filterWarehouseAria); L298 SelectInput; L304 aria-label (list.filterStatusAria); L315 SelectInput (list.filterBrandAria); L319 aria-label (list.filterBrandAria); L331 Button; L344 button; L374 Button; L383 Button; L392 Button; L401 Button; L409 role=alert; L412 Button; L435 Button; L443 Button (list.clearFilters); L451 Pagination; L474 ConfirmDialog; L489 ConfirmDialog.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `inventory.list.<step>.title` and `.body` for these steps: `title`, `add`, `search`, `category`, `warehouse`, `status`, `brand`, `clear`, `loading`, `error`, `retry`, `emptyFirst`, `emptyFiltered`, `count`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `inventory.list.<step>.title` and `.body` for these steps in Albanian: `title`, `add`, `search`, `category`, `warehouse`, `status`, `brand`, `clear`, `loading`, `error`, `retry`, `emptyFirst`, `emptyFiltered`, `count`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'inventory.list', route: 'inventory' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "inventory.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/inventoryList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/inventory/InventoryList/InventoryList.tsx`.
@@ -7691,6 +12529,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 154.
 15. **Dependencies and handoff:** unblocks S89. Later slices of this page extend the same guide and may rely on the ids `inventory.list.*` and the registration made in slice 1.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Inventory list, which belong to S89 (Inventory list: rows, selection, bulk actions, stock and delete).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S89: Inventory list: rows, selection, bulk actions, stock and delete
 
@@ -7700,9 +12543,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Inventory list** (`inventory.list`; `/:tenantSlug/inventory`); slice 2 of 2. Not infrastructure.
 5. **Prerequisites:** S88 (Inventory list: header, filters and states); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/inventory/InventoryList/InventoryList.tsx`, `components/inventory/StockAdjustmentPanel`.
 6. **Production LOC estimate:** **~232** (within the 200 to 300 target): 6 extend the guide and registration + 22 steps x 8 = 176 + 20 annotation sites x 2 = 40 + Annotations in `InventoryList` rows, bulk bar and the stock indicator 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/inventory/InventoryList/InventoryList.tsx`, `src/components/inventory/InventoryTable`, `src/components/ui/MultiLocationStockIndicator`, `src/components/inventory/StockAdjustmentPanel`
-   - Extended: `src/lib/support/guides/inventoryList.ts`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Modify** `src/lib/support/guides/inventoryList.ts`
+      - Change: Extend the page guide with the 22 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'inventory.list', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`, `shared.pagination`. Each step: `{ id, target: 'inventory.list.<id>', kind, safety, … }`. Steps in state-only elements: `bulkBar`, `bulkCount`, `bulkActionA`, `bulkActionB`, `bulkActionC`, `bulkClear`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `menu`, `delete`, `bulk`.
+      - Integration: Loaded lazily through `loaders['inventory.list']` in `pageRegistry.ts`; copy keys resolve to `supportOps:inventory.list.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/inventoryList.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Modify** `src/lib/support/guides/inventoryList.test.tsx`
+      - Change: Extend the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/pages/inventory/InventoryList/InventoryList.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InventoryList`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L243 Button (list.addProduct); L254 KPICard; L261 TextInput (list.searchPlaceholder); L267 aria-label (list.searchAria); L270 SelectInput (list.filterCategoryAria); L274 aria-label (list.filterCategoryAria); L284 SelectInput (list.filterWarehouseAria); L288 aria-label (list.filterWarehouseAria); L298 SelectInput; L304 aria-label (list.filterStatusAria); L315 SelectInput (list.filterBrandAria); L319 aria-label (list.filterBrandAria); L331 Button; L344 button; L374 Button; L383 Button; L392 Button; L401 Button; L409 role=alert; L412 Button; L435 Button; L443 Button (list.clearFilters); L451 Pagination; L474 ConfirmDialog; L489 ConfirmDialog.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   4. **Modify** `src/components/inventory/InventoryTable/InventoryTable.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InventoryTable`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L219 DropdownMenu (list.actionsFor); L221 button (list.actionsFor); L238 DataTable; L246 DataTable empty prop (list.emptyFiltered).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   5. **Modify** `src/components/ui/MultiLocationStockIndicator/MultiLocationStockIndicator.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `MultiLocationStockIndicator`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/inventory/StockAdjustmentPanel/StockAdjustmentPanel.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.list.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `StockAdjustmentPanel`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L103 SlideOver (stock.adjustTitle); L127 button (stock.tabAdjust); L134 button (stock.tabTransfer); L146 SelectInput (stock.selectLocation); L163 button; L169 button; L177 TextInput (stock.quantity); L190 button; L201 TextareaInput (stock.notesLabel); L213 SelectInput (stock.originLabel); L232 SelectInput (stock.destinationLabel); L246 TextInput (stock.transferQuantity); L265 Button; L266 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `inventory.list.<step>.title` and `.body` for these steps: `table`, `row`, `rowImage`, `rowName`, `rowStock`, `rowStatus`, `rowSelect`, `selectAll`, `bulkBar`, `bulkCount`, `bulkActionA`, `bulkActionB`, `bulkActionC`, `bulkClear`, `rowMenu`, `menuEdit`, `menuAdjust`, `menuDelete`, `stockAdjust`, `deleteConfirm`, `bulkConfirm`, `pagination`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `inventory.list.<step>.title` and `.body` for these steps in Albanian: `table`, `row`, `rowImage`, `rowName`, `rowStock`, `rowStatus`, `rowSelect`, `selectAll`, `bulkBar`, `bulkCount`, `bulkActionA`, `bulkActionB`, `bulkActionC`, `bulkClear`, `rowMenu`, `menuEdit`, `menuAdjust`, `menuDelete`, `stockAdjust`, `deleteConfirm`, `bulkConfirm`, `pagination`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Extend the table entry `{ page: 'inventory.list', route: 'inventory' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "inventory.list"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/inventoryList.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/inventory/InventoryList/InventoryList.tsx`.
@@ -7764,6 +12659,11 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 232.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Inventory list is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - The other parts of Inventory list, which belong to S88 (Inventory list: header, filters and states).
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S90: Product form
 
@@ -7773,9 +12673,73 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Product form (create and edit)** (`inventory.form`; `/:tenantSlug/inventory/new`, `/:tenantSlug/inventory/:productId/edit`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/inventory/ProductForm/ProductForm.tsx`, `components/inventory/ProductImageManager`.
 6. **Production LOC estimate:** **~298** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 28 steps x 8 = 224 + 25 annotation sites x 2 = 50 + `ProductImageManager` annotations 8. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/inventory/ProductForm/ProductForm.tsx`, `src/components/inventory/WarehouseStockAllocation`, `src/components/inventory/ProductImageManager`
-   - New: `src/lib/support/guides/inventoryForm.ts`, `src/lib/support/guides/inventoryForm.test.tsx`. Touched: `locales/{en,sq}/supportOps.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (11 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/inventoryForm.ts`
+      - Change: Create the page guide with the 28 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'inventory.form', version: 1, namespace: 'supportOps', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'inventory.form.<id>', kind, safety, … }`. Steps in state-only elements: `fieldErrors`, `saving`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `discard`, `delete`.
+      - Integration: Loaded lazily through `loaders['inventory.form']` in `pageRegistry.ts`; copy keys resolve to `supportOps:inventory.form.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/inventoryForm.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/inventoryForm.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'inventory.form': () => import('./guides/inventoryForm')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'inventory.form'` on the entries for `inventory/new`, `inventory/:productId/edit` and delete `'inventory.form'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/inventory/ProductForm/ProductForm.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ProductForm`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L312 Button (form.backToInventory); L324 button (form.breadcrumbInventory); L352 TextInput (form.nameLabel); L362 TextInput; L370 TextInput; L384 TextareaInput; L392 SelectInput (form.categoryLabel); L418 TextInput (form.priceLabel); L431 TextInput; L444 TextInput; L542 Button; L554 Button; L585 Button (form.close); L588 Button; L600 ConfirmDialog (form.deleteTitle).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/inventory/WarehouseStockAllocation/WarehouseStockAllocation.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `WarehouseStockAllocation`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L39 Button.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/components/inventory/WarehouseStockAllocation/WarehouseStockRow.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `WarehouseStockRow`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L34 SelectInput (stock.warehouseLabel); L48 TextInput (stock.initialQuantity); L57 button (stock.removeRowAria); L61 aria-label (stock.removeRowAria).
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/components/inventory/ProductImageManager/ProductImageManager.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('inventory.form.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `ProductImageManager`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L135 aria-label (form.imagesAria); L200 aria-label; L230 button; L235 aria-label; L239 button; L244 aria-label; L248 button; L257 aria-label; L284 aria-label (form.addImagesAria); L298 input.
+      - Integration: The component is rendered inside `AppLayout` by its page wrapper (see section 3); it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   9. **Modify** `src/locales/en/supportOps.json`
+      - Change: Add `inventory.form.<step>.title` and `.body` for these steps: `mode`, `back`, `name`, `sku`, `category`, `brand`, `description`, `price`, `cost`, `stockAllocation`, `allocationAdd`, `threshold`, `status`, `details`, `fieldErrors`, `images`, `imageAdd`, `imageThumb`, `imageMove`, `imageRemove`, `imageLimit`, `discard`, `discardConfirm`, `save`, `dangerZone`, `delete`, `deleteConfirm`, `saving`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `src/locales/sq/supportOps.json`
+      - Change: Add `inventory.form.<step>.title` and `.body` for these steps in Albanian: `mode`, `back`, `name`, `sku`, `category`, `brand`, `description`, `price`, `cost`, `stockAllocation`, `allocationAdd`, `threshold`, `status`, `details`, `fieldErrors`, `images`, `imageAdd`, `imageThumb`, `imageMove`, `imageRemove`, `imageLimit`, `discard`, `discardConfirm`, `save`, `dangerZone`, `delete`, `deleteConfirm`, `saving`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportOps')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   11. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'inventory.form', route: 'inventory/new' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "inventory.form"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/inventoryForm.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/inventory/ProductForm/ProductForm.tsx`.
@@ -7845,6 +12809,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 298.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Product form (create and edit) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 #### Page tours: Platform administration (Super Admin)
 
@@ -7856,9 +12824,67 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Platform: Tenants** (`admin.tenants`; `/admin/tenants`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/admin/TenantsPage.tsx`, `components/widgets/TenantManagementTable`, `pages/admin/CreateTenantModal.tsx`.
 6. **Production LOC estimate:** **~202** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32 + Annotations in `TenantManagementTable` and `CreateTenantModal` 10. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/admin/TenantsPage.tsx`, `src/components/widgets/TenantManagementTable`, `src/pages/admin/CreateTenantModal.tsx`
-   - New: `src/lib/support/guides/adminTenants.ts`, `src/lib/support/guides/adminTenants.test.tsx`. Touched: `locales/{en,sq}/supportAdmin.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (10 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/adminTenants.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'admin.tenants', version: 1, namespace: 'supportAdmin', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'admin.tenants.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `create`, `status`, `delete`.
+      - Integration: Loaded lazily through `loaders['admin.tenants']` in `pageRegistry.ts`; copy keys resolve to `supportAdmin:admin.tenants.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/adminTenants.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/adminTenants.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'admin.tenants': () => import('./guides/adminTenants')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'admin.tenants'` on the entries for `/admin/tenants` and delete `'admin.tenants'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/admin/TenantsPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.tenants.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TenantsPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L100 Button; L112 role=alert; L121 role=alert; L159 ConfirmDialog; L185 ConfirmDialog (superAdmin.confirmDeleteTitle); L198 input; L211 role=alert (superAdmin.confirmDeleteMismatch).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/components/widgets/TenantManagementTable/TenantManagementTable.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.tenants.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TenantManagementTable`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L116 DropdownMenu; L119 button (superAdmin.tenantActionsFor); L122 aria-label (superAdmin.tenantActionsFor); L193 button (superAdmin.viewAllTenants); L199 DataTable (superAdmin.tableCaption); L206 DataTable empty prop (superAdmin.emptyTitle).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: Extend the existing `src/components/widgets/TenantManagementTable/TenantManagementTable.test.tsx` with an assertion that the annotated ids are present for the empty and the populated render.
+   7. **Modify** `src/pages/admin/CreateTenantModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.tenants.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `CreateTenantModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L110 Modal (superAdmin.createTenantTitle); L111 form (superAdmin.createTenantIntro); L114 TextInput (superAdmin.fieldCompanyName); L123 TextInput (superAdmin.fieldUrlSlug); L135 TextInput (superAdmin.fieldOwnerEmail); L155 role=alert; L161 Button (superAdmin.cancel); L164 Button (superAdmin.creating).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   8. **Modify** `src/locales/en/supportAdmin.json`
+      - Change: Add `admin.tenants.<step>.title` and `.body` for these steps: `title`, `newTenant`, `table`, `row`, `rowStatus`, `rowActions`, `suspend`, `delete`, `createModal`, `createFields`, `createSave`, `statusConfirm`, `statusOk`, `deleteConfirm`, `deleteSlug`, `deleteOk`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `src/locales/sq/supportAdmin.json`
+      - Change: Add `admin.tenants.<step>.title` and `.body` for these steps in Albanian: `title`, `newTenant`, `table`, `row`, `rowStatus`, `rowActions`, `suspend`, `delete`, `createModal`, `createFields`, `createSave`, `statusConfirm`, `statusOk`, `deleteConfirm`, `deleteSlug`, `deleteOk`, `empty`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   10. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'admin.tenants', route: '/admin/tenants' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "admin.tenants"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/adminTenants.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/admin/TenantsPage.tsx`, `src/pages/admin/CreateTenantModal.tsx`.
@@ -7915,6 +12941,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 202.
 15. **Dependencies and handoff:** unblocks S95. After this slice **Platform: Tenants is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S92: Platform: People
 
@@ -7924,9 +12954,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Platform: People** (`admin.people`; `/admin/people`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/admin/PeoplePage.tsx`, `pages/admin/InviteUserModal.tsx`.
 6. **Production LOC estimate:** **~292** (within the 200 to 300 target): 16 guide module, loader line, route-map flip + 27 steps x 8 = 216 + 24 annotation sites x 2 = 48 + Annotations in `InviteUserModal` and the inline dialogs 12. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/admin/PeoplePage.tsx`, `src/pages/admin/InviteUserModal.tsx`
-   - New: `src/lib/support/guides/adminPeople.ts`, `src/lib/support/guides/adminPeople.test.tsx`. Touched: `locales/{en,sq}/supportAdmin.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/adminPeople.ts`
+      - Change: Create the page guide with the 27 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'admin.people', version: 1, namespace: 'supportAdmin', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11) and uses shared kinds: `shared.statusBadge`. Each step: `{ id, target: 'admin.people.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `emptyNoMatch`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `menu`, `invite`, `role`, `deactivate`, `delete`, `all`.
+      - Integration: Loaded lazily through `loaders['admin.people']` in `pageRegistry.ts`; copy keys resolve to `supportAdmin:admin.people.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/adminPeople.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/adminPeople.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'admin.people': () => import('./guides/adminPeople')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'admin.people'` on the entries for `/admin/people` and delete `'admin.people'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/admin/PeoplePage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.people.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PeoplePage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L280 DropdownMenu; L283 button (superAdmin.userActionsFor); L286 aria-label (superAdmin.userActionsFor); L333 Button; L347 TextInput (superAdmin.filterSearch); L357 SelectInput (superAdmin.filterWorkspace); L370 SelectInput (superAdmin.filterRole); L383 role=alert; L389 role=alert; L394 DataTable (superAdmin.peopleTableCaption); L400 DataTable empty prop (superAdmin.peopleEmptyTitle); L416 ConfirmDialog (superAdmin.confirmSuspendUserTitle); L439 role=alert; L448 ConfirmDialog (superAdmin.confirmReactivateUserTitle); L472 input; L496 ConfirmDialog (superAdmin.confirmDeleteUserTitle); L521 input; L535 role=alert; L575 SelectInput (superAdmin.newBusinessOwner).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/admin/InviteUserModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.people.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `InviteUserModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L91 Modal (superAdmin.inviteUserTitle); L92 form; L97 SelectInput (superAdmin.fieldRole); L112 SelectInput (superAdmin.fieldWorkspace); L127 TextInput (superAdmin.fieldUserEmail); L137 role=alert; L143 Button (superAdmin.cancel); L146 Button (superAdmin.sendingInvite).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportAdmin.json`
+      - Change: Add `admin.people.<step>.title` and `.body` for these steps: `title`, `invite`, `search`, `roleFilter`, `statusFilter`, `table`, `row`, `rowStatus`, `rowMenu`, `menuChangeRole`, `menuDeactivate`, `menuDelete`, `empty`, `emptyNoMatch`, `error`, `inviteModal`, `inviteEmail`, `inviteRole`, `inviteSend`, `roleDialog`, `roleOptions`, `roleOk`, `deactivateDialog`, `deactivateOk`, `deleteDialog`, `deleteOk`, `dialogError`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportAdmin.json`
+      - Change: Add `admin.people.<step>.title` and `.body` for these steps in Albanian: `title`, `invite`, `search`, `roleFilter`, `statusFilter`, `table`, `row`, `rowStatus`, `rowMenu`, `menuChangeRole`, `menuDeactivate`, `menuDelete`, `empty`, `emptyNoMatch`, `error`, `inviteModal`, `inviteEmail`, `inviteRole`, `inviteSend`, `roleDialog`, `roleOptions`, `roleOk`, `deactivateDialog`, `deactivateOk`, `deleteDialog`, `deleteOk`, `dialogError`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'admin.people', route: '/admin/people' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "admin.people"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/adminPeople.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/admin/PeoplePage.tsx`, `src/pages/admin/InviteUserModal.tsx`.
@@ -7995,6 +13077,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 292.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Platform: People is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S93: Platform: Settings
 
@@ -8004,9 +13090,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Platform: Settings** (`admin.settings`; `/admin/setting`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S58 (Settings: Company). Existing code it relies on, unchanged since planning: `pages/admin/PlatformSettingsPage.tsx`, `pages/admin/TenantPickerModal.tsx`.
 6. **Production LOC estimate:** **~192** (just under the target (150 to 199)): 16 guide module, loader line, route-map flip + 18 steps x 8 = 144 + 16 annotation sites x 2 = 32. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/admin/PlatformSettingsPage.tsx`, `src/pages/admin/TenantPickerModal.tsx`
-   - New: `src/lib/support/guides/adminSettings.ts`, `src/lib/support/guides/adminSettings.test.tsx`. Touched: `locales/{en,sq}/supportAdmin.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/adminSettings.ts`
+      - Change: Create the page guide with the 18 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'admin.settings', version: 1, namespace: 'supportAdmin', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'admin.settings.<id>', kind, safety, … }`. Steps in state-only elements: `scopeSummary`, `saved`, `error`, `loading`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `picker`, `apply`.
+      - Integration: Loaded lazily through `loaders['admin.settings']` in `pageRegistry.ts`; copy keys resolve to `supportAdmin:admin.settings.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/adminSettings.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/adminSettings.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'admin.settings': () => import('./guides/adminSettings')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'admin.settings'` on the entries for `/admin/setting` and delete `'admin.settings'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/admin/PlatformSettingsPage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.settings.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `PlatformSettingsPage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L139 input; L153 input; L169 Button (superAdmin.selectTenants); L203 select; L223 select; L240 select; L263 select; L308 input; L324 role=status (superAdmin.applyingToPlatform); L333 Button; L354 ConfirmDialog.
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/admin/TenantPickerModal.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.settings.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `TenantPickerModal`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L79 Modal (superAdmin.selectTenantsTitle); L81 TextInput (superAdmin.selectTenantsSearchPlaceholder); L85 aria-label (superAdmin.selectTenantsSearchPlaceholder); L91 input; L113 input; L129 Button (superAdmin.cancel); L132 Button (superAdmin.applySelection).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportAdmin.json`
+      - Change: Add `admin.settings.<step>.title` and `.body` for these steps: `title`, `scopeAll`, `scopeSelected`, `chooseTenants`, `pickerModal`, `pickerSearch`, `pickerRow`, `pickerOk`, `language`, `defaults`, `checkbox`, `scopeSummary`, `apply`, `applyConfirm`, `applyOk`, `saved`, `error`, `loading`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportAdmin.json`
+      - Change: Add `admin.settings.<step>.title` and `.body` for these steps in Albanian: `title`, `scopeAll`, `scopeSelected`, `chooseTenants`, `pickerModal`, `pickerSearch`, `pickerRow`, `pickerOk`, `language`, `defaults`, `checkbox`, `scopeSummary`, `apply`, `applyConfirm`, `applyOk`, `saved`, `error`, `loading`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'admin.settings', route: '/admin/setting' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "admin.settings"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/adminSettings.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/admin/PlatformSettingsPage.tsx`, `src/pages/admin/TenantPickerModal.tsx`.
@@ -8062,6 +13200,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 192.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Platform: Settings is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S94: Platform: My profile
 
@@ -8071,9 +13213,55 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Platform: My profile** (`admin.profile`; `/admin/profile`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore). Existing code it relies on, unchanged since planning: `pages/admin/AdminProfilePage.tsx`.
 6. **Production LOC estimate:** **~144** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 13 steps x 8 = 104 + 12 annotation sites x 2 = 24. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/admin/AdminProfilePage.tsx`
-   - New: `src/lib/support/guides/adminProfile.ts`, `src/lib/support/guides/adminProfile.test.tsx`. Touched: `locales/{en,sq}/supportAdmin.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (8 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/adminProfile.ts`
+      - Change: Create the page guide with the 13 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'admin.profile', version: 1, namespace: 'supportAdmin', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'admin.profile.<id>', kind, safety, … }`. Steps in state-only elements: `errors`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): `confirm`.
+      - Integration: Loaded lazily through `loaders['admin.profile']` in `pageRegistry.ts`; copy keys resolve to `supportAdmin:admin.profile.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/adminProfile.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/adminProfile.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'admin.profile': () => import('./guides/adminProfile')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'admin.profile'` on the entries for `/admin/profile` and delete `'admin.profile'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/admin/AdminProfilePage.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.profile.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `AdminProfilePage`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L153 form (profile.firstName); L155 TextInput (profile.firstName); L161 TextInput (profile.lastName); L169 TextInput (profile.email); L177 Button; L197 form (profile.currentPassword); L198 TextInput (profile.currentPassword); L205 TextInput (profile.newPassword); L212 TextInput (profile.confirmPassword); L222 Button (profile.changePasswordTitle); L251 Button; L265 ConfirmDialog; L275 TextInput; L284 role=alert.
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/locales/en/supportAdmin.json`
+      - Change: Add `admin.profile.<step>.title` and `.body` for these steps: `title`, `firstName`, `lastName`, `email`, `saveProfile`, `currentPassword`, `newPassword`, `confirmPassword`, `changePassword`, `extraAction`, `confirmDialog`, `confirmOk`, `errors`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   7. **Modify** `src/locales/sq/supportAdmin.json`
+      - Change: Add `admin.profile.<step>.title` and `.body` for these steps in Albanian: `title`, `firstName`, `lastName`, `email`, `saveProfile`, `currentPassword`, `newPassword`, `confirmPassword`, `changePassword`, `extraAction`, `confirmDialog`, `confirmOk`, `errors`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'admin.profile', route: '/admin/profile' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "admin.profile"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/adminProfile.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: control lines extracted during planning, conditions not read in context; read the files fully and verify every condition): `src/pages/admin/AdminProfilePage.tsx`.
@@ -8123,6 +13311,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 144.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Platform: My profile is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ### S95: Platform dashboard, and phase closure
 
@@ -8132,9 +13324,61 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 4. **Page association:** one page only: **Platform dashboard (Super Admin)** (`admin.dashboard`; `/admin`, `/admin/dashboard`); slice 1 of 1. Not infrastructure.
 5. **Prerequisites:** S16 (Explain a control: pick mode); S18 (Clients list: states, rows, row menu and archive / restore); S91 (Platform: Tenants). Existing code it relies on, unchanged since planning: `pages/dashboard/SuperAdminDashboard.tsx`, `pages/shell/SuperAdminShell.tsx`.
 6. **Production LOC estimate:** **~110** (**below 150: documented exception (R1, D1)**): 16 guide module, loader line, route-map flip + 9 steps x 8 = 72 + 8 annotation sites x 2 = 16 + Remove the final id from `PLANNED_PAGES` and turn the `it.todo` guard into a real test 6. Copy is JSON and not counted.
-7. **Files and components:**
-   - Existing, annotated (attributes only, no wrappers): `src/pages/dashboard/SuperAdminDashboard.tsx`, `src/pages/shell/SuperAdminShell.tsx`
-   - New: `src/lib/support/guides/adminDashboard.ts`, `src/lib/support/guides/adminDashboard.test.tsx`. Touched: `locales/{en,sq}/supportAdmin.json`, `tests/e2e/support.spec.ts`, `src/lib/support/pageRegistry.ts`, `routeMap.ts`.
+7. **File-Level Change Plan** (9 files; paths relative to `frontend/`; symbols marked (new) are proposed, all others exist today):
+   1. **Create** `src/lib/support/guides/adminDashboard.ts`
+      - Change: Create the page guide with the 9 steps listed in item 8, in tour order. Export default `definePageGuide({ pageId: 'admin.dashboard', version: 1, namespace: 'supportAdmin', steps })`.
+      - Implementation details: Imports `definePageGuide` (S11). Each step: `{ id, target: 'admin.dashboard.<id>', kind, safety, … }`. Steps in state-only elements: `empty`, `loading`, `error`. Eligibility (`requires`): none beyond page access. Hand-offs (`opens`/`group`): none.
+      - Integration: Loaded lazily through `loaders['admin.dashboard']` in `pageRegistry.ts`; copy keys resolve to `supportAdmin:admin.dashboard.<id>`; the host (S08) runs it; S15/S16 list its steps as explainable controls.
+      - Removal: No removal: new or additive.
+      - Verification: `src/lib/support/guides/adminDashboard.test.tsx` (ST-1 to ST-5) and the page's Playwright row.
+   2. **Create** `src/lib/support/guides/adminDashboard.test.tsx`
+      - Change: Create the guide test first: `assertGuideIntegrity`, per-state resolution against the rendered page, change-during-tour, eligibility, read-only spies, and the slice-specific cases of item 11.
+      - Implementation details: Renders the real content component(s) with msw handlers from `src/mocks`, an auth user with a given `permissions` map, and the Support host (`renderWithSupport`, S08).
+      - Integration: Uses the same providers as the existing page tests.
+      - Removal: None.
+      - Verification: It is the verification for this slice.
+   3. **Modify** `src/lib/support/pageRegistry.ts`
+      - Change: Add the loader entry `'admin.dashboard': () => import('./guides/adminDashboard')` to the `loaders` record.
+      - Implementation details: `loaders`
+      - Integration: Makes `hasGuide` true for the page in `useSupportPage`.
+      - Removal: No removal.
+      - Verification: Route-map guard test (S03) requires a loader for every mapped page.
+   4. **Modify** `src/lib/support/routeMap.ts`
+      - Change: Set `pageId: 'admin.dashboard'` on the entries for `/admin`, `/admin/dashboard` and delete `'admin.dashboard'` from `PLANNED_PAGES`.
+      - Implementation details: `ROUTE_MAP`, `PLANNED_PAGES`
+      - Integration: The patterns must equal the `path` strings in `src/routes/index.tsx`.
+      - Removal: Remove only the id from `PLANNED_PAGES`: safe because the guard test now requires the loader instead.
+      - Verification: `routeMap.test.ts`.
+   5. **Modify** `src/pages/dashboard/SuperAdminDashboard.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.dashboard.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `SuperAdminDashboard`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): L156 Button (superAdmin.newTenant); L171 KPICard (superAdmin.activeTenants); L182 KPICard (superAdmin.globalMrr); L190 KPICard (superAdmin.systemHealth).
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   6. **Modify** `src/pages/shell/SuperAdminShell.tsx`
+      - Change: Annotate the elements that implement the steps of this slice with `tourProps('admin.dashboard.<step>')` (plain elements, `Button`, `TextInput`, `SelectInput` spread it) or the `tourId` prop (`DataTable`, `Tabs`, `Pagination`, `Modal`, `SlideOver`, `ConfirmDialog`, `DropdownMenu` items, field containers). Mark repeated structures with `repeat`. Do not add wrappers, change handlers or touch styling.
+      - Implementation details: Exports: `SuperAdminShell`. Locate each step's element by its i18n key or `aria-label`; current anchors in this file (line numbers may drift, search by key): none found: read the file.
+      - Integration: The component is rendered inside `AppLayout` by `SuperAdminShell`; it keeps its own state, services and permission checks untouched, and the tour only reads the resulting DOM.
+      - Removal: No removal: attribute-only change.
+      - Verification: No test file exists next to it: cover it in the guide test (do not create a new component test unless a regression appears).
+   7. **Modify** `src/locales/en/supportAdmin.json`
+      - Change: Add `admin.dashboard.<step>.title` and `.body` for these steps: `title`, `newTenant`, `summaryCards`, `recent`, `recentItem`, `viewAll`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   8. **Modify** `src/locales/sq/supportAdmin.json`
+      - Change: Add `admin.dashboard.<step>.title` and `.body` for these steps in Albanian: `title`, `newTenant`, `summaryCards`, `recent`, `recentItem`, `viewAll`, `empty`, `loading`, `error`. Add `.when`, `.warning`, `.disabled` for steps that need them (warning steps, steps with a disabled hint).
+      - Implementation details: Flat nested JSON like the other namespaces (`pageId` object containing step objects).
+      - Integration: Loaded by `loadSupportCopy('supportAdmin')` (S04); not statically imported.
+      - Removal: No removal.
+      - Verification: `npm run check:translations` and `assertGuideIntegrity` key check.
+   9. **Modify** `tests/e2e/support.spec.ts`
+      - Change: Add the table entry `{ page: 'admin.dashboard', route: '/admin' }`: open the route, open Support, start the tour, press Next to the end, assert no console error, no navigation, and `expectNoMutations(page)`; repeat at 360 px.
+      - Implementation details: The spec created in S09; helper from `tests/e2e/support/noMutations.ts` (S14).
+      - Integration: Runs in the `support` Playwright project.
+      - Removal: No removal.
+      - Verification: `npx playwright test --project=support --grep "admin.dashboard"`.
 8. **Implementation tasks (in order; PT = standard procedure, section 6.1):**
    1. **PT-1 Red first** in `src/lib/support/guides/adminDashboard.test.tsx`: ST-1 to ST-5 plus the slice-specific tests of item 11.
    2. **PT-2 Re-inventory** (evidence: profiled only; read the files fully and treat the steps as a hypothesis): `src/pages/dashboard/SuperAdminDashboard.tsx`, `src/pages/shell/SuperAdminShell.tsx`.
@@ -8180,6 +13424,10 @@ Each page slice below lists its *own* inputs (files, annotation sites, steps, st
 
 14. **Completion evidence:** SE-1 to SE-4; measured production LOC against the estimate of 110.
 15. **Dependencies and handoff:** unblocks nothing depends on it directly. After this slice **Platform dashboard (Super Admin) is complete**: every applicable state in 7.3 is covered.
+16. **Intentionally excluded from this slice:**
+   - Any other page. Shared components reused from other pages are only referenced here, not re-annotated (see item 5 and section 5.3).
+   - Any behavioural change, refactor, new wrapper element, style change or fix of a defect found in the page; defects are reported, not fixed here.
+   - Any backend, schema, route-table or dependency change.
 
 ---
 
