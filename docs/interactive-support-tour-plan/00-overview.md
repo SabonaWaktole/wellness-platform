@@ -14,8 +14,8 @@
 
 > ## If you were asked to implement a slice ("implement slice 7", "do S07")
 >
-> 1. "Slice N" means the heading `### SNN:` in the slice document listed for it in the table in section 6. Open **only** that slice, plus the standard procedure (6.1) and the assumptions (0.2) repeated below. Do not read the overview in full.
-> 2. Read the slice's **Prerequisites** (item 5) and confirm each prerequisite slice is already merged (the overview, `00-overview.md`, has the slice-to-document table in section 6 and the dependency table in 5.6). If one is not merged, stop and say so; do not build it as a side effect.
+> 1. "Slice N" means the heading `### SNN:` in the phase document listed for it in the table in section 6. Open **only** that slice, plus the standard procedure (6.1) and the assumptions (0.2) repeated below. Do not read the overview in full.
+> 2. Read the slice's **Prerequisites** (item 5) and confirm each prerequisite slice is already merged (the overview, `00-overview.md`, has the slice-to-phase-document table in section 6 and the dependency table in 5.6). If one is not merged, stop and say so; do not build it as a side effect.
 > 3. Foundation slices (S01 to S04) are made of parts P01 to P16; read every part inside the slice.
 > 4. Work test-first. Apply the **File-Level Change Plan** (item 7) file by file; follow item 8 for task order; keep to item 16 (what is excluded).
 > 5. Verify with item 13, check item 12, and report the measured production LOC next to the estimate in item 6.
@@ -207,7 +207,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** The mine / team / all select only for `companies.view` scope TEAM or ALL (its Team option only for ALL); the archived toggle, Delete and Restore only with `companies.delete`; Delete only outside the archived view, Restore only inside it; the Add-client empty action only with no search term and outside the archived view; Clear filters only while a filter is active; the filter bar only while shown. **Restore runs immediately with no confirmation.**
 - **States that exist:** E L P F X A D K. Three distinct empty states (first use, no match for a search term, archived view); load error banner (`role="alert"`). **Previous/Next are static `disabled` buttons with no handler** and are not explained.
 - **Source files:** `pages/clients/ClientListPage.tsx`, `pages/clients/ClientListContent.tsx`, `components/ui/DataTable/DataTable.tsx`, `components/ui/DropdownMenu/DropdownMenu.tsx`
-- **Slices:** [S05](slices-1.md#s05)
+- **Slices:** [S05](phase-1.md#s05)
 
 **2. Client form (create and edit)** (`clients.form`)
 - **Route(s):** `/:tenantSlug/clients/new`, `/:tenantSlug/clients/:clientId/edit`
@@ -217,7 +217,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** The first-deal card only when creating and with `deals.edit`; city depends on area; the tenant form only if one exists; one component serves both routes (`isEdit`). **In edit mode `ContactPersonsEditor` saves each change through its own endpoints immediately (not on Save), so its controls are explain-only there; in create mode it edits a draft.**
 - **States that exist:** L A D V. Validation messages per field, submit error banner, edit-mode loading.
 - **Source files:** `pages/clients/ClientFormPage.tsx`, `pages/clients/ClientFormContent.tsx`, `pages/clients/ContactPersonsEditor.tsx`, `components/ui/CustomFieldInput`
-- **Slices:** [S06](slices-1.md#s06)
+- **Slices:** [S06](phase-1.md#s06)
 
 **3. Client detail** (`clients.detail`)
 - **Route(s):** `/:tenantSlug/clients/:clientId`
@@ -227,7 +227,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Script button needs `script.view`; the follow-ups panel needs `calendar.view` (Plan: `activities.add`; quick buttons: `followups.manage`); Calculate price needs `offers.edit`; Employee upload needs `members.import`; Contracts, Deals, Wellness tabs need `contracts.validity.view`, `deals.view`, `members.view`; add activity / note need `activities.add` / `notes.add`.
 - **States that exist:** E L P X A D T K. Loading, not found, duplicate-name notice, empty timeline, empty tabs.
 - **Source files:** `pages/clients/ClientDetailPage.tsx`, `pages/clients/ClientDetailContent.tsx`, `components/followUps/FollowUpsPanel.tsx`, `components/calendar/PlanActivityDialog.tsx`, `components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`, `components/clients/CompanyTimeline.tsx`, `components/clients/ClientContractsTab.tsx`, `components/clients/ClientDealsTab.tsx`, `pages/membership/CompanyWellnessTab.tsx`, `components/activities/ActivityDialog.tsx`
-- **Slices:** [S09](slices-2.md#s09)
+- **Slices:** [S09](phase-2.md#s09)
 
 **4. Pricing screen (offer builder)** (`pricing.offer`)
 - **Route(s):** `/:tenantSlug/deals/:dealId/pricing`, `/:tenantSlug/clients/:clientId/pricing`
@@ -237,7 +237,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Entered from a deal or from a company (deal chosen on screen); Save disabled until `canSave`; discount and approval states depend on pricing settings and permissions.
 - **States that exist:** L X A V. Load error (`pricingScreenError`), warning text, saving.
 - **Source files:** `pages/pricing/PricingContent.tsx`
-- **Slices:** [S10](slices-2.md#s10)
+- **Slices:** [S10](phase-2.md#s10)
 
 **5. Calendar (appointments, follow-ups, contract dates)** (`appointments`)
 - **Route(s):** `/:tenantSlug/appointments`
@@ -247,7 +247,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Calendar scope (`calendar.view` OWN/TEAM/ALL) decides the team filter; Plan needs `activities.add`; follow-up actions need `followups.manage`; contract date chips only for contract viewers.
 - **States that exist:** E L P X A D T V. Empty period (`role="status"`), load notice (`role="alert"`), overdue section appears only when items are overdue.
 - **Source files:** `pages/appointments/AppointmentsPage.tsx`, `pages/appointments/CalendarContent.tsx`, `components/calendar/CalendarToolbar.tsx`, `components/calendar/CalendarMonthView.tsx`, `components/calendar/CalendarTimeGrid.tsx`, `components/calendar/CalendarAgenda.tsx`, `components/calendar/TeamFilter.tsx`, `components/calendar/OverdueSection.tsx`, `components/calendar/PlanActivityDialog.tsx`, `components/calendar/RescheduleItemDialog.tsx`, `components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`
-- **Slices:** [S08](slices-2.md#s08)
+- **Slices:** [S08](phase-2.md#s08)
 
 **6. Follow-ups** (`followUps`)
 - **Route(s):** `/:tenantSlug/follow-ups`
@@ -257,7 +257,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Team tab and salesperson filter by `calendar.view` scope; actions need `followups.manage`.
 - **States that exist:** E L P F X A D T. Empty list per tab, loading, error.
 - **Source files:** `pages/followUps/FollowUpsPage.tsx`, `pages/followUps/FollowUpsContent.tsx`, `components/followUps/FollowUpList.tsx`, `components/followUps/FollowUpActionModals.tsx`, `components/followUps/FollowUpQuickButtons.tsx`
-- **Slices:** [S07](slices-1.md#s07)
+- **Slices:** [S07](phase-1.md#s07)
 
 **7. Discount approvals** (`approvals`)
 - **Route(s):** `/:tenantSlug/approvals`
@@ -267,7 +267,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Whole page needs `discounts.approve`; only in the SALES_PROCESS workflow (nav item filter).
 - **States that exist:** E L P G X A. Empty queue, loading, error.
 - **Source files:** `pages/approvals/ApprovalsPage.tsx`, `pages/approvals/ApprovalsContent.tsx`
-- **Slices:** [S11](slices-2.md#s11)
+- **Slices:** [S11](phase-2.md#s11)
 
 **8. Offers list** (`offers`)
 - **Route(s):** `/:tenantSlug/offers`
@@ -277,7 +277,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `commercial.view`; salesperson select only above OWN scope; SALES_PROCESS workflow.
 - **States that exist:** E L P F G X A. Empty / no-match, loading, error.
 - **Source files:** `pages/offers/OfferList.tsx`, `pages/offers/OfferListContent.tsx`
-- **Slices:** [S12](slices-2.md#s12)
+- **Slices:** [S12](phase-2.md#s12)
 
 **9. Pipeline board** (`pipeline.board`)
 - **Route(s):** `/:tenantSlug/pipeline`
@@ -287,7 +287,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Move needs `deals.edit`; deal values need `commercial.view`; New deal needs `deals.edit`.
 - **States that exist:** E L P X A D. Empty column, partial load per column, error.
 - **Source files:** `pages/deals/DealsPage.tsx`, `pages/deals/PipelineBoardContent.tsx`, `pages/deals/PipelineViewSwitch.tsx`, `pages/deals/DealMarkers.tsx`
-- **Slices:** [S15](slices-2.md#s15)
+- **Slices:** [S15](phase-2.md#s15)
 
 **10. Pipeline list** (`pipeline.list`)
 - **Route(s):** `/:tenantSlug/pipeline/list`
@@ -297,7 +297,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Salesperson filter above OWN scope; values need `commercial.view`.
 - **States that exist:** E L P F G X A. Empty / no-match, loading, error.
 - **Source files:** `pages/deals/DealListContent.tsx`, `pages/deals/PipelineViewSwitch.tsx`
-- **Slices:** [S16](slices-2.md#s16)
+- **Slices:** [S16](phase-2.md#s16)
 
 **11. Deal form (create and edit)** (`deals.form`)
 - **Route(s):** `/:tenantSlug/deals/new`, `/:tenantSlug/deals/:dealId/edit`
@@ -307,7 +307,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Salesperson select needs `companies.reassign`; needs `deals.edit`.
 - **States that exist:** L A V. Field errors, `role="alert"` form error, saving.
 - **Source files:** `pages/deals/DealFormContent.tsx`
-- **Slices:** [S13](slices-2.md#s13)
+- **Slices:** [S13](phase-2.md#s13)
 
 **12. Deal detail** (`deals.detail`)
 - **Route(s):** `/:tenantSlug/deals/:dealId`
@@ -317,7 +317,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Edit needs `deals.edit`; Reassign `companies.reassign`; Delete `deals.delete`; Reopen `deals.reopen`; Win is disabled without an offer; open vs closed deals show different actions.
 - **States that exist:** E L P X A D V K. Open vs won vs lost deal; empty offers/activities; dialog validation (`disabled` until a reason/comment).
 - **Source files:** `pages/deals/DealDetailContent.tsx`, `pages/deals/DealClosingModals.tsx`, `pages/deals/DealActivitiesSection.tsx`, `pages/deals/DealOffersSection.tsx`
-- **Slices:** [S14](slices-2.md#s14)
+- **Slices:** [S14](phase-2.md#s14)
 
 **13. Quotations list (legacy workflow)** (`quotations.list`)
 - **Route(s):** `/:tenantSlug/quotations`
@@ -327,7 +327,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Only in the LEGACY_QUOTATIONS workflow (nav `workflow` filter) and with `quotations.manage`.
 - **States that exist:** E L P F X A. Empty, loading, error; **Previous/Next static `disabled`** (not explained).
 - **Source files:** `pages/quotations/QuotationList.tsx`, `pages/quotations/QuotationListContent.tsx`
-- **Slices:** [S17](slices-2.md#s17)
+- **Slices:** [S17](phase-2.md#s17)
 
 **14. Quotation form (create and edit)** (`quotations.form`)
 - **Route(s):** `/:tenantSlug/quotations/new`, `/:tenantSlug/quotations/:id/edit`
@@ -337,7 +337,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Legacy workflow only.
 - **States that exist:** L P A V. Row validation, saving.
 - **Source files:** `pages/quotations/CreateQuotation.tsx`, `pages/quotations/EditQuotation.tsx`, `pages/quotations/QuotationFormContent.tsx`
-- **Slices:** [S18](slices-3.md#s18)
+- **Slices:** [S18](phase-3.md#s18)
 
 **15. Quotation detail** (`quotations.detail`)
 - **Route(s):** `/:tenantSlug/quotations/:id`
@@ -347,7 +347,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Which buttons render depends on status and permission; legacy workflow only.
 - **States that exist:** L X A K. One layout per status; `role="alert"` error banner.
 - **Source files:** `pages/quotations/QuotationDetail.tsx`, `pages/quotations/QuotationDetailContent.tsx`
-- **Slices:** [S19](slices-3.md#s19)
+- **Slices:** [S19](phase-3.md#s19)
 
 **16. Invoices list** (`invoices.list`)
 - **Route(s):** `/:tenantSlug/invoices`
@@ -357,7 +357,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `invoices.manage`.
 - **States that exist:** E L P F X A. Empty, loading, error; **Previous/Next static `disabled`** (not explained).
 - **Source files:** `pages/invoices/InvoiceList.tsx`, `pages/invoices/InvoiceListContent.tsx`
-- **Slices:** [S20](slices-3.md#s20)
+- **Slices:** [S20](phase-3.md#s20)
 
 **17. Invoice detail** (`invoices.detail`)
 - **Route(s):** `/:tenantSlug/invoices/:id`
@@ -367,7 +367,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Buttons depend on invoice status.
 - **States that exist:** L X A K. Status-dependent actions; `role="alert"` banner.
 - **Source files:** `pages/invoices/InvoiceDetail.tsx`, `pages/invoices/InvoiceDetailContent.tsx`
-- **Slices:** [S21](slices-3.md#s21)
+- **Slices:** [S21](phase-3.md#s21)
 
 **18. Contracts list** (`contracts.list`)
 - **Route(s):** `/:tenantSlug/contracts`
@@ -377,7 +377,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `contracts.validity.view`; salesperson/scope filters by permission.
 - **States that exist:** E L P F X A. Empty, loading, error; **Previous/Next static `disabled`** (not explained).
 - **Source files:** `pages/contracts/ContractList.tsx`, `pages/contracts/ContractListContent.tsx`
-- **Slices:** [S22](slices-3.md#s22)
+- **Slices:** [S22](phase-3.md#s22)
 
 **19. Contract form (create and edit)** (`contracts.form`)
 - **Route(s):** `/:tenantSlug/contracts/new`, `/:tenantSlug/contracts/:contractId/edit`
@@ -387,7 +387,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Edit vs create share one component.
 - **States that exist:** L A V. Field errors, saving.
 - **Source files:** `pages/contracts/ContractFormPage.tsx`, `pages/contracts/ContractFormContent.tsx`
-- **Slices:** [S23](slices-3.md#s23)
+- **Slices:** [S23](phase-3.md#s23)
 
 **20. Contract detail** (`contracts.detail`)
 - **Route(s):** `/:tenantSlug/contracts/:contractId`
@@ -397,7 +397,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Every lifecycle button depends on contract status; some need extra permissions.
 - **States that exist:** L P X A D V K. Warning banner (`role="alert"`), reason dialog validation.
 - **Source files:** `pages/contracts/ContractDetail.tsx`, `pages/contracts/ContractDetailContent.tsx`, `components/contracts/ContractPaymentsCard.tsx`
-- **Slices:** [S24](slices-3.md#s24)
+- **Slices:** [S24](phase-3.md#s24)
 
 **21. Payments overview** (`payments`)
 - **Route(s):** `/:tenantSlug/payments`
@@ -407,7 +407,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `payments.view`; scope-dependent salesperson filter.
 - **States that exist:** E L P F G X A. Empty (`role="alert"`), loading, export busy.
 - **Source files:** `pages/payments/PaymentsOverview.tsx`, `pages/payments/PaymentsOverviewContent.tsx`
-- **Slices:** [S25](slices-3.md#s25)
+- **Slices:** [S25](phase-3.md#s25)
 
 **22. Renewals** (`renewals`)
 - **Route(s):** `/:tenantSlug/renewals`
@@ -417,7 +417,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `contracts.validity.view`; action column only on the work-list windows.
 - **States that exist:** E L P F G X A D T V. Empty (`role="alert"`), loading, modal validation.
 - **Source files:** `pages/renewals/Renewals.tsx`, `pages/renewals/RenewalsContent.tsx`
-- **Slices:** [S26](slices-3.md#s26)
+- **Slices:** [S26](phase-3.md#s26)
 
 **23. Performance** (`performance`)
 - **Route(s):** `/:tenantSlug/performance`
@@ -427,7 +427,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `performance.view`; scope narrows the rows.
 - **States that exist:** E L P F G X A D T. Empty (`role="alert"`), detail load failure.
 - **Source files:** `pages/performance/Performance.tsx`, `pages/performance/PerformanceContent.tsx`, `pages/performance/PerformanceDetail.tsx`, `pages/performance/PerformanceRecordsDialog.tsx`
-- **Slices:** [S27](slices-3.md#s27)
+- **Slices:** [S27](phase-3.md#s27)
 
 #### Wellness+ membership
 
@@ -439,7 +439,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** New member needs `members.manage`; page needs `members.view`; SALES_PROCESS workflow.
 - **States that exist:** E L P F G X A. Empty, loading, `role="alert"` load error, total summary.
 - **Source files:** `pages/membership/MembersList.tsx`, `pages/membership/MembersContent.tsx`, `pages/membership/MemberBadges.tsx`
-- **Slices:** [S28](slices-3.md#s28)
+- **Slices:** [S28](phase-3.md#s28)
 
 **25. Member form (register and edit)** (`members.form`)
 - **Route(s):** `/:tenantSlug/members/new`, `/:tenantSlug/members/:memberId/edit`
@@ -449,7 +449,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `members.manage`. No tier / status / number control exists by design.
 - **States that exist:** L D V A. Field errors, identifier error, generic error, duplicate dialog.
 - **Source files:** `pages/membership/MemberFormPage.tsx`, `pages/membership/MemberFormContent.tsx`
-- **Slices:** [S29](slices-3.md#s29)
+- **Slices:** [S29](phase-3.md#s29)
 
 **26. Member detail** (`members.detail`)
 - **Route(s):** `/:tenantSlug/members/:memberId`
@@ -459,7 +459,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Nearly every action has its own permission (`members.manage`, `members.payments.view/record`, `members.vip.*`); Close is destructive.
 - **States that exist:** E L P X A D V T K. Loading, not found, load failed, per-tab empty states, dialog errors.
 - **Source files:** `pages/membership/MemberDetailPage.tsx`, `pages/membership/MemberDetailContent.tsx`, `pages/membership/FamilyTab.tsx`, `pages/membership/VipTab.tsx`, `pages/membership/RecordPaymentModal.tsx`, `pages/membership/CorrectTierDialog.tsx`, `pages/membership/RemoveFromCompanyDialog.tsx`, `pages/membership/MemberCardDialog.tsx`, `pages/membership/VipDecisionDialog.tsx`
-- **Slices:** [S30](slices-3.md#s30)
+- **Slices:** [S30](phase-3.md#s30)
 
 **27. Membership payments** (`members.payments`)
 - **Route(s):** `/:tenantSlug/members/payments`
@@ -469,7 +469,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `members.payments.view`.
 - **States that exist:** E L P F G X A. Empty, loading, `role="alert"` failure, summary.
 - **Source files:** `pages/membership/MemberPaymentsPage.tsx`, `pages/membership/MemberPaymentsContent.tsx`
-- **Slices:** [S31](slices-4.md#s31)
+- **Slices:** [S31](phase-4.md#s31)
 
 **28. Membership reports** (`members.reports`)
 - **Route(s):** `/:tenantSlug/members/reports`
@@ -479,7 +479,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `members.reports.view`.
 - **States that exist:** E L P F X A. Loading, `role="alert"` error, empty lists.
 - **Source files:** `pages/membership/reports/MembershipReportsPage.tsx`, `pages/membership/reports/MembershipReportsContent.tsx`, `pages/membership/reports/reportSections.ts`
-- **Slices:** [S32](slices-4.md#s32)
+- **Slices:** [S32](phase-4.md#s32)
 
 **29. Verify member (Reception)** (`members.verify`)
 - **Route(s):** `/:tenantSlug/members/verify`
@@ -489,7 +489,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `members.verify`; camera needs browser permission and HTTPS.
 - **States that exist:** L F X A D. Idle, checking (`role="status"`), no matches, failed, result.
 - **Source files:** `pages/membership/VerifyMemberPage.tsx`, `pages/membership/verify/VerifyMemberContent.tsx`, `pages/membership/verify/QrScanner.tsx`, `pages/membership/verify/ReceptionResult.tsx`
-- **Slices:** [S33](slices-4.md#s33)
+- **Slices:** [S33](phase-4.md#s33)
 
 **30. Employee upload** (`members.employeeUpload`)
 - **Route(s):** `/:tenantSlug/members/employee-upload`
@@ -499,7 +499,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `members.import`; confirm disabled when nothing would be created or linked.
 - **States that exist:** E L P X A V. Idle, uploading, preview, outcome, `role="alert"` error, empty history.
 - **Source files:** `pages/membership/EmployeeUploadPage.tsx`, `pages/membership/EmployeeUploadContent.tsx`
-- **Slices:** [S34](slices-4.md#s34)
+- **Slices:** [S34](phase-4.md#s34)
 
 **31. VIP requests** (`members.vipRequests`)
 - **Route(s):** `/:tenantSlug/members/vip-requests`
@@ -509,7 +509,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `members.vip.approve`; an approver cannot approve their own request (server rule).
 - **States that exist:** E L P F G X A D V. Empty, loading, `role="alert"` failure.
 - **Source files:** `pages/membership/VipRequestsPage.tsx`, `pages/membership/VipRequestsContent.tsx`, `pages/membership/VipDecisionDialog.tsx`
-- **Slices:** [S35](slices-4.md#s35)
+- **Slices:** [S35](phase-4.md#s35)
 
 #### Settings and form builder
 
@@ -521,7 +521,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Section reachable with `settings.manage` (SettingsLayout nav).
 - **States that exist:** L X A V. Loading, saving, saved, error.
 - **Source files:** `pages/settings/AccountSettingsPage.tsx`, `components/layout/SettingsLayout/SettingsLayout.tsx`
-- **Slices:** [S36](slices-4.md#s36)
+- **Slices:** [S36](phase-4.md#s36)
 
 **33. Settings: My profile** (`settings.profile`)
 - **Route(s):** `/:tenantSlug/settings/profile`
@@ -531,7 +531,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Available to every tenant user (no permission).
 - **States that exist:** L X V. Saving, success, field errors.
 - **Source files:** `pages/settings/profile/ProfilePage.tsx`
-- **Slices:** [S37](slices-4.md#s37)
+- **Slices:** [S37](phase-4.md#s37)
 
 **34. Settings: Team** (`settings.team`)
 - **Route(s):** `/:tenantSlug/settings/team`
@@ -541,7 +541,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `users.manage`; Reactivate vs Deactivate by status.
 - **States that exist:** E L P X A D V K. Empty, `role="alert"` errors, modal validation.
 - **Source files:** `pages/settings/team/TeamSettingsPage.tsx`, `pages/settings/team/TeamSettingsContent.tsx`, `pages/settings/team/InviteMemberModal.tsx`, `pages/settings/team/EditMemberModal.tsx`
-- **Slices:** [S38](slices-4.md#s38)
+- **Slices:** [S38](phase-4.md#s38)
 
 **35. Settings: Roles and permissions** (`settings.roles`)
 - **Route(s):** `/:tenantSlug/settings/roles`
@@ -551,7 +551,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `roles.manage`; system roles cannot be renamed or deleted (server rule).
 - **States that exist:** L X A D V K. Load failed (`role="alert"`), dirty state, delete error.
 - **Source files:** `pages/settings/roles/RolesSettingsPage.tsx`, `pages/settings/roles/RolesSettingsContent.tsx`, `pages/settings/roles/RoleNameModal.tsx`
-- **Slices:** [S39](slices-4.md#s39)
+- **Slices:** [S39](phase-4.md#s39)
 
 **36. Settings: Lists** (`settings.lists`)
 - **Route(s):** `/:tenantSlug/settings/lists/:list?`
@@ -561,7 +561,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `settings.manage` or `activityResults.manage`; tabs differ by permission.
 - **States that exist:** E L P X A D T V. Per-list empty / loading / error.
 - **Source files:** `pages/settings/lists/ListsSettingsPage.tsx`, `pages/settings/lists/ListsSettingsContent.tsx`, `components/settings/LookupListEditor`, `pages/settings/lists/AreasList.tsx`, `pages/settings/lists/CitiesList.tsx`
-- **Slices:** [S40](slices-4.md#s40)
+- **Slices:** [S40](phase-4.md#s40)
 
 **37. Settings: Sales script** (`settings.salesScript`)
 - **Route(s):** `/:tenantSlug/settings/sales-script`
@@ -571,7 +571,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `script.edit`.
 - **States that exist:** E L X A D T V K. Load error, empty draft, busy.
 - **Source files:** `pages/settings/salesScript/SalesScriptSettingsPage.tsx`, `pages/settings/salesScript/SalesScriptSettingsContent.tsx`
-- **Slices:** [S41](slices-4.md#s41)
+- **Slices:** [S41](phase-4.md#s41)
 
 **38. Settings: Pricing** (`settings.pricing`)
 - **Route(s):** `/:tenantSlug/settings/pricing/:tab?`
@@ -581,7 +581,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `pricing.manage`.
 - **States that exist:** E L P X D T V K. Per-panel load error (`role="alert"`), empty, dialogs.
 - **Source files:** `pages/settings/pricing/PricingSettingsPage.tsx`, `pages/settings/pricing/PricingSettingsContent.tsx`, `pages/settings/pricing/pricingTabs.ts`
-- **Slices:** [S42](slices-4.md#s42)
+- **Slices:** [S42](phase-4.md#s42)
 
 **39. Settings: Statuses** (`settings.statuses`)
 - **Route(s):** `/:tenantSlug/settings/statuses`
@@ -591,7 +591,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `settings.manage`.
 - **States that exist:** L X V. Load failed, error, saved status.
 - **Source files:** `pages/settings/statuses/StatusesSettingsPage.tsx`, `pages/settings/statuses/StatusesSettingsContent.tsx`
-- **Slices:** [S43](slices-5.md#s43)
+- **Slices:** [S43](phase-5.md#s43)
 
 **40. Settings: Wellness+** (`settings.wellnessPlus`)
 - **Route(s):** `/:tenantSlug/settings/wellness-plus/:tab?`
@@ -601,7 +601,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Edit needs `wellnessplus.settings.manage`; `members.view` / `members.verify` see only the read-only benefits tab.
 - **States that exist:** L X A T V. `role="alert"` error per panel.
 - **Source files:** `pages/settings/wellnessPlus/WellnessPlusSettingsPage.tsx`, `pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`, `pages/settings/wellnessPlus/TiersPanel.tsx`, `pages/settings/wellnessPlus/RulesPanel.tsx`, `pages/settings/wellnessPlus/RelationshipsPanel.tsx`, `pages/settings/wellnessPlus/BenefitsPanel.tsx`
-- **Slices:** [S44](slices-5.md#s44)
+- **Slices:** [S44](phase-5.md#s44)
 
 **41. Settings: Contracts and payments** (`settings.contracts`)
 - **Route(s):** `/:tenantSlug/settings/contracts`
@@ -611,7 +611,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `settings.manage`.
 - **States that exist:** L X V. Saving / saved / error.
 - **Source files:** `pages/settings/contracts/ContractSettingsPage.tsx`, `pages/settings/contracts/ContractSettingsContent.tsx`
-- **Slices:** [S45](slices-5.md#s45)
+- **Slices:** [S45](phase-5.md#s45)
 
 **42. Settings: Audit log** (`settings.audit`)
 - **Route(s):** `/:tenantSlug/settings/audit`
@@ -621,7 +621,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `audit.view`.
 - **States that exist:** E L P F G X A D. Empty, `role="alert"` failure.
 - **Source files:** `pages/settings/audit/AuditLogSettingsPage.tsx`, `pages/settings/audit/AuditLogContent.tsx`, `pages/settings/audit/AuditEntryDetail.tsx`
-- **Slices:** [S46](slices-5.md#s46)
+- **Slices:** [S46](phase-5.md#s46)
 
 **43. Settings: Integrations** (`settings.integrations`)
 - **Route(s):** `/:tenantSlug/settings/integrations`
@@ -631,7 +631,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `integrations.manage`; Connect vs Disconnect by state; button disabled while processing.
 - **States that exist:** L P X A. Connected / not connected per provider, processing.
 - **Source files:** `pages/IntegrationsPage.tsx`
-- **Slices:** [S47](slices-5.md#s47)
+- **Slices:** [S47](phase-5.md#s47)
 
 **44. Settings: Client management** (`settings.clientManagement`)
 - **Route(s):** `/:tenantSlug/settings/client-management`
@@ -641,7 +641,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `settings.manage`; form actions need `forms.manage`.
 - **States that exist:** E L P X A D T V K. Empty lists, errors, confirmations.
 - **Source files:** `pages/settings/ClientSettingsPage.tsx`, `pages/settings/ClientSettingsContent.tsx`, `pages/settings/ClientFormsTab.tsx`
-- **Slices:** [S48](slices-5.md#s48)
+- **Slices:** [S48](phase-5.md#s48)
 
 **45. Settings: Notifications** (`settings.notifications`)
 - **Route(s):** `/:tenantSlug/settings/notifications`
@@ -651,7 +651,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Readable by everyone; **all controls are disabled for non-owners** and the server refuses their writes.
 - **States that exist:** L X A V. Loading, saving, read-only.
 - **Source files:** `pages/settings/NotificationSettingsPage.tsx`
-- **Slices:** [S49](slices-5.md#s49)
+- **Slices:** [S49](phase-5.md#s49)
 
 **46. Settings: Warehouses** (`settings.warehouses`)
 - **Route(s):** `/:tenantSlug/settings/warehouses`
@@ -661,7 +661,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `inventory.manage` at scope ALL.
 - **States that exist:** E L P X A D V K. Empty, error.
 - **Source files:** `pages/inventory/WarehouseList/WarehouseList.tsx`, `components/inventory/WarehouseTable`, `components/inventory/WarehouseFormModal`
-- **Slices:** [S50](slices-5.md#s50)
+- **Slices:** [S50](phase-5.md#s50)
 
 **47. Settings: Categories** (`settings.categories`)
 - **Route(s):** `/:tenantSlug/settings/categories`
@@ -671,7 +671,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `inventory.manage` at scope ALL.
 - **States that exist:** E L P F X A D V K. Empty, archived view. **The per-row "more" button is `disabled` with a "coming soon" title** and is not explained as functional.
 - **Source files:** `pages/inventory/CategoryList/CategoryList.tsx`, `components/inventory/CategoryFormModal`, `components/inventory/DeleteCategoryModal`
-- **Slices:** [S51](slices-5.md#s51)
+- **Slices:** [S51](phase-5.md#s51)
 
 **48. Form submissions** (`forms.submissions`)
 - **Route(s):** `/:tenantSlug/settings/client-management/forms/:formId/submissions`
@@ -681,7 +681,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `forms.manage`.
 - **States that exist:** E L P X A D. Empty, error, detail overlay.
 - **Source files:** `pages/settings/FormSubmissionsPage.tsx`, `pages/settings/FormSubmissionsContent.tsx`
-- **Slices:** [S52](slices-5.md#s52)
+- **Slices:** [S52](phase-5.md#s52)
 
 **49. Form builder** (`forms.builder`)
 - **Route(s):** `/:tenantSlug/settings/client-management/forms/:formId`
@@ -691,7 +691,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `forms.manage`; contextual ribbon tabs exist only while an object is selected; many commands are disabled without a selection. **Not wrapped in `AppLayout`**: it has no header Help button.
 - **States that exist:** E L A D T K. Empty page, selection-dependent commands, autosave states, history availability.
 - **Source files:** `pages/settings/FormBuilderPage.tsx`, `components/forms/canvas/FormBuilder.tsx`, `components/forms/canvas/ribbon/*`, `components/forms/canvas/PageRail.tsx`, `components/forms/canvas/FormCanvas.tsx`, `components/forms/canvas/AddMenu.tsx`, `components/forms/canvas/PropertiesPanel.tsx`
-- **Slices:** [S53](slices-5.md#s53)
+- **Slices:** [S53](phase-5.md#s53)
 
 #### Dashboards, reports, inventory, notifications
 
@@ -703,7 +703,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** No role gate; rows scoped to the recipient server-side.
 - **States that exist:** E L P X. Empty, loading, error.
 - **Source files:** `pages/notifications/NotificationsPage.tsx`, `pages/notifications/NotificationsContent.tsx`
-- **Slices:** [S60](slices-6.md#s60)
+- **Slices:** [S60](phase-6.md#s60)
 
 **51. Reports** (`reports`)
 - **Route(s):** `/:tenantSlug/reports`
@@ -713,7 +713,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `reports.view`.
 - **States that exist:** E L P X A. Loading grid (`aria-busy`), two `role="alert"` banners.
 - **Source files:** `pages/ReportsPage.tsx`
-- **Slices:** [S61](slices-6.md#s61)
+- **Slices:** [S61](phase-6.md#s61)
 
 **52. Inventory list** (`inventory.list`)
 - **Route(s):** `/:tenantSlug/inventory`
@@ -723,7 +723,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Needs `inventory.manage`; bulk bar only while rows are selected.
 - **States that exist:** E L P F G X A D K. Empty vs filtered-empty (with Clear), error with Retry, loading.
 - **Source files:** `pages/inventory/InventoryList/InventoryList.tsx`, `components/inventory/StockAdjustmentPanel`
-- **Slices:** [S62](slices-6.md#s62)
+- **Slices:** [S62](phase-6.md#s62)
 
 **53. Product form (create and edit)** (`inventory.form`)
 - **Route(s):** `/:tenantSlug/inventory/new`, `/:tenantSlug/inventory/:productId/edit`
@@ -733,7 +733,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Edit-only danger zone; needs `inventory.manage`.
 - **States that exist:** L A D V K. Field errors, saving, unsaved-changes confirm.
 - **Source files:** `pages/inventory/ProductForm/ProductForm.tsx`, `components/inventory/ProductImageManager`
-- **Slices:** [S63](slices-6.md#s63)
+- **Slices:** [S63](phase-6.md#s63)
 
 **54. Dashboard: Sales User** (`dashboard.salesUser`)
 - **Route(s):** `/:tenantSlug/dashboard (role = SALES_USER)`
@@ -743,7 +743,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Figures the user may not see are simply absent (server-side); this is the **shared frame** of the four role dashboards.
 - **States that exist:** E L P F X A. Empty state, `role="alert"` failure, `aria-busy` tiles.
 - **Source files:** `pages/dashboard/SalesUserDashboard.tsx`, `pages/dashboard/RoleDashboardFrame.tsx`, `pages/dashboard/PeriodSelector.tsx`, `pages/dashboard/RefreshBar.tsx`, `pages/dashboard/KpiTile.tsx`, `pages/dashboard/ChartWithTable.tsx`, `pages/dashboard/EmptyState.tsx`
-- **Slices:** [S54](slices-5.md#s54)
+- **Slices:** [S54](phase-5.md#s54)
 
 **55. Dashboard: Sales Manager** (`dashboard.salesManager`)
 - **Route(s):** `/:tenantSlug/dashboard (role = SALES_MANAGER)`
@@ -753,7 +753,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Value / follow-up columns exist only if the server returns them.
 - **States that exist:** E P F A. Empty table.
 - **Source files:** `pages/dashboard/SalesManagerDashboard.tsx`
-- **Slices:** [S55](slices-6.md#s55)
+- **Slices:** [S55](phase-6.md#s55)
 
 **56. Dashboard: Administrator** (`dashboard.administrator`)
 - **Route(s):** `/:tenantSlug/dashboard (role = ADMINISTRATOR)`
@@ -763,7 +763,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Recent changes panel conditional.
 - **States that exist:** E P A. Empty panels.
 - **Source files:** `pages/dashboard/AdministratorDashboard.tsx`
-- **Slices:** [S56](slices-6.md#s56)
+- **Slices:** [S56](phase-6.md#s56)
 
 **57. Dashboard: CEO** (`dashboard.ceo`)
 - **Route(s):** `/:tenantSlug/dashboard (role = CEO)`
@@ -773,7 +773,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Wellness+ block only in the SALES_PROCESS workflow.
 - **States that exist:** E P A. Empty panels.
 - **Source files:** `pages/dashboard/CeoDashboard.tsx`
-- **Slices:** [S57](slices-6.md#s57)
+- **Slices:** [S57](phase-6.md#s57)
 
 **58. Dashboard: Business owner (fallback)** (`dashboard.legacyOwner`)
 - **Route(s):** `/:tenantSlug/dashboard (fallback, scope ALL)`
@@ -783,7 +783,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Shown only as the fallback in `DashboardLanding`.
 - **States that exist:** E L P X. Several loading / empty / error branches.
 - **Source files:** `pages/dashboard/BusinessOwnerDashboard.tsx`, `pages/shell/BusinessOwnerShell.tsx`
-- **Slices:** [S58](slices-6.md#s58)
+- **Slices:** [S58](phase-6.md#s58)
 
 **59. Dashboard: Staff (fallback)** (`dashboard.legacyStaff`)
 - **Route(s):** `/:tenantSlug/dashboard (fallback, scope OWN / TEAM)`
@@ -793,7 +793,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Fallback only.
 - **States that exist:** E L P X. Many loading / empty branches.
 - **Source files:** `pages/dashboard/StaffDashboard.tsx`, `pages/shell/StaffShell.tsx`
-- **Slices:** [S59](slices-6.md#s59)
+- **Slices:** [S59](phase-6.md#s59)
 
 #### Platform administration (Super Admin)
 
@@ -805,7 +805,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Role `SUPER_ADMIN` (outside the permission system).
 - **States that exist:** E L P X. Loading / empty branches.
 - **Source files:** `pages/dashboard/SuperAdminDashboard.tsx`, `pages/shell/SuperAdminShell.tsx`
-- **Slices:** [S68](slices-6.md#s68)
+- **Slices:** [S68](phase-6.md#s68)
 
 **61. Platform: Tenants** (`admin.tenants`)
 - **Route(s):** `/admin/tenants`
@@ -815,7 +815,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Role `SUPER_ADMIN`; suspend vs reactivate by state.
 - **States that exist:** E L P X D V K. Empty, `role="alert"` errors.
 - **Source files:** `pages/admin/TenantsPage.tsx`, `components/widgets/TenantManagementTable`, `pages/admin/CreateTenantModal.tsx`
-- **Slices:** [S64](slices-6.md#s64)
+- **Slices:** [S64](phase-6.md#s64)
 
 **62. Platform: People** (`admin.people`)
 - **Route(s):** `/admin/people`
@@ -825,7 +825,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Role `SUPER_ADMIN`.
 - **States that exist:** E L P F X D V K. Empty, loading, errors.
 - **Source files:** `pages/admin/PeoplePage.tsx`, `pages/admin/InviteUserModal.tsx`
-- **Slices:** [S65](slices-6.md#s65)
+- **Slices:** [S65](phase-6.md#s65)
 
 **63. Platform: Settings** (`admin.settings`)
 - **Route(s):** `/admin/setting`
@@ -835,7 +835,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Role `SUPER_ADMIN`.
 - **States that exist:** L X D V K. Loading, summary, confirm.
 - **Source files:** `pages/admin/PlatformSettingsPage.tsx`, `pages/admin/TenantPickerModal.tsx`
-- **Slices:** [S66](slices-6.md#s66)
+- **Slices:** [S66](phase-6.md#s66)
 
 **64. Platform: My profile** (`admin.profile`)
 - **Route(s):** `/admin/profile`
@@ -845,7 +845,7 @@ Evidence levels: **Read in context** (the render code was read), **Extracted** (
 - **Conditional / permission-dependent:** Role `SUPER_ADMIN`.
 - **States that exist:** L X D V K. Saving, errors.
 - **Source files:** `pages/admin/AdminProfilePage.tsx`
-- **Slices:** [S67](slices-6.md#s67)
+- **Slices:** [S67](phase-6.md#s67)
 
 ### 3.3 Routes without a tour
 
@@ -1185,22 +1185,22 @@ PAGE TOURS  one slice per page, each depends on S04 and on the pilot, plus the e
 
 | Part | Title | Slice |
 |---|---|---|
-| P01 | Tour engine model and state machine (pure) | [S01](slices-1.md#s01) |
-| P02 | Target resolver and live DOM synchronisation | [S01](slices-1.md#s01) |
-| P03 | Support store, page-context registry and route-coverage guard | [S01](slices-1.md#s01) |
-| P04 | Step eligibility, progress persistence and lazy copy loader | [S01](slices-1.md#s01) |
-| P05 | Spotlight overlay layer | [S02](slices-1.md#s02) |
-| P06 | Tour popover: content, progress and navigation controls | [S02](slices-1.md#s02) |
-| P07 | Focus management, keyboard and screen-reader announcements | [S02](slices-1.md#s02) |
-| P08 | Support host: session orchestration and mounting | [S02](slices-1.md#s02) |
-| P09 | Support launcher and contextual help panel | [S03](slices-1.md#s03) |
-| P10 | Annotation pass-through on shared UI components | [S03](slices-1.md#s03) |
-| P11 | Shared guidance library and guide-authoring helpers | [S03](slices-1.md#s03) |
-| P12 | Application shell chrome: annotations, layout adapters and shell guide | [S03](slices-1.md#s03) |
-| P13 | Nested layers: dialogs, drawers, menus and tabs | [S04](slices-1.md#s04) |
-| P14 | Explain-only enforcement and safety watchdog | [S04](slices-1.md#s04) |
-| P15 | Explain a control: control list | [S04](slices-1.md#s04) |
-| P16 | Explain a control: pick mode | [S04](slices-1.md#s04) |
+| P01 | Tour engine model and state machine (pure) | [S01](phase-1.md#s01) |
+| P02 | Target resolver and live DOM synchronisation | [S01](phase-1.md#s01) |
+| P03 | Support store, page-context registry and route-coverage guard | [S01](phase-1.md#s01) |
+| P04 | Step eligibility, progress persistence and lazy copy loader | [S01](phase-1.md#s01) |
+| P05 | Spotlight overlay layer | [S02](phase-1.md#s02) |
+| P06 | Tour popover: content, progress and navigation controls | [S02](phase-1.md#s02) |
+| P07 | Focus management, keyboard and screen-reader announcements | [S02](phase-1.md#s02) |
+| P08 | Support host: session orchestration and mounting | [S02](phase-1.md#s02) |
+| P09 | Support launcher and contextual help panel | [S03](phase-1.md#s03) |
+| P10 | Annotation pass-through on shared UI components | [S03](phase-1.md#s03) |
+| P11 | Shared guidance library and guide-authoring helpers | [S03](phase-1.md#s03) |
+| P12 | Application shell chrome: annotations, layout adapters and shell guide | [S03](phase-1.md#s03) |
+| P13 | Nested layers: dialogs, drawers, menus and tabs | [S04](phase-1.md#s04) |
+| P14 | Explain-only enforcement and safety watchdog | [S04](phase-1.md#s04) |
+| P15 | Explain a control: control list | [S04](phase-1.md#s04) |
+| P16 | Explain a control: pick mode | [S04](phase-1.md#s04) |
 
 ### 5.5 Which tours depend on which foundation slice
 
@@ -1288,89 +1288,89 @@ PAGE TOURS  one slice per page, each depends on S04 and on the pilot, plus the e
 
 ## 6. Detailed slice specifications
 
-The full specification of every slice lives in six documents of roughly equal size, in dependency order. Every slice has the fifteen fields the task requires, numbered 1 to 15, plus a sixteenth, the list of what is intentionally excluded. Item 7 is the File-Level Change Plan: for every affected file it gives the action, exact path, change instructions, implementation details, integration, removal instructions and verification.
+The full specification of every slice lives in six phase documents of roughly equal size, in dependency order. Every slice has the fifteen fields the task requires, numbered 1 to 15, plus a sixteenth, the list of what is intentionally excluded. Item 7 is the File-Level Change Plan: for every affected file it gives the action, exact path, change instructions, implementation details, integration, removal instructions and verification.
 
-### 6.0b Slice documents
+### 6.0b Phase documents
 
-| Document | Slices | Size |
+| Phase document | Slices | Size |
 |---|---|---|
-| [slices-1.md](slices-1.md) | S01 to S07 (7 slices) | about 175 KB |
-| [slices-2.md](slices-2.md) | S08 to S17 (10 slices) | about 195 KB |
-| [slices-3.md](slices-3.md) | S18 to S30 (13 slices) | about 206 KB |
-| [slices-4.md](slices-4.md) | S31 to S42 (12 slices) | about 202 KB |
-| [slices-5.md](slices-5.md) | S43 to S54 (12 slices) | about 207 KB |
-| [slices-6.md](slices-6.md) | S55 to S68 (14 slices) | about 196 KB |
+| [phase-1.md](phase-1.md) | S01 to S07 (7 slices) | about 175 KB |
+| [phase-2.md](phase-2.md) | S08 to S17 (10 slices) | about 195 KB |
+| [phase-3.md](phase-3.md) | S18 to S30 (13 slices) | about 206 KB |
+| [phase-4.md](phase-4.md) | S31 to S42 (12 slices) | about 202 KB |
+| [phase-5.md](phase-5.md) | S43 to S54 (12 slices) | about 207 KB |
+| [phase-6.md](phase-6.md) | S55 to S68 (14 slices) | about 196 KB |
 
-| Slice | Title | Document |
+| Slice | Title | Phase document |
 |---|---|---|
-| S01 | Foundation 1: engine, live target resolution, page registry, eligibility and copy loading | [slices-1.md](slices-1.md#s01) |
-| S02 | Foundation 2: spotlight, popover, focus and keyboard, and the running host | [slices-1.md](slices-1.md#s02) |
-| S03 | Foundation 3: launcher and panel, shared-component annotations, shared guidance and the shell guide | [slices-1.md](slices-1.md#s03) |
-| S04 | Foundation 4: nested layers, read-only enforcement and Explain a control | [slices-1.md](slices-1.md#s04) |
-| S05 | Clients list: complete tour | [slices-1.md](slices-1.md#s05) |
-| S06 | Client form (create and edit): complete tour | [slices-1.md](slices-1.md#s06) |
-| S07 | Follow-ups: complete tour | [slices-1.md](slices-1.md#s07) |
-| S08 | Calendar (appointments, follow-ups, contract dates): complete tour | [slices-2.md](slices-2.md#s08) |
-| S09 | Client detail: complete tour | [slices-2.md](slices-2.md#s09) |
-| S10 | Pricing screen (offer builder): complete tour | [slices-2.md](slices-2.md#s10) |
-| S11 | Discount approvals: complete tour | [slices-2.md](slices-2.md#s11) |
-| S12 | Offers list: complete tour | [slices-2.md](slices-2.md#s12) |
-| S13 | Deal form (create and edit): complete tour | [slices-2.md](slices-2.md#s13) |
-| S14 | Deal detail: complete tour | [slices-2.md](slices-2.md#s14) |
-| S15 | Pipeline board: complete tour | [slices-2.md](slices-2.md#s15) |
-| S16 | Pipeline list: complete tour | [slices-2.md](slices-2.md#s16) |
-| S17 | Quotations list (legacy workflow): complete tour | [slices-2.md](slices-2.md#s17) |
-| S18 | Quotation form (create and edit): complete tour | [slices-3.md](slices-3.md#s18) |
-| S19 | Quotation detail: complete tour | [slices-3.md](slices-3.md#s19) |
-| S20 | Invoices list: complete tour | [slices-3.md](slices-3.md#s20) |
-| S21 | Invoice detail: complete tour | [slices-3.md](slices-3.md#s21) |
-| S22 | Contracts list: complete tour | [slices-3.md](slices-3.md#s22) |
-| S23 | Contract form (create and edit): complete tour | [slices-3.md](slices-3.md#s23) |
-| S24 | Contract detail: complete tour | [slices-3.md](slices-3.md#s24) |
-| S25 | Payments overview: complete tour | [slices-3.md](slices-3.md#s25) |
-| S26 | Renewals: complete tour | [slices-3.md](slices-3.md#s26) |
-| S27 | Performance: complete tour | [slices-3.md](slices-3.md#s27) |
-| S28 | Members list: complete tour | [slices-3.md](slices-3.md#s28) |
-| S29 | Member form (register and edit): complete tour | [slices-3.md](slices-3.md#s29) |
-| S30 | Member detail: complete tour | [slices-3.md](slices-3.md#s30) |
-| S31 | Membership payments: complete tour | [slices-4.md](slices-4.md#s31) |
-| S32 | Membership reports: complete tour | [slices-4.md](slices-4.md#s32) |
-| S33 | Verify member (Reception): complete tour | [slices-4.md](slices-4.md#s33) |
-| S34 | Employee upload: complete tour | [slices-4.md](slices-4.md#s34) |
-| S35 | VIP requests: complete tour | [slices-4.md](slices-4.md#s35) |
-| S36 | Settings: Company: complete tour | [slices-4.md](slices-4.md#s36) |
-| S37 | Settings: My profile: complete tour | [slices-4.md](slices-4.md#s37) |
-| S38 | Settings: Team: complete tour | [slices-4.md](slices-4.md#s38) |
-| S39 | Settings: Roles and permissions: complete tour | [slices-4.md](slices-4.md#s39) |
-| S40 | Settings: Lists: complete tour | [slices-4.md](slices-4.md#s40) |
-| S41 | Settings: Sales script: complete tour | [slices-4.md](slices-4.md#s41) |
-| S42 | Settings: Pricing: complete tour | [slices-4.md](slices-4.md#s42) |
-| S43 | Settings: Statuses: complete tour | [slices-5.md](slices-5.md#s43) |
-| S44 | Settings: Wellness+: complete tour | [slices-5.md](slices-5.md#s44) |
-| S45 | Settings: Contracts and payments: complete tour | [slices-5.md](slices-5.md#s45) |
-| S46 | Settings: Audit log: complete tour | [slices-5.md](slices-5.md#s46) |
-| S47 | Settings: Integrations: complete tour | [slices-5.md](slices-5.md#s47) |
-| S48 | Settings: Client management: complete tour | [slices-5.md](slices-5.md#s48) |
-| S49 | Settings: Notifications: complete tour | [slices-5.md](slices-5.md#s49) |
-| S50 | Settings: Warehouses: complete tour | [slices-5.md](slices-5.md#s50) |
-| S51 | Settings: Categories: complete tour | [slices-5.md](slices-5.md#s51) |
-| S52 | Form submissions: complete tour | [slices-5.md](slices-5.md#s52) |
-| S53 | Form builder: complete tour | [slices-5.md](slices-5.md#s53) |
-| S54 | Dashboard: Sales User: complete tour | [slices-5.md](slices-5.md#s54) |
-| S55 | Dashboard: Sales Manager: complete tour | [slices-6.md](slices-6.md#s55) |
-| S56 | Dashboard: Administrator: complete tour | [slices-6.md](slices-6.md#s56) |
-| S57 | Dashboard: CEO: complete tour | [slices-6.md](slices-6.md#s57) |
-| S58 | Dashboard: Business owner (fallback): complete tour | [slices-6.md](slices-6.md#s58) |
-| S59 | Dashboard: Staff (fallback): complete tour | [slices-6.md](slices-6.md#s59) |
-| S60 | Notifications: complete tour | [slices-6.md](slices-6.md#s60) |
-| S61 | Reports: complete tour | [slices-6.md](slices-6.md#s61) |
-| S62 | Inventory list: complete tour | [slices-6.md](slices-6.md#s62) |
-| S63 | Product form (create and edit): complete tour | [slices-6.md](slices-6.md#s63) |
-| S64 | Platform: Tenants: complete tour | [slices-6.md](slices-6.md#s64) |
-| S65 | Platform: People: complete tour | [slices-6.md](slices-6.md#s65) |
-| S66 | Platform: Settings: complete tour | [slices-6.md](slices-6.md#s66) |
-| S67 | Platform: My profile: complete tour | [slices-6.md](slices-6.md#s67) |
-| S68 | Platform dashboard (Super Admin): complete tour | [slices-6.md](slices-6.md#s68) |
+| S01 | Foundation 1: engine, live target resolution, page registry, eligibility and copy loading | [phase-1.md](phase-1.md#s01) |
+| S02 | Foundation 2: spotlight, popover, focus and keyboard, and the running host | [phase-1.md](phase-1.md#s02) |
+| S03 | Foundation 3: launcher and panel, shared-component annotations, shared guidance and the shell guide | [phase-1.md](phase-1.md#s03) |
+| S04 | Foundation 4: nested layers, read-only enforcement and Explain a control | [phase-1.md](phase-1.md#s04) |
+| S05 | Clients list: complete tour | [phase-1.md](phase-1.md#s05) |
+| S06 | Client form (create and edit): complete tour | [phase-1.md](phase-1.md#s06) |
+| S07 | Follow-ups: complete tour | [phase-1.md](phase-1.md#s07) |
+| S08 | Calendar (appointments, follow-ups, contract dates): complete tour | [phase-2.md](phase-2.md#s08) |
+| S09 | Client detail: complete tour | [phase-2.md](phase-2.md#s09) |
+| S10 | Pricing screen (offer builder): complete tour | [phase-2.md](phase-2.md#s10) |
+| S11 | Discount approvals: complete tour | [phase-2.md](phase-2.md#s11) |
+| S12 | Offers list: complete tour | [phase-2.md](phase-2.md#s12) |
+| S13 | Deal form (create and edit): complete tour | [phase-2.md](phase-2.md#s13) |
+| S14 | Deal detail: complete tour | [phase-2.md](phase-2.md#s14) |
+| S15 | Pipeline board: complete tour | [phase-2.md](phase-2.md#s15) |
+| S16 | Pipeline list: complete tour | [phase-2.md](phase-2.md#s16) |
+| S17 | Quotations list (legacy workflow): complete tour | [phase-2.md](phase-2.md#s17) |
+| S18 | Quotation form (create and edit): complete tour | [phase-3.md](phase-3.md#s18) |
+| S19 | Quotation detail: complete tour | [phase-3.md](phase-3.md#s19) |
+| S20 | Invoices list: complete tour | [phase-3.md](phase-3.md#s20) |
+| S21 | Invoice detail: complete tour | [phase-3.md](phase-3.md#s21) |
+| S22 | Contracts list: complete tour | [phase-3.md](phase-3.md#s22) |
+| S23 | Contract form (create and edit): complete tour | [phase-3.md](phase-3.md#s23) |
+| S24 | Contract detail: complete tour | [phase-3.md](phase-3.md#s24) |
+| S25 | Payments overview: complete tour | [phase-3.md](phase-3.md#s25) |
+| S26 | Renewals: complete tour | [phase-3.md](phase-3.md#s26) |
+| S27 | Performance: complete tour | [phase-3.md](phase-3.md#s27) |
+| S28 | Members list: complete tour | [phase-3.md](phase-3.md#s28) |
+| S29 | Member form (register and edit): complete tour | [phase-3.md](phase-3.md#s29) |
+| S30 | Member detail: complete tour | [phase-3.md](phase-3.md#s30) |
+| S31 | Membership payments: complete tour | [phase-4.md](phase-4.md#s31) |
+| S32 | Membership reports: complete tour | [phase-4.md](phase-4.md#s32) |
+| S33 | Verify member (Reception): complete tour | [phase-4.md](phase-4.md#s33) |
+| S34 | Employee upload: complete tour | [phase-4.md](phase-4.md#s34) |
+| S35 | VIP requests: complete tour | [phase-4.md](phase-4.md#s35) |
+| S36 | Settings: Company: complete tour | [phase-4.md](phase-4.md#s36) |
+| S37 | Settings: My profile: complete tour | [phase-4.md](phase-4.md#s37) |
+| S38 | Settings: Team: complete tour | [phase-4.md](phase-4.md#s38) |
+| S39 | Settings: Roles and permissions: complete tour | [phase-4.md](phase-4.md#s39) |
+| S40 | Settings: Lists: complete tour | [phase-4.md](phase-4.md#s40) |
+| S41 | Settings: Sales script: complete tour | [phase-4.md](phase-4.md#s41) |
+| S42 | Settings: Pricing: complete tour | [phase-4.md](phase-4.md#s42) |
+| S43 | Settings: Statuses: complete tour | [phase-5.md](phase-5.md#s43) |
+| S44 | Settings: Wellness+: complete tour | [phase-5.md](phase-5.md#s44) |
+| S45 | Settings: Contracts and payments: complete tour | [phase-5.md](phase-5.md#s45) |
+| S46 | Settings: Audit log: complete tour | [phase-5.md](phase-5.md#s46) |
+| S47 | Settings: Integrations: complete tour | [phase-5.md](phase-5.md#s47) |
+| S48 | Settings: Client management: complete tour | [phase-5.md](phase-5.md#s48) |
+| S49 | Settings: Notifications: complete tour | [phase-5.md](phase-5.md#s49) |
+| S50 | Settings: Warehouses: complete tour | [phase-5.md](phase-5.md#s50) |
+| S51 | Settings: Categories: complete tour | [phase-5.md](phase-5.md#s51) |
+| S52 | Form submissions: complete tour | [phase-5.md](phase-5.md#s52) |
+| S53 | Form builder: complete tour | [phase-5.md](phase-5.md#s53) |
+| S54 | Dashboard: Sales User: complete tour | [phase-5.md](phase-5.md#s54) |
+| S55 | Dashboard: Sales Manager: complete tour | [phase-6.md](phase-6.md#s55) |
+| S56 | Dashboard: Administrator: complete tour | [phase-6.md](phase-6.md#s56) |
+| S57 | Dashboard: CEO: complete tour | [phase-6.md](phase-6.md#s57) |
+| S58 | Dashboard: Business owner (fallback): complete tour | [phase-6.md](phase-6.md#s58) |
+| S59 | Dashboard: Staff (fallback): complete tour | [phase-6.md](phase-6.md#s59) |
+| S60 | Notifications: complete tour | [phase-6.md](phase-6.md#s60) |
+| S61 | Reports: complete tour | [phase-6.md](phase-6.md#s61) |
+| S62 | Inventory list: complete tour | [phase-6.md](phase-6.md#s62) |
+| S63 | Product form (create and edit): complete tour | [phase-6.md](phase-6.md#s63) |
+| S64 | Platform: Tenants: complete tour | [phase-6.md](phase-6.md#s64) |
+| S65 | Platform: People: complete tour | [phase-6.md](phase-6.md#s65) |
+| S66 | Platform: Settings: complete tour | [phase-6.md](phase-6.md#s66) |
+| S67 | Platform: My profile: complete tour | [phase-6.md](phase-6.md#s67) |
+| S68 | Platform dashboard (Super Admin): complete tour | [phase-6.md](phase-6.md#s68) |
 
 ### 6.0 Slice index, sizes and exceptions
 
@@ -1378,74 +1378,74 @@ The slice target is about **1,000 lines of production code**. Production LOC are
 
 | Slice | Title | Kind | Est. LOC | Band | Steps |
 |---|---|---|---|---|---|
-| [S01](slices-1.md#s01) | Foundation 1: engine, live target resolution, page registry, eligibility and copy loading | infra | 1010 | in | - |
-| [S02](slices-1.md#s02) | Foundation 2: spotlight, popover, focus and keyboard, and the running host | infra | 1010 | in | - |
-| [S03](slices-1.md#s03) | Foundation 3: launcher and panel, shared-component annotations, shared guidance and the shell guide | infra | 955 | in | - |
-| [S04](slices-1.md#s04) | Foundation 4: nested layers, read-only enforcement and Explain a control | infra | 890 | in | - |
-| [S05](slices-1.md#s05) | Clients list: complete tour | Clients list | 416 | short | 38 |
-| [S06](slices-1.md#s06) | Client form (create and edit): complete tour | Client form (create and edit) | 212 | short | 18 |
-| [S07](slices-1.md#s07) | Follow-ups: complete tour | Follow-ups | 202 | short | 18 |
-| [S08](slices-2.md#s08) | Calendar (appointments, follow-ups, contract dates): complete tour | Calendar (appointments, follow-ups, contract dates) | 522 | short | 48 |
-| [S09](slices-2.md#s09) | Client detail: complete tour | Client detail | 630 | near | 56 |
-| [S10](slices-2.md#s10) | Pricing screen (offer builder): complete tour | Pricing screen (offer builder) | 214 | short | 19 |
-| [S11](slices-2.md#s11) | Discount approvals: complete tour | Discount approvals | 140 | short | 12 |
-| [S12](slices-2.md#s12) | Offers list: complete tour | Offers list | 172 | short | 16 |
-| [S13](slices-2.md#s13) | Deal form (create and edit): complete tour | Deal form (create and edit) | 154 | short | 14 |
-| [S14](slices-2.md#s14) | Deal detail: complete tour | Deal detail | 658 | near | 63 |
-| [S15](slices-2.md#s15) | Pipeline board: complete tour | Pipeline board | 198 | short | 18 |
-| [S16](slices-2.md#s16) | Pipeline list: complete tour | Pipeline list | 232 | short | 22 |
-| [S17](slices-2.md#s17) | Quotations list (legacy workflow): complete tour | Quotations list (legacy workflow) | 144 | short | 13 |
-| [S18](slices-3.md#s18) | Quotation form (create and edit): complete tour | Quotation form (create and edit) | 154 | short | 14 |
-| [S19](slices-3.md#s19) | Quotation detail: complete tour | Quotation detail | 164 | short | 15 |
-| [S20](slices-3.md#s20) | Invoices list: complete tour | Invoices list | 134 | short | 12 |
-| [S21](slices-3.md#s21) | Invoice detail: complete tour | Invoice detail | 104 | short | 9 |
-| [S22](slices-3.md#s22) | Contracts list: complete tour | Contracts list | 172 | short | 16 |
-| [S23](slices-3.md#s23) | Contract form (create and edit): complete tour | Contract form (create and edit) | 134 | short | 12 |
-| [S24](slices-3.md#s24) | Contract detail: complete tour | Contract detail | 568 | short | 53 |
-| [S25](slices-3.md#s25) | Payments overview: complete tour | Payments overview | 198 | short | 18 |
-| [S26](slices-3.md#s26) | Renewals: complete tour | Renewals | 212 | short | 20 |
-| [S27](slices-3.md#s27) | Performance: complete tour | Performance | 290 | short | 28 |
-| [S28](slices-3.md#s28) | Members list: complete tour | Members list | 232 | short | 22 |
-| [S29](slices-3.md#s29) | Member form (register and edit): complete tour | Member form (register and edit) | 192 | short | 18 |
-| [S30](slices-3.md#s30) | Member detail: complete tour | Member detail | 1000 | in | 97 |
-| [S31](slices-4.md#s31) | Membership payments: complete tour | Membership payments | 182 | short | 17 |
-| [S32](slices-4.md#s32) | Membership reports: complete tour | Membership reports | 190 | short | 17 |
-| [S33](slices-4.md#s33) | Verify member (Reception): complete tour | Verify member (Reception) | 144 | short | 13 |
-| [S34](slices-4.md#s34) | Employee upload: complete tour | Employee upload | 230 | short | 21 |
-| [S35](slices-4.md#s35) | VIP requests: complete tour | VIP requests | 164 | short | 15 |
-| [S36](slices-4.md#s36) | Settings: Company: complete tour | Settings: Company | 186 | short | 16 |
-| [S37](slices-4.md#s37) | Settings: My profile: complete tour | Settings: My profile | 164 | short | 15 |
-| [S38](slices-4.md#s38) | Settings: Team: complete tour | Settings: Team | 220 | short | 20 |
-| [S39](slices-4.md#s39) | Settings: Roles and permissions: complete tour | Settings: Roles and permissions | 222 | short | 20 |
-| [S40](slices-4.md#s40) | Settings: Lists: complete tour | Settings: Lists | 294 | short | 26 |
-| [S41](slices-4.md#s41) | Settings: Sales script: complete tour | Settings: Sales script | 182 | short | 17 |
-| [S42](slices-4.md#s42) | Settings: Pricing: complete tour | Settings: Pricing | 512 | short | 50 |
-| [S43](slices-5.md#s43) | Settings: Statuses: complete tour | Settings: Statuses | 154 | short | 14 |
-| [S44](slices-5.md#s44) | Settings: Wellness+: complete tour | Settings: Wellness+ | 242 | short | 23 |
-| [S45](slices-5.md#s45) | Settings: Contracts and payments: complete tour | Settings: Contracts and payments | 84 | short | 7 |
-| [S46](slices-5.md#s46) | Settings: Audit log: complete tour | Settings: Audit log | 182 | short | 17 |
-| [S47](slices-5.md#s47) | Settings: Integrations: complete tour | Settings: Integrations | 114 | short | 10 |
-| [S48](slices-5.md#s48) | Settings: Client management: complete tour | Settings: Client management | 426 | short | 41 |
-| [S49](slices-5.md#s49) | Settings: Notifications: complete tour | Settings: Notifications | 144 | short | 13 |
-| [S50](slices-5.md#s50) | Settings: Warehouses: complete tour | Settings: Warehouses | 134 | short | 12 |
-| [S51](slices-5.md#s51) | Settings: Categories: complete tour | Settings: Categories | 154 | short | 14 |
-| [S52](slices-5.md#s52) | Form submissions: complete tour | Form submissions | 124 | short | 11 |
-| [S53](slices-5.md#s53) | Form builder: complete tour | Form builder | 783 | near | 71 |
-| [S54](slices-5.md#s54) | Dashboard: Sales User: complete tour | Dashboard: Sales User | 190 | short | 16 |
-| [S55](slices-6.md#s55) | Dashboard: Sales Manager: complete tour | Dashboard: Sales Manager | 118 | short | 9 |
-| [S56](slices-6.md#s56) | Dashboard: Administrator: complete tour | Dashboard: Administrator | 104 | short | 9 |
-| [S57](slices-6.md#s57) | Dashboard: CEO: complete tour | Dashboard: CEO | 124 | short | 11 |
-| [S58](slices-6.md#s58) | Dashboard: Business owner (fallback): complete tour | Dashboard: Business owner (fallback) | 114 | short | 10 |
-| [S59](slices-6.md#s59) | Dashboard: Staff (fallback): complete tour | Dashboard: Staff (fallback) | 134 | short | 12 |
-| [S60](slices-6.md#s60) | Notifications: complete tour | Notifications | 94 | short | 8 |
-| [S61](slices-6.md#s61) | Reports: complete tour | Reports | 172 | short | 16 |
-| [S62](slices-6.md#s62) | Inventory list: complete tour | Inventory list | 378 | short | 36 |
-| [S63](slices-6.md#s63) | Product form (create and edit): complete tour | Product form (create and edit) | 298 | short | 28 |
-| [S64](slices-6.md#s64) | Platform: Tenants: complete tour | Platform: Tenants | 202 | short | 18 |
-| [S65](slices-6.md#s65) | Platform: People: complete tour | Platform: People | 292 | short | 27 |
-| [S66](slices-6.md#s66) | Platform: Settings: complete tour | Platform: Settings | 192 | short | 18 |
-| [S67](slices-6.md#s67) | Platform: My profile: complete tour | Platform: My profile | 144 | short | 13 |
-| [S68](slices-6.md#s68) | Platform dashboard (Super Admin): complete tour | Platform dashboard (Super Admin) | 110 | short | 9 |
+| [S01](phase-1.md#s01) | Foundation 1: engine, live target resolution, page registry, eligibility and copy loading | infra | 1010 | in | - |
+| [S02](phase-1.md#s02) | Foundation 2: spotlight, popover, focus and keyboard, and the running host | infra | 1010 | in | - |
+| [S03](phase-1.md#s03) | Foundation 3: launcher and panel, shared-component annotations, shared guidance and the shell guide | infra | 955 | in | - |
+| [S04](phase-1.md#s04) | Foundation 4: nested layers, read-only enforcement and Explain a control | infra | 890 | in | - |
+| [S05](phase-1.md#s05) | Clients list: complete tour | Clients list | 416 | short | 38 |
+| [S06](phase-1.md#s06) | Client form (create and edit): complete tour | Client form (create and edit) | 212 | short | 18 |
+| [S07](phase-1.md#s07) | Follow-ups: complete tour | Follow-ups | 202 | short | 18 |
+| [S08](phase-2.md#s08) | Calendar (appointments, follow-ups, contract dates): complete tour | Calendar (appointments, follow-ups, contract dates) | 522 | short | 48 |
+| [S09](phase-2.md#s09) | Client detail: complete tour | Client detail | 630 | near | 56 |
+| [S10](phase-2.md#s10) | Pricing screen (offer builder): complete tour | Pricing screen (offer builder) | 214 | short | 19 |
+| [S11](phase-2.md#s11) | Discount approvals: complete tour | Discount approvals | 140 | short | 12 |
+| [S12](phase-2.md#s12) | Offers list: complete tour | Offers list | 172 | short | 16 |
+| [S13](phase-2.md#s13) | Deal form (create and edit): complete tour | Deal form (create and edit) | 154 | short | 14 |
+| [S14](phase-2.md#s14) | Deal detail: complete tour | Deal detail | 658 | near | 63 |
+| [S15](phase-2.md#s15) | Pipeline board: complete tour | Pipeline board | 198 | short | 18 |
+| [S16](phase-2.md#s16) | Pipeline list: complete tour | Pipeline list | 232 | short | 22 |
+| [S17](phase-2.md#s17) | Quotations list (legacy workflow): complete tour | Quotations list (legacy workflow) | 144 | short | 13 |
+| [S18](phase-3.md#s18) | Quotation form (create and edit): complete tour | Quotation form (create and edit) | 154 | short | 14 |
+| [S19](phase-3.md#s19) | Quotation detail: complete tour | Quotation detail | 164 | short | 15 |
+| [S20](phase-3.md#s20) | Invoices list: complete tour | Invoices list | 134 | short | 12 |
+| [S21](phase-3.md#s21) | Invoice detail: complete tour | Invoice detail | 104 | short | 9 |
+| [S22](phase-3.md#s22) | Contracts list: complete tour | Contracts list | 172 | short | 16 |
+| [S23](phase-3.md#s23) | Contract form (create and edit): complete tour | Contract form (create and edit) | 134 | short | 12 |
+| [S24](phase-3.md#s24) | Contract detail: complete tour | Contract detail | 568 | short | 53 |
+| [S25](phase-3.md#s25) | Payments overview: complete tour | Payments overview | 198 | short | 18 |
+| [S26](phase-3.md#s26) | Renewals: complete tour | Renewals | 212 | short | 20 |
+| [S27](phase-3.md#s27) | Performance: complete tour | Performance | 290 | short | 28 |
+| [S28](phase-3.md#s28) | Members list: complete tour | Members list | 232 | short | 22 |
+| [S29](phase-3.md#s29) | Member form (register and edit): complete tour | Member form (register and edit) | 192 | short | 18 |
+| [S30](phase-3.md#s30) | Member detail: complete tour | Member detail | 1000 | in | 97 |
+| [S31](phase-4.md#s31) | Membership payments: complete tour | Membership payments | 182 | short | 17 |
+| [S32](phase-4.md#s32) | Membership reports: complete tour | Membership reports | 190 | short | 17 |
+| [S33](phase-4.md#s33) | Verify member (Reception): complete tour | Verify member (Reception) | 144 | short | 13 |
+| [S34](phase-4.md#s34) | Employee upload: complete tour | Employee upload | 230 | short | 21 |
+| [S35](phase-4.md#s35) | VIP requests: complete tour | VIP requests | 164 | short | 15 |
+| [S36](phase-4.md#s36) | Settings: Company: complete tour | Settings: Company | 186 | short | 16 |
+| [S37](phase-4.md#s37) | Settings: My profile: complete tour | Settings: My profile | 164 | short | 15 |
+| [S38](phase-4.md#s38) | Settings: Team: complete tour | Settings: Team | 220 | short | 20 |
+| [S39](phase-4.md#s39) | Settings: Roles and permissions: complete tour | Settings: Roles and permissions | 222 | short | 20 |
+| [S40](phase-4.md#s40) | Settings: Lists: complete tour | Settings: Lists | 294 | short | 26 |
+| [S41](phase-4.md#s41) | Settings: Sales script: complete tour | Settings: Sales script | 182 | short | 17 |
+| [S42](phase-4.md#s42) | Settings: Pricing: complete tour | Settings: Pricing | 512 | short | 50 |
+| [S43](phase-5.md#s43) | Settings: Statuses: complete tour | Settings: Statuses | 154 | short | 14 |
+| [S44](phase-5.md#s44) | Settings: Wellness+: complete tour | Settings: Wellness+ | 242 | short | 23 |
+| [S45](phase-5.md#s45) | Settings: Contracts and payments: complete tour | Settings: Contracts and payments | 84 | short | 7 |
+| [S46](phase-5.md#s46) | Settings: Audit log: complete tour | Settings: Audit log | 182 | short | 17 |
+| [S47](phase-5.md#s47) | Settings: Integrations: complete tour | Settings: Integrations | 114 | short | 10 |
+| [S48](phase-5.md#s48) | Settings: Client management: complete tour | Settings: Client management | 426 | short | 41 |
+| [S49](phase-5.md#s49) | Settings: Notifications: complete tour | Settings: Notifications | 144 | short | 13 |
+| [S50](phase-5.md#s50) | Settings: Warehouses: complete tour | Settings: Warehouses | 134 | short | 12 |
+| [S51](phase-5.md#s51) | Settings: Categories: complete tour | Settings: Categories | 154 | short | 14 |
+| [S52](phase-5.md#s52) | Form submissions: complete tour | Form submissions | 124 | short | 11 |
+| [S53](phase-5.md#s53) | Form builder: complete tour | Form builder | 783 | near | 71 |
+| [S54](phase-5.md#s54) | Dashboard: Sales User: complete tour | Dashboard: Sales User | 190 | short | 16 |
+| [S55](phase-6.md#s55) | Dashboard: Sales Manager: complete tour | Dashboard: Sales Manager | 118 | short | 9 |
+| [S56](phase-6.md#s56) | Dashboard: Administrator: complete tour | Dashboard: Administrator | 104 | short | 9 |
+| [S57](phase-6.md#s57) | Dashboard: CEO: complete tour | Dashboard: CEO | 124 | short | 11 |
+| [S58](phase-6.md#s58) | Dashboard: Business owner (fallback): complete tour | Dashboard: Business owner (fallback) | 114 | short | 10 |
+| [S59](phase-6.md#s59) | Dashboard: Staff (fallback): complete tour | Dashboard: Staff (fallback) | 134 | short | 12 |
+| [S60](phase-6.md#s60) | Notifications: complete tour | Notifications | 94 | short | 8 |
+| [S61](phase-6.md#s61) | Reports: complete tour | Reports | 172 | short | 16 |
+| [S62](phase-6.md#s62) | Inventory list: complete tour | Inventory list | 378 | short | 36 |
+| [S63](phase-6.md#s63) | Product form (create and edit): complete tour | Product form (create and edit) | 298 | short | 28 |
+| [S64](phase-6.md#s64) | Platform: Tenants: complete tour | Platform: Tenants | 202 | short | 18 |
+| [S65](phase-6.md#s65) | Platform: People: complete tour | Platform: People | 292 | short | 27 |
+| [S66](phase-6.md#s66) | Platform: Settings: complete tour | Platform: Settings | 192 | short | 18 |
+| [S67](phase-6.md#s67) | Platform: My profile: complete tour | Platform: My profile | 144 | short | 13 |
+| [S68](phase-6.md#s68) | Platform dashboard (Super Admin): complete tour | Platform dashboard (Super Admin) | 110 | short | 9 |
 
 **Distribution.** Infrastructure (4 slices, 16 parts): 4 in band, 0 near, 0 short. Page-tour slices (64, one per page): 1 in band, 3 near, 60 short. Total estimated production code: about 19,210 lines.
 
@@ -1453,66 +1453,66 @@ The slice target is about **1,000 lines of production code**. Production LOC are
 
 | Slice | Page | Est. LOC | Steps |
 |---|---|---|---|
-| [S05](slices-1.md#s05) | Clients list | 416 | 38 |
-| [S06](slices-1.md#s06) | Client form (create and edit) | 212 | 18 |
-| [S07](slices-1.md#s07) | Follow-ups | 202 | 18 |
-| [S08](slices-2.md#s08) | Calendar (appointments, follow-ups, contract dates) | 522 | 48 |
-| [S10](slices-2.md#s10) | Pricing screen (offer builder) | 214 | 19 |
-| [S11](slices-2.md#s11) | Discount approvals | 140 | 12 |
-| [S12](slices-2.md#s12) | Offers list | 172 | 16 |
-| [S13](slices-2.md#s13) | Deal form (create and edit) | 154 | 14 |
-| [S15](slices-2.md#s15) | Pipeline board | 198 | 18 |
-| [S16](slices-2.md#s16) | Pipeline list | 232 | 22 |
-| [S17](slices-2.md#s17) | Quotations list (legacy workflow) | 144 | 13 |
-| [S18](slices-3.md#s18) | Quotation form (create and edit) | 154 | 14 |
-| [S19](slices-3.md#s19) | Quotation detail | 164 | 15 |
-| [S20](slices-3.md#s20) | Invoices list | 134 | 12 |
-| [S21](slices-3.md#s21) | Invoice detail | 104 | 9 |
-| [S22](slices-3.md#s22) | Contracts list | 172 | 16 |
-| [S23](slices-3.md#s23) | Contract form (create and edit) | 134 | 12 |
-| [S24](slices-3.md#s24) | Contract detail | 568 | 53 |
-| [S25](slices-3.md#s25) | Payments overview | 198 | 18 |
-| [S26](slices-3.md#s26) | Renewals | 212 | 20 |
-| [S27](slices-3.md#s27) | Performance | 290 | 28 |
-| [S28](slices-3.md#s28) | Members list | 232 | 22 |
-| [S29](slices-3.md#s29) | Member form (register and edit) | 192 | 18 |
-| [S31](slices-4.md#s31) | Membership payments | 182 | 17 |
-| [S32](slices-4.md#s32) | Membership reports | 190 | 17 |
-| [S33](slices-4.md#s33) | Verify member (Reception) | 144 | 13 |
-| [S34](slices-4.md#s34) | Employee upload | 230 | 21 |
-| [S35](slices-4.md#s35) | VIP requests | 164 | 15 |
-| [S36](slices-4.md#s36) | Settings: Company | 186 | 16 |
-| [S37](slices-4.md#s37) | Settings: My profile | 164 | 15 |
-| [S38](slices-4.md#s38) | Settings: Team | 220 | 20 |
-| [S39](slices-4.md#s39) | Settings: Roles and permissions | 222 | 20 |
-| [S40](slices-4.md#s40) | Settings: Lists | 294 | 26 |
-| [S41](slices-4.md#s41) | Settings: Sales script | 182 | 17 |
-| [S42](slices-4.md#s42) | Settings: Pricing | 512 | 50 |
-| [S43](slices-5.md#s43) | Settings: Statuses | 154 | 14 |
-| [S44](slices-5.md#s44) | Settings: Wellness+ | 242 | 23 |
-| [S45](slices-5.md#s45) | Settings: Contracts and payments | 84 | 7 |
-| [S46](slices-5.md#s46) | Settings: Audit log | 182 | 17 |
-| [S47](slices-5.md#s47) | Settings: Integrations | 114 | 10 |
-| [S48](slices-5.md#s48) | Settings: Client management | 426 | 41 |
-| [S49](slices-5.md#s49) | Settings: Notifications | 144 | 13 |
-| [S50](slices-5.md#s50) | Settings: Warehouses | 134 | 12 |
-| [S51](slices-5.md#s51) | Settings: Categories | 154 | 14 |
-| [S52](slices-5.md#s52) | Form submissions | 124 | 11 |
-| [S54](slices-5.md#s54) | Dashboard: Sales User | 190 | 16 |
-| [S55](slices-6.md#s55) | Dashboard: Sales Manager | 118 | 9 |
-| [S56](slices-6.md#s56) | Dashboard: Administrator | 104 | 9 |
-| [S57](slices-6.md#s57) | Dashboard: CEO | 124 | 11 |
-| [S58](slices-6.md#s58) | Dashboard: Business owner (fallback) | 114 | 10 |
-| [S59](slices-6.md#s59) | Dashboard: Staff (fallback) | 134 | 12 |
-| [S60](slices-6.md#s60) | Notifications | 94 | 8 |
-| [S61](slices-6.md#s61) | Reports | 172 | 16 |
-| [S62](slices-6.md#s62) | Inventory list | 378 | 36 |
-| [S63](slices-6.md#s63) | Product form (create and edit) | 298 | 28 |
-| [S64](slices-6.md#s64) | Platform: Tenants | 202 | 18 |
-| [S65](slices-6.md#s65) | Platform: People | 292 | 27 |
-| [S66](slices-6.md#s66) | Platform: Settings | 192 | 18 |
-| [S67](slices-6.md#s67) | Platform: My profile | 144 | 13 |
-| [S68](slices-6.md#s68) | Platform dashboard (Super Admin) | 110 | 9 |
+| [S05](phase-1.md#s05) | Clients list | 416 | 38 |
+| [S06](phase-1.md#s06) | Client form (create and edit) | 212 | 18 |
+| [S07](phase-1.md#s07) | Follow-ups | 202 | 18 |
+| [S08](phase-2.md#s08) | Calendar (appointments, follow-ups, contract dates) | 522 | 48 |
+| [S10](phase-2.md#s10) | Pricing screen (offer builder) | 214 | 19 |
+| [S11](phase-2.md#s11) | Discount approvals | 140 | 12 |
+| [S12](phase-2.md#s12) | Offers list | 172 | 16 |
+| [S13](phase-2.md#s13) | Deal form (create and edit) | 154 | 14 |
+| [S15](phase-2.md#s15) | Pipeline board | 198 | 18 |
+| [S16](phase-2.md#s16) | Pipeline list | 232 | 22 |
+| [S17](phase-2.md#s17) | Quotations list (legacy workflow) | 144 | 13 |
+| [S18](phase-3.md#s18) | Quotation form (create and edit) | 154 | 14 |
+| [S19](phase-3.md#s19) | Quotation detail | 164 | 15 |
+| [S20](phase-3.md#s20) | Invoices list | 134 | 12 |
+| [S21](phase-3.md#s21) | Invoice detail | 104 | 9 |
+| [S22](phase-3.md#s22) | Contracts list | 172 | 16 |
+| [S23](phase-3.md#s23) | Contract form (create and edit) | 134 | 12 |
+| [S24](phase-3.md#s24) | Contract detail | 568 | 53 |
+| [S25](phase-3.md#s25) | Payments overview | 198 | 18 |
+| [S26](phase-3.md#s26) | Renewals | 212 | 20 |
+| [S27](phase-3.md#s27) | Performance | 290 | 28 |
+| [S28](phase-3.md#s28) | Members list | 232 | 22 |
+| [S29](phase-3.md#s29) | Member form (register and edit) | 192 | 18 |
+| [S31](phase-4.md#s31) | Membership payments | 182 | 17 |
+| [S32](phase-4.md#s32) | Membership reports | 190 | 17 |
+| [S33](phase-4.md#s33) | Verify member (Reception) | 144 | 13 |
+| [S34](phase-4.md#s34) | Employee upload | 230 | 21 |
+| [S35](phase-4.md#s35) | VIP requests | 164 | 15 |
+| [S36](phase-4.md#s36) | Settings: Company | 186 | 16 |
+| [S37](phase-4.md#s37) | Settings: My profile | 164 | 15 |
+| [S38](phase-4.md#s38) | Settings: Team | 220 | 20 |
+| [S39](phase-4.md#s39) | Settings: Roles and permissions | 222 | 20 |
+| [S40](phase-4.md#s40) | Settings: Lists | 294 | 26 |
+| [S41](phase-4.md#s41) | Settings: Sales script | 182 | 17 |
+| [S42](phase-4.md#s42) | Settings: Pricing | 512 | 50 |
+| [S43](phase-5.md#s43) | Settings: Statuses | 154 | 14 |
+| [S44](phase-5.md#s44) | Settings: Wellness+ | 242 | 23 |
+| [S45](phase-5.md#s45) | Settings: Contracts and payments | 84 | 7 |
+| [S46](phase-5.md#s46) | Settings: Audit log | 182 | 17 |
+| [S47](phase-5.md#s47) | Settings: Integrations | 114 | 10 |
+| [S48](phase-5.md#s48) | Settings: Client management | 426 | 41 |
+| [S49](phase-5.md#s49) | Settings: Notifications | 144 | 13 |
+| [S50](phase-5.md#s50) | Settings: Warehouses | 134 | 12 |
+| [S51](phase-5.md#s51) | Settings: Categories | 154 | 14 |
+| [S52](phase-5.md#s52) | Form submissions | 124 | 11 |
+| [S54](phase-5.md#s54) | Dashboard: Sales User | 190 | 16 |
+| [S55](phase-6.md#s55) | Dashboard: Sales Manager | 118 | 9 |
+| [S56](phase-6.md#s56) | Dashboard: Administrator | 104 | 9 |
+| [S57](phase-6.md#s57) | Dashboard: CEO | 124 | 11 |
+| [S58](phase-6.md#s58) | Dashboard: Business owner (fallback) | 114 | 10 |
+| [S59](phase-6.md#s59) | Dashboard: Staff (fallback) | 134 | 12 |
+| [S60](phase-6.md#s60) | Notifications | 94 | 8 |
+| [S61](phase-6.md#s61) | Reports | 172 | 16 |
+| [S62](phase-6.md#s62) | Inventory list | 378 | 36 |
+| [S63](phase-6.md#s63) | Product form (create and edit) | 298 | 28 |
+| [S64](phase-6.md#s64) | Platform: Tenants | 202 | 18 |
+| [S65](phase-6.md#s65) | Platform: People | 292 | 27 |
+| [S66](phase-6.md#s66) | Platform: Settings | 192 | 18 |
+| [S67](phase-6.md#s67) | Platform: My profile | 144 | 13 |
+| [S68](phase-6.md#s68) | Platform dashboard (Super Admin) | 110 | 9 |
 
 ### 6.0a Build sheet: what each slice does and which files it touches
 
@@ -1523,414 +1523,414 @@ Imperative summary per slice. **Create** = new files, **Modify** = existing file
 - Modify: `src/i18n/config.ts` (NAMESPACES list)
 - Read: `src/setupTests.ts`, `src/routes/index.tsx`, `src/store/useAuthStore.ts`, `scripts/check-translations.mjs`
 - Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
-- Details: [S01](slices-1.md#s01)
+- Details: [S01](phase-1.md#s01)
 
 **S02. Build the spotlight overlay, the explanation card, focus and keyboard handling, and the host that runs a tour and mounts in the tenant and Super Admin shells.**
 - Create: `src/components/support/SpotlightMask.tsx`, `src/components/support/SpotlightMask.module.css`, `src/lib/support/useTargetRect.ts`, `src/components/support/SpotlightMask.test.tsx`, `src/components/support/SpotlightMask.stories.tsx`, `src/components/support/TourPopover.tsx`, `src/components/support/TourPopover.module.css`, `src/lib/support/popoverPlacement.ts`, `src/components/support/TourPopover.test.tsx`, `src/lib/support/popoverPlacement.test.ts`, `src/components/support/TourPopover.stories.tsx`, `src/lib/support/useTourFocus.ts`, `src/lib/support/useTourKeyboard.ts`, `src/components/support/LiveAnnouncer.tsx`, `src/lib/support/describeTarget.ts`, `src/lib/support/useTourFocus.test.tsx`, `src/lib/support/useTourKeyboard.test.tsx`, `src/lib/support/describeTarget.test.ts`, `src/components/support/SupportHost.tsx`, `src/lib/support/useTourSession.ts`, `src/lib/support/scrollTargetIntoView.ts`, `src/components/support/SupportHost.test.tsx`, `src/lib/support/useTourSession.test.tsx`
 - Modify: `src/styles/tokens.css` (add `--z-tour`; `--z-tooltip` is 100 and the impersonation banner is a literal 1000, so the token must exceed 1000), `src/components/ui/Button/Button.tsx` (reuse as-is), `src/routes/TenantGuard.tsx`, `src/pages/shell/SuperAdminShell.tsx`, `src/components/panels/SalesScriptPanel/SalesScriptPanel.tsx` (pattern reference)
 - Read: `src/components/ui/DropdownMenu/DropdownMenu.tsx`, `src/components/ui/Modal/Modal.tsx`, `src/components/ui/SlideOver/SlideOver.tsx`
 - Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
-- Details: [S02](slices-1.md#s02)
+- Details: [S02](phase-1.md#s02)
 
 **S03. Replace the dead Support entry points with a working launcher and panel, add `tourId` props to shared components, write the shared guidance library, and annotate and guide the app shell.**
 - Create: `src/components/support/SupportLauncher.tsx`, `src/components/support/SupportPanel.tsx`, `src/components/support/SupportPanel.module.css`, `src/locales/en/support.json`, `src/locales/sq/support.json`, `tests/e2e/support.spec.ts`, `src/components/support/SupportPanel.test.tsx`, `src/lib/support/tourProps.ts`, `src/lib/support/tourProps.test.ts`, `src/lib/support/sharedGuidance.ts`, `src/lib/support/defineGuide.ts`, `src/lib/support/guideLint.ts`, `src/lib/support/stepFactories.ts`, `src/lib/support/sharedGuidance.test.ts`, `src/lib/support/guideLint.test.ts`, `src/lib/support/layoutAdapters.ts`, `src/lib/support/guides/shell.ts`, `src/lib/support/guides/shell.test.tsx`
 - Modify: `src/components/layout/AppLayout/AppLayout.tsx` (header help button), `src/components/layout/Sidebar/Sidebar.tsx` (bottom "Support" link), `src/locales/en/common.json` (`header.help`, `actions.support` already exist), `src/i18n/config.ts` (add `support` namespace name), `playwright.config.ts`, `tests/e2e/mobile360.spec.ts`, `src/components/ui/DataTable/DataTable.tsx`, `src/components/ui/Tabs/Tabs.tsx`, `src/components/ui/Pagination/*`, `src/components/ui/DropdownMenu/DropdownMenu.tsx`, `src/components/ui/Modal/Modal.tsx`, `src/components/ui/SlideOver/SlideOver.tsx`, `src/components/ui/ConfirmDialog/ConfirmDialog.tsx`, `src/components/ui/Card/*`, `src/components/ui/KPICard/*`, `src/components/ui/TextInput/TextInput.tsx`, `src/components/ui/SelectInput/SelectInput.tsx`, `src/locales/en/support.json` and sq/support.json (shared keys), `src/components/layout/AppLayout/AppLayout.tsx`, `src/components/layout/Sidebar/Sidebar.tsx`, `src/components/notifications/NotificationBell.tsx`, `src/components/salesScript/SalesScriptButton.tsx`, `src/components/ui/ThemeToggle`
 - Read: `src/hooks/useNavigation.ts`
 - Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
-- Details: [S03](slices-1.md#s03)
+- Details: [S03](phase-1.md#s03)
 
 **S04. Add nested-layer guidance, block clicks and submits on explained controls, and add Explain a control with a list and a point-and-ask mode.**
 - Create: `src/lib/support/layerStack.ts`, `src/lib/support/useLayerWatcher.ts`, `src/lib/support/layerStack.test.ts`, `src/lib/support/nestedGuide.test.tsx`, `src/lib/support/interactionGuard.ts`, `src/lib/support/interactionGuard.test.tsx`, `tests/e2e/support/noMutations.ts`, `src/lib/support/useExplainableControls.ts`, `src/components/support/ControlList.tsx`, `src/components/support/ControlList.module.css`, `src/components/support/ControlList.test.tsx`, `src/lib/support/useExplainableControls.test.tsx`, `src/lib/support/usePickMode.ts`, `src/components/support/PickBanner.tsx`, `src/lib/support/usePickMode.test.tsx`, `src/components/support/PickBanner.test.tsx`
 - Modify: `src/lib/support/useTourSession.ts` (extends), `src/components/ui/DropdownMenu/DropdownMenu.tsx` (menu is portalled to `body`; closes on outside click), `src/components/ui/Modal/Modal.tsx, SlideOver.tsx, ConfirmDialog.tsx`, `src/lib/support/useTourSession.ts` (installs the guard), `src/components/support/SupportPanel.tsx`, `src/lib/support/tourMachine.ts` (add the single-step mode)
 - Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
-- Details: [S04](slices-1.md#s04)
+- Details: [S04](phase-1.md#s04)
 
 **S05. Tour the Clients list header, search and filters (pilot). Tour the Clients list loading, error and empty states, repeated rows, row menu, and the archive and restore flow.**
 - Create: `src/lib/support/guides/clientsList.ts`, `src/lib/support/guides/clientsList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/clients/ClientListContent.tsx`, `src/components/clients/ExcelImportButton`, `src/pages/clients/ClientListContent.tsx` (row, menu, empty branches, dialog), `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (38 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Read: `src/hooks/useClients.ts`, `src/locales/en/clients.json`
 - Also: Remove `'clients.list'` from `PLANNED_PAGES`. Annotate about 34 elements with `tourProps('clients.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S05](slices-1.md#s05)
+- Details: [S05](phase-1.md#s05)
 
 **S06. Tour the client create and edit form, including the tenant-built form, contacts, first-deal option, notes and save bar.**
 - Create: `src/lib/support/guides/clientsForm.ts`, `src/lib/support/guides/clientsForm.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/clients/ClientFormContent.tsx`, `src/pages/clients/ContactPersonsEditor.tsx`, `src/components/forms/FormRenderer`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'clients.form'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('clients.form.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S06](slices-1.md#s06)
+- Details: [S06](phase-1.md#s06)
 
 **S07. Tour the Follow-ups tabs, filters, list, and complete, reschedule, cancel and reassign actions.**
 - Create: `src/lib/support/guides/followUps.ts`, `src/lib/support/guides/followUps.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/followUps/FollowUpsContent.tsx`, `src/components/followUps/FollowUpList.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpActionModals.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'followUps'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('followUps.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S07](slices-1.md#s07)
+- Details: [S07](phase-1.md#s07)
 
 **S08. Tour the Calendar toolbar, views, team filter, overdue section and its empty and error states. Tour calendar items, the detail panel, the Plan activity dialog and rescheduling.**
 - Create: `src/lib/support/guides/appointments.ts`, `src/lib/support/guides/appointments.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/appointments/CalendarContent.tsx`, `src/components/calendar/CalendarToolbar.tsx`, `src/components/calendar/CalendarMonthView.tsx`, `src/components/calendar/CalendarTimeGrid.tsx`, `src/components/calendar/CalendarAgenda.tsx`, `src/components/calendar/CalendarChip.tsx`, `src/components/calendar/ContractDateChip.tsx`, `src/components/calendar/TeamFilter.tsx`, `src/components/calendar/OverdueSection.tsx`, `src/components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`, `src/components/calendar/PlanActivityDialog.tsx`, `src/components/calendar/RescheduleItemDialog.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (48 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'appointments'` from `PLANNED_PAGES`. Annotate about 43 elements with `tourProps('appointments.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S08](slices-2.md#s08)
+- Details: [S08](phase-2.md#s08)
 
 **S09. Tour the client detail header, action bar, summary, custom fields and follow-ups panel. Tour the client timeline, activity logging and the Appointments tab. Tour the client Deals and Wellness+ tabs.**
 - Create: `src/lib/support/guides/clientsDetail.ts`, `src/lib/support/guides/clientsDetail.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/clients/ClientDetailContent.tsx`, `src/components/followUps/FollowUpsPanel.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpList.tsx`, `src/components/clients/CompanyTimeline.tsx`, `src/components/activities/ActivityDialog.tsx`, `src/components/clients/ClientContractsTab.tsx`, `src/components/clients/ClientDealsTab.tsx`, `src/pages/membership/CompanyWellnessTab.tsx`, `src/pages/membership/MemberBadges.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (56 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'clients.detail'` from `PLANNED_PAGES`. Annotate about 50 elements with `tourProps('clients.detail.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S09](slices-2.md#s09)
+- Details: [S09](phase-2.md#s09)
 
 **S10. Tour the pricing screen: inputs, price breakdown, warnings and save.**
 - Create: `src/lib/support/guides/pricingOffer.ts`, `src/lib/support/guides/pricingOffer.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/pricing/PricingContent.tsx`, `src/pages/pricing/pricingScreenError.ts`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (19 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'pricing.offer'` from `PLANNED_PAGES`. Annotate about 17 elements with `tourProps('pricing.offer.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S10](slices-2.md#s10)
+- Details: [S10](phase-2.md#s10)
 
 **S11. Tour the Discount approvals queue.**
 - Create: `src/lib/support/guides/approvals.ts`, `src/lib/support/guides/approvals.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/approvals/ApprovalsContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'approvals'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('approvals.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S11](slices-2.md#s11)
+- Details: [S11](phase-2.md#s11)
 
 **S12. Tour the Offers list search, status chips, filters and table.**
 - Create: `src/lib/support/guides/offers.ts`, `src/lib/support/guides/offers.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/offers/OfferListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'offers'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('offers.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S12](slices-2.md#s12)
+- Details: [S12](phase-2.md#s12)
 
 **S13. Tour the deal create and edit form.**
 - Create: `src/lib/support/guides/dealsForm.ts`, `src/lib/support/guides/dealsForm.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/DealFormContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'deals.form'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('deals.form.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S13](slices-2.md#s13)
+- Details: [S13](phase-2.md#s13)
 
 **S14. Tour the deal detail header, stage, history, activities and follow-ups panel. Tour the deal offers section and the per-offer action bar. Tour the win, lose, reopen, reassign and delete dialogs.**
 - Create: `src/lib/support/guides/dealsDetail.ts`, `src/lib/support/guides/dealsDetail.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/DealDetailContent.tsx`, `src/pages/deals/DealOffersSection.tsx`, `src/components/offers/OfferActions.tsx`, `src/pages/deals/DealActivitiesSection.tsx`, `src/components/activities/ActivityDetails.tsx`, `src/components/activities/useCanEditActivity.ts`, `src/pages/deals/DealClosingModals.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (63 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'deals.detail'` from `PLANNED_PAGES`. Annotate about 57 elements with `tourProps('deals.detail.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S14](slices-2.md#s14)
+- Details: [S14](phase-2.md#s14)
 
 **S15. Tour the pipeline board columns, cards, move menu and load more.**
 - Create: `src/lib/support/guides/pipelineBoard.ts`, `src/lib/support/guides/pipelineBoard.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/PipelineBoardContent.tsx`, `src/pages/deals/PipelineViewSwitch.tsx`, `src/pages/deals/DealMarkers.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'pipeline.board'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('pipeline.board.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S15](slices-2.md#s15)
+- Details: [S15](phase-2.md#s15)
 
 **S16. Tour the pipeline list filters, table and pagination.**
 - Create: `src/lib/support/guides/pipelineList.ts`, `src/lib/support/guides/pipelineList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/DealListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (22 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'pipeline.list'` from `PLANNED_PAGES`. Annotate about 20 elements with `tourProps('pipeline.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S16](slices-2.md#s16)
+- Details: [S16](phase-2.md#s16)
 
 **S17. Tour the legacy Quotations list.**
 - Create: `src/lib/support/guides/quotationsList.ts`, `src/lib/support/guides/quotationsList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/quotations/QuotationListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'quotations.list'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('quotations.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S17](slices-2.md#s17)
+- Details: [S17](phase-2.md#s17)
 
 **S18. Tour the quotation form and its line items.**
 - Create: `src/lib/support/guides/quotationsForm.ts`, `src/lib/support/guides/quotationsForm.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/quotations/QuotationFormContent.tsx`, `src/pages/quotations/CreateQuotation.tsx`, `src/pages/quotations/EditQuotation.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'quotations.form'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('quotations.form.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S18](slices-3.md#s18)
+- Details: [S18](phase-3.md#s18)
 
 **S19. Tour the quotation detail and its status buttons.**
 - Create: `src/lib/support/guides/quotationsDetail.ts`, `src/lib/support/guides/quotationsDetail.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/quotations/QuotationDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (15 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'quotations.detail'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('quotations.detail.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S19](slices-3.md#s19)
+- Details: [S19](phase-3.md#s19)
 
 **S20. Tour the Invoices list.**
 - Create: `src/lib/support/guides/invoicesList.ts`, `src/lib/support/guides/invoicesList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/invoices/InvoiceListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'invoices.list'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('invoices.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S20](slices-3.md#s20)
+- Details: [S20](phase-3.md#s20)
 
 **S21. Tour the invoice detail actions.**
 - Create: `src/lib/support/guides/invoicesDetail.ts`, `src/lib/support/guides/invoicesDetail.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/invoices/InvoiceDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'invoices.detail'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('invoices.detail.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S21](slices-3.md#s21)
+- Details: [S21](phase-3.md#s21)
 
 **S22. Tour the Contracts list filters and row menu.**
 - Create: `src/lib/support/guides/contractsList.ts`, `src/lib/support/guides/contractsList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/contracts/ContractListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'contracts.list'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('contracts.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S22](slices-3.md#s22)
+- Details: [S22](phase-3.md#s22)
 
 **S23. Tour the contract form.**
 - Create: `src/lib/support/guides/contractsForm.ts`, `src/lib/support/guides/contractsForm.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/contracts/ContractFormContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'contracts.form'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('contracts.form.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S23](slices-3.md#s23)
+- Details: [S23](phase-3.md#s23)
 
 **S24. Tour contract lifecycle actions, terms, documents, notes, history and the reason dialogs. Tour the contract instalment schedule, its drawer actions and the add-instalment dialog.**
 - Create: `src/lib/support/guides/contractsDetail.ts`, `src/lib/support/guides/contractsDetail.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/contracts/ContractDetailContent.tsx`, `src/components/contracts/ContractPaymentsCard.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (53 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'contracts.detail'` from `PLANNED_PAGES`. Annotate about 48 elements with `tourProps('contracts.detail.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S24](slices-3.md#s24)
+- Details: [S24](phase-3.md#s24)
 
 **S25. Tour the Payments overview filters, totals and export.**
 - Create: `src/lib/support/guides/payments.ts`, `src/lib/support/guides/payments.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/payments/PaymentsOverviewContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'payments'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('payments.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S25](slices-3.md#s25)
+- Details: [S25](phase-3.md#s25)
 
 **S26. Tour Renewals windows, filters, row actions and the not-renewing dialog.**
 - Create: `src/lib/support/guides/renewals.ts`, `src/lib/support/guides/renewals.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/renewals/RenewalsContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'renewals'` from `PLANNED_PAGES`. Annotate about 18 elements with `tourProps('renewals.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S26](slices-3.md#s26)
+- Details: [S26](phase-3.md#s26)
 
 **S27. Tour Performance comparison, filters, export, person detail and records dialog.**
 - Create: `src/lib/support/guides/performance.ts`, `src/lib/support/guides/performance.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/performance/PerformanceContent.tsx`, `src/pages/performance/PerformanceDetail.tsx`, `src/pages/performance/PerformanceRecordsDialog.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (28 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'performance'` from `PLANNED_PAGES`. Annotate about 25 elements with `tourProps('performance.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S27](slices-3.md#s27)
+- Details: [S27](phase-3.md#s27)
 
 **S28. Tour the Members list.**
 - Create: `src/lib/support/guides/membersList.ts`, `src/lib/support/guides/membersList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MembersContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (22 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Read: `src/pages/membership/MemberBadges.tsx`
 - Also: Remove `'members.list'` from `PLANNED_PAGES`. Annotate about 20 elements with `tourProps('members.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S28](slices-3.md#s28)
+- Details: [S28](phase-3.md#s28)
 
 **S29. Tour the member form and its duplicate dialog.**
 - Create: `src/lib/support/guides/membersForm.ts`, `src/lib/support/guides/membersForm.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MemberFormContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.form'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('members.form.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S29](slices-3.md#s29)
+- Details: [S29](phase-3.md#s29)
 
 **S30. Tour the member detail header and the overview, terms, history and note tabs. Tour the member Payments and VIP tabs, receipts, void and the VIP decision. Tour the member Family tab. Tour the record payment, correct tier, remove from company, card and status dialogs.**
 - Create: `src/lib/support/guides/membersDetail.ts`, `src/lib/support/guides/membersDetail.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MemberDetailContent.tsx`, `src/pages/membership/FamilyTab.tsx`, `src/pages/membership/VipTab.tsx`, `src/pages/membership/VipDecisionDialog.tsx`, `src/pages/membership/RecordPaymentModal.tsx`, `src/pages/membership/CorrectTierDialog.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`, `src/pages/membership/MemberCardDialog.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (97 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.detail'` from `PLANNED_PAGES`. Annotate about 87 elements with `tourProps('members.detail.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S30](slices-3.md#s30)
+- Details: [S30](phase-3.md#s30)
 
 **S31. Tour Membership payments.**
 - Create: `src/lib/support/guides/membersPayments.ts`, `src/lib/support/guides/membersPayments.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MemberPaymentsContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.payments'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('members.payments.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S31](slices-4.md#s31)
+- Details: [S31](phase-4.md#s31)
 
 **S32. Tour Membership reports.**
 - Create: `src/lib/support/guides/membersReports.ts`, `src/lib/support/guides/membersReports.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/reports/MembershipReportsContent.tsx`, `src/pages/membership/reports/reportSections.ts`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.reports'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('members.reports.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S32](slices-4.md#s32)
+- Details: [S32](phase-4.md#s32)
 
 **S33. Tour Verify member, the Reception scan and search screen.**
 - Create: `src/lib/support/guides/membersVerify.ts`, `src/lib/support/guides/membersVerify.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/verify/VerifyMemberContent.tsx`, `src/pages/membership/verify/QrScanner.tsx`, `src/pages/membership/verify/ReceptionResult.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.verify'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('members.verify.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S33](slices-4.md#s33)
+- Details: [S33](phase-4.md#s33)
 
 **S34. Tour Employee upload from file pick through preview to outcome.**
 - Create: `src/lib/support/guides/membersEmployeeUpload.ts`, `src/lib/support/guides/membersEmployeeUpload.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/EmployeeUploadContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (21 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.employeeUpload'` from `PLANNED_PAGES`. Annotate about 19 elements with `tourProps('members.employeeUpload.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S34](slices-4.md#s34)
+- Details: [S34](phase-4.md#s34)
 
 **S35. Tour VIP requests.**
 - Create: `src/lib/support/guides/membersVipRequests.ts`, `src/lib/support/guides/membersVipRequests.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/VipRequestsContent.tsx`, `src/pages/membership/VipDecisionDialog.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (15 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'members.vipRequests'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('members.vipRequests.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S35](slices-4.md#s35)
+- Details: [S35](phase-4.md#s35)
 
 **S36. Tour Company settings and the settings side menu.**
 - Create: `src/lib/support/guides/settingsCompany.ts`, `src/lib/support/guides/settingsCompany.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/AccountSettingsPage.tsx`, `src/components/settings/LanguagePicker.tsx`, `src/components/layout/SettingsLayout/SettingsLayout.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.company'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('settings.company.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S36](slices-4.md#s36)
+- Details: [S36](phase-4.md#s36)
 
 **S37. Tour My profile.**
 - Create: `src/lib/support/guides/settingsProfile.ts`, `src/lib/support/guides/settingsProfile.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/profile/ProfilePage.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (15 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.profile'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('settings.profile.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S37](slices-4.md#s37)
+- Details: [S37](phase-4.md#s37)
 
 **S38. Tour Team settings: invite, edit, deactivate.**
 - Create: `src/lib/support/guides/settingsTeam.ts`, `src/lib/support/guides/settingsTeam.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/team/TeamSettingsContent.tsx`, `src/pages/settings/team/InviteMemberModal.tsx`, `src/pages/settings/team/EditMemberModal.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.team'` from `PLANNED_PAGES`. Annotate about 18 elements with `tourProps('settings.team.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S38](slices-4.md#s38)
+- Details: [S38](phase-4.md#s38)
 
 **S39. Tour Roles and the permission matrix.**
 - Create: `src/lib/support/guides/settingsRoles.ts`, `src/lib/support/guides/settingsRoles.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/roles/RolesSettingsContent.tsx`, `src/pages/settings/roles/RoleNameModal.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.roles'` from `PLANNED_PAGES`. Annotate about 18 elements with `tourProps('settings.roles.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S39](slices-4.md#s39)
+- Details: [S39](phase-4.md#s39)
 
 **S40. Tour all seven lookup-list tabs.**
 - Create: `src/lib/support/guides/settingsLists.ts`, `src/lib/support/guides/settingsLists.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/lists/ListsSettingsContent.tsx`, `src/components/settings/LookupListEditor`, `src/pages/settings/lists/RiskLevelsList.tsx`, `src/pages/settings/lists/BusinessTypesList.tsx`, `src/pages/settings/lists/AreasList.tsx`, `src/pages/settings/lists/CitiesList.tsx`, `src/pages/settings/lists/FollowUpIntervalsList.tsx`, `src/pages/settings/lists/LostReasonsList.tsx`, `src/pages/settings/lists/ActivityResultsList.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (26 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.lists'` from `PLANNED_PAGES`. Annotate about 23 elements with `tourProps('settings.lists.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S40](slices-4.md#s40)
+- Details: [S40](phase-4.md#s40)
 
 **S41. Tour the Sales script editor, preview, publish and versions.**
 - Create: `src/lib/support/guides/settingsSalesScript.ts`, `src/lib/support/guides/settingsSalesScript.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/salesScript/SalesScriptSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.salesScript'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('settings.salesScript.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S41](slices-4.md#s41)
+- Details: [S41](phase-4.md#s41)
 
 **S42. Tour Pricing settings tabs: bands, risk, frequencies, zones and discount cap. Tour Pricing services, packages, offer wording and the test calculator.**
 - Create: `src/lib/support/guides/settingsPricing.ts`, `src/lib/support/guides/settingsPricing.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/pricing/PricingSettingsContent.tsx`, `src/pages/settings/pricing/EmployeeBandsPanel.tsx`, `src/pages/settings/pricing/RiskSurchargesPanel.tsx`, `src/pages/settings/pricing/pricingTabs.ts`, `src/pages/settings/pricing/VisitFrequenciesPanel.tsx`, `src/pages/settings/pricing/PriceZonesPanel.tsx`, `src/pages/settings/pricing/DiscountCapPanel.tsx`, `src/pages/settings/pricing/ServicesPanel.tsx`, `src/pages/settings/pricing/PackagesPanel.tsx`, `src/pages/settings/pricing/descriptionColumns.tsx`, `src/pages/settings/pricing/OfferSettingsPanel.tsx`, `src/pages/settings/pricing/TestCalculatorPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (50 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.pricing'` from `PLANNED_PAGES`. Annotate about 45 elements with `tourProps('settings.pricing.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S42](slices-4.md#s42)
+- Details: [S42](phase-4.md#s42)
 
 **S43. Tour Statuses.**
 - Create: `src/lib/support/guides/settingsStatuses.ts`, `src/lib/support/guides/settingsStatuses.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/statuses/StatusesSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.statuses'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('settings.statuses.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S43](slices-5.md#s43)
+- Details: [S43](phase-5.md#s43)
 
 **S44. Tour Wellness+ settings.**
 - Create: `src/lib/support/guides/settingsWellnessPlus.ts`, `src/lib/support/guides/settingsWellnessPlus.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`, `src/pages/settings/wellnessPlus/TiersPanel.tsx`, `src/pages/settings/wellnessPlus/RulesPanel.tsx`, `src/pages/settings/wellnessPlus/RelationshipsPanel.tsx`, `src/pages/settings/wellnessPlus/BenefitsPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (23 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.wellnessPlus'` from `PLANNED_PAGES`. Annotate about 21 elements with `tourProps('settings.wellnessPlus.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S44](slices-5.md#s44)
+- Details: [S44](phase-5.md#s44)
 
 **S45. Tour Contract and payment settings.**
 - Create: `src/lib/support/guides/settingsContracts.ts`, `src/lib/support/guides/settingsContracts.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/contracts/ContractSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (7 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.contracts'` from `PLANNED_PAGES`. Annotate about 6 elements with `tourProps('settings.contracts.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S45](slices-5.md#s45)
+- Details: [S45](phase-5.md#s45)
 
 **S46. Tour the Audit log.**
 - Create: `src/lib/support/guides/settingsAudit.ts`, `src/lib/support/guides/settingsAudit.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/audit/AuditLogContent.tsx`, `src/pages/settings/audit/AuditEntryDetail.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.audit'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('settings.audit.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S46](slices-5.md#s46)
+- Details: [S46](phase-5.md#s46)
 
 **S47. Tour Integrations.**
 - Create: `src/lib/support/guides/settingsIntegrations.ts`, `src/lib/support/guides/settingsIntegrations.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/IntegrationsPage.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (10 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.integrations'` from `PLANNED_PAGES`. Annotate about 9 elements with `tourProps('settings.integrations.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S47](slices-5.md#s47)
+- Details: [S47](phase-5.md#s47)
 
 **S48. Tour Client management custom fields. Tour Client management forms: create, template, duplicate, delete.**
 - Create: `src/lib/support/guides/settingsClientManagement.ts`, `src/lib/support/guides/settingsClientManagement.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/ClientSettingsContent.tsx`, `src/pages/settings/ClientFormsTab.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (41 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.clientManagement'` from `PLANNED_PAGES`. Annotate about 37 elements with `tourProps('settings.clientManagement.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S48](slices-5.md#s48)
+- Details: [S48](phase-5.md#s48)
 
 **S49. Tour Notification settings.**
 - Create: `src/lib/support/guides/settingsNotifications.ts`, `src/lib/support/guides/settingsNotifications.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/NotificationSettingsPage.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.notifications'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('settings.notifications.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S49](slices-5.md#s49)
+- Details: [S49](phase-5.md#s49)
 
 **S50. Tour Warehouses.**
 - Create: `src/lib/support/guides/settingsWarehouses.ts`, `src/lib/support/guides/settingsWarehouses.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/WarehouseList/WarehouseList.tsx`, `src/components/inventory/WarehouseFormModal`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.warehouses'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('settings.warehouses.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S50](slices-5.md#s50)
+- Details: [S50](phase-5.md#s50)
 
 **S51. Tour Categories.**
 - Create: `src/lib/support/guides/settingsCategories.ts`, `src/lib/support/guides/settingsCategories.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/CategoryList/CategoryList.tsx`, `src/components/inventory/CategoryFormModal`, `src/components/inventory/DeleteCategoryModal`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'settings.categories'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('settings.categories.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S51](slices-5.md#s51)
+- Details: [S51](phase-5.md#s51)
 
 **S52. Tour Form submissions.**
 - Create: `src/lib/support/guides/formsSubmissions.ts`, `src/lib/support/guides/formsSubmissions.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/FormSubmissionsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (11 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'forms.submissions'` from `PLANNED_PAGES`. Annotate about 10 elements with `tourProps('forms.submissions.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S52](slices-5.md#s52)
+- Details: [S52](phase-5.md#s52)
 
 **S53. Add a Support entry to the form builder, then tour its title bar, status bar and the Home and Insert ribbon tabs. Tour the builder's Layout and contextual ribbon tabs and the properties panel. Tour the builder's page rail, canvas, Add menu and context menu.**
 - Create: `src/lib/support/guides/formsBuilder.ts`, `src/lib/support/guides/formsBuilder.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/FormBuilderPage.tsx`, `src/components/forms/canvas/ribbon/TitleBar.tsx`, `src/components/forms/canvas/ribbon/StatusBar.tsx`, `src/components/forms/canvas/ribbon/HomeTab.tsx`, `src/components/forms/canvas/ribbon/InsertTab.tsx`, `src/components/forms/canvas/ribbon/RibbonButton.tsx`, `src/components/forms/registry/FormattingToolbar`, `src/components/forms/canvas/ribbon/LayoutTab.tsx`, `src/components/forms/canvas/ribbon/ContextualTab.tsx`, `src/components/forms/canvas/PageRail.tsx`, `src/components/forms/canvas/AddMenu.tsx`, `src/components/forms/canvas/FormCanvas.tsx`, `src/components/forms/canvas/CanvasSection.tsx`, `src/components/forms/canvas/CanvasElement.tsx`, `src/components/ui/ContextMenu`, `src/components/forms/canvas/PropertiesPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (71 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Read: `src/components/forms/canvas/keyboard.ts`
 - Also: Remove `'forms.builder'` from `PLANNED_PAGES`. Annotate about 64 elements with `tourProps('forms.builder.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S53](slices-5.md#s53)
+- Details: [S53](phase-5.md#s53)
 
 **S54. Tour the Sales User dashboard and the shared role-dashboard frame, and publish the dashboard variant to Support.**
 - Create: `src/lib/support/guides/dashboardSalesUser.ts`, `src/lib/support/guides/dashboardSalesUser.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/SalesUserDashboard.tsx`, `src/pages/dashboard/RoleDashboardFrame.tsx`, `src/pages/dashboard/PeriodSelector.tsx`, `src/pages/dashboard/RefreshBar.tsx`, `src/pages/dashboard/KpiTile.tsx`, `src/pages/dashboard/ChartWithTable.tsx`, `src/pages/dashboard/EmptyState.tsx`, `src/pages/dashboard/DashboardLanding.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'dashboard.salesUser'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('dashboard.salesUser.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S54](slices-5.md#s54)
+- Details: [S54](phase-5.md#s54)
 
 **S55. Tour the Sales Manager dashboard additions.**
 - Create: `src/lib/support/guides/dashboardSalesManager.ts`, `src/lib/support/guides/dashboardSalesManager.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/SalesManagerDashboard.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'dashboard.salesManager'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('dashboard.salesManager.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S55](slices-6.md#s55)
+- Details: [S55](phase-6.md#s55)
 
 **S56. Tour the Administrator dashboard.**
 - Create: `src/lib/support/guides/dashboardAdministrator.ts`, `src/lib/support/guides/dashboardAdministrator.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/AdministratorDashboard.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'dashboard.administrator'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('dashboard.administrator.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S56](slices-6.md#s56)
+- Details: [S56](phase-6.md#s56)
 
 **S57. Tour the CEO dashboard.**
 - Create: `src/lib/support/guides/dashboardCeo.ts`, `src/lib/support/guides/dashboardCeo.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/CeoDashboard.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (11 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'dashboard.ceo'` from `PLANNED_PAGES`. Annotate about 10 elements with `tourProps('dashboard.ceo.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S57](slices-6.md#s57)
+- Details: [S57](phase-6.md#s57)
 
 **S58. Tour the fallback Business owner dashboard.**
 - Create: `src/lib/support/guides/dashboardLegacyOwner.ts`, `src/lib/support/guides/dashboardLegacyOwner.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/BusinessOwnerDashboard.tsx`, `src/pages/shell/BusinessOwnerShell.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (10 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'dashboard.legacyOwner'` from `PLANNED_PAGES`. Annotate about 9 elements with `tourProps('dashboard.legacyOwner.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S58](slices-6.md#s58)
+- Details: [S58](phase-6.md#s58)
 
 **S59. Tour the fallback Staff dashboard.**
 - Create: `src/lib/support/guides/dashboardLegacyStaff.ts`, `src/lib/support/guides/dashboardLegacyStaff.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/StaffDashboard.tsx`, `src/pages/shell/StaffShell.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'dashboard.legacyStaff'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('dashboard.legacyStaff.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S59](slices-6.md#s59)
+- Details: [S59](phase-6.md#s59)
 
 **S60. Tour the Notifications page.**
 - Create: `src/lib/support/guides/notifications.ts`, `src/lib/support/guides/notifications.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/notifications/NotificationsContent.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (8 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'notifications'` from `PLANNED_PAGES`. Annotate about 7 elements with `tourProps('notifications.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S60](slices-6.md#s60)
+- Details: [S60](phase-6.md#s60)
 
 **S61. Tour Reports.**
 - Create: `src/lib/support/guides/reports.ts`, `src/lib/support/guides/reports.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/ReportsPage.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'reports'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('reports.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S61](slices-6.md#s61)
+- Details: [S61](phase-6.md#s61)
 
 **S62. Tour the Inventory list header, filters and states. Tour Inventory rows, selection, bulk actions, row menu, stock adjustment and delete.**
 - Create: `src/lib/support/guides/inventoryList.ts`, `src/lib/support/guides/inventoryList.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/InventoryList/InventoryList.tsx`, `src/components/inventory/InventoryTable`, `src/components/ui/MultiLocationStockIndicator`, `src/components/inventory/StockAdjustmentPanel`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (36 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'inventory.list'` from `PLANNED_PAGES`. Annotate about 32 elements with `tourProps('inventory.list.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S62](slices-6.md#s62)
+- Details: [S62](phase-6.md#s62)
 
 **S63. Tour the product form, including stock per warehouse and images.**
 - Create: `src/lib/support/guides/inventoryForm.ts`, `src/lib/support/guides/inventoryForm.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/ProductForm/ProductForm.tsx`, `src/components/inventory/WarehouseStockAllocation`, `src/components/inventory/ProductImageManager`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (28 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'inventory.form'` from `PLANNED_PAGES`. Annotate about 25 elements with `tourProps('inventory.form.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S63](slices-6.md#s63)
+- Details: [S63](phase-6.md#s63)
 
 **S64. Tour Platform Tenants.**
 - Create: `src/lib/support/guides/adminTenants.ts`, `src/lib/support/guides/adminTenants.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/TenantsPage.tsx`, `src/components/widgets/TenantManagementTable`, `src/pages/admin/CreateTenantModal.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'admin.tenants'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('admin.tenants.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S64](slices-6.md#s64)
+- Details: [S64](phase-6.md#s64)
 
 **S65. Tour Platform People.**
 - Create: `src/lib/support/guides/adminPeople.ts`, `src/lib/support/guides/adminPeople.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/PeoplePage.tsx`, `src/pages/admin/InviteUserModal.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (27 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'admin.people'` from `PLANNED_PAGES`. Annotate about 24 elements with `tourProps('admin.people.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S65](slices-6.md#s65)
+- Details: [S65](phase-6.md#s65)
 
 **S66. Tour Platform Settings.**
 - Create: `src/lib/support/guides/adminSettings.ts`, `src/lib/support/guides/adminSettings.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/PlatformSettingsPage.tsx`, `src/pages/admin/TenantPickerModal.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'admin.settings'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('admin.settings.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S66](slices-6.md#s66)
+- Details: [S66](phase-6.md#s66)
 
 **S67. Tour the Super Admin profile.**
 - Create: `src/lib/support/guides/adminProfile.ts`, `src/lib/support/guides/adminProfile.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/AdminProfilePage.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'admin.profile'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('admin.profile.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S67](slices-6.md#s67)
+- Details: [S67](phase-6.md#s67)
 
 **S68. Tour the Platform dashboard, then empty the planned-pages list so a hard test enforces full coverage.**
 - Create: `src/lib/support/guides/adminDashboard.ts`, `src/lib/support/guides/adminDashboard.test.tsx`
 - Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/SuperAdminDashboard.tsx`, `src/pages/shell/SuperAdminShell.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
 - Also: Remove `'admin.dashboard'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('admin.dashboard.<step>')` or `tourId`. Run `npm run check:translations`.
-- Details: [S68](slices-6.md#s68)
+- Details: [S68](phase-6.md#s68)
 
 ### 6.1 Standard procedure, tests, acceptance and evidence for every page-tour slice
 
@@ -1987,75 +1987,75 @@ Every `path` in `routes/index.tsx` appears here. Generated from the file; a path
 | `/forgot-password` | excluded: Pre-login single field; outside `AppLayout`. | none |
 | `/reset-password` | excluded: Pre-login two fields; outside `AppLayout`. | none |
 | `/:tenantSlug` | excluded: Same screen as `/:tenantSlug/dashboard`; covered by the dashboard pages. | none |
-| `/:tenantSlug/dashboard` | Dashboard: Sales User (`dashboard.salesUser`); Dashboard: Sales Manager (`dashboard.salesManager`); Dashboard: Administrator (`dashboard.administrator`); Dashboard: CEO (`dashboard.ceo`); Dashboard: Business owner (fallback) (`dashboard.legacyOwner`); Dashboard: Staff (fallback) (`dashboard.legacyStaff`); excluded: Reception has no dashboard: `DashboardLanding` redirects to the company list. | [S54](slices-5.md#s54), [S55](slices-6.md#s55), [S56](slices-6.md#s56), [S57](slices-6.md#s57), [S58](slices-6.md#s58), [S59](slices-6.md#s59) |
-| `/:tenantSlug/settings` | Settings: Company (`settings.company`) | [S36](slices-4.md#s36) |
-| `/:tenantSlug/settings/team` | Settings: Team (`settings.team`) | [S38](slices-4.md#s38) |
-| `/:tenantSlug/settings/roles` | Settings: Roles and permissions (`settings.roles`) | [S39](slices-4.md#s39) |
-| `/:tenantSlug/settings/lists/:list?` | Settings: Lists (`settings.lists`) | [S40](slices-4.md#s40) |
-| `/:tenantSlug/settings/sales-script` | Settings: Sales script (`settings.salesScript`) | [S41](slices-4.md#s41) |
-| `/:tenantSlug/settings/pricing/:tab?` | Settings: Pricing (`settings.pricing`) | [S42](slices-4.md#s42) |
-| `/:tenantSlug/settings/statuses` | Settings: Statuses (`settings.statuses`) | [S43](slices-5.md#s43) |
-| `/:tenantSlug/settings/wellness-plus/:tab?` | Settings: Wellness+ (`settings.wellnessPlus`) | [S44](slices-5.md#s44) |
-| `/:tenantSlug/settings/contracts` | Settings: Contracts and payments (`settings.contracts`) | [S45](slices-5.md#s45) |
-| `/:tenantSlug/settings/audit` | Settings: Audit log (`settings.audit`) | [S46](slices-5.md#s46) |
-| `/:tenantSlug/settings/integrations` | Settings: Integrations (`settings.integrations`) | [S47](slices-5.md#s47) |
-| `/:tenantSlug/settings/profile` | Settings: My profile (`settings.profile`) | [S37](slices-4.md#s37) |
-| `/:tenantSlug/reports` | Reports (`reports`) | [S61](slices-6.md#s61) |
-| `/:tenantSlug/clients` | Clients list (`clients.list`) | [S05](slices-1.md#s05) |
-| `/:tenantSlug/clients/new` | Client form (create and edit) (`clients.form`) | [S06](slices-1.md#s06) |
-| `/:tenantSlug/clients/:clientId` | Client detail (`clients.detail`) | [S09](slices-2.md#s09) |
-| `/:tenantSlug/clients/:clientId/edit` | Client form (create and edit) (`clients.form`) | [S06](slices-1.md#s06) |
-| `/:tenantSlug/appointments` | Calendar (appointments, follow-ups, contract dates) (`appointments`) | [S08](slices-2.md#s08) |
-| `/:tenantSlug/settings/client-management` | Settings: Client management (`settings.clientManagement`) | [S48](slices-5.md#s48) |
-| `/:tenantSlug/settings/client-management/forms/:formId` | Form builder (`forms.builder`) | [S53](slices-5.md#s53) |
-| `/:tenantSlug/settings/client-management/forms/:formId/submissions` | Form submissions (`forms.submissions`) | [S52](slices-5.md#s52) |
+| `/:tenantSlug/dashboard` | Dashboard: Sales User (`dashboard.salesUser`); Dashboard: Sales Manager (`dashboard.salesManager`); Dashboard: Administrator (`dashboard.administrator`); Dashboard: CEO (`dashboard.ceo`); Dashboard: Business owner (fallback) (`dashboard.legacyOwner`); Dashboard: Staff (fallback) (`dashboard.legacyStaff`); excluded: Reception has no dashboard: `DashboardLanding` redirects to the company list. | [S54](phase-5.md#s54), [S55](phase-6.md#s55), [S56](phase-6.md#s56), [S57](phase-6.md#s57), [S58](phase-6.md#s58), [S59](phase-6.md#s59) |
+| `/:tenantSlug/settings` | Settings: Company (`settings.company`) | [S36](phase-4.md#s36) |
+| `/:tenantSlug/settings/team` | Settings: Team (`settings.team`) | [S38](phase-4.md#s38) |
+| `/:tenantSlug/settings/roles` | Settings: Roles and permissions (`settings.roles`) | [S39](phase-4.md#s39) |
+| `/:tenantSlug/settings/lists/:list?` | Settings: Lists (`settings.lists`) | [S40](phase-4.md#s40) |
+| `/:tenantSlug/settings/sales-script` | Settings: Sales script (`settings.salesScript`) | [S41](phase-4.md#s41) |
+| `/:tenantSlug/settings/pricing/:tab?` | Settings: Pricing (`settings.pricing`) | [S42](phase-4.md#s42) |
+| `/:tenantSlug/settings/statuses` | Settings: Statuses (`settings.statuses`) | [S43](phase-5.md#s43) |
+| `/:tenantSlug/settings/wellness-plus/:tab?` | Settings: Wellness+ (`settings.wellnessPlus`) | [S44](phase-5.md#s44) |
+| `/:tenantSlug/settings/contracts` | Settings: Contracts and payments (`settings.contracts`) | [S45](phase-5.md#s45) |
+| `/:tenantSlug/settings/audit` | Settings: Audit log (`settings.audit`) | [S46](phase-5.md#s46) |
+| `/:tenantSlug/settings/integrations` | Settings: Integrations (`settings.integrations`) | [S47](phase-5.md#s47) |
+| `/:tenantSlug/settings/profile` | Settings: My profile (`settings.profile`) | [S37](phase-4.md#s37) |
+| `/:tenantSlug/reports` | Reports (`reports`) | [S61](phase-6.md#s61) |
+| `/:tenantSlug/clients` | Clients list (`clients.list`) | [S05](phase-1.md#s05) |
+| `/:tenantSlug/clients/new` | Client form (create and edit) (`clients.form`) | [S06](phase-1.md#s06) |
+| `/:tenantSlug/clients/:clientId` | Client detail (`clients.detail`) | [S09](phase-2.md#s09) |
+| `/:tenantSlug/clients/:clientId/edit` | Client form (create and edit) (`clients.form`) | [S06](phase-1.md#s06) |
+| `/:tenantSlug/appointments` | Calendar (appointments, follow-ups, contract dates) (`appointments`) | [S08](phase-2.md#s08) |
+| `/:tenantSlug/settings/client-management` | Settings: Client management (`settings.clientManagement`) | [S48](phase-5.md#s48) |
+| `/:tenantSlug/settings/client-management/forms/:formId` | Form builder (`forms.builder`) | [S53](phase-5.md#s53) |
+| `/:tenantSlug/settings/client-management/forms/:formId/submissions` | Form submissions (`forms.submissions`) | [S52](phase-5.md#s52) |
 | `/:tenantSlug/settings/client-management/forms/:formId/print` | excluded: Print layout (30 lines): no interactive controls. | none |
 | `/:tenantSlug/settings/client-management/forms/:formId/submissions/:submissionId/print` | excluded: Print layout (37 lines): no interactive controls. | none |
-| `/:tenantSlug/settings/notifications` | Settings: Notifications (`settings.notifications`) | [S49](slices-5.md#s49) |
-| `/:tenantSlug/inventory` | Inventory list (`inventory.list`) | [S62](slices-6.md#s62) |
-| `/:tenantSlug/inventory/new` | Product form (create and edit) (`inventory.form`) | [S63](slices-6.md#s63) |
-| `/:tenantSlug/inventory/:productId/edit` | Product form (create and edit) (`inventory.form`) | [S63](slices-6.md#s63) |
-| `/:tenantSlug/settings/warehouses` | Settings: Warehouses (`settings.warehouses`) | [S50](slices-5.md#s50) |
-| `/:tenantSlug/settings/categories` | Settings: Categories (`settings.categories`) | [S51](slices-5.md#s51) |
-| `/:tenantSlug/notifications` | Notifications (`notifications`) | [S60](slices-6.md#s60) |
-| `/:tenantSlug/offers` | Offers list (`offers`) | [S12](slices-2.md#s12) |
-| `/:tenantSlug/follow-ups` | Follow-ups (`followUps`) | [S07](slices-1.md#s07) |
-| `/:tenantSlug/approvals` | Discount approvals (`approvals`) | [S11](slices-2.md#s11) |
-| `/:tenantSlug/quotations` | Quotations list (legacy workflow) (`quotations.list`) | [S17](slices-2.md#s17) |
-| `/:tenantSlug/quotations/new` | Quotation form (create and edit) (`quotations.form`) | [S18](slices-3.md#s18) |
-| `/:tenantSlug/quotations/:id` | Quotation detail (`quotations.detail`) | [S19](slices-3.md#s19) |
-| `/:tenantSlug/invoices` | Invoices list (`invoices.list`) | [S20](slices-3.md#s20) |
-| `/:tenantSlug/invoices/:id` | Invoice detail (`invoices.detail`) | [S21](slices-3.md#s21) |
-| `/:tenantSlug/contracts` | Contracts list (`contracts.list`) | [S22](slices-3.md#s22) |
-| `/:tenantSlug/contracts/new` | Contract form (create and edit) (`contracts.form`) | [S23](slices-3.md#s23) |
-| `/:tenantSlug/members` | Members list (`members.list`) | [S28](slices-3.md#s28) |
-| `/:tenantSlug/members/new` | Member form (register and edit) (`members.form`) | [S29](slices-3.md#s29) |
-| `/:tenantSlug/members/payments` | Membership payments (`members.payments`) | [S31](slices-4.md#s31) |
-| `/:tenantSlug/members/reports` | Membership reports (`members.reports`) | [S32](slices-4.md#s32) |
-| `/:tenantSlug/members/verify` | Verify member (Reception) (`members.verify`) | [S33](slices-4.md#s33) |
-| `/:tenantSlug/members/employee-upload` | Employee upload (`members.employeeUpload`) | [S34](slices-4.md#s34) |
-| `/:tenantSlug/members/vip-requests` | VIP requests (`members.vipRequests`) | [S35](slices-4.md#s35) |
-| `/:tenantSlug/members/:memberId` | Member detail (`members.detail`) | [S30](slices-3.md#s30) |
-| `/:tenantSlug/members/:memberId/edit` | Member form (register and edit) (`members.form`) | [S29](slices-3.md#s29) |
-| `/:tenantSlug/contracts/:contractId` | Contract detail (`contracts.detail`) | [S24](slices-3.md#s24) |
-| `/:tenantSlug/payments` | Payments overview (`payments`) | [S25](slices-3.md#s25) |
-| `/:tenantSlug/renewals` | Renewals (`renewals`) | [S26](slices-3.md#s26) |
-| `/:tenantSlug/performance` | Performance (`performance`) | [S27](slices-3.md#s27) |
-| `/:tenantSlug/contracts/:contractId/edit` | Contract form (create and edit) (`contracts.form`) | [S23](slices-3.md#s23) |
-| `/:tenantSlug/pipeline` | Pipeline board (`pipeline.board`) | [S15](slices-2.md#s15) |
-| `/:tenantSlug/pipeline/list` | Pipeline list (`pipeline.list`) | [S16](slices-2.md#s16) |
-| `/:tenantSlug/deals/new` | Deal form (create and edit) (`deals.form`) | [S13](slices-2.md#s13) |
-| `/:tenantSlug/deals/:dealId` | Deal detail (`deals.detail`) | [S14](slices-2.md#s14) |
-| `/:tenantSlug/deals/:dealId/pricing` | Pricing screen (offer builder) (`pricing.offer`) | [S10](slices-2.md#s10) |
-| `/:tenantSlug/clients/:clientId/pricing` | Pricing screen (offer builder) (`pricing.offer`) | [S10](slices-2.md#s10) |
-| `/:tenantSlug/deals/:dealId/edit` | Deal form (create and edit) (`deals.form`) | [S13](slices-2.md#s13) |
-| `/:tenantSlug/quotations/:id/edit` | Quotation form (create and edit) (`quotations.form`) | [S18](slices-3.md#s18) |
-| `/admin` | Platform dashboard (Super Admin) (`admin.dashboard`) | [S68](slices-6.md#s68) |
-| `/admin/dashboard` | Platform dashboard (Super Admin) (`admin.dashboard`) | [S68](slices-6.md#s68) |
-| `/admin/tenants` | Platform: Tenants (`admin.tenants`) | [S64](slices-6.md#s64) |
-| `/admin/people` | Platform: People (`admin.people`) | [S65](slices-6.md#s65) |
-| `/admin/setting` | Platform: Settings (`admin.settings`) | [S66](slices-6.md#s66) |
-| `/admin/profile` | Platform: My profile (`admin.profile`) | [S67](slices-6.md#s67) |
+| `/:tenantSlug/settings/notifications` | Settings: Notifications (`settings.notifications`) | [S49](phase-5.md#s49) |
+| `/:tenantSlug/inventory` | Inventory list (`inventory.list`) | [S62](phase-6.md#s62) |
+| `/:tenantSlug/inventory/new` | Product form (create and edit) (`inventory.form`) | [S63](phase-6.md#s63) |
+| `/:tenantSlug/inventory/:productId/edit` | Product form (create and edit) (`inventory.form`) | [S63](phase-6.md#s63) |
+| `/:tenantSlug/settings/warehouses` | Settings: Warehouses (`settings.warehouses`) | [S50](phase-5.md#s50) |
+| `/:tenantSlug/settings/categories` | Settings: Categories (`settings.categories`) | [S51](phase-5.md#s51) |
+| `/:tenantSlug/notifications` | Notifications (`notifications`) | [S60](phase-6.md#s60) |
+| `/:tenantSlug/offers` | Offers list (`offers`) | [S12](phase-2.md#s12) |
+| `/:tenantSlug/follow-ups` | Follow-ups (`followUps`) | [S07](phase-1.md#s07) |
+| `/:tenantSlug/approvals` | Discount approvals (`approvals`) | [S11](phase-2.md#s11) |
+| `/:tenantSlug/quotations` | Quotations list (legacy workflow) (`quotations.list`) | [S17](phase-2.md#s17) |
+| `/:tenantSlug/quotations/new` | Quotation form (create and edit) (`quotations.form`) | [S18](phase-3.md#s18) |
+| `/:tenantSlug/quotations/:id` | Quotation detail (`quotations.detail`) | [S19](phase-3.md#s19) |
+| `/:tenantSlug/invoices` | Invoices list (`invoices.list`) | [S20](phase-3.md#s20) |
+| `/:tenantSlug/invoices/:id` | Invoice detail (`invoices.detail`) | [S21](phase-3.md#s21) |
+| `/:tenantSlug/contracts` | Contracts list (`contracts.list`) | [S22](phase-3.md#s22) |
+| `/:tenantSlug/contracts/new` | Contract form (create and edit) (`contracts.form`) | [S23](phase-3.md#s23) |
+| `/:tenantSlug/members` | Members list (`members.list`) | [S28](phase-3.md#s28) |
+| `/:tenantSlug/members/new` | Member form (register and edit) (`members.form`) | [S29](phase-3.md#s29) |
+| `/:tenantSlug/members/payments` | Membership payments (`members.payments`) | [S31](phase-4.md#s31) |
+| `/:tenantSlug/members/reports` | Membership reports (`members.reports`) | [S32](phase-4.md#s32) |
+| `/:tenantSlug/members/verify` | Verify member (Reception) (`members.verify`) | [S33](phase-4.md#s33) |
+| `/:tenantSlug/members/employee-upload` | Employee upload (`members.employeeUpload`) | [S34](phase-4.md#s34) |
+| `/:tenantSlug/members/vip-requests` | VIP requests (`members.vipRequests`) | [S35](phase-4.md#s35) |
+| `/:tenantSlug/members/:memberId` | Member detail (`members.detail`) | [S30](phase-3.md#s30) |
+| `/:tenantSlug/members/:memberId/edit` | Member form (register and edit) (`members.form`) | [S29](phase-3.md#s29) |
+| `/:tenantSlug/contracts/:contractId` | Contract detail (`contracts.detail`) | [S24](phase-3.md#s24) |
+| `/:tenantSlug/payments` | Payments overview (`payments`) | [S25](phase-3.md#s25) |
+| `/:tenantSlug/renewals` | Renewals (`renewals`) | [S26](phase-3.md#s26) |
+| `/:tenantSlug/performance` | Performance (`performance`) | [S27](phase-3.md#s27) |
+| `/:tenantSlug/contracts/:contractId/edit` | Contract form (create and edit) (`contracts.form`) | [S23](phase-3.md#s23) |
+| `/:tenantSlug/pipeline` | Pipeline board (`pipeline.board`) | [S15](phase-2.md#s15) |
+| `/:tenantSlug/pipeline/list` | Pipeline list (`pipeline.list`) | [S16](phase-2.md#s16) |
+| `/:tenantSlug/deals/new` | Deal form (create and edit) (`deals.form`) | [S13](phase-2.md#s13) |
+| `/:tenantSlug/deals/:dealId` | Deal detail (`deals.detail`) | [S14](phase-2.md#s14) |
+| `/:tenantSlug/deals/:dealId/pricing` | Pricing screen (offer builder) (`pricing.offer`) | [S10](phase-2.md#s10) |
+| `/:tenantSlug/clients/:clientId/pricing` | Pricing screen (offer builder) (`pricing.offer`) | [S10](phase-2.md#s10) |
+| `/:tenantSlug/deals/:dealId/edit` | Deal form (create and edit) (`deals.form`) | [S13](phase-2.md#s13) |
+| `/:tenantSlug/quotations/:id/edit` | Quotation form (create and edit) (`quotations.form`) | [S18](phase-3.md#s18) |
+| `/admin` | Platform dashboard (Super Admin) (`admin.dashboard`) | [S68](phase-6.md#s68) |
+| `/admin/dashboard` | Platform dashboard (Super Admin) (`admin.dashboard`) | [S68](phase-6.md#s68) |
+| `/admin/tenants` | Platform: Tenants (`admin.tenants`) | [S64](phase-6.md#s64) |
+| `/admin/people` | Platform: People (`admin.people`) | [S65](phase-6.md#s65) |
+| `/admin/setting` | Platform: Settings (`admin.settings`) | [S66](phase-6.md#s66) |
+| `/admin/profile` | Platform: My profile (`admin.profile`) | [S67](phase-6.md#s67) |
 | `/admin/*` | excluded: Redirected by `SuperAdminShell`; the five real sub-pages are covered. | none |
 | `/unauthorized` | excluded: 403 status page. | none |
 | `*` | excluded: 404 status page. | none |
@@ -2064,70 +2064,70 @@ Every `path` in `routes/index.tsx` appears here. Generated from the file; a path
 
 | # | Page | Id | Slices | Tour complete after |
 |---|---|---|---|---|
-| 1 | Clients list | `clients.list` | [S05](slices-1.md#s05) | [S05](slices-1.md#s05) |
-| 2 | Client form (create and edit) | `clients.form` | [S06](slices-1.md#s06) | [S06](slices-1.md#s06) |
-| 3 | Client detail | `clients.detail` | [S09](slices-2.md#s09) | [S09](slices-2.md#s09) |
-| 4 | Pricing screen (offer builder) | `pricing.offer` | [S10](slices-2.md#s10) | [S10](slices-2.md#s10) |
-| 5 | Calendar (appointments, follow-ups, contract dates) | `appointments` | [S08](slices-2.md#s08) | [S08](slices-2.md#s08) |
-| 6 | Follow-ups | `followUps` | [S07](slices-1.md#s07) | [S07](slices-1.md#s07) |
-| 7 | Discount approvals | `approvals` | [S11](slices-2.md#s11) | [S11](slices-2.md#s11) |
-| 8 | Offers list | `offers` | [S12](slices-2.md#s12) | [S12](slices-2.md#s12) |
-| 9 | Pipeline board | `pipeline.board` | [S15](slices-2.md#s15) | [S15](slices-2.md#s15) |
-| 10 | Pipeline list | `pipeline.list` | [S16](slices-2.md#s16) | [S16](slices-2.md#s16) |
-| 11 | Deal form (create and edit) | `deals.form` | [S13](slices-2.md#s13) | [S13](slices-2.md#s13) |
-| 12 | Deal detail | `deals.detail` | [S14](slices-2.md#s14) | [S14](slices-2.md#s14) |
-| 13 | Quotations list (legacy workflow) | `quotations.list` | [S17](slices-2.md#s17) | [S17](slices-2.md#s17) |
-| 14 | Quotation form (create and edit) | `quotations.form` | [S18](slices-3.md#s18) | [S18](slices-3.md#s18) |
-| 15 | Quotation detail | `quotations.detail` | [S19](slices-3.md#s19) | [S19](slices-3.md#s19) |
-| 16 | Invoices list | `invoices.list` | [S20](slices-3.md#s20) | [S20](slices-3.md#s20) |
-| 17 | Invoice detail | `invoices.detail` | [S21](slices-3.md#s21) | [S21](slices-3.md#s21) |
-| 18 | Contracts list | `contracts.list` | [S22](slices-3.md#s22) | [S22](slices-3.md#s22) |
-| 19 | Contract form (create and edit) | `contracts.form` | [S23](slices-3.md#s23) | [S23](slices-3.md#s23) |
-| 20 | Contract detail | `contracts.detail` | [S24](slices-3.md#s24) | [S24](slices-3.md#s24) |
-| 21 | Payments overview | `payments` | [S25](slices-3.md#s25) | [S25](slices-3.md#s25) |
-| 22 | Renewals | `renewals` | [S26](slices-3.md#s26) | [S26](slices-3.md#s26) |
-| 23 | Performance | `performance` | [S27](slices-3.md#s27) | [S27](slices-3.md#s27) |
-| 24 | Members list | `members.list` | [S28](slices-3.md#s28) | [S28](slices-3.md#s28) |
-| 25 | Member form (register and edit) | `members.form` | [S29](slices-3.md#s29) | [S29](slices-3.md#s29) |
-| 26 | Member detail | `members.detail` | [S30](slices-3.md#s30) | [S30](slices-3.md#s30) |
-| 27 | Membership payments | `members.payments` | [S31](slices-4.md#s31) | [S31](slices-4.md#s31) |
-| 28 | Membership reports | `members.reports` | [S32](slices-4.md#s32) | [S32](slices-4.md#s32) |
-| 29 | Verify member (Reception) | `members.verify` | [S33](slices-4.md#s33) | [S33](slices-4.md#s33) |
-| 30 | Employee upload | `members.employeeUpload` | [S34](slices-4.md#s34) | [S34](slices-4.md#s34) |
-| 31 | VIP requests | `members.vipRequests` | [S35](slices-4.md#s35) | [S35](slices-4.md#s35) |
-| 32 | Settings: Company | `settings.company` | [S36](slices-4.md#s36) | [S36](slices-4.md#s36) |
-| 33 | Settings: My profile | `settings.profile` | [S37](slices-4.md#s37) | [S37](slices-4.md#s37) |
-| 34 | Settings: Team | `settings.team` | [S38](slices-4.md#s38) | [S38](slices-4.md#s38) |
-| 35 | Settings: Roles and permissions | `settings.roles` | [S39](slices-4.md#s39) | [S39](slices-4.md#s39) |
-| 36 | Settings: Lists | `settings.lists` | [S40](slices-4.md#s40) | [S40](slices-4.md#s40) |
-| 37 | Settings: Sales script | `settings.salesScript` | [S41](slices-4.md#s41) | [S41](slices-4.md#s41) |
-| 38 | Settings: Pricing | `settings.pricing` | [S42](slices-4.md#s42) | [S42](slices-4.md#s42) |
-| 39 | Settings: Statuses | `settings.statuses` | [S43](slices-5.md#s43) | [S43](slices-5.md#s43) |
-| 40 | Settings: Wellness+ | `settings.wellnessPlus` | [S44](slices-5.md#s44) | [S44](slices-5.md#s44) |
-| 41 | Settings: Contracts and payments | `settings.contracts` | [S45](slices-5.md#s45) | [S45](slices-5.md#s45) |
-| 42 | Settings: Audit log | `settings.audit` | [S46](slices-5.md#s46) | [S46](slices-5.md#s46) |
-| 43 | Settings: Integrations | `settings.integrations` | [S47](slices-5.md#s47) | [S47](slices-5.md#s47) |
-| 44 | Settings: Client management | `settings.clientManagement` | [S48](slices-5.md#s48) | [S48](slices-5.md#s48) |
-| 45 | Settings: Notifications | `settings.notifications` | [S49](slices-5.md#s49) | [S49](slices-5.md#s49) |
-| 46 | Settings: Warehouses | `settings.warehouses` | [S50](slices-5.md#s50) | [S50](slices-5.md#s50) |
-| 47 | Settings: Categories | `settings.categories` | [S51](slices-5.md#s51) | [S51](slices-5.md#s51) |
-| 48 | Form submissions | `forms.submissions` | [S52](slices-5.md#s52) | [S52](slices-5.md#s52) |
-| 49 | Form builder | `forms.builder` | [S53](slices-5.md#s53) | [S53](slices-5.md#s53) |
-| 50 | Notifications | `notifications` | [S60](slices-6.md#s60) | [S60](slices-6.md#s60) |
-| 51 | Reports | `reports` | [S61](slices-6.md#s61) | [S61](slices-6.md#s61) |
-| 52 | Inventory list | `inventory.list` | [S62](slices-6.md#s62) | [S62](slices-6.md#s62) |
-| 53 | Product form (create and edit) | `inventory.form` | [S63](slices-6.md#s63) | [S63](slices-6.md#s63) |
-| 54 | Dashboard: Sales User | `dashboard.salesUser` | [S54](slices-5.md#s54) | [S54](slices-5.md#s54) |
-| 55 | Dashboard: Sales Manager | `dashboard.salesManager` | [S55](slices-6.md#s55) | [S55](slices-6.md#s55) |
-| 56 | Dashboard: Administrator | `dashboard.administrator` | [S56](slices-6.md#s56) | [S56](slices-6.md#s56) |
-| 57 | Dashboard: CEO | `dashboard.ceo` | [S57](slices-6.md#s57) | [S57](slices-6.md#s57) |
-| 58 | Dashboard: Business owner (fallback) | `dashboard.legacyOwner` | [S58](slices-6.md#s58) | [S58](slices-6.md#s58) |
-| 59 | Dashboard: Staff (fallback) | `dashboard.legacyStaff` | [S59](slices-6.md#s59) | [S59](slices-6.md#s59) |
-| 60 | Platform dashboard (Super Admin) | `admin.dashboard` | [S68](slices-6.md#s68) | [S68](slices-6.md#s68) |
-| 61 | Platform: Tenants | `admin.tenants` | [S64](slices-6.md#s64) | [S64](slices-6.md#s64) |
-| 62 | Platform: People | `admin.people` | [S65](slices-6.md#s65) | [S65](slices-6.md#s65) |
-| 63 | Platform: Settings | `admin.settings` | [S66](slices-6.md#s66) | [S66](slices-6.md#s66) |
-| 64 | Platform: My profile | `admin.profile` | [S67](slices-6.md#s67) | [S67](slices-6.md#s67) |
+| 1 | Clients list | `clients.list` | [S05](phase-1.md#s05) | [S05](phase-1.md#s05) |
+| 2 | Client form (create and edit) | `clients.form` | [S06](phase-1.md#s06) | [S06](phase-1.md#s06) |
+| 3 | Client detail | `clients.detail` | [S09](phase-2.md#s09) | [S09](phase-2.md#s09) |
+| 4 | Pricing screen (offer builder) | `pricing.offer` | [S10](phase-2.md#s10) | [S10](phase-2.md#s10) |
+| 5 | Calendar (appointments, follow-ups, contract dates) | `appointments` | [S08](phase-2.md#s08) | [S08](phase-2.md#s08) |
+| 6 | Follow-ups | `followUps` | [S07](phase-1.md#s07) | [S07](phase-1.md#s07) |
+| 7 | Discount approvals | `approvals` | [S11](phase-2.md#s11) | [S11](phase-2.md#s11) |
+| 8 | Offers list | `offers` | [S12](phase-2.md#s12) | [S12](phase-2.md#s12) |
+| 9 | Pipeline board | `pipeline.board` | [S15](phase-2.md#s15) | [S15](phase-2.md#s15) |
+| 10 | Pipeline list | `pipeline.list` | [S16](phase-2.md#s16) | [S16](phase-2.md#s16) |
+| 11 | Deal form (create and edit) | `deals.form` | [S13](phase-2.md#s13) | [S13](phase-2.md#s13) |
+| 12 | Deal detail | `deals.detail` | [S14](phase-2.md#s14) | [S14](phase-2.md#s14) |
+| 13 | Quotations list (legacy workflow) | `quotations.list` | [S17](phase-2.md#s17) | [S17](phase-2.md#s17) |
+| 14 | Quotation form (create and edit) | `quotations.form` | [S18](phase-3.md#s18) | [S18](phase-3.md#s18) |
+| 15 | Quotation detail | `quotations.detail` | [S19](phase-3.md#s19) | [S19](phase-3.md#s19) |
+| 16 | Invoices list | `invoices.list` | [S20](phase-3.md#s20) | [S20](phase-3.md#s20) |
+| 17 | Invoice detail | `invoices.detail` | [S21](phase-3.md#s21) | [S21](phase-3.md#s21) |
+| 18 | Contracts list | `contracts.list` | [S22](phase-3.md#s22) | [S22](phase-3.md#s22) |
+| 19 | Contract form (create and edit) | `contracts.form` | [S23](phase-3.md#s23) | [S23](phase-3.md#s23) |
+| 20 | Contract detail | `contracts.detail` | [S24](phase-3.md#s24) | [S24](phase-3.md#s24) |
+| 21 | Payments overview | `payments` | [S25](phase-3.md#s25) | [S25](phase-3.md#s25) |
+| 22 | Renewals | `renewals` | [S26](phase-3.md#s26) | [S26](phase-3.md#s26) |
+| 23 | Performance | `performance` | [S27](phase-3.md#s27) | [S27](phase-3.md#s27) |
+| 24 | Members list | `members.list` | [S28](phase-3.md#s28) | [S28](phase-3.md#s28) |
+| 25 | Member form (register and edit) | `members.form` | [S29](phase-3.md#s29) | [S29](phase-3.md#s29) |
+| 26 | Member detail | `members.detail` | [S30](phase-3.md#s30) | [S30](phase-3.md#s30) |
+| 27 | Membership payments | `members.payments` | [S31](phase-4.md#s31) | [S31](phase-4.md#s31) |
+| 28 | Membership reports | `members.reports` | [S32](phase-4.md#s32) | [S32](phase-4.md#s32) |
+| 29 | Verify member (Reception) | `members.verify` | [S33](phase-4.md#s33) | [S33](phase-4.md#s33) |
+| 30 | Employee upload | `members.employeeUpload` | [S34](phase-4.md#s34) | [S34](phase-4.md#s34) |
+| 31 | VIP requests | `members.vipRequests` | [S35](phase-4.md#s35) | [S35](phase-4.md#s35) |
+| 32 | Settings: Company | `settings.company` | [S36](phase-4.md#s36) | [S36](phase-4.md#s36) |
+| 33 | Settings: My profile | `settings.profile` | [S37](phase-4.md#s37) | [S37](phase-4.md#s37) |
+| 34 | Settings: Team | `settings.team` | [S38](phase-4.md#s38) | [S38](phase-4.md#s38) |
+| 35 | Settings: Roles and permissions | `settings.roles` | [S39](phase-4.md#s39) | [S39](phase-4.md#s39) |
+| 36 | Settings: Lists | `settings.lists` | [S40](phase-4.md#s40) | [S40](phase-4.md#s40) |
+| 37 | Settings: Sales script | `settings.salesScript` | [S41](phase-4.md#s41) | [S41](phase-4.md#s41) |
+| 38 | Settings: Pricing | `settings.pricing` | [S42](phase-4.md#s42) | [S42](phase-4.md#s42) |
+| 39 | Settings: Statuses | `settings.statuses` | [S43](phase-5.md#s43) | [S43](phase-5.md#s43) |
+| 40 | Settings: Wellness+ | `settings.wellnessPlus` | [S44](phase-5.md#s44) | [S44](phase-5.md#s44) |
+| 41 | Settings: Contracts and payments | `settings.contracts` | [S45](phase-5.md#s45) | [S45](phase-5.md#s45) |
+| 42 | Settings: Audit log | `settings.audit` | [S46](phase-5.md#s46) | [S46](phase-5.md#s46) |
+| 43 | Settings: Integrations | `settings.integrations` | [S47](phase-5.md#s47) | [S47](phase-5.md#s47) |
+| 44 | Settings: Client management | `settings.clientManagement` | [S48](phase-5.md#s48) | [S48](phase-5.md#s48) |
+| 45 | Settings: Notifications | `settings.notifications` | [S49](phase-5.md#s49) | [S49](phase-5.md#s49) |
+| 46 | Settings: Warehouses | `settings.warehouses` | [S50](phase-5.md#s50) | [S50](phase-5.md#s50) |
+| 47 | Settings: Categories | `settings.categories` | [S51](phase-5.md#s51) | [S51](phase-5.md#s51) |
+| 48 | Form submissions | `forms.submissions` | [S52](phase-5.md#s52) | [S52](phase-5.md#s52) |
+| 49 | Form builder | `forms.builder` | [S53](phase-5.md#s53) | [S53](phase-5.md#s53) |
+| 50 | Notifications | `notifications` | [S60](phase-6.md#s60) | [S60](phase-6.md#s60) |
+| 51 | Reports | `reports` | [S61](phase-6.md#s61) | [S61](phase-6.md#s61) |
+| 52 | Inventory list | `inventory.list` | [S62](phase-6.md#s62) | [S62](phase-6.md#s62) |
+| 53 | Product form (create and edit) | `inventory.form` | [S63](phase-6.md#s63) | [S63](phase-6.md#s63) |
+| 54 | Dashboard: Sales User | `dashboard.salesUser` | [S54](phase-5.md#s54) | [S54](phase-5.md#s54) |
+| 55 | Dashboard: Sales Manager | `dashboard.salesManager` | [S55](phase-6.md#s55) | [S55](phase-6.md#s55) |
+| 56 | Dashboard: Administrator | `dashboard.administrator` | [S56](phase-6.md#s56) | [S56](phase-6.md#s56) |
+| 57 | Dashboard: CEO | `dashboard.ceo` | [S57](phase-6.md#s57) | [S57](phase-6.md#s57) |
+| 58 | Dashboard: Business owner (fallback) | `dashboard.legacyOwner` | [S58](phase-6.md#s58) | [S58](phase-6.md#s58) |
+| 59 | Dashboard: Staff (fallback) | `dashboard.legacyStaff` | [S59](phase-6.md#s59) | [S59](phase-6.md#s59) |
+| 60 | Platform dashboard (Super Admin) | `admin.dashboard` | [S68](phase-6.md#s68) | [S68](phase-6.md#s68) |
+| 61 | Platform: Tenants | `admin.tenants` | [S64](phase-6.md#s64) | [S64](phase-6.md#s64) |
+| 62 | Platform: People | `admin.people` | [S65](phase-6.md#s65) | [S65](phase-6.md#s65) |
+| 63 | Platform: Settings | `admin.settings` | [S66](phase-6.md#s66) | [S66](phase-6.md#s66) |
+| 64 | Platform: My profile | `admin.profile` | [S67](phase-6.md#s67) | [S67](phase-6.md#s67) |
 
 ### 7.3 Page by runtime state
 

@@ -1,11 +1,11 @@
-# Support tour plan: slice document 3 of 6 (S18 to S30)
+# Support tour plan: phase document 3 of 6 (S18 to S30)
 
-Part of the Interactive Support and Tour System plan. Overview, inventory, architecture, dependencies, traceability, testing, risks and the checklist are in [00-overview.md](00-overview.md). This document holds the full specifications of 13 slices. Section numbers such as "section 3.4" refer to the overview; the standard procedure (6.1) and the assumptions (0.2) are repeated here so the document can be used on its own.
+Part of the Interactive Support and Tour System plan. Overview, inventory, architecture, dependencies, traceability, testing, risks and the checklist are in [00-overview.md](00-overview.md). This phase document holds the full specifications of 13 slices. Section numbers such as "section 3.4" refer to the overview; the standard procedure (6.1) and the assumptions (0.2) are repeated here so the document can be used on its own.
 
 > ## If you were asked to implement a slice ("implement slice 7", "do S07")
 >
 > 1. "Slice N" means the heading `### SNN:` in this document. Open **only** that slice, plus the standard procedure (6.1) and the assumptions (0.2) repeated below. Do not read the overview in full.
-> 2. Read the slice's **Prerequisites** (item 5) and confirm each prerequisite slice is already merged (the overview, `00-overview.md`, has the slice-to-document table in section 6 and the dependency table in 5.6). If one is not merged, stop and say so; do not build it as a side effect.
+> 2. Read the slice's **Prerequisites** (item 5) and confirm each prerequisite slice is already merged (the overview, `00-overview.md`, has the slice-to-phase-document table in section 6 and the dependency table in 5.6). If one is not merged, stop and say so; do not build it as a side effect.
 > 3. Foundation slices (S01 to S04) are made of parts P01 to P16; read every part inside the slice.
 > 4. Work test-first. Apply the **File-Level Change Plan** (item 7) file by file; follow item 8 for task order; keep to item 16 (what is excluded).
 > 5. Verify with item 13, check item 12, and report the measured production LOC next to the estimate in item 6.
