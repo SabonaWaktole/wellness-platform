@@ -16,12 +16,44 @@
  * be impersonating. The bottom edge is unoccupied, always visible without
  * scrolling, and costs the rest of the layout nothing.
  */
-.banner {
+.root {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+/* The arrow tab: sits on the strip's top edge, and is all that remains once collapsed. */
+.toggle {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 20px;
+  margin-right: 1rem;
+  padding: 0;
+  border: 1px solid #9a3412;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #7c2d12;
+  color: #fff7ed;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: #9a3412;
+}
+
+.banner {
+  pointer-events: auto;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
