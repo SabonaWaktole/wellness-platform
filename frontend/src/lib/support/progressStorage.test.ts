@@ -4,8 +4,31 @@ import { PROGRESS_STORAGE_KEY, progressUserKey, readPageProgress, readProgress, 
 const alice = 'u1:acme';
 const bob = 'u2:acme';
 
-beforeEach(() => localStorage.clear());
-afterEach(() => vi.restoreAllMocks());
+/** An in-memory Storage: under Node 26, Node's own `localStorage` global shadows jsdom's and is unusable without a file. */
+const memoryStorage = (): Storage => {
+  const items = new Map<string, string>();
+  return {
+    get length() {
+      return items.size;
+    },
+    clear: () => items.clear(),
+    getItem: (key) => items.get(key) ?? null,
+    key: (index) => [...items.keys()][index] ?? null,
+    removeItem: (key) => void items.delete(key),
+    setItem: (key, value) => void items.set(key, String(value)),
+  };
+};
+
+let storage: Storage;
+
+beforeEach(() => {
+  storage = memoryStorage();
+  vi.stubGlobal('localStorage', storage);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('SUP-17 progress storage', () => {
   it('SUP-17 keys progress by user and workspace', () => {
@@ -55,7 +78,7 @@ describe('SUP-17 progress storage', () => {
   );
 
   it('SUP-17 storage that throws on read does not crash', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(storage, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
     expect(readProgress(alice)).toEqual({});
@@ -63,7 +86,7 @@ describe('SUP-17 progress storage', () => {
   });
 
   it('SUP-17 storage that throws on write does not crash and reports failure', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(storage, 'setItem').mockImplementation(() => {
       throw new Error('quota');
     });
     expect(writeProgress(alice, 'clients.list', { v: 1 })).toBe(false);

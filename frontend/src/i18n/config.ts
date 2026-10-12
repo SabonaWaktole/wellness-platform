@@ -71,6 +71,14 @@ export const NAMESPACES = [
   'offers',
   'followUps',
   'members',
+  // Support copy. Declared here only so `Namespace` accepts them; the files are loaded on demand
+  // by `lib/support/supportCopy.ts` and are never imported by `i18n/index.ts`.
+  'support',
+  'supportSales',
+  'supportMembers',
+  'supportSettings',
+  'supportOps',
+  'supportAdmin',
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

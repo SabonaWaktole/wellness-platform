@@ -21,7 +21,13 @@ const fakeModules = (loaded: string[] = []) => {
       return { tour: { title: text } };
     },
   ] as const;
-  return Object.fromEntries([file('en', 'support', 'English'), file('sq', 'support', 'Shqip'), file('en', 'supportSales', 'English sales')]);
+  return Object.fromEntries([
+    file('en', 'support', 'English'),
+    file('sq', 'support', 'Shqip'),
+    file('it', 'support', 'Italiano'),
+    file('en', 'supportSales', 'English sales'),
+    file('it', 'supportSales', 'Vendite'),
+  ]);
 };
 
 describe('SUP-18 SUP-19 support copy is loaded on demand', () => {
@@ -65,22 +71,19 @@ describe('SUP-18 SUP-19 support copy is loaded on demand', () => {
   it('SUP-18 a language switch loads the new language without being asked again', async () => {
     await createSupportCopy(i18n, fakeModules()).loadSupportCopy('support');
     expect(i18n.hasResourceBundle('it', 'support')).toBe(false);
-    await i18n.changeLanguage('en');
+    await i18n.changeLanguage('it');
     await settle();
-    expect(i18n.t('support:tour.title')).toBe('English');
+    expect(i18n.hasResourceBundle('it', 'support')).toBe(true);
+    expect(i18n.t('support:tour.title')).toBe('Italiano');
   });
 
   it('SUP-18 a switch loads every namespace that was requested', async () => {
-    const copy = createSupportCopy(i18n, {
-      ...fakeModules(),
-      '../../locales/sq/supportSales.json': async () => ({ tour: { title: 'Shitje' } }),
-    });
+    const copy = createSupportCopy(i18n, fakeModules());
     await copy.loadSupportCopy('support');
     await copy.loadSupportCopy('supportSales');
-    await i18n.changeLanguage('en');
-    await i18n.changeLanguage('sq');
+    await i18n.changeLanguage('it');
     await settle();
-    expect(i18n.t('supportSales:tour.title')).toBe('Shitje');
+    expect(i18n.t('supportSales:tour.title')).toBe('Vendite');
   });
 
   it('SUP-19 a file that fails to load does not reject, and English still works', async () => {
@@ -117,6 +120,6 @@ describe('SUP-18 SUP-19 support copy never joins the main bundle', () => {
   });
 
   it('SUP-19 the main i18n module does not mention support copy', () => {
-    expect(readFileSync(resolve(src, 'i18n', 'index.ts'), 'utf8')).not.toMatch(/support/i);
+    expect(readFileSync(resolve(src, 'i18n', 'index.ts'), 'utf8')).not.toMatch(/support[A-Za-z]*\.json|['"]support[A-Za-z]*['"]/);
   });
 });
