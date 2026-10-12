@@ -1418,6 +1418,570 @@ Production LOC are estimates (assumption A1 and A3), not measurements. Bands: **
 
 Slices in the 150 to 199 band are listed in the index above; they are within about 25% of the lower bound and are not treated as exceptions, but the reviewer may reclassify them (D1).
 
+### 6.0a Build sheet: what each slice does and which files it touches
+
+Imperative summary per slice. **Create** = new files, **Modify** = existing files edited, **Read** = existing files only read, **Also** = copy, tests and wiring. Paths are relative to `frontend/`. Test files are listed under Create because they are written first.
+
+**S01. Define the tour data model and a pure state machine for start, next, back, skip, exit, wait and lost-target.**
+- Create: `src/lib/support/types.ts`, `src/lib/support/tourMachine.ts`, `src/lib/support/tourMachine.test.ts`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S01](#s01)
+
+**S02. Find each step's real element in the live page and report found, disabled, off-screen, loading, missing or lost; re-check on every DOM change.**
+- Create: `src/lib/support/targetResolver.ts`, `src/lib/support/domObserverHub.ts`, `src/lib/support/useTargetElement.ts`, `src/lib/support/targetResolver.test.tsx`, `src/lib/support/useTargetElement.test.tsx`
+- Read: `src/setupTests.ts`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S02](#s02)
+
+**S03. Add the Support store and a URL-to-page-id registry, plus a test that fails when a route is neither mapped to a guide nor excluded with a reason.**
+- Create: `src/store/useSupportStore.ts`, `src/lib/support/routeMap.ts`, `src/lib/support/pageRegistry.ts`, `src/lib/support/useSupportPage.ts`, `src/lib/support/routeMap.test.ts`, `src/store/useSupportStore.test.ts`
+- Read: `src/routes/index.tsx`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S03](#s03)
+
+**S04. Filter steps by permission, scope and workflow; save progress in localStorage; lazy-load Support copy so it stays out of the main bundle.**
+- Create: `src/lib/support/stepEligibility.ts`, `src/lib/support/progressStorage.ts`, `src/lib/support/supportCopy.ts`, `src/lib/support/stepEligibility.test.ts`, `src/lib/support/progressStorage.test.ts`, `src/lib/support/supportCopy.test.ts`
+- Modify: `src/i18n/config.ts` (NAMESPACES list)
+- Read: `src/store/useAuthStore.ts`, `scripts/check-translations.mjs`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S04](#s04)
+
+**S05. Draw the dimmed spotlight around the target and make it follow scroll and resize, with reduced-motion and high-contrast support.**
+- Create: `src/components/support/SpotlightMask.tsx`, `src/components/support/SpotlightMask.module.css`, `src/lib/support/useTargetRect.ts`, `src/components/support/SpotlightMask.test.tsx`, `src/components/support/SpotlightMask.stories.tsx`
+- Modify: `src/styles/tokens.css` (add `--z-tour`; `--z-tooltip` is 100 and the impersonation banner is a literal 1000, so the token must exceed 1000)
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S05](#s05)
+
+**S06. Build the explanation card with Back, Next, Skip tour, Exit, "Step n of N" and a completion state; dock it as a bottom sheet on phones.**
+- Create: `src/components/support/TourPopover.tsx`, `src/components/support/TourPopover.module.css`, `src/lib/support/popoverPlacement.ts`, `src/components/support/TourPopover.test.tsx`, `src/lib/support/popoverPlacement.test.ts`, `src/components/support/TourPopover.stories.tsx`
+- Modify: `src/components/ui/Button/Button.tsx` (reuse as-is)
+- Read: `src/components/ui/DropdownMenu/DropdownMenu.tsx`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S06](#s06)
+
+**S07. Move and restore focus, handle Esc and arrow keys, announce each step to screen readers and link the target to its explanation.**
+- Create: `src/lib/support/useTourFocus.ts`, `src/lib/support/useTourKeyboard.ts`, `src/components/support/LiveAnnouncer.tsx`, `src/lib/support/describeTarget.ts`, `src/lib/support/useTourFocus.test.tsx`, `src/lib/support/useTourKeyboard.test.tsx`, `src/lib/support/describeTarget.test.ts`
+- Read: `src/components/ui/Modal/Modal.tsx`, `src/components/ui/SlideOver/SlideOver.tsx`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S07](#s07)
+
+**S08. Join the parts into one running tour: scroll to the target, skip missing steps, handle lost targets, end on navigation; mount it in the tenant and Super Admin shells.**
+- Create: `src/components/support/SupportHost.tsx`, `src/lib/support/useTourSession.ts`, `src/lib/support/scrollTargetIntoView.ts`, `src/components/support/SupportHost.test.tsx`, `src/lib/support/useTourSession.test.tsx`
+- Modify: `src/routes/TenantGuard.tsx`, `src/pages/shell/SuperAdminShell.tsx`, `src/components/panels/SalesScriptPanel/SalesScriptPanel.tsx` (pattern reference)
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S08](#s08)
+
+**S09. Replace the dead header Help button and sidebar Support link with a working launcher and a per-page help panel; add the Playwright `support` project.**
+- Create: `src/components/support/SupportLauncher.tsx`, `src/components/support/SupportPanel.tsx`, `src/components/support/SupportPanel.module.css`, `src/locales/en/support.json`, `src/locales/sq/support.json`, `tests/e2e/support.spec.ts`, `src/components/support/SupportPanel.test.tsx`
+- Modify: `src/components/layout/AppLayout/AppLayout.tsx` (header help button), `src/components/layout/Sidebar/Sidebar.tsx` (bottom "Support" link), `src/locales/en/common.json` (`header.help`, `actions.support` already exist), `src/i18n/config.ts` (add `support` namespace name), `playwright.config.ts`, `tests/e2e/mobile360.spec.ts`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S09](#s09)
+
+**S10. Add optional `tourId` props to shared components so rows, tabs, menu items, dialogs and fields can be marked without wrappers.**
+- Create: `src/lib/support/tourProps.ts`, `src/lib/support/tourProps.test.ts`
+- Modify: `src/components/ui/DataTable/DataTable.tsx`, `src/components/ui/Tabs/Tabs.tsx`, `src/components/ui/Pagination/*`, `src/components/ui/DropdownMenu/DropdownMenu.tsx`, `src/components/ui/Modal/Modal.tsx`, `src/components/ui/SlideOver/SlideOver.tsx`, `src/components/ui/ConfirmDialog/ConfirmDialog.tsx`, `src/components/ui/Card/*`, `src/components/ui/KPICard/*`, `src/components/ui/TextInput/TextInput.tsx`, `src/components/ui/SelectInput/SelectInput.tsx`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S10](#s10)
+
+**S11. Write reusable guidance for common controls, plus the helpers and lint rules every page guide uses.**
+- Create: `src/lib/support/sharedGuidance.ts`, `src/lib/support/defineGuide.ts`, `src/lib/support/guideLint.ts`, `src/lib/support/stepFactories.ts`, `src/lib/support/sharedGuidance.test.ts`, `src/lib/support/guideLint.test.ts`
+- Modify: `src/locales/en/support.json` and sq/support.json (shared keys)
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S11](#s11)
+
+**S12. Annotate the header and sidebar, let a step open and restore the mobile sidebar, and write the short app-chrome guide.**
+- Create: `src/lib/support/layoutAdapters.ts`, `src/lib/support/guides/shell.ts`, `src/lib/support/guides/shell.test.tsx`
+- Modify: `src/components/layout/AppLayout/AppLayout.tsx`, `src/components/layout/Sidebar/Sidebar.tsx`, `src/components/notifications/NotificationBell.tsx`, `src/components/salesScript/SalesScriptButton.tsx`, `src/components/ui/ThemeToggle`
+- Read: `src/hooks/useNavigation.ts`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S12](#s12)
+
+**S13. Guide through menus, dialogs, drawers and tabs by waiting for the user to open them, return to the page on close, and settle how Esc behaves.**
+- Create: `src/lib/support/layerStack.ts`, `src/lib/support/useLayerWatcher.ts`, `src/lib/support/layerStack.test.ts`, `src/lib/support/nestedGuide.test.tsx`
+- Modify: `src/lib/support/useTourSession.ts` (extends), `src/components/ui/DropdownMenu/DropdownMenu.tsx` (menu is portalled to `body`; closes on outside click), `src/components/ui/Modal/Modal.tsx, SlideOver.tsx, ConfirmDialog.tsx`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S13](#s13)
+
+**S14. Block clicks, Enter, Space and form submits on explained controls while a tour runs, and add the "no data changed" test helper.**
+- Create: `src/lib/support/interactionGuard.ts`, `src/lib/support/interactionGuard.test.tsx`, `tests/e2e/support/noMutations.ts`
+- Modify: `src/lib/support/useTourSession.ts` (installs the guard)
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S14](#s14)
+
+**S15. Add "Explain a control" to the panel: list controls present on screen now and explain one in a single card.**
+- Create: `src/lib/support/useExplainableControls.ts`, `src/components/support/ControlList.tsx`, `src/components/support/ControlList.module.css`, `src/components/support/ControlList.test.tsx`, `src/lib/support/useExplainableControls.test.tsx`
+- Modify: `src/components/support/SupportPanel.tsx`, `src/lib/support/tourMachine.ts` (add the single-step mode)
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S15](#s15)
+
+**S16. Add point-and-ask mode: hover, tap or tab to any marked control to get its explanation.**
+- Create: `src/lib/support/usePickMode.ts`, `src/components/support/PickBanner.tsx`, `src/lib/support/usePickMode.test.tsx`, `src/components/support/PickBanner.test.tsx`
+- Modify: `src/components/support/SupportPanel.tsx`
+- Also: Write the failing tests first, run them, then implement (full task order in item 8 of the slice).
+- Details: [S16](#s16)
+
+**S17. Tour the Clients list header, search and filters (pilot).**
+- Create: `src/lib/support/guides/clientsList.ts`, `src/lib/support/guides/clientsList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Read: `src/hooks/useClients.ts`, `src/locales/en/clients.json`
+- Also: Remove `'clients.list'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('clients.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S17](#s17)
+
+**S18. Tour the Clients list loading, error and empty states, repeated rows, row menu, and the archive and restore flow.**
+- Modify: `src/lib/support/guides/clientsList.ts` (add the steps), `src/lib/support/guides/clientsList.test.tsx` (add the tests), `src/pages/clients/ClientListContent.tsx` (row, menu, empty branches, dialog), `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (21 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 19 elements with `tourProps('clients.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S18](#s18)
+
+**S19. Tour the client create and edit form, including the tenant-built form, contacts, first-deal option, notes and save bar.**
+- Create: `src/lib/support/guides/clientsForm.ts`, `src/lib/support/guides/clientsForm.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/clients/ClientFormContent.tsx`, `src/pages/clients/ContactPersonsEditor.tsx`, `src/components/forms/FormRenderer`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'clients.form'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('clients.form.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S19](#s19)
+
+**S20. Tour the Follow-ups tabs, filters, list, and complete, reschedule, cancel and reassign actions.**
+- Create: `src/lib/support/guides/followUps.ts`, `src/lib/support/guides/followUps.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/followUps/FollowUpsContent.tsx`, `src/components/followUps/FollowUpList.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpActionModals.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'followUps'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('followUps.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S20](#s20)
+
+**S21. Tour the Calendar toolbar, views, team filter, overdue section and its empty and error states.**
+- Create: `src/lib/support/guides/appointments.ts`, `src/lib/support/guides/appointments.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/appointments/CalendarContent.tsx`, `src/components/calendar/CalendarToolbar.tsx`, `src/components/calendar/CalendarMonthView.tsx`, `src/components/calendar/CalendarTimeGrid.tsx`, `src/components/calendar/CalendarAgenda.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (21 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'appointments'` from `PLANNED_PAGES`. Annotate about 19 elements with `tourProps('appointments.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S21](#s21)
+
+**S22. Tour calendar items, the detail panel, the Plan activity dialog and rescheduling.**
+- Modify: `src/lib/support/guides/appointments.ts` (add the steps), `src/lib/support/guides/appointments.test.tsx` (add the tests), `src/components/calendar/CalendarChip.tsx`, `src/components/calendar/ContractDateChip.tsx`, `src/components/calendar/TeamFilter.tsx`, `src/components/calendar/OverdueSection.tsx`, `src/components/panels/AppointmentDetailPanel/AppointmentDetailPanel.tsx`, `src/components/calendar/PlanActivityDialog.tsx`, `src/components/calendar/RescheduleItemDialog.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (27 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 24 elements with `tourProps('appointments.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S22](#s22)
+
+**S23. Tour the client detail header, action bar, summary, custom fields and follow-ups panel.**
+- Create: `src/lib/support/guides/clientsDetail.ts`, `src/lib/support/guides/clientsDetail.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/clients/ClientDetailContent.tsx`, `src/components/followUps/FollowUpsPanel.tsx`, `src/components/followUps/FollowUpQuickButtons.tsx`, `src/components/followUps/FollowUpList.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'clients.detail'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('clients.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S23](#s23)
+
+**S24. Tour the client timeline, activity logging and the Appointments tab.**
+- Modify: `src/lib/support/guides/clientsDetail.ts` (add the steps), `src/lib/support/guides/clientsDetail.test.tsx` (add the tests), `src/pages/clients/ClientDetailContent.tsx`, `src/components/clients/CompanyTimeline.tsx`, `src/components/activities/ActivityDialog.tsx`, `src/components/clients/ClientContractsTab.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (24 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 22 elements with `tourProps('clients.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S24](#s24)
+
+**S25. Tour the client Deals and Wellness+ tabs.**
+- Modify: `src/lib/support/guides/clientsDetail.ts` (add the steps), `src/lib/support/guides/clientsDetail.test.tsx` (add the tests), `src/components/clients/ClientDealsTab.tsx`, `src/pages/membership/CompanyWellnessTab.tsx`, `src/pages/membership/MemberBadges.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 13 elements with `tourProps('clients.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S25](#s25)
+
+**S26. Tour the pricing screen: inputs, price breakdown, warnings and save.**
+- Create: `src/lib/support/guides/pricingOffer.ts`, `src/lib/support/guides/pricingOffer.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/pricing/PricingContent.tsx`, `src/pages/pricing/pricingScreenError.ts`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (19 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'pricing.offer'` from `PLANNED_PAGES`. Annotate about 17 elements with `tourProps('pricing.offer.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S26](#s26)
+
+**S27. Tour the Discount approvals queue.**
+- Create: `src/lib/support/guides/approvals.ts`, `src/lib/support/guides/approvals.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/approvals/ApprovalsContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'approvals'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('approvals.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S27](#s27)
+
+**S28. Tour the Offers list search, status chips, filters and table.**
+- Create: `src/lib/support/guides/offers.ts`, `src/lib/support/guides/offers.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/offers/OfferListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'offers'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('offers.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S28](#s28)
+
+**S29. Tour the deal create and edit form.**
+- Create: `src/lib/support/guides/dealsForm.ts`, `src/lib/support/guides/dealsForm.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/DealFormContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'deals.form'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('deals.form.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S29](#s29)
+
+**S30. Tour the deal detail header, stage, history, activities and follow-ups panel.**
+- Create: `src/lib/support/guides/dealsDetail.ts`, `src/lib/support/guides/dealsDetail.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/DealDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (21 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'deals.detail'` from `PLANNED_PAGES`. Annotate about 19 elements with `tourProps('deals.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S30](#s30)
+
+**S31. Tour the deal offers section and the per-offer action bar.**
+- Modify: `src/lib/support/guides/dealsDetail.ts` (add the steps), `src/lib/support/guides/dealsDetail.test.tsx` (add the tests), `src/pages/deals/DealOffersSection.tsx`, `src/components/offers/OfferActions.tsx`, `src/pages/deals/DealActivitiesSection.tsx`, `src/components/activities/ActivityDetails.tsx`, `src/components/activities/useCanEditActivity.ts`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (24 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 22 elements with `tourProps('deals.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S31](#s31)
+
+**S32. Tour the win, lose, reopen, reassign and delete dialogs.**
+- Modify: `src/lib/support/guides/dealsDetail.ts` (add the steps), `src/lib/support/guides/dealsDetail.test.tsx` (add the tests), `src/pages/deals/DealClosingModals.tsx`, `src/pages/deals/DealDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 16 elements with `tourProps('deals.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S32](#s32)
+
+**S33. Tour the pipeline board columns, cards, move menu and load more.**
+- Create: `src/lib/support/guides/pipelineBoard.ts`, `src/lib/support/guides/pipelineBoard.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/PipelineBoardContent.tsx`, `src/pages/deals/PipelineViewSwitch.tsx`, `src/pages/deals/DealMarkers.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'pipeline.board'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('pipeline.board.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S33](#s33)
+
+**S34. Tour the pipeline list filters, table and pagination.**
+- Create: `src/lib/support/guides/pipelineList.ts`, `src/lib/support/guides/pipelineList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/deals/DealListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (22 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'pipeline.list'` from `PLANNED_PAGES`. Annotate about 20 elements with `tourProps('pipeline.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S34](#s34)
+
+**S35. Tour the legacy Quotations list.**
+- Create: `src/lib/support/guides/quotationsList.ts`, `src/lib/support/guides/quotationsList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/quotations/QuotationListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'quotations.list'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('quotations.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S35](#s35)
+
+**S36. Tour the quotation form and its line items.**
+- Create: `src/lib/support/guides/quotationsForm.ts`, `src/lib/support/guides/quotationsForm.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/quotations/QuotationFormContent.tsx`, `src/pages/quotations/CreateQuotation.tsx`, `src/pages/quotations/EditQuotation.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'quotations.form'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('quotations.form.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S36](#s36)
+
+**S37. Tour the quotation detail and its status buttons.**
+- Create: `src/lib/support/guides/quotationsDetail.ts`, `src/lib/support/guides/quotationsDetail.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/quotations/QuotationDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (15 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'quotations.detail'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('quotations.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S37](#s37)
+
+**S38. Tour the Invoices list.**
+- Create: `src/lib/support/guides/invoicesList.ts`, `src/lib/support/guides/invoicesList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/invoices/InvoiceListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'invoices.list'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('invoices.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S38](#s38)
+
+**S39. Tour the invoice detail actions.**
+- Create: `src/lib/support/guides/invoicesDetail.ts`, `src/lib/support/guides/invoicesDetail.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/invoices/InvoiceDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'invoices.detail'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('invoices.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S39](#s39)
+
+**S40. Tour the Contracts list filters and row menu.**
+- Create: `src/lib/support/guides/contractsList.ts`, `src/lib/support/guides/contractsList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/contracts/ContractListContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'contracts.list'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('contracts.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S40](#s40)
+
+**S41. Tour the contract form.**
+- Create: `src/lib/support/guides/contractsForm.ts`, `src/lib/support/guides/contractsForm.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/contracts/ContractFormContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'contracts.form'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('contracts.form.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S41](#s41)
+
+**S42. Tour contract lifecycle actions, terms, documents, notes, history and the reason dialogs.**
+- Create: `src/lib/support/guides/contractsDetail.ts`, `src/lib/support/guides/contractsDetail.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/contracts/ContractDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (27 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'contracts.detail'` from `PLANNED_PAGES`. Annotate about 24 elements with `tourProps('contracts.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S42](#s42)
+
+**S43. Tour the contract instalment schedule, its drawer actions and the add-instalment dialog.**
+- Modify: `src/lib/support/guides/contractsDetail.ts` (add the steps), `src/lib/support/guides/contractsDetail.test.tsx` (add the tests), `src/components/contracts/ContractPaymentsCard.tsx`, `src/pages/contracts/ContractDetailContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (26 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 23 elements with `tourProps('contracts.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S43](#s43)
+
+**S44. Tour the Payments overview filters, totals and export.**
+- Create: `src/lib/support/guides/payments.ts`, `src/lib/support/guides/payments.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/payments/PaymentsOverviewContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'payments'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('payments.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S44](#s44)
+
+**S45. Tour Renewals windows, filters, row actions and the not-renewing dialog.**
+- Create: `src/lib/support/guides/renewals.ts`, `src/lib/support/guides/renewals.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/renewals/RenewalsContent.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'renewals'` from `PLANNED_PAGES`. Annotate about 18 elements with `tourProps('renewals.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S45](#s45)
+
+**S46. Tour Performance comparison, filters, export, person detail and records dialog.**
+- Create: `src/lib/support/guides/performance.ts`, `src/lib/support/guides/performance.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/performance/PerformanceContent.tsx`, `src/pages/performance/PerformanceDetail.tsx`, `src/pages/performance/PerformanceRecordsDialog.tsx`, `src/locales/en/supportSales.json` and src/locales/sq/supportSales.json (28 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'performance'` from `PLANNED_PAGES`. Annotate about 25 elements with `tourProps('performance.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S46](#s46)
+
+**S47. Tour the Members list.**
+- Create: `src/lib/support/guides/membersList.ts`, `src/lib/support/guides/membersList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MembersContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (22 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Read: `src/pages/membership/MemberBadges.tsx`
+- Also: Remove `'members.list'` from `PLANNED_PAGES`. Annotate about 20 elements with `tourProps('members.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S47](#s47)
+
+**S48. Tour the member form and its duplicate dialog.**
+- Create: `src/lib/support/guides/membersForm.ts`, `src/lib/support/guides/membersForm.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MemberFormContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.form'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('members.form.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S48](#s48)
+
+**S49. Tour the member detail header and the overview, terms, history and note tabs.**
+- Create: `src/lib/support/guides/membersDetail.ts`, `src/lib/support/guides/membersDetail.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MemberDetailContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (28 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.detail'` from `PLANNED_PAGES`. Annotate about 25 elements with `tourProps('members.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S49](#s49)
+
+**S50. Tour the member Payments and VIP tabs, receipts, void and the VIP decision.**
+- Modify: `src/lib/support/guides/membersDetail.ts` (add the steps), `src/lib/support/guides/membersDetail.test.tsx` (add the tests), `src/pages/membership/MemberDetailContent.tsx`, `src/pages/membership/VipTab.tsx`, `src/pages/membership/VipDecisionDialog.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (29 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 26 elements with `tourProps('members.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S50](#s50)
+
+**S51. Tour the member Family tab.**
+- Modify: `src/lib/support/guides/membersDetail.ts` (add the steps), `src/lib/support/guides/membersDetail.test.tsx` (add the tests), `src/pages/membership/FamilyTab.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 18 elements with `tourProps('members.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S51](#s51)
+
+**S52. Tour the record payment, correct tier, remove from company, card and status dialogs.**
+- Modify: `src/lib/support/guides/membersDetail.ts` (add the steps), `src/lib/support/guides/membersDetail.test.tsx` (add the tests), `src/pages/membership/RecordPaymentModal.tsx`, `src/pages/membership/CorrectTierDialog.tsx`, `src/pages/membership/RemoveFromCompanyDialog.tsx`, `src/pages/membership/MemberCardDialog.tsx`, `src/pages/membership/MemberDetailContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 18 elements with `tourProps('members.detail.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S52](#s52)
+
+**S53. Tour Membership payments.**
+- Create: `src/lib/support/guides/membersPayments.ts`, `src/lib/support/guides/membersPayments.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/MemberPaymentsContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.payments'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('members.payments.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S53](#s53)
+
+**S54. Tour Membership reports.**
+- Create: `src/lib/support/guides/membersReports.ts`, `src/lib/support/guides/membersReports.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/reports/MembershipReportsContent.tsx`, `src/pages/membership/reports/reportSections.ts`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.reports'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('members.reports.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S54](#s54)
+
+**S55. Tour Verify member, the Reception scan and search screen.**
+- Create: `src/lib/support/guides/membersVerify.ts`, `src/lib/support/guides/membersVerify.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/verify/VerifyMemberContent.tsx`, `src/pages/membership/verify/QrScanner.tsx`, `src/pages/membership/verify/ReceptionResult.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.verify'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('members.verify.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S55](#s55)
+
+**S56. Tour Employee upload from file pick through preview to outcome.**
+- Create: `src/lib/support/guides/membersEmployeeUpload.ts`, `src/lib/support/guides/membersEmployeeUpload.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/EmployeeUploadContent.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (21 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.employeeUpload'` from `PLANNED_PAGES`. Annotate about 19 elements with `tourProps('members.employeeUpload.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S56](#s56)
+
+**S57. Tour VIP requests.**
+- Create: `src/lib/support/guides/membersVipRequests.ts`, `src/lib/support/guides/membersVipRequests.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/membership/VipRequestsContent.tsx`, `src/pages/membership/VipDecisionDialog.tsx`, `src/locales/en/supportMembers.json` and src/locales/sq/supportMembers.json (15 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'members.vipRequests'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('members.vipRequests.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S57](#s57)
+
+**S58. Tour Company settings and the settings side menu.**
+- Create: `src/lib/support/guides/settingsCompany.ts`, `src/lib/support/guides/settingsCompany.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/AccountSettingsPage.tsx`, `src/components/settings/LanguagePicker.tsx`, `src/components/layout/SettingsLayout/SettingsLayout.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.company'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('settings.company.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S58](#s58)
+
+**S59. Tour My profile.**
+- Create: `src/lib/support/guides/settingsProfile.ts`, `src/lib/support/guides/settingsProfile.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/profile/ProfilePage.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (15 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.profile'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('settings.profile.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S59](#s59)
+
+**S60. Tour Team settings: invite, edit, deactivate.**
+- Create: `src/lib/support/guides/settingsTeam.ts`, `src/lib/support/guides/settingsTeam.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/team/TeamSettingsContent.tsx`, `src/pages/settings/team/InviteMemberModal.tsx`, `src/pages/settings/team/EditMemberModal.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.team'` from `PLANNED_PAGES`. Annotate about 18 elements with `tourProps('settings.team.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S60](#s60)
+
+**S61. Tour Roles and the permission matrix.**
+- Create: `src/lib/support/guides/settingsRoles.ts`, `src/lib/support/guides/settingsRoles.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/roles/RolesSettingsContent.tsx`, `src/pages/settings/roles/RoleNameModal.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (20 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.roles'` from `PLANNED_PAGES`. Annotate about 18 elements with `tourProps('settings.roles.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S61](#s61)
+
+**S62. Tour all seven lookup-list tabs.**
+- Create: `src/lib/support/guides/settingsLists.ts`, `src/lib/support/guides/settingsLists.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/lists/ListsSettingsContent.tsx`, `src/components/settings/LookupListEditor`, `src/pages/settings/lists/RiskLevelsList.tsx`, `src/pages/settings/lists/BusinessTypesList.tsx`, `src/pages/settings/lists/AreasList.tsx`, `src/pages/settings/lists/CitiesList.tsx`, `src/pages/settings/lists/FollowUpIntervalsList.tsx`, `src/pages/settings/lists/LostReasonsList.tsx`, `src/pages/settings/lists/ActivityResultsList.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (26 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.lists'` from `PLANNED_PAGES`. Annotate about 23 elements with `tourProps('settings.lists.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S62](#s62)
+
+**S63. Tour the Sales script editor, preview, publish and versions.**
+- Create: `src/lib/support/guides/settingsSalesScript.ts`, `src/lib/support/guides/settingsSalesScript.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/salesScript/SalesScriptSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.salesScript'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('settings.salesScript.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S63](#s63)
+
+**S64. Tour Pricing settings tabs: bands, risk, frequencies, zones and discount cap.**
+- Create: `src/lib/support/guides/settingsPricing.ts`, `src/lib/support/guides/settingsPricing.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/pricing/PricingSettingsContent.tsx`, `src/pages/settings/pricing/EmployeeBandsPanel.tsx`, `src/pages/settings/pricing/RiskSurchargesPanel.tsx`, `src/pages/settings/pricing/pricingTabs.ts`, `src/pages/settings/pricing/VisitFrequenciesPanel.tsx`, `src/pages/settings/pricing/PriceZonesPanel.tsx`, `src/pages/settings/pricing/DiscountCapPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (27 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.pricing'` from `PLANNED_PAGES`. Annotate about 24 elements with `tourProps('settings.pricing.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S64](#s64)
+
+**S65. Tour Pricing services, packages, offer wording and the test calculator.**
+- Modify: `src/lib/support/guides/settingsPricing.ts` (add the steps), `src/lib/support/guides/settingsPricing.test.tsx` (add the tests), `src/pages/settings/pricing/ServicesPanel.tsx`, `src/pages/settings/pricing/PackagesPanel.tsx`, `src/pages/settings/pricing/descriptionColumns.tsx`, `src/pages/settings/pricing/OfferSettingsPanel.tsx`, `src/pages/settings/pricing/TestCalculatorPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (23 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 21 elements with `tourProps('settings.pricing.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S65](#s65)
+
+**S66. Tour Statuses.**
+- Create: `src/lib/support/guides/settingsStatuses.ts`, `src/lib/support/guides/settingsStatuses.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/statuses/StatusesSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.statuses'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('settings.statuses.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S66](#s66)
+
+**S67. Tour Wellness+ settings.**
+- Create: `src/lib/support/guides/settingsWellnessPlus.ts`, `src/lib/support/guides/settingsWellnessPlus.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/wellnessPlus/WellnessPlusSettingsContent.tsx`, `src/pages/settings/wellnessPlus/TiersPanel.tsx`, `src/pages/settings/wellnessPlus/RulesPanel.tsx`, `src/pages/settings/wellnessPlus/RelationshipsPanel.tsx`, `src/pages/settings/wellnessPlus/BenefitsPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (23 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.wellnessPlus'` from `PLANNED_PAGES`. Annotate about 21 elements with `tourProps('settings.wellnessPlus.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S67](#s67)
+
+**S68. Tour Contract and payment settings.**
+- Create: `src/lib/support/guides/settingsContracts.ts`, `src/lib/support/guides/settingsContracts.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/contracts/ContractSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (7 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.contracts'` from `PLANNED_PAGES`. Annotate about 6 elements with `tourProps('settings.contracts.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S68](#s68)
+
+**S69. Tour the Audit log.**
+- Create: `src/lib/support/guides/settingsAudit.ts`, `src/lib/support/guides/settingsAudit.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/audit/AuditLogContent.tsx`, `src/pages/settings/audit/AuditEntryDetail.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (17 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.audit'` from `PLANNED_PAGES`. Annotate about 15 elements with `tourProps('settings.audit.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S69](#s69)
+
+**S70. Tour Integrations.**
+- Create: `src/lib/support/guides/settingsIntegrations.ts`, `src/lib/support/guides/settingsIntegrations.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/IntegrationsPage.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (10 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.integrations'` from `PLANNED_PAGES`. Annotate about 9 elements with `tourProps('settings.integrations.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S70](#s70)
+
+**S71. Tour Client management custom fields.**
+- Create: `src/lib/support/guides/settingsClientManagement.ts`, `src/lib/support/guides/settingsClientManagement.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/ClientSettingsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (22 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.clientManagement'` from `PLANNED_PAGES`. Annotate about 20 elements with `tourProps('settings.clientManagement.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S71](#s71)
+
+**S72. Tour Client management forms: create, template, duplicate, delete.**
+- Modify: `src/lib/support/guides/settingsClientManagement.ts` (add the steps), `src/lib/support/guides/settingsClientManagement.test.tsx` (add the tests), `src/pages/settings/ClientFormsTab.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (19 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 17 elements with `tourProps('settings.clientManagement.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S72](#s72)
+
+**S73. Tour Notification settings.**
+- Create: `src/lib/support/guides/settingsNotifications.ts`, `src/lib/support/guides/settingsNotifications.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/NotificationSettingsPage.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.notifications'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('settings.notifications.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S73](#s73)
+
+**S74. Tour Warehouses.**
+- Create: `src/lib/support/guides/settingsWarehouses.ts`, `src/lib/support/guides/settingsWarehouses.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/WarehouseList/WarehouseList.tsx`, `src/components/inventory/WarehouseFormModal`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.warehouses'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('settings.warehouses.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S74](#s74)
+
+**S75. Tour Categories.**
+- Create: `src/lib/support/guides/settingsCategories.ts`, `src/lib/support/guides/settingsCategories.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/CategoryList/CategoryList.tsx`, `src/components/inventory/CategoryFormModal`, `src/components/inventory/DeleteCategoryModal`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'settings.categories'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('settings.categories.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S75](#s75)
+
+**S76. Tour Form submissions.**
+- Create: `src/lib/support/guides/formsSubmissions.ts`, `src/lib/support/guides/formsSubmissions.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/FormSubmissionsContent.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (11 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'forms.submissions'` from `PLANNED_PAGES`. Annotate about 10 elements with `tourProps('forms.submissions.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S76](#s76)
+
+**S77. Add a Support entry to the form builder, then tour its title bar, status bar and the Home and Insert ribbon tabs.**
+- Create: `src/lib/support/guides/formsBuilder.ts`, `src/lib/support/guides/formsBuilder.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/settings/FormBuilderPage.tsx`, `src/components/forms/canvas/ribbon/TitleBar.tsx`, `src/components/forms/canvas/ribbon/StatusBar.tsx`, `src/components/forms/canvas/ribbon/HomeTab.tsx`, `src/components/forms/canvas/ribbon/InsertTab.tsx`, `src/components/forms/canvas/ribbon/RibbonButton.tsx`, `src/components/forms/registry/FormattingToolbar`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (24 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Read: `src/components/forms/canvas/keyboard.ts`
+- Also: Remove `'forms.builder'` from `PLANNED_PAGES`. Annotate about 22 elements with `tourProps('forms.builder.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S77](#s77)
+
+**S78. Tour the builder's Layout and contextual ribbon tabs and the properties panel.**
+- Modify: `src/lib/support/guides/formsBuilder.ts` (add the steps), `src/lib/support/guides/formsBuilder.test.tsx` (add the tests), `src/components/forms/canvas/ribbon/LayoutTab.tsx`, `src/components/forms/canvas/ribbon/ContextualTab.tsx`, `src/components/forms/canvas/PropertiesPanel.tsx`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (28 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 25 elements with `tourProps('forms.builder.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S78](#s78)
+
+**S79. Tour the builder's page rail, canvas, Add menu and context menu.**
+- Modify: `src/lib/support/guides/formsBuilder.ts` (add the steps), `src/lib/support/guides/formsBuilder.test.tsx` (add the tests), `src/components/forms/canvas/PageRail.tsx`, `src/components/forms/canvas/AddMenu.tsx`, `src/components/forms/canvas/FormCanvas.tsx`, `src/components/forms/canvas/CanvasSection.tsx`, `src/components/forms/canvas/CanvasElement.tsx`, `src/components/ui/ContextMenu`, `src/locales/en/supportSettings.json` and src/locales/sq/supportSettings.json (19 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 17 elements with `tourProps('forms.builder.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S79](#s79)
+
+**S80. Tour the Sales User dashboard and the shared role-dashboard frame, and publish the dashboard variant to Support.**
+- Create: `src/lib/support/guides/dashboardSalesUser.ts`, `src/lib/support/guides/dashboardSalesUser.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/SalesUserDashboard.tsx`, `src/pages/dashboard/RoleDashboardFrame.tsx`, `src/pages/dashboard/PeriodSelector.tsx`, `src/pages/dashboard/RefreshBar.tsx`, `src/pages/dashboard/KpiTile.tsx`, `src/pages/dashboard/ChartWithTable.tsx`, `src/pages/dashboard/EmptyState.tsx`, `src/pages/dashboard/DashboardLanding.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'dashboard.salesUser'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('dashboard.salesUser.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S80](#s80)
+
+**S81. Tour the Sales Manager dashboard additions.**
+- Create: `src/lib/support/guides/dashboardSalesManager.ts`, `src/lib/support/guides/dashboardSalesManager.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/SalesManagerDashboard.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'dashboard.salesManager'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('dashboard.salesManager.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S81](#s81)
+
+**S82. Tour the Administrator dashboard.**
+- Create: `src/lib/support/guides/dashboardAdministrator.ts`, `src/lib/support/guides/dashboardAdministrator.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/AdministratorDashboard.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'dashboard.administrator'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('dashboard.administrator.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S82](#s82)
+
+**S83. Tour the CEO dashboard.**
+- Create: `src/lib/support/guides/dashboardCeo.ts`, `src/lib/support/guides/dashboardCeo.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/CeoDashboard.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (11 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'dashboard.ceo'` from `PLANNED_PAGES`. Annotate about 10 elements with `tourProps('dashboard.ceo.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S83](#s83)
+
+**S84. Tour the fallback Business owner dashboard.**
+- Create: `src/lib/support/guides/dashboardLegacyOwner.ts`, `src/lib/support/guides/dashboardLegacyOwner.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/BusinessOwnerDashboard.tsx`, `src/pages/shell/BusinessOwnerShell.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (10 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'dashboard.legacyOwner'` from `PLANNED_PAGES`. Annotate about 9 elements with `tourProps('dashboard.legacyOwner.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S84](#s84)
+
+**S85. Tour the fallback Staff dashboard.**
+- Create: `src/lib/support/guides/dashboardLegacyStaff.ts`, `src/lib/support/guides/dashboardLegacyStaff.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/StaffDashboard.tsx`, `src/pages/shell/StaffShell.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (12 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'dashboard.legacyStaff'` from `PLANNED_PAGES`. Annotate about 11 elements with `tourProps('dashboard.legacyStaff.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S85](#s85)
+
+**S86. Tour the Notifications page.**
+- Create: `src/lib/support/guides/notifications.ts`, `src/lib/support/guides/notifications.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/notifications/NotificationsContent.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (8 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'notifications'` from `PLANNED_PAGES`. Annotate about 7 elements with `tourProps('notifications.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S86](#s86)
+
+**S87. Tour Reports.**
+- Create: `src/lib/support/guides/reports.ts`, `src/lib/support/guides/reports.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/ReportsPage.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (16 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'reports'` from `PLANNED_PAGES`. Annotate about 14 elements with `tourProps('reports.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S87](#s87)
+
+**S88. Tour the Inventory list header, filters and states.**
+- Create: `src/lib/support/guides/inventoryList.ts`, `src/lib/support/guides/inventoryList.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/InventoryList/InventoryList.tsx`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (14 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'inventory.list'` from `PLANNED_PAGES`. Annotate about 13 elements with `tourProps('inventory.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S88](#s88)
+
+**S89. Tour Inventory rows, selection, bulk actions, row menu, stock adjustment and delete.**
+- Modify: `src/lib/support/guides/inventoryList.ts` (add the steps), `src/lib/support/guides/inventoryList.test.tsx` (add the tests), `src/pages/inventory/InventoryList/InventoryList.tsx`, `src/components/inventory/InventoryTable`, `src/components/ui/MultiLocationStockIndicator`, `src/components/inventory/StockAdjustmentPanel`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (22 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Annotate about 20 elements with `tourProps('inventory.list.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S89](#s89)
+
+**S90. Tour the product form, including stock per warehouse and images.**
+- Create: `src/lib/support/guides/inventoryForm.ts`, `src/lib/support/guides/inventoryForm.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/inventory/ProductForm/ProductForm.tsx`, `src/components/inventory/WarehouseStockAllocation`, `src/components/inventory/ProductImageManager`, `src/locales/en/supportOps.json` and src/locales/sq/supportOps.json (28 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'inventory.form'` from `PLANNED_PAGES`. Annotate about 25 elements with `tourProps('inventory.form.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S90](#s90)
+
+**S91. Tour Platform Tenants.**
+- Create: `src/lib/support/guides/adminTenants.ts`, `src/lib/support/guides/adminTenants.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/TenantsPage.tsx`, `src/components/widgets/TenantManagementTable`, `src/pages/admin/CreateTenantModal.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'admin.tenants'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('admin.tenants.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S91](#s91)
+
+**S92. Tour Platform People.**
+- Create: `src/lib/support/guides/adminPeople.ts`, `src/lib/support/guides/adminPeople.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/PeoplePage.tsx`, `src/pages/admin/InviteUserModal.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (27 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'admin.people'` from `PLANNED_PAGES`. Annotate about 24 elements with `tourProps('admin.people.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S92](#s92)
+
+**S93. Tour Platform Settings.**
+- Create: `src/lib/support/guides/adminSettings.ts`, `src/lib/support/guides/adminSettings.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/PlatformSettingsPage.tsx`, `src/pages/admin/TenantPickerModal.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (18 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'admin.settings'` from `PLANNED_PAGES`. Annotate about 16 elements with `tourProps('admin.settings.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S93](#s93)
+
+**S94. Tour the Super Admin profile.**
+- Create: `src/lib/support/guides/adminProfile.ts`, `src/lib/support/guides/adminProfile.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/admin/AdminProfilePage.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (13 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'admin.profile'` from `PLANNED_PAGES`. Annotate about 12 elements with `tourProps('admin.profile.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S94](#s94)
+
+**S95. Tour the Platform dashboard, then empty the planned-pages list so a hard test enforces full coverage.**
+- Create: `src/lib/support/guides/adminDashboard.ts`, `src/lib/support/guides/adminDashboard.test.tsx`
+- Modify: `src/lib/support/pageRegistry.ts` (add the loader line), `src/lib/support/routeMap.ts` (planned -> mapped), `src/pages/dashboard/SuperAdminDashboard.tsx`, `src/pages/shell/SuperAdminShell.tsx`, `src/locales/en/supportAdmin.json` and src/locales/sq/supportAdmin.json (9 steps x title, body), `tests/e2e/support.spec.ts` (page row)
+- Also: Remove `'admin.dashboard'` from `PLANNED_PAGES`. Annotate about 8 elements with `tourProps('admin.dashboard.<step>')` or `tourId`. Run `npm run check:translations`.
+- Details: [S95](#s95)
+
 ### 6.1 Standard procedure, tests, acceptance and evidence for every page-tour slice
 
 Each page slice below lists its *own* inputs (files, annotation sites, steps, states, tests, acceptance). The parts that are identical for every page are defined here once and referenced as PT, ST, SA and SE. A slice is not complete unless every referenced item is done.
