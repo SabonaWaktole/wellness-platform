@@ -4,18 +4,16 @@ import { routes } from '../../routes';
 import { loaders } from './pageRegistry';
 import { PLANNED_PAGES, ROUTE_MAP, type RouteMapEntry } from './routeMap';
 
-const TENANT_PARENT = '/:tenantSlug';
-
 /**
  * The keys `ROUTE_MAP` uses for the router's leaf routes: top level paths as written
  * (`/login`), and the tenant shell's children relative to it (`clients/:clientId`, and
  * the empty string for the index route).
  */
-function leafPatterns(table: RouteObject[], parent: string | null = null): string[] {
+function leafPatterns(table: RouteObject[]): string[] {
   return table.flatMap((route) => {
     const own = route.index ? '' : (route.path ?? '');
-    if (route.children) return leafPatterns(route.children, route.path ?? '');
-    return [parent === TENANT_PARENT ? own : own];
+    if (route.children) return leafPatterns(route.children);
+    return [own];
   });
 }
 
