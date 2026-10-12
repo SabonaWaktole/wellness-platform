@@ -47,5 +47,94 @@
     "error": "Help could not be loaded.",
     "retry": "Retry",
     "close": "Close"
+  },
+  "shared": {
+    "subject": "this page",
+    "search": {
+      "title": "Search {{subject}}",
+      "body": "Type part of a name, number or phrase to narrow {{subject}}. The list updates as you type; clear the box to see everything again.",
+      "when": "When you know roughly what you are looking for."
+    },
+    "filterSelect": {
+      "title": "Filter {{subject}}",
+      "body": "Choose a value to show only the matching entries. Filters can be combined, and choosing the first option clears the filter.",
+      "when": "When the list is long and you only need one group."
+    },
+    "dateRange": {
+      "title": "Choose a date range",
+      "body": "Pick a start and an end date to show only what falls between them. Leave a side empty for no limit.",
+      "when": "When you are looking at a particular week, month or period."
+    },
+    "statusChips": {
+      "title": "Filter by status",
+      "body": "Each chip shows the entries with that status. Select one to filter; select it again to clear.",
+      "when": "When you only care about entries at one stage."
+    },
+    "sortHeader": {
+      "title": "Sort by this column",
+      "body": "Select the heading to sort {{subject}} by it. Select it again to reverse the order.",
+      "when": "When you want the newest, the largest or the first alphabetically at the top."
+    },
+    "pagination": {
+      "title": "Move between pages",
+      "body": "Shows which entries you are seeing and how many there are. Use the arrows or a page number to move, and the size menu to show more or fewer at a time.",
+      "when": "When {{subject}} does not fit on one page.",
+      "disabled": "A direction is dimmed when there is nothing further that way."
+    },
+    "rowMenu": {
+      "title": "Actions for one entry",
+      "body": "Opens the actions available for this entry. What you see depends on what you are allowed to do.",
+      "when": "When you want to act on one entry without opening it.",
+      "disabled": "A dimmed action is not available for this entry right now."
+    },
+    "statusBadge": {
+      "title": "Status",
+      "body": "Shows where this entry stands right now. It changes as the work moves forward."
+    },
+    "tabs": {
+      "title": "Tabs",
+      "body": "Each tab shows a different part of {{subject}}. Select a tab to switch; the one you are on is highlighted.",
+      "when": "When the information you want is in another section."
+    },
+    "bulkSelect": {
+      "title": "Select several",
+      "body": "Tick the boxes to choose more than one entry, or the box in the header to choose everything on this page. Actions for the selection appear once something is chosen.",
+      "when": "When the same action applies to many entries.",
+      "disabled": "Some entries cannot be selected because you may not act on them."
+    },
+    "export": {
+      "title": "Export",
+      "body": "Downloads {{subject}} as a file you can open in a spreadsheet. It exports what the filters currently show.",
+      "when": "When you need the data outside the application.",
+      "disabled": "Exporting is not available right now."
+    },
+    "refresh": {
+      "title": "Refresh",
+      "body": "Loads the latest {{subject}} from the server. The page also refreshes itself after you save a change.",
+      "when": "When someone else may have changed something.",
+      "disabled": "A refresh is already in progress."
+    },
+    "backLink": {
+      "title": "Go back",
+      "body": "Returns to the previous screen. Anything you have not saved on this one is not kept.",
+      "when": "When you are done here or opened the wrong entry."
+    },
+    "saveBar": {
+      "title": "Save or discard",
+      "body": "Save stores your changes; Discard throws them away. Nothing is saved until you press Save.",
+      "when": "When you have finished filling in the form.",
+      "disabled": "Save is dimmed until the required fields are filled in correctly."
+    },
+    "confirmDialog": {
+      "title": "Confirm before it happens",
+      "body": "This window asks you to confirm because the action cannot easily be undone. Read the message, then confirm or cancel. The tour never presses these for you.",
+      "when": "Whenever you are about to delete or close something."
+    },
+    "emptyAction": {
+      "title": "Nothing here yet",
+      "body": "This list is empty. The button below starts the first entry, so you can add one straight away.",
+      "when": "The first time you use this page.",
+      "disabled": "Adding is not available to your role."
+    }
   }
 }

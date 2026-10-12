@@ -132,6 +132,16 @@ describe('SUP-02 assertGuideIntegrity', () => {
       { id: 'rows', target: 'clients.list.row', kind: 'region' },
       { id: 'rows', target: 'Bad Id', kind: 'control' },
     ]);
-    expect(() => assertGuideIntegrity(broken, copy(['rows']))).toThrow(/clients\.list: .*declared more than once[\s\S]*Bad Id[\s\S]*repeat: true/);
+    const message = (() => {
+      try {
+        assertGuideIntegrity(broken, copy(['rows']));
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return '';
+    })();
+    expect(message).toContain('clients.list: Step "rows" is declared more than once.');
+    expect(message).toContain('Bad Id');
+    expect(message).toContain('repeat: true');
   });
 });

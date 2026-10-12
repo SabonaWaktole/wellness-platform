@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useSupportStore } from '../../store/useSupportStore';
 import type { PopoverVariant } from '../../components/support/TourPopover';
 import { announce } from './announcer';
+import { resolveStepCopy, runtimeVars } from './defineGuide';
 import { loadGuide } from './pageRegistry';
 import { progressUserKey, readPageProgress, writeProgress } from './progressStorage';
 import { scrollTargetIntoView } from './scrollTargetIntoView';
@@ -88,6 +89,13 @@ export function useTourSession(): TourSession {
         return;
       }
       await Promise.all([loadSupportCopy('support'), loadSupportCopy(loaded.namespace as Namespace)]);
+      // In development a broken guide is reported the moment it loads; the lint reads every catalogue, so it is not shipped.
+      if (import.meta.env.DEV) {
+        void import('./guideLint').then(({ lintGuide }) => {
+          const issues = lintGuide(loaded);
+          if (issues.length > 0) console.warn(`Support guide ${loaded.pageId} has problems:\n${issues.map((i) => i.message).join('\n')}`);
+        });
+      }
       if (!cancelled) setGuide(loaded);
     })();
     return () => {
@@ -133,18 +141,7 @@ export function useTourSession(): TourSession {
   const target = useTargetElement(spec);
   const fresh = target.key === targetSpecKey(spec);
 
-  const copyKey = (part: string) => (guide && step ? `${guide.pageId}.${step.id}.${part}` : '');
-  const read = (part: string) => (guide && step ? t(copyKey(part), { ns: guide.namespace, defaultValue: '' }) : '');
-  const copy: StepCopy | null =
-    guide && step
-      ? {
-          title: read('title'),
-          body: read('body'),
-          when: read('when') || undefined,
-          warning: read('warning') || undefined,
-          disabled: read('disabled') || undefined,
-        }
-      : null;
+  const copy: StepCopy | null = guide && step ? resolveStepCopy(guide, step, t, runtimeVars(target.element)) : null;
 
   const skipCurrent = (fromWaiting: boolean) => {
     notice.current = t('announce.skipped', { ns: 'support', title: copy?.title ?? '' });
