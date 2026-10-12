@@ -24,6 +24,21 @@
       "body": "Këtë tur mund ta bëni përsëri kurdo nga Mbështetja.",
       "replay": "Përsërit",
       "close": "Mbyll"
+    },
+    "openHint": "Hapeni vetë për të vazhduar. Turi nuk klikon kurrë për ju.",
+    "seeAgain": "Doni ta shihni sërish?",
+    "skipPart": "Kapërce këtë pjesë",
+    "continue": "Vazhdo",
+    "closeWait": {
+      "title": "Mbylleni për të vazhduar",
+      "body": "Kur ta mbyllni, turi vazhdon me hapin tjetër."
+    },
+    "blocked": "Dilni nga turi për ta përdorur këtë kontroll.",
+    "blockedSubmit": "Dilni nga turi për ta dërguar.",
+    "single": {
+      "close": "Mbyll",
+      "another": "Shpjego një tjetër",
+      "pickAnother": "Zgjidh një tjetër"
     }
   },
   "announce": {
@@ -31,7 +46,8 @@
     "skipped": "U kapërcye: {{title}} nuk është i disponueshëm tani",
     "closed": "Turi u mbyll",
     "movedPage": "Turi u mbyll sepse kaluat në një faqe tjetër",
-    "done": "Turi përfundoi. Përfunduat."
+    "done": "Turi përfundoi. Përfunduat.",
+    "single": "Po shpjegohet: {{title}}"
   },
   "panel": {
     "title": "Ndihmë për {{page}}",
@@ -46,7 +62,10 @@
     "noPage": "Ende nuk ka ndihmë për këtë ekran",
     "error": "Ndihma nuk mund të ngarkohej.",
     "retry": "Provo përsëri",
-    "close": "Mbyll"
+    "close": "Mbyll",
+    "explain": "Shpjego një kontroll",
+    "pick": "Trego një kontroll",
+    "back": "Kthehu"
   },
   "shared": {
     "subject": "këtë faqe",
@@ -174,5 +193,21 @@
       "title": "Dil",
       "body": "Mbyll sesionin tuaj në këtë pajisje. Çfarë nuk keni ruajtur nuk mbahet."
     }
+  },
+  "controls": {
+    "title": "Shpjego një kontroll",
+    "search": "Gjej një kontroll",
+    "loading": "Po shihet faqja…",
+    "empty": "Ende asnjë kontroll i kësaj faqeje nuk mund të shpjegohet",
+    "retry": "Provo përsëri",
+    "noMatch": "Asnjë kontroll nuk përputhet me “{{query}}”.",
+    "everyRow": "Shfaqet në çdo rresht"
+  },
+  "pick": {
+    "banner": "Zgjidhni një kontroll. Shtypni Escape për të anuluar.",
+    "cancel": "Anulo",
+    "highlighted": "I theksuar: {{name}}",
+    "noHelpTitle": "Ende nuk ka ndihmë të shkruar për këtë kontroll",
+    "noHelpBody": "Është në faqe, por askush nuk e ka shpjeguar ende këtu."
   }
 }

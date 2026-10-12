@@ -40,15 +40,17 @@ const settle = () =>
     for (let i = 0; i < 3; i += 1) await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
   });
 
-const NavigateButton = () => {
-  const navigate = useNavigate();
-  return <button type="button" aria-label="go elsewhere" onClick={() => navigate('/acme/follow-ups')} />;
+/** The browser's own back button or an address change: a running tour blocks the page's links, so tests navigate directly. */
+let go: (to: string) => void = () => {};
+const Navigator = () => {
+  go = useNavigate();
+  return null;
 };
 
 const mount = () =>
   render(
     <MemoryRouter initialEntries={['/acme/clients']}>
-      <NavigateButton />
+      <Navigator />
       <SupportHost />
     </MemoryRouter>,
   );
@@ -316,7 +318,7 @@ describe('SUP-17 leaving a tour', () => {
     await start();
     click('Next');
     await settle();
-    click('go elsewhere');
+    act(() => go('/acme/follow-ups'));
     await settle();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(status()).toBe('Tour closed because you moved to another page');

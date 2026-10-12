@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   canGoBack,
+  inLastGroupStep,
   currentStep,
   initialTourState,
   isLast,
@@ -283,5 +284,74 @@ describe('SUP-03 tour machine: determinism and purity', () => {
     const source = readFileSync(resolve(__dirname, file), 'utf8');
     expect(source).not.toMatch(/from\s+['"](react|react-dom|react-router-dom)(\/[^'"]*)?['"]/);
     expect(source).not.toMatch(/\b(document|window)\./);
+  });
+});
+
+describe('SUP-10 tour machine: skipping a part and leaving a layer', () => {
+  const steps: StepRef[] = [ref('open'), ref('f1', 'dialog'), ref('f2', 'dialog'), ref('after')];
+  const holding = () => run([{ type: 'START', steps }, { type: 'HOLD_FOR_USER', layerId: 'dlg' }]);
+
+  it('SUP-10 SKIP_GROUP leaves the wait for the user and goes past the whole group', () => {
+    const next = tourReducer(holding(), { type: 'SKIP_GROUP' });
+    expect(next).toMatchObject({ status: 'running', parentId: null });
+    expect(currentStep(next)?.id).toBe('after');
+  });
+
+  it('SUP-10 SKIP_GROUP on the last step finishes the tour', () => {
+    const only: StepRef[] = [ref('open'), ref('f1', 'dialog')];
+    const held = run([{ type: 'START', steps: only }, { type: 'HOLD_FOR_USER', layerId: 'dlg' }]);
+    expect(tourReducer(held, { type: 'SKIP_GROUP' })).toMatchObject({ status: 'finished', outcome: 'completed' });
+  });
+
+  it('SUP-10 SKIP_GROUP is ignored unless the tour waits for the user outside a layer', () => {
+    const running = run([{ type: 'START', steps }]);
+    expect(tourReducer(running, { type: 'SKIP_GROUP' })).toBe(running);
+    const inside = run([{ type: 'START', steps }, { type: 'HOLD_FOR_USER', layerId: 'dlg' }, { type: 'LAYER_OPENED', group: 'dialog' }]);
+    expect(tourReducer(inside, { type: 'SKIP_GROUP' })).toBe(inside);
+    const loading = run([{ type: 'START', steps }, { type: 'TARGET_PENDING' }]);
+    expect(tourReducer(loading, { type: 'SKIP_GROUP' })).toBe(loading);
+  });
+
+  it('SUP-10 inLastGroupStep is true only on the final step of a layer', () => {
+    const inside = run([{ type: 'START', steps }, { type: 'HOLD_FOR_USER', layerId: 'dlg' }, { type: 'LAYER_OPENED', group: 'dialog' }]);
+    expect(inLastGroupStep(inside)).toBe(false);
+    expect(inLastGroupStep(tourReducer(inside, { type: 'NEXT' }))).toBe(true);
+    expect(inLastGroupStep(run([{ type: 'START', steps }]))).toBe(false);
+    expect(inLastGroupStep(initialTourState)).toBe(false);
+  });
+
+  it('SUP-10 holding at the end of a group and then closing the layer returns to the opener', () => {
+    const atEnd = run([
+      { type: 'START', steps },
+      { type: 'HOLD_FOR_USER', layerId: 'dlg' },
+      { type: 'LAYER_OPENED', group: 'dialog' },
+      { type: 'NEXT' },
+      { type: 'HOLD_FOR_USER', layerId: 'dlg' },
+    ]);
+    expect(atEnd).toMatchObject({ status: 'waiting', reason: 'user-action', parentId: 'open' });
+    const closed = tourReducer(atEnd, { type: 'LAYER_CLOSED' });
+    expect(currentStep(closed)?.id).toBe('open');
+    expect(currentStep(tourReducer(closed, { type: 'NEXT' }))?.id).toBe('after');
+  });
+});
+
+describe('SUP-04 tour machine: explaining a single control', () => {
+  const single = () => run([{ type: 'START', steps: [ref('only')], single: true }]);
+
+  it('SUP-04 runs the one step with no progress', () => {
+    expect(currentStep(single())?.id).toBe('only');
+    expect(progress(single())).toEqual({ index: 0, total: 0 });
+  });
+
+  it('SUP-04 has no Next or Back', () => {
+    const state = single();
+    expect(tourReducer(state, { type: 'NEXT' })).toBe(state);
+    expect(tourReducer(state, { type: 'BACK' })).toBe(state);
+    expect(canGoBack(state)).toBe(false);
+  });
+
+  it('SUP-04 can still be exited, and a lost control is reported like in a tour', () => {
+    expect(tourReducer(single(), { type: 'EXIT' })).toMatchObject({ status: 'finished', outcome: 'exited' });
+    expect(tourReducer(single(), { type: 'TARGET_LOST' })).toMatchObject({ status: 'lost' });
   });
 });

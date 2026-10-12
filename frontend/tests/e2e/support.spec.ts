@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectNoMutations } from './support/noMutations';
 import { ADMIN_STATE } from './support/sessions';
 
 /**
@@ -42,6 +43,41 @@ test.describe('Support panel', () => {
       expect(consoleErrors, 'no console errors while using Support').toEqual([]);
     });
   }
+
+  // Every page slice adds the same assertion around its own tour (start, Next to the end). Until a page has a guide
+  // there is no tour to run, so this pins the weaker claim that using Support itself changes nothing.
+  test('opening and closing Support changes no data', async ({ page }) => {
+    await page.goto(`/${TENANT}/dashboard`);
+    await expect(page).not.toHaveURL(/\/login|\/unauthorized/);
+    const watch = expectNoMutations(page);
+    const help = page.getByRole('button', { name: /^(Help|Ndihmë)$/ });
+    await help.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
+    watch.assert();
+  });
+
+  // Point-and-ask works on any page, guide or not: the header and menu are explained everywhere. The click that
+  // picks the control is swallowed, so it neither navigates nor changes anything.
+  test('pointing at a control explains it, and changes no data', async ({ page }) => {
+    await page.goto(`/${TENANT}/clients`);
+    await expect(page).not.toHaveURL(/\/login|\/unauthorized/);
+    const here = page.url();
+    const watch = expectNoMutations(page);
+
+    await page.getByRole('button', { name: /^(Help|Ndihmë)$/ }).click();
+    await page.getByRole('button', { name: /^(Point at a control|Trego një kontroll)$/ }).click();
+    await expect(page.getByText(/Pick a control|Zgjidhni një kontroll/)).toBeVisible();
+
+    await page.locator('[data-tour="shell.nav.item"]').first().click();
+    await expect(page.getByRole('heading', { level: 2, name: /A menu entry|Një zë i menusë/ })).toBeVisible();
+    expect(page.url(), 'the click only explained the menu entry').toBe(here);
+
+    await page.getByRole('button', { name: /^(Close|Mbyll)$/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: /A menu entry|Një zë i menusë/ })).toBeHidden();
+    watch.assert();
+  });
 
   test('the sidebar Support item opens the same panel', async ({ page }) => {
     await page.goto(`/${TENANT}/dashboard`);

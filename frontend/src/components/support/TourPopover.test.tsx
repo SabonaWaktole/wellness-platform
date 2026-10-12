@@ -180,3 +180,71 @@ describe('SUP-15 tour popover: placement', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: original });
   });
 });
+
+describe('SUP-10 tour popover: waiting for the user', () => {
+  it('SUP-10 asking the user to open something shows the step, says the tour will not click, and offers to skip the part', () => {
+    const onSkipPart = vi.fn();
+    renderStep({ variant: 'waiting', waitingFor: 'open', onSkipPart });
+    expect(screen.getByRole('heading', { name: 'Add a client' })).toBeInTheDocument();
+    expect(screen.getByText(/never clicks for you/)).toBeInTheDocument();
+    expect(buttonNames()).toEqual(['Skip this part', 'Skip tour', 'Exit']);
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this part' }));
+    expect(onSkipPart).toHaveBeenCalledTimes(1);
+  });
+
+  it('SUP-10 offers to show a part again when the user closed it early', () => {
+    renderStep({ variant: 'waiting', waitingFor: 'open', onSkipPart: vi.fn(), note: 'again' });
+    expect(screen.getByText('Want to see it again?')).toBeInTheDocument();
+  });
+
+  it('SUP-10 asking the user to close something says so, and offers no skip', () => {
+    renderStep({ variant: 'waiting', waitingFor: 'close' });
+    expect(screen.getByRole('heading', { name: 'Close it to continue' })).toBeInTheDocument();
+    expect(buttonNames()).toEqual(['Skip tour', 'Exit']);
+  });
+
+  it('SUP-10 the last step of a layer says Continue, not Finish', () => {
+    const h = renderStep({ index: 1, total: 2, lastLabel: 'continue' });
+    expect(screen.queryByRole('button', { name: 'Finish' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(h.onFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('SUP-10 waiting for the page to load is unchanged', () => {
+    renderStep({ variant: 'waiting', waitingFor: 'loading' });
+    expect(screen.getByRole('heading', { name: 'Loading this part of the page…' })).toBeInTheDocument();
+  });
+});
+
+describe('SUP-04 tour popover: a single control', () => {
+  it('SUP-04 shows the explanation with only Explain another and Close', () => {
+    const h = renderStep({ single: true, onAnother: vi.fn() });
+    expect(buttonNames()).toEqual(['Explain another', 'Close']);
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText(/Step \d/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(h.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('SUP-04 without a way to pick another, only Close', () => {
+    renderStep({ single: true });
+    expect(buttonNames()).toEqual(['Close']);
+  });
+
+  it('SUP-16 in pick mode the other action says Pick another', () => {
+    renderStep({ single: true, onAnother: vi.fn(), anotherLabel: 'pick' });
+    expect(buttonNames()).toEqual(['Pick another', 'Close']);
+  });
+
+  it('SUP-04 keeps the same card when the control is lost', () => {
+    renderStep({ single: true, variant: 'lost', onAnother: vi.fn() });
+    expect(screen.getByRole('heading', { name: 'This item changed or is no longer on the page' })).toBeInTheDocument();
+    expect(buttonNames()).toEqual(['Explain another', 'Close']);
+  });
+
+  it('SUP-04 shows the warning and the disabled hint of the control', () => {
+    renderStep({ single: true, status: 'disabled' });
+    expect(screen.getByRole('note')).toBeInTheDocument();
+    expect(screen.getByText('You need permission to add clients.')).toBeInTheDocument();
+  });
+});

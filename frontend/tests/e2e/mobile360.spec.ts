@@ -268,6 +268,24 @@ test.describe('NFR-USE-01 NFR-USE-02 NFR-USE-03 screens have no horizontal overf
       await expectNoHorizontalOverflow(page, 'Support panel');
     });
 
+    // Support S04: point-and-ask by touch. The tap is swallowed and explains the control; the card fits the phone.
+    test('Support: pointing at a control by touch', async ({ page }) => {
+      await page.goto(`/${TENANT}/clients`);
+      await expect(page).not.toHaveURL(/\/login|\/unauthorized/);
+      await page.getByRole('button', { name: /^(Help|Ndihmë)$/ }).tap();
+      await page.getByRole('button', { name: /^(Point at a control|Trego një kontroll)$/ }).tap();
+      await page.locator('[data-tour="shell.theme"]').tap();
+      const card = page.getByRole('dialog');
+      await expect(card.getByRole('heading', { level: 2 })).toBeVisible();
+      const box = await card.boundingBox();
+      expect(box, 'the card has a box').not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+      await expectNoHorizontalOverflow(page, 'Support pick mode');
+      await card.getByRole('button', { name: /^(Close|Mbyll)$/ }).tap();
+      await expect(card).toBeHidden();
+    });
+
     for (const [screen, path] of screens) {
       test(screen, async ({ page }) => {
         await page.goto(`/${TENANT}/${path(companyId)}`);

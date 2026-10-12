@@ -6,6 +6,9 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useSupportStore } from '../../store/useSupportStore';
 import type { PopoverVariant } from '../../components/support/TourPopover';
 import { announce } from './announcer';
+import { subscribeToDom } from './domObserverHub';
+import { assertStepSafety, effectiveSafety, installGuard, isSupportUi, type GuardContext } from './interactionGuard';
+import { findLayer, topLayer } from './layerStack';
 import { resolveStepCopy, runtimeVars } from './defineGuide';
 import { ensureOpen, isAdapterName, restoreAll } from './layoutAdapters';
 import { loadGuide } from './pageRegistry';
@@ -13,7 +16,8 @@ import { progressUserKey, readPageProgress, writeProgress } from './progressStor
 import { scrollTargetIntoView } from './scrollTargetIntoView';
 import { loadSupportCopy } from './supportCopy';
 import { useEligibleSteps } from './stepEligibility';
-import { currentStep, initialTourState, progress, tourReducer } from './tourMachine';
+import { currentStep, inLastGroupStep, initialTourState, progress, tourReducer } from './tourMachine';
+import { useLayerWatcher } from './useLayerWatcher';
 import { targetSpecKey, useTargetElement } from './useTargetElement';
 import { useSupportPage } from './useSupportPage';
 import type { GuideStep, PageGuide, StepCopy, StepRef, TargetSpec, TargetStatus } from './types';
@@ -33,6 +37,20 @@ export interface TourSession {
   stepKey: string | null;
   /** The tour waits for the user to open something; the page owns Escape and Tab. */
   waitingForUser: boolean;
+  /** Escape belongs to the layer the user is in (or about to open), not to the tour. */
+  escapeToApp: boolean;
+  /** What a waiting card waits for. */
+  waitingFor: 'loading' | 'open' | 'close';
+  /** The last step of a layer's part says Continue. */
+  lastLabel: 'finish' | 'continue';
+  /** Set when the user closed a layer before its part was over. */
+  note: 'again' | undefined;
+  onSkipPart: () => void;
+  /** Explaining one control, not touring. */
+  single: boolean;
+  onAnother: () => void;
+  /** Said under the body, once, after the user tried to use a control during the tour. */
+  notice: string | undefined;
   onNext: () => void;
   onBack: () => void;
   onSkip: () => void;
@@ -59,6 +77,8 @@ export interface TourSession {
 export function useTourSession(): TourSession {
   const { t } = useTranslation();
   const pageId = useSupportStore((state) => state.context.pageId);
+  const single = useSupportStore((state) => state.mode === 'single');
+  const singleStepId = useSupportStore((state) => state.singleStepId);
   const { pageId: routePageId } = useSupportPage();
   const user = useAuthStore((state) => state.user);
   const userKey = user ? progressUserKey(user) : 'anonymous';
@@ -66,6 +86,12 @@ export function useTourSession(): TourSession {
   const [guide, setGuide] = useState<PageGuide | null>(null);
   const [machine, dispatch] = useReducer(tourReducer, initialTourState);
   const eligible = useEligibleSteps(guide);
+  const machineRef = useRef(machine);
+  machineRef.current = machine;
+  /** The opener step whose layer the user closed early, so its card can offer the part again. */
+  const [seeAgainFor, setSeeAgainFor] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<'use' | 'submit' | null>(null);
+  const noticeShown = useRef(false);
 
   const sheetHeight = useRef(0);
   const setSheetHeight = useCallback((height: number) => {
@@ -114,11 +140,18 @@ export function useTourSession(): TourSession {
         useSupportStore.getState().endSession();
         return;
       }
+      if (single) {
+        // One control, out of its group: it is looked for wherever it is on the page now.
+        const only = eligible.find((s) => s.id === singleStepId);
+        if (only) dispatch({ type: 'START', steps: [{ id: only.id }], single: true });
+        else useSupportStore.getState().endSession();
+        return;
+      }
       lastSignature.current = signature(steps);
       const saved = resume ? readPageProgress(userKey, guide.pageId, guide.version) : null;
       dispatch({ type: 'START', steps, resumeAtId: saved?.lastStepId });
     },
-    [guide, eligible, userKey],
+    [guide, eligible, userKey, single, singleStepId],
   );
   useEffect(() => {
     if (guide && machine.status === 'idle') start(true);
@@ -126,44 +159,109 @@ export function useTourSession(): TourSession {
 
   // Permissions, workflow or viewport changed under the tour: re-enter the list.
   useEffect(() => {
-    if (machine.status !== 'running' && machine.status !== 'waiting' && machine.status !== 'lost') return;
+    if (single || (machine.status !== 'running' && machine.status !== 'waiting' && machine.status !== 'lost')) return;
     const steps = eligible.map(toRef);
     const next = signature(steps);
     if (next === lastSignature.current) return;
     lastSignature.current = next;
     dispatch({ type: 'STEPS_CHANGED', steps });
-  }, [eligible, machine.status]);
+  }, [eligible, machine.status, single]);
 
   const isDesktop = useIsDesktop();
   const ref = currentStep(machine);
   const step = ref ? (eligible.find((s) => s.id === ref.id) ?? null) : null;
   const active = machine.status === 'running' || machine.status === 'waiting' || machine.status === 'lost';
+  const parentId = machine.status === 'idle' || machine.status === 'finished' ? null : machine.parentId;
 
+  // An opener is looked for on the page, not in the layer it opens: once that layer is up, the layer is the
+  // scope, and the opener would otherwise read as gone.
   const spec: TargetSpec | null =
-    active && step ? { id: step.target, repeat: step.repeat, pick: step.pick, nth: step.nth, within: step.within, scope: step.scope } : null;
+    active && step
+      ? { id: step.target, repeat: step.repeat, pick: step.pick, nth: step.nth, within: step.within, scope: step.opens ? (step.scope ?? 'page') : step.scope }
+      : null;
   const target = useTargetElement(spec);
   const fresh = target.key === targetSpecKey(spec);
 
   const copy: StepCopy | null = guide && step ? resolveStepCopy(guide, step, t, runtimeVars(target.element)) : null;
 
+  // A destructive step is explain-only whatever the guide says; in development the mistake is reported loudly.
+  // (Logged rather than thrown: an error in an effect would unmount the whole application over a content mistake.)
+  useEffect(() => {
+    if (!step) return;
+    try {
+      assertStepSafety(step);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [step]);
+
+  // The layer the current step opens, or is inside: watched from the moment the tour waits for the user.
+  const opener = machine.status === 'waiting' && machine.reason === 'user-action' && parentId === null ? step : parentId ? (eligible.find((s) => s.id === parentId) ?? null) : null;
+  const watchId = active && !single && opener?.opens ? opener.opens : null;
+  const layerOpen = useLayerWatcher(watchId, {
+    onOpen: () => {
+      const m = machineRef.current;
+      if (watchId && m.status === 'waiting' && m.reason === 'user-action' && m.parentId === null) dispatch({ type: 'LAYER_OPENED', group: watchId });
+    },
+    onClose: () => {
+      const m = machineRef.current;
+      if (m.status === 'idle' || m.status === 'finished' || m.parentId === null) return;
+      // Closed after the last step of its part (or while the tour waited for exactly that): carry on after the opener.
+      // Closed sooner: back to the opener, offering the part again.
+      const done = m.status === 'waiting' || inLastGroupStep(m);
+      const openerId = m.parentId;
+      dispatch({ type: 'LAYER_CLOSED' });
+      if (done) dispatch({ type: 'NEXT' });
+      else setSeeAgainFor(openerId);
+    },
+  });
+  const layerOpenRef = useRef(layerOpen);
+  layerOpenRef.current = layerOpen;
+
+  /** Next: inside a layer's last step, wait for the user to close it, so later steps are not looked for inside it. */
+  const advance = () => {
+    const m = machineRef.current;
+    if (inLastGroupStep(m) && layerOpenRef.current && opener?.opens) dispatch({ type: 'HOLD_FOR_USER', layerId: opener.opens });
+    else dispatch({ type: 'NEXT' });
+  };
+
   const skipCurrent = (fromWaiting: boolean) => {
+    if (single) {
+      // Nothing to skip to: say that the control is gone.
+      dispatch({ type: 'TARGET_LOST' });
+      return;
+    }
     notice.current = t('announce.skipped', { ns: 'support', title: copy?.title ?? '' });
     if (fromWaiting) dispatch({ type: 'TARGET_LOST' });
-    dispatch({ type: 'NEXT' });
+    advance();
+  };
+
+  const skipPart = () => {
+    notice.current = t('announce.skipped', { ns: 'support', title: copy?.title ?? '' });
+    dispatch({ type: 'SKIP_GROUP' });
   };
 
   // Step policy: what to do about where the control is right now.
   useEffect(() => {
     if (!step || !fresh) return;
     const present = target.status === 'found' || target.status === 'disabled' || target.status === 'offscreen';
+    // Inside a layer that has just gone, its controls went with it: the watcher will say it closed (after its
+    // exit grace), so they are not reported lost. Asked of the page itself, because the watcher holds the layer
+    // as open through that grace.
+    if (parentId !== null && watchId && (machine.status === 'running' || machine.status === 'lost') && (!layerOpen || !findLayer(document, watchId))) return;
     if (machine.status === 'running') {
-      if (target.status === 'pending') dispatch({ type: 'TARGET_PENDING' });
+      if (!single && parentId === null && step.opens && target.status === 'disabled') skipPart();
+      else if (!single && parentId === null && step.opens && (target.status === 'found' || target.status === 'offscreen')) dispatch({ type: 'HOLD_FOR_USER', layerId: step.opens });
+      else if (target.status === 'pending') dispatch({ type: 'TARGET_PENDING' });
       else if (target.status === 'missing') skipCurrent(false);
       else if (target.status === 'lost') dispatch({ type: 'TARGET_LOST' });
       else if (target.status === 'offscreen' && target.element && scrolledTo.current !== target.element) {
         scrolledTo.current = target.element;
         scrollTargetIntoView(target.element, { sheetHeight: sheetHeight.current });
       }
+    } else if (machine.status === 'waiting' && machine.reason === 'user-action') {
+      // Waiting for the user to open a layer: if the opener can no longer be used, the part is skipped.
+      if (parentId === null && (target.status === 'disabled' || target.status === 'missing' || target.status === 'lost')) skipPart();
     } else if (machine.status === 'waiting' && machine.reason === 'loading') {
       if (present) dispatch({ type: 'TARGET_READY' });
       else if (target.status === 'missing') skipCurrent(true);
@@ -172,7 +270,42 @@ export function useTourSession(): TourSession {
     }
     // `skipCurrent` and `copy` are derived from the values listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machine.status, step?.id, fresh, target.status, target.element]);
+  }, [machine.status, parentId, step?.id, fresh, target.status, target.element, layerOpen]);
+
+  // The read-only guard: while a tour runs, only the tour's own controls, the control of a try-it step and the
+  // layer the user was asked to open can be operated. Rules are read afresh on every event.
+  const guard = useRef<GuardContext>({ allows: () => false, onBlocked: () => {} });
+  const targetElement = target.element;
+  const waitingOnUser = machine.status === 'waiting' && machine.reason === 'user-action';
+  guard.current = {
+    allows: (el) => {
+      if (isSupportUi(el) || el === document.documentElement || el === document.body) return true;
+      if (step && effectiveSafety(step) === 'try-it' && targetElement?.contains(el)) return true;
+      return waitingOnUser && (topLayer(document)?.contains(el) ?? false);
+    },
+    onBlocked: (_el, kind) => {
+      if (kind === 'drag' || kind === 'pointer' || noticeShown.current) return;
+      noticeShown.current = true;
+      const key = kind === 'submit' ? 'popover.blockedSubmit' : 'popover.blocked';
+      setBlocked(kind === 'submit' ? 'submit' : 'use');
+      announce(t(key, { ns: 'support' }));
+    },
+  };
+  useEffect(() => {
+    if (!active) return;
+    return installGuard(() => guard.current);
+  }, [active]);
+  useEffect(() => setBlocked(null), [step?.id]);
+
+  // A tab step waits for the tab to be selected, and moves on when it is.
+  useEffect(() => {
+    const element = target.element;
+    if (single || machine.status !== 'running' || step?.advanceWhen !== 'selected' || !element || !fresh) return;
+    if (element.getAttribute('aria-selected') === 'true') return;
+    return subscribeToDom(() => {
+      if (element.getAttribute('aria-selected') === 'true') dispatch({ type: 'NEXT' });
+    });
+  }, [single, machine.status, step?.id, step?.advanceWhen, target.element, fresh]);
 
   // A step about something that is off screen on a phone (the sidebar) opens it first and puts it back
   // when the step changes or the tour ends. On a desktop the control is always there, so nothing is opened.
@@ -197,7 +330,9 @@ export function useTourSession(): TourSession {
   // Say where we are: on each step (with any skip notice in front), and again if the total changes.
   useEffect(() => {
     if (!running || !copy?.title) return;
-    const message = t('announce.step', { ns: 'support', current: index + 1, total, title: copy.title });
+    const message = single
+      ? t('announce.single', { ns: 'support', title: copy.title })
+      : t('announce.step', { ns: 'support', current: index + 1, total, title: copy.title });
     announce([notice.current, message].filter(Boolean).join(' '));
     notice.current = '';
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,6 +341,11 @@ export function useTourSession(): TourSession {
   // The tour ended: remember how, say so, and close it (a finished tour waits for its completion card to be closed).
   useEffect(() => {
     if (machine.status !== 'finished' || !guide) return;
+    if (single) {
+      // Explaining one control leaves no trace: no progress, no closing message.
+      useSupportStore.getState().endSession();
+      return;
+    }
     const now = new Date().toISOString();
     if (machine.outcome === 'completed') writeProgress(userKey, guide.pageId, { v: guide.version, completedAt: now });
     else if (machine.outcome === 'skipped') writeProgress(userKey, guide.pageId, { v: guide.version, dismissedAt: now });
@@ -235,11 +375,22 @@ export function useTourSession(): TourSession {
     targetElement: variant === 'step' && fresh ? target.element : null,
     stepKey: step?.id ?? variant,
     waitingForUser: machine.status === 'waiting' && machine.reason === 'user-action',
-    onNext: () => dispatch({ type: 'NEXT' }),
+    escapeToApp: (machine.status === 'waiting' && machine.reason === 'user-action') || parentId !== null,
+    waitingFor: machine.status === 'waiting' && machine.reason === 'user-action' ? (parentId !== null ? 'close' : 'open') : 'loading',
+    lastLabel: inLastGroupStep(machine) ? 'continue' : 'finish',
+    note: step && seeAgainFor === step.id ? 'again' : undefined,
+    onSkipPart: skipPart,
+    single,
+    onAnother: () => {
+      useSupportStore.getState().endSession();
+      useSupportStore.getState().openPanel('controls');
+    },
+    notice: blocked ? t(blocked === 'submit' ? 'popover.blockedSubmit' : 'popover.blocked', { ns: 'support' }) : undefined,
+    onNext: advance,
     onBack: () => dispatch({ type: 'BACK' }),
     onSkip: () => dispatch({ type: 'SKIP_TOUR' }),
     onExit: () => dispatch({ type: 'EXIT' }),
-    onFinish: () => dispatch({ type: 'NEXT' }),
+    onFinish: advance,
     onReplay: () => start(false),
     onClose: () => useSupportStore.getState().endSession(),
     setSheetHeight,

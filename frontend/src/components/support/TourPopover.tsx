@@ -26,6 +26,21 @@ export interface TourPopoverProps {
   onFinish: () => void;
   onReplay: () => void;
   onClose: () => void;
+  /** Explaining one control, not touring: no progress, and only Close (and a way to pick another). */
+  single?: boolean;
+  onAnother?: () => void;
+  /** What the "another" action is called: from the list of controls, or in pick mode. */
+  anotherLabel?: 'list' | 'pick';
+  /** What a `waiting` card waits for: the page to load (default), the user to open a layer, or to close it. */
+  waitingFor?: 'loading' | 'open' | 'close';
+  /** Leave the part of the tour that sits inside a layer the user has not opened. */
+  onSkipPart?: () => void;
+  /** `again`: the user closed the layer before the part was over, so offer it a second time. */
+  note?: 'again';
+  /** The last step of a layer says Continue; the last step of the tour says Finish. */
+  lastLabel?: 'finish' | 'continue';
+  /** A line of text shown under the body, for example that a control cannot be used during the tour. */
+  notice?: string;
   rootRef?: Ref<HTMLDivElement>;
   headingRef?: Ref<HTMLHeadingElement>;
   /** Called with the card's height when it docks as a bottom sheet (0 otherwise), so the host can keep the target clear of it. */
@@ -65,6 +80,14 @@ export const TourPopover = ({
   onFinish,
   onReplay,
   onClose,
+  single = false,
+  onAnother,
+  anotherLabel = 'list',
+  waitingFor = 'loading',
+  onSkipPart,
+  note,
+  lastLabel = 'finish',
+  notice,
   rootRef,
   headingRef,
   onSheetHeight,
@@ -102,9 +125,22 @@ export const TourPopover = ({
   const style: CSSProperties | undefined = floating ? { top: floating.top, left: floating.left } : undefined;
   const isLast = index >= total - 1;
 
+  // A card that waits for the user to open something is the step itself, with a hint; one that waits for
+  // a layer to close, or for the page to load, has copy of its own.
+  const waitingOnOpen = variant === 'waiting' && waitingFor === 'open';
+  const waitingOnClose = variant === 'waiting' && waitingFor === 'close';
   const title =
-    variant === 'step' ? (copy?.title ?? '') : t(`popover.${variant}.title`);
-  const body = variant === 'step' ? (copy?.body ?? '') : t(`popover.${variant}.body`);
+    variant === 'step' || waitingOnOpen
+      ? (copy?.title ?? '')
+      : waitingOnClose
+        ? t('popover.closeWait.title')
+        : t(`popover.${variant}.title`);
+  const body =
+    variant === 'step' || waitingOnOpen
+      ? (copy?.body ?? '')
+      : waitingOnClose
+        ? t('popover.closeWait.body')
+        : t(`popover.${variant}.body`);
 
   return (
     <div
@@ -114,10 +150,13 @@ export const TourPopover = ({
       aria-modal="false"
       aria-labelledby={titleId}
       aria-describedby={bodyId}
+      data-support-ui=""
       data-mode={mode}
       data-variant={variant}
       data-side={floating?.side}
       style={style}
+      // A press on the card is not a click "outside" a menu or dialog the tour is explaining.
+      onMouseDown={(event) => event.stopPropagation()}
     >
       {floating && (
         <span
@@ -134,6 +173,9 @@ export const TourPopover = ({
         {body}
       </p>
 
+      {notice && <p className={styles.notice}>{notice}</p>}
+      {waitingOnOpen && <p className={styles.hint}>{t('popover.openHint')}</p>}
+      {waitingOnOpen && note === 'again' && <p className={styles.hint}>{t('popover.seeAgain')}</p>}
       {variant === 'step' && copy?.when && (
         <section className={styles.when}>
           <h3 className={styles.whenLabel}>{t('popover.when')}</h3>
@@ -153,7 +195,7 @@ export const TourPopover = ({
         <p className={styles.hint}>{copy?.disabled ?? t('popover.disabledFallback')}</p>
       )}
 
-      {(variant === 'step' || variant === 'lost') && total > 0 && (
+      {!single && (variant === 'step' || variant === 'lost') && total > 0 && (
         <div className={styles.progress}>
           <span className={styles.progressText}>{t('popover.stepOf', { current: index + 1, total })}</span>
           <div
@@ -170,7 +212,18 @@ export const TourPopover = ({
       )}
 
       <div className={styles.actions}>
-        {variant === 'completed' ? (
+        {single ? (
+          <>
+            {onAnother && (
+              <Button type="button" size="sm" variant="outline" onClick={onAnother}>
+                {anotherLabel === 'pick' ? t('popover.single.pickAnother') : t('popover.single.another')}
+              </Button>
+            )}
+            <Button type="button" size="sm" onClick={onClose}>
+              {t('popover.single.close')}
+            </Button>
+          </>
+        ) : variant === 'completed' ? (
           <>
             <Button type="button" size="sm" onClick={onReplay}>
               {t('popover.completed.replay')}
@@ -181,6 +234,11 @@ export const TourPopover = ({
           </>
         ) : (
           <>
+            {waitingOnOpen && onSkipPart && (
+              <Button type="button" size="sm" variant="outline" onClick={onSkipPart}>
+                {t('popover.skipPart')}
+              </Button>
+            )}
             {variant !== 'waiting' && index > 0 && (
               <Button type="button" size="sm" variant="outline" onClick={onBack}>
                 {t('popover.back')}
@@ -189,7 +247,7 @@ export const TourPopover = ({
             {variant !== 'waiting' &&
               (isLast ? (
                 <Button type="button" size="sm" onClick={onFinish}>
-                  {t('popover.finish')}
+                  {lastLabel === 'continue' ? t('popover.continue') : t('popover.finish')}
                 </Button>
               ) : (
                 <Button type="button" size="sm" onClick={onNext}>

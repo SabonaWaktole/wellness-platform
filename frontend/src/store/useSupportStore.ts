@@ -13,8 +13,15 @@ export interface SupportContext {
   scope: string | null;
 }
 
+export type PanelView = 'main' | 'controls';
+
 interface SupportState {
   panelOpen: boolean;
+  /** Which screen of the panel is showing: what Support offers here, or the list of controls to explain. */
+  panelView: PanelView;
+  setPanelView: (view: PanelView) => void;
+  /** The control being explained in `single` mode. */
+  singleStepId: string | null;
   /**
    * The URL the open panel belongs to, set by the panel itself. Each page mounts its own header, so a
    * panel left open across a navigation would reappear on the next page; a panel that finds a path
@@ -24,10 +31,14 @@ interface SupportState {
   setPanelPath: (path: string | null) => void;
   mode: SupportMode;
   context: SupportContext;
-  openPanel: () => void;
+  openPanel: (view?: PanelView) => void;
   closePanel: () => void;
   /** Start a tour for `pageId`. The panel closes so the page is visible. */
   startTour: (pageId: string) => void;
+  /** Point-and-ask on `pageId`: any annotated control can be explained. */
+  startPick: (pageId: string) => void;
+  /** Explain one control of `pageId`'s guide, without touring. */
+  startSingle: (pageId: string, stepId: string) => void;
   /** Return to mode `none` without touching what the page published. */
   endSession: () => void;
   setContext: (patch: Partial<Pick<SupportContext, 'variant' | 'scope'>>) => void;
@@ -45,14 +56,20 @@ const EMPTY_CONTEXT: SupportContext = { pageId: null, variant: null, scope: null
  */
 export const useSupportStore = create<SupportState>((set) => ({
   panelOpen: false,
+  panelView: 'main',
+  setPanelView: (view) => set({ panelView: view }),
+  singleStepId: null,
   panelPath: null,
   setPanelPath: (path) => set({ panelPath: path }),
   mode: 'none',
   context: EMPTY_CONTEXT,
-  openPanel: () => set({ panelOpen: true }),
-  closePanel: () => set({ panelOpen: false, panelPath: null }),
+  openPanel: (view = 'main') => set({ panelOpen: true, panelView: view }),
+  closePanel: () => set({ panelOpen: false, panelPath: null, panelView: 'main' }),
   startTour: (pageId) => set((state) => ({ panelOpen: false, panelPath: null, mode: 'tour', context: { ...state.context, pageId } })),
-  endSession: () => set((state) => ({ mode: 'none', context: { ...state.context, pageId: null } })),
+  startPick: (pageId) => set((state) => ({ panelOpen: false, panelPath: null, panelView: 'main', mode: 'pick', context: { ...state.context, pageId } })),
+  startSingle: (pageId, stepId) =>
+    set((state) => ({ panelOpen: false, panelPath: null, panelView: 'main', mode: 'single', singleStepId: stepId, context: { ...state.context, pageId } })),
+  endSession: () => set((state) => ({ mode: 'none', singleStepId: null, context: { ...state.context, pageId: null } })),
   setContext: (patch) => set((state) => ({ context: { ...state.context, ...patch } })),
   clearContext: () => set((state) => ({ context: { ...state.context, variant: null, scope: null } })),
 }));
@@ -60,6 +77,6 @@ export const useSupportStore = create<SupportState>((set) => ({
 // Signing out ends everything, so the next person to sign in on this browser starts clean.
 useAuthStore.subscribe((state, previous) => {
   if (previous.user && !state.user) {
-    useSupportStore.setState({ panelOpen: false, panelPath: null, mode: 'none', context: EMPTY_CONTEXT });
+    useSupportStore.setState({ panelOpen: false, panelPath: null, panelView: 'main', mode: 'none', singleStepId: null, context: EMPTY_CONTEXT });
   }
 });

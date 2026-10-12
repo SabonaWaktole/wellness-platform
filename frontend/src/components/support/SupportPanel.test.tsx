@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../../i18n';
+import { mockRect } from '../../mocks/mockRect';
 import { loaders } from '../../lib/support/pageRegistry';
 import { progressUserKey, writeProgress } from '../../lib/support/progressStorage';
 import type { PageGuide } from '../../lib/support/types';
@@ -269,5 +271,127 @@ describe('SUP-13 SUP-14 SupportPanel: closing', () => {
     const types = remove.mock.calls.map(([type]) => type);
     expect(types).toContain('keydown');
     expect(types).toContain('mousedown');
+  });
+});
+
+describe('SUP-04 SupportPanel: pointing at a control', () => {
+  it('SUP-04 offers it on a page with a guide, and starts pick mode for the page', async () => {
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Point at a control' }));
+    expect(useSupportStore.getState()).toMatchObject({ mode: 'pick', panelOpen: false, context: { pageId: 'clients.list' } });
+  });
+
+  it('SUP-05 offers it on a page with no guide too, because the header and menu can still be explained', async () => {
+    delete loaders['clients.list'];
+    mount();
+    await open();
+    expect(await screen.findByRole('button', { name: 'Point at a control' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Explain a control' })).toBeNull();
+  });
+
+  it('SUP-01 does not offer it on a screen with no page', async () => {
+    mount('/acme');
+    await open();
+    await screen.findByText('No help for this screen yet');
+    expect(screen.queryByRole('button', { name: 'Point at a control' })).toBeNull();
+  });
+});
+
+describe('SUP-04 SupportPanel: Explain a control', () => {
+  const created: HTMLElement[] = [];
+  const onPage = (...ids: string[]) => {
+    let main = document.querySelector('main') as HTMLElement | null;
+    if (!main) {
+      main = document.createElement('main');
+      document.body.append(main);
+      created.push(main);
+    }
+    for (const id of ids) {
+      const node = document.createElement('button');
+      node.setAttribute('data-tour', `fx.${id}`);
+      main.append(node);
+      mockRect(node);
+    }
+  };
+
+  beforeEach(() => {
+    i18n.addResourceBundle('en', 'supportSales', { clients: { list: { a: { title: 'Alpha control', body: 'a' }, b: { title: 'Beta control', body: 'b' }, c: { title: 'Gamma control', body: 'c' } } } }, true, true);
+  });
+  afterEach(() => {
+    created.splice(0).forEach((n) => n.remove());
+    i18n.removeResourceBundle('en', 'supportSales');
+  });
+
+  it('SUP-04 offers it next to the tour', async () => {
+    onPage('a');
+    mount();
+    await open();
+    expect(await screen.findByRole('button', { name: 'Explain a control' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tour this page' })).toBeInTheDocument();
+  });
+
+  it('SUP-04 does not offer it where there is no help', async () => {
+    delete loaders['clients.list'];
+    mount();
+    await open();
+    await screen.findByText('No help written for Clients list yet');
+    expect(screen.queryByRole('button', { name: 'Explain a control' })).toBeNull();
+  });
+
+  it('SUP-04 lists only the controls that are on the page right now', async () => {
+    onPage('a', 'c');
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Explain a control' }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['Alpha control', 'Gamma control']);
+  });
+
+  it('SUP-04 choosing one explains it in a single card and closes the panel', async () => {
+    onPage('a', 'c');
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Explain a control' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Gamma control/ }));
+    expect(useSupportStore.getState()).toMatchObject({ mode: 'single', singleStepId: 'c', panelOpen: false, context: { pageId: 'clients.list' } });
+  });
+
+  it('SUP-04 Back returns to what Support offers', async () => {
+    onPage('a');
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Explain a control' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+    expect(await screen.findByRole('button', { name: 'Tour this page' })).toBeInTheDocument();
+  });
+
+  it('SUP-11 says so when no control can be explained yet, and Retry looks again', async () => {
+    onPage();
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Explain a control' }));
+    expect(await screen.findByText('No controls on this page can be explained yet')).toBeInTheDocument();
+    onPage('b');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('option', { name: /Beta control/ })).toBeInTheDocument();
+  });
+
+  it('SUP-04 can be opened straight onto the list (from "Explain another")', async () => {
+    onPage('a');
+    mount();
+    act(() => useSupportStore.getState().openPanel('controls'));
+    expect(await screen.findByRole('searchbox', { name: 'Find a control' })).toBeInTheDocument();
+  });
+
+  it('SUP-13 Escape from the list still closes the panel and returns focus to the launcher', async () => {
+    onPage('a');
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Explain a control' }));
+    await screen.findByRole('searchbox');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(launcher());
   });
 });

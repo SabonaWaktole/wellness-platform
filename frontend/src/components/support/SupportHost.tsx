@@ -4,10 +4,12 @@ import { useAnnouncerStore } from '../../lib/support/announcer';
 import { describeTarget } from '../../lib/support/describeTarget';
 import { useTourFocus } from '../../lib/support/useTourFocus';
 import { useTourKeyboard } from '../../lib/support/useTourKeyboard';
+import { usePickMode } from '../../lib/support/usePickMode';
 import { useTourSession } from '../../lib/support/useTourSession';
 import { useTargetRect } from '../../lib/support/useTargetRect';
 import { useSupportStore } from '../../store/useSupportStore';
 import { LiveAnnouncer } from './LiveAnnouncer';
+import { PickBanner } from './PickBanner';
 import { SpotlightMask } from './SpotlightMask';
 import { TourPopover } from './TourPopover';
 
@@ -22,7 +24,7 @@ const TourSessionView = () => {
   useTourFocus(shown, headingRef, session.stepKey);
   useTourKeyboard({
     running: shown,
-    waiting: session.waitingForUser,
+    waiting: session.escapeToApp,
     onExit: variant === 'completed' ? session.onClose : session.onExit,
     onNext: session.onNext,
     onBack: session.onBack,
@@ -57,12 +59,63 @@ const TourSessionView = () => {
           onFinish={session.onFinish}
           onReplay={session.onReplay}
           onClose={session.onClose}
+          waitingFor={session.waitingFor}
+          onSkipPart={session.onSkipPart}
+          note={session.note}
+          notice={session.notice}
+          single={session.single}
+          onAnother={session.single ? session.onAnother : undefined}
+          lastLabel={session.lastLabel}
           rootRef={popoverRef}
           headingRef={headingRef}
           onSheetHeight={session.setSheetHeight}
         />,
         document.body,
       )}
+    </>
+  );
+};
+
+const noop = () => {};
+
+/** Point-and-ask: a banner while the user looks around, and a single card for the control they pick. */
+const PickSessionView = () => {
+  const pick = usePickMode();
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const shown = pick.picked !== null && pick.pickedCopy !== null;
+  const rect = useTargetRect(pick.highlight);
+
+  useTourFocus(shown, headingRef, pick.picked?.id ?? null);
+
+  return (
+    <>
+      <PickBanner candidateName={pick.candidateName} onCancel={pick.close} />
+      <SpotlightMask element={pick.highlight} />
+      {shown &&
+        createPortal(
+          <TourPopover
+            variant="step"
+            single
+            copy={pick.pickedCopy!.copy}
+            index={0}
+            total={0}
+            status={null}
+            targetRect={rect}
+            onNext={noop}
+            onBack={noop}
+            onSkip={noop}
+            onExit={pick.close}
+            onFinish={noop}
+            onReplay={noop}
+            onClose={pick.close}
+            onAnother={pick.pickAnother}
+            anotherLabel="pick"
+            rootRef={popoverRef}
+            headingRef={headingRef}
+          />,
+          document.body,
+        )}
     </>
   );
 };
@@ -78,7 +131,8 @@ export default function SupportHost() {
   if (mode === 'none' && !message) return null;
   return (
     <>
-      {mode === 'tour' && <TourSessionView />}
+      {(mode === 'tour' || mode === 'single') && <TourSessionView />}
+      {mode === 'pick' && <PickSessionView />}
       <LiveAnnouncer />
     </>
   );

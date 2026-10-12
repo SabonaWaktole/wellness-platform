@@ -33,11 +33,14 @@ const finish = (state: ActiveState, outcome: 'completed' | 'skipped' | 'exited')
   lastStepId: state.parentId ?? state.steps[state.index]?.id ?? null,
 });
 
+const carry = (state: ActiveState) => (state.single ? { single: true } : {});
+
 const running = (state: ActiveState, index: number, parentId: string | null): MachineState => ({
   status: 'running',
   steps: state.steps,
   index,
   parentId,
+  ...carry(state),
 });
 
 const findFrom = (steps: StepRef[], from: number, step: number, test: (s: StepRef) => boolean): number => {
@@ -85,10 +88,10 @@ const stepsChanged = (state: ActiveState, next: StepRef[]): MachineState => {
     if (j >= 0 && ok(next[j])) anchor = j;
   }
   if (anchor < 0) anchor = findFrom(next, next.length, -1, ok);
-  if (anchor >= 0) return { status: 'running', steps: next, index: anchor, parentId };
+  if (anchor >= 0) return { status: 'running', steps: next, index: anchor, parentId, ...carry(state) };
 
   const top = findFrom(next, next.length, -1, isTop);
-  if (top >= 0) return { status: 'running', steps: next, index: top, parentId: null };
+  if (top >= 0) return { status: 'running', steps: next, index: top, parentId: null, ...carry(state) };
   return { status: 'finished', outcome: 'completed', lastStepId: state.parentId ?? current?.id ?? null };
 };
 
@@ -97,19 +100,19 @@ export function tourReducer(state: MachineState, event: MachineEvent): MachineSt
     const first = event.steps.findIndex(isTop);
     if (first < 0) return { status: 'finished', outcome: 'completed', lastStepId: null };
     const resume = event.resumeAtId ? event.steps.findIndex((s) => s.id === event.resumeAtId && isTop(s)) : -1;
-    return { status: 'running', steps: event.steps, index: resume >= 0 ? resume : first, parentId: null };
+    return { status: 'running', steps: event.steps, index: resume >= 0 ? resume : first, parentId: null, ...(event.single ? { single: true } : {}) };
   }
 
   if (!isActive(state)) return state;
 
   switch (event.type) {
     case 'NEXT': {
-      if (state.status === 'waiting') return state;
+      if (state.status === 'waiting' || state.single) return state;
       const target = nextTarget(state);
       return target ? running(state, target.index, target.parentId) : finish(state, 'completed');
     }
     case 'BACK': {
-      if (state.status === 'waiting') return state;
+      if (state.status === 'waiting' || state.single) return state;
       const target = backTarget(state);
       return target ? running(state, target.index, target.parentId) : state;
     }
@@ -125,7 +128,7 @@ export function tourReducer(state: MachineState, event: MachineEvent): MachineSt
       return state.status === 'waiting' && state.reason === 'loading' ? running(state, state.index, state.parentId) : state;
     case 'TARGET_LOST':
       return state.status === 'running' || (state.status === 'waiting' && state.reason === 'loading')
-        ? { status: 'lost', steps: state.steps, index: state.index, parentId: state.parentId }
+        ? { status: 'lost', steps: state.steps, index: state.index, parentId: state.parentId, ...carry(state) }
         : state;
     case 'TARGET_RESTORED':
       return state.status === 'lost' ? running(state, state.index, state.parentId) : state;
@@ -139,6 +142,12 @@ export function tourReducer(state: MachineState, event: MachineEvent): MachineSt
       return inside >= 0
         ? running(state, inside, state.steps[state.index].id)
         : running(state, state.index, state.parentId);
+    }
+    case 'SKIP_GROUP': {
+      // Only while waiting for the user to open a layer they have not opened: past the whole group.
+      if (state.status !== 'waiting' || state.reason !== 'user-action' || state.parentId !== null) return state;
+      const target = nextTarget(state);
+      return target ? running(state, target.index, target.parentId) : finish(state, 'completed');
     }
     case 'LAYER_CLOSED': {
       if (state.parentId === null) return state;
@@ -154,11 +163,15 @@ export const currentStep = (state: MachineState): StepRef | null => (isActive(st
 
 /** Position among the steps reachable right now (the eligible top level, or the open layer's group). */
 export const progress = (state: MachineState): { index: number; total: number } => {
-  if (!isActive(state)) return { index: 0, total: 0 };
+  if (!isActive(state) || state.single) return { index: 0, total: 0 };
   const visible = state.steps.filter(reachableIn(currentGroup(state)));
   return { index: Math.max(0, visible.findIndex((s) => s.id === state.steps[state.index]?.id)), total: visible.length };
 };
 
 export const isLast = (state: MachineState): boolean => isActive(state) && nextTarget(state) === null;
 
-export const canGoBack = (state: MachineState): boolean => isActive(state) && backTarget(state) !== null;
+export const canGoBack = (state: MachineState): boolean => isActive(state) && !state.single && backTarget(state) !== null;
+
+/** On the final step of a layer's group, where Next means "you are done in here". */
+export const inLastGroupStep = (state: MachineState): boolean =>
+  isActive(state) && state.parentId !== null && findFrom(state.steps, state.index, 1, reachableIn(currentGroup(state))) < 0;
