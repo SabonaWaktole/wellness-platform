@@ -34,6 +34,8 @@ export interface TourPopoverProps {
   note?: 'again';
   /** The last step of a layer says Continue; the last step of the tour says Finish. */
   lastLabel?: 'finish' | 'continue';
+  /** A line of text shown under the body, for example that a control cannot be used during the tour. */
+  notice?: string;
   rootRef?: Ref<HTMLDivElement>;
   headingRef?: Ref<HTMLHeadingElement>;
   /** Called with the card's height when it docks as a bottom sheet (0 otherwise), so the host can keep the target clear of it. */
@@ -77,6 +79,7 @@ export const TourPopover = ({
   onSkipPart,
   note,
   lastLabel = 'finish',
+  notice,
   rootRef,
   headingRef,
   onSheetHeight,
@@ -139,6 +142,7 @@ export const TourPopover = ({
       aria-modal="false"
       aria-labelledby={titleId}
       aria-describedby={bodyId}
+      data-support-ui=""
       data-mode={mode}
       data-variant={variant}
       data-side={floating?.side}
@@ -161,6 +165,7 @@ export const TourPopover = ({
         {body}
       </p>
 
+      {notice && <p className={styles.notice}>{notice}</p>}
       {waitingOnOpen && <p className={styles.hint}>{t('popover.openHint')}</p>}
       {waitingOnOpen && note === 'again' && <p className={styles.hint}>{t('popover.seeAgain')}</p>}
       {variant === 'step' && copy?.when && (

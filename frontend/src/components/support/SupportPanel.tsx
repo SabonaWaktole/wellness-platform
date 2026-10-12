@@ -186,6 +186,7 @@ export default function SupportPanel({ launcherRef }: SupportPanelProps) {
     <div
       ref={panelRef}
       className={styles.panel}
+      data-support-ui=""
       role="dialog"
       tabIndex={-1}
       aria-modal="false"

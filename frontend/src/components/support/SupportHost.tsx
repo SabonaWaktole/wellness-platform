@@ -60,6 +60,7 @@ const TourSessionView = () => {
           waitingFor={session.waitingFor}
           onSkipPart={session.onSkipPart}
           note={session.note}
+          notice={session.notice}
           lastLabel={session.lastLabel}
           rootRef={popoverRef}
           headingRef={headingRef}

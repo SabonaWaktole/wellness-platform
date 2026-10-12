@@ -32,7 +32,9 @@
     "closeWait": {
       "title": "Close it to continue",
       "body": "When you close it, the tour carries on with the next step."
-    }
+    },
+    "blocked": "Exit the tour to use this control.",
+    "blockedSubmit": "Exit the tour to submit."
   },
   "announce": {
     "step": "Step {{current}} of {{total}}: {{title}}",

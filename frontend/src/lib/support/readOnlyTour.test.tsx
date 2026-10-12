@@ -14,9 +14,10 @@ import type { GuideStep, PageGuide } from './types';
 const GUARDED = ['click', 'pointerdown', 'mousedown', 'touchstart', 'keydown', 'submit', 'dragstart'];
 const calls = { del: vi.fn(), save: vi.fn(), submit: vi.fn(), nameKey: vi.fn() };
 
+let go: (to: string) => void = () => {};
 const Page = () => {
   const [name, setName] = useState('');
-  const navigate = useNavigate();
+  go = useNavigate();
   return (
     <main>
       <button type="button" aria-label="delete client" data-tour="fx.delete" onClick={calls.del} />
@@ -24,7 +25,6 @@ const Page = () => {
         <input aria-label="name" data-tour="fx.name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={calls.nameKey} />
         <button type="submit" aria-label="save client" data-tour="fx.save" onClick={calls.save} />
       </form>
-      <button type="button" aria-label="go elsewhere" onClick={() => navigate('/acme/follow-ups')} />
     </main>
   );
 };
@@ -139,8 +139,6 @@ describe('SUP-12 a running tour is read-only', () => {
       default: { pageId: 'clients.list', version: 1, namespace: 'supportSales', steps: steps({ del: { safety: 'try-it' }, name: { warning: undefined } }).map((s) => (s.id === 'del' ? { ...s, safety: 'try-it' as const } : s)) } as PageGuide,
     });
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const caught: unknown[] = [];
-    window.addEventListener('error', (e) => { caught.push(e.error); e.preventDefault(); });
     render(
       <MemoryRouter initialEntries={['/acme/clients']}>
         <Page />
@@ -148,10 +146,10 @@ describe('SUP-12 a running tour is read-only', () => {
       </MemoryRouter>,
     );
     act(() => useSupportStore.getState().startTour('clients.list'));
+    await waitFor(() => expect(card()).not.toBeNull());
     await settle();
-    await settle();
-    // In development the hand-written mistake is loud; either way the delete handler is never reached.
-    expect(String(caught[0] ?? error.mock.calls[0]?.[0] ?? '')).toMatch(/del|try-it|destructive/i);
+    // In development the hand-written mistake is reported; at any time the delete handler is never reached.
+    expect(error.mock.calls.flat().join(' ')).toMatch(/destructive/i);
     fireEvent.click(screen.getByRole('button', { name: 'delete client' }));
     expect(calls.del).not.toHaveBeenCalled();
   });
@@ -209,5 +207,5 @@ describe('SUP-19 the guard is gone on every way out', () => {
       await settle();
       press('Close');
     }));
-  it('SUP-19 after the route changes', async () => baseline(async () => void fireEvent.click(screen.getByRole('button', { name: 'go elsewhere' }))));
+  it('SUP-19 after the route changes', async () => baseline(async () => void act(() => go('/acme/follow-ups'))));
 });

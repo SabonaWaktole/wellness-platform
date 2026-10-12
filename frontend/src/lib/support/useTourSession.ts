@@ -7,7 +7,8 @@ import { useSupportStore } from '../../store/useSupportStore';
 import type { PopoverVariant } from '../../components/support/TourPopover';
 import { announce } from './announcer';
 import { subscribeToDom } from './domObserverHub';
-import { findLayer } from './layerStack';
+import { assertStepSafety, effectiveSafety, installGuard, isSupportUi, type GuardContext } from './interactionGuard';
+import { findLayer, topLayer } from './layerStack';
 import { resolveStepCopy, runtimeVars } from './defineGuide';
 import { ensureOpen, isAdapterName, restoreAll } from './layoutAdapters';
 import { loadGuide } from './pageRegistry';
@@ -45,6 +46,8 @@ export interface TourSession {
   /** Set when the user closed a layer before its part was over. */
   note: 'again' | undefined;
   onSkipPart: () => void;
+  /** Said under the body, once, after the user tried to use a control during the tour. */
+  notice: string | undefined;
   onNext: () => void;
   onBack: () => void;
   onSkip: () => void;
@@ -82,6 +85,8 @@ export function useTourSession(): TourSession {
   machineRef.current = machine;
   /** The opener step whose layer the user closed early, so its card can offer the part again. */
   const [seeAgainFor, setSeeAgainFor] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<'use' | 'submit' | null>(null);
+  const noticeShown = useRef(false);
 
   const sheetHeight = useRef(0);
   const setSheetHeight = useCallback((height: number) => {
@@ -167,6 +172,17 @@ export function useTourSession(): TourSession {
 
   const copy: StepCopy | null = guide && step ? resolveStepCopy(guide, step, t, runtimeVars(target.element)) : null;
 
+  // A destructive step is explain-only whatever the guide says; in development the mistake is reported loudly.
+  // (Logged rather than thrown: an error in an effect would unmount the whole application over a content mistake.)
+  useEffect(() => {
+    if (!step) return;
+    try {
+      assertStepSafety(step);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [step]);
+
   // The layer the current step opens, or is inside: watched from the moment the tour waits for the user.
   const opener = machine.status === 'waiting' && machine.reason === 'user-action' && parentId === null ? step : parentId ? (eligible.find((s) => s.id === parentId) ?? null) : null;
   const watchId = active && opener?.opens ? opener.opens : null;
@@ -238,6 +254,31 @@ export function useTourSession(): TourSession {
     // `skipCurrent` and `copy` are derived from the values listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machine.status, parentId, step?.id, fresh, target.status, target.element, layerOpen]);
+
+  // The read-only guard: while a tour runs, only the tour's own controls, the control of a try-it step and the
+  // layer the user was asked to open can be operated. Rules are read afresh on every event.
+  const guard = useRef<GuardContext>({ allows: () => false, onBlocked: () => {} });
+  const targetElement = target.element;
+  const waitingOnUser = machine.status === 'waiting' && machine.reason === 'user-action';
+  guard.current = {
+    allows: (el) => {
+      if (isSupportUi(el) || el === document.documentElement || el === document.body) return true;
+      if (step && effectiveSafety(step) === 'try-it' && targetElement?.contains(el)) return true;
+      return waitingOnUser && (topLayer(document)?.contains(el) ?? false);
+    },
+    onBlocked: (_el, kind) => {
+      if (kind === 'drag' || kind === 'pointer' || noticeShown.current) return;
+      noticeShown.current = true;
+      const key = kind === 'submit' ? 'popover.blockedSubmit' : 'popover.blocked';
+      setBlocked(kind === 'submit' ? 'submit' : 'use');
+      announce(t(key, { ns: 'support' }));
+    },
+  };
+  useEffect(() => {
+    if (!active) return;
+    return installGuard(() => guard.current);
+  }, [active]);
+  useEffect(() => setBlocked(null), [step?.id]);
 
   // A tab step waits for the tab to be selected, and moves on when it is.
   useEffect(() => {
@@ -315,6 +356,7 @@ export function useTourSession(): TourSession {
     lastLabel: inLastGroupStep(machine) ? 'continue' : 'finish',
     note: step && seeAgainFor === step.id ? 'again' : undefined,
     onSkipPart: skipPart,
+    notice: blocked ? t(blocked === 'submit' ? 'popover.blockedSubmit' : 'popover.blocked', { ns: 'support' }) : undefined,
     onNext: advance,
     onBack: () => dispatch({ type: 'BACK' }),
     onSkip: () => dispatch({ type: 'SKIP_TOUR' }),

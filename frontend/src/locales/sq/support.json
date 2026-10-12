@@ -32,7 +32,9 @@
     "closeWait": {
       "title": "Mbylleni për të vazhduar",
       "body": "Kur ta mbyllni, turi vazhdon me hapin tjetër."
-    }
+    },
+    "blocked": "Dilni nga turi për ta përdorur këtë kontroll.",
+    "blockedSubmit": "Dilni nga turi për ta dërguar."
   },
   "announce": {
     "step": "Hapi {{current}} nga {{total}}: {{title}}",

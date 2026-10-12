@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectNoMutations } from './support/noMutations';
 import { ADMIN_STATE } from './support/sessions';
 
 /**
@@ -42,6 +43,20 @@ test.describe('Support panel', () => {
       expect(consoleErrors, 'no console errors while using Support').toEqual([]);
     });
   }
+
+  // Every page slice adds the same assertion around its own tour (start, Next to the end). Until a page has a guide
+  // there is no tour to run, so this pins the weaker claim that using Support itself changes nothing.
+  test('opening and closing Support changes no data', async ({ page }) => {
+    await page.goto(`/${TENANT}/dashboard`);
+    await expect(page).not.toHaveURL(/\/login|\/unauthorized/);
+    const watch = expectNoMutations(page);
+    const help = page.getByRole('button', { name: /^(Help|Ndihmë)$/ });
+    await help.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
+    watch.assert();
+  });
 
   test('the sidebar Support item opens the same panel', async ({ page }) => {
     await page.goto(`/${TENANT}/dashboard`);
