@@ -4,6 +4,8 @@ import { resolveTarget } from './targetResolver';
 import type { TargetRect, TargetSpec, TargetStatus } from './types';
 
 export interface TargetElementState {
+  /** The `targetSpecKey` this result was computed for; null before the first lookup. A caller that switches specs ignores a result whose key is not the current one. */
+  key: string | null;
   element: Element | null;
   status: TargetStatus;
   rect: TargetRect | null;
@@ -14,7 +16,7 @@ interface Options {
   waitMs?: number;
 }
 
-const EMPTY: TargetElementState = { element: null, status: 'missing', rect: null };
+const EMPTY: TargetElementState = { key: null, element: null, status: 'missing', rect: null };
 const DEFAULT_WAIT_MS = 4000;
 
 const measure = (element: Element): TargetRect => {
@@ -23,6 +25,7 @@ const measure = (element: Element): TargetRect => {
 };
 
 const sameState = (a: TargetElementState, b: TargetElementState) =>
+  a.key === b.key &&
   a.element === b.element &&
   a.status === b.status &&
   a.rect?.top === b.rect?.top &&
@@ -30,7 +33,7 @@ const sameState = (a: TargetElementState, b: TargetElementState) =>
   a.rect?.width === b.rect?.width &&
   a.rect?.height === b.rect?.height;
 
-const specKey = (spec: TargetSpec | null) =>
+export const targetSpecKey = (spec: TargetSpec | null) =>
   spec ? [spec.id, spec.repeat, spec.pick, spec.nth, spec.within, spec.scope].join('|') : null;
 
 /**
@@ -43,7 +46,7 @@ const specKey = (spec: TargetSpec | null) =>
  */
 export function useTargetElement(spec: TargetSpec | null, { waitMs = DEFAULT_WAIT_MS }: Options = {}): TargetElementState {
   const [state, setState] = useState<TargetElementState>(EMPTY);
-  const key = specKey(spec);
+  const key = targetSpecKey(spec);
   const specRef = useRef(spec);
   specRef.current = spec;
 
@@ -98,6 +101,7 @@ export function useTargetElement(spec: TargetSpec | null, { waitMs = DEFAULT_WAI
       }
 
       const next: TargetElementState = {
+        key: targetSpecKey(target),
         element: resolution.element,
         status,
         rect: resolution.element ? measure(resolution.element) : null,

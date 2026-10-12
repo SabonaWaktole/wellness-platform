@@ -73,6 +73,18 @@ export interface GuideStep {
   needs?: string;
 }
 
+/** A step's text, read from the guide's namespace by key. Only the title and body are required. */
+export interface StepCopy {
+  title: string;
+  body: string;
+  /** "When to use it". */
+  when?: string;
+  /** Shown as a callout for steps that need care. */
+  warning?: string;
+  /** Added when the control is disabled right now. */
+  disabled?: string;
+}
+
 export interface PageGuide {
   pageId: string;
   /** Bumped when the guide changes enough to re-offer the tour. */

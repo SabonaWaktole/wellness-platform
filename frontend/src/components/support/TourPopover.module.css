@@ -1,0 +1,171 @@
+/* ============================================================================
+ * Tour popover — the card beside the highlighted control (desktop) or docked
+ * at the bottom of the screen (phone). One element for every variant.
+ * ========================================================================= */
+
+.popover {
+  position: fixed;
+  z-index: var(--z-tour);
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-base);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-outline-variant);
+  font-family: var(--font-family-base);
+}
+
+/* No target to sit beside: centred near the bottom. */
+.popover[data-mode='centred'] {
+  left: 50%;
+  bottom: var(--spacing-lg);
+  transform: translateX(-50%);
+}
+
+.popover[data-mode='sheet'] {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom, 0px));
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-body-lg);
+  font-weight: 600;
+  line-height: var(--font-line-height-body-lg);
+}
+
+.title:focus {
+  outline: none;
+}
+
+.title:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+.body,
+.when p,
+.hint {
+  margin: 0;
+  font-size: var(--font-size-body-md);
+  line-height: var(--font-line-height-body-md);
+}
+
+.whenLabel {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+}
+
+.warning {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-base);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-outline);
+  background-color: var(--color-surface-container-low);
+  font-size: var(--font-size-body-sm);
+}
+
+.warning p {
+  margin: 0;
+}
+
+.hint {
+  padding-left: var(--spacing-base);
+  border-left: 3px solid var(--color-outline);
+  color: var(--color-on-surface-variant);
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.progressText {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-on-surface-variant);
+}
+
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--color-surface-container-high);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background-color: var(--color-primary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.popover[data-side='bottom'] .arrow {
+  top: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.popover[data-side='top'] .arrow {
+  top: 100%;
+  border-left: none;
+  border-top: none;
+}
+
+.popover[data-side='right'] .arrow {
+  left: 0;
+  border-top: none;
+  border-right: none;
+}
+
+.popover[data-side='left'] .arrow {
+  left: 100%;
+  border-bottom: none;
+  border-left: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .popover[data-mode='floating'] {
+    transition:
+      top var(--duration-normal) var(--ease-out),
+      left var(--duration-normal) var(--ease-out);
+  }
+}
+
+@media (forced-colors: active) {
+  .popover,
+  .warning {
+    border: 1px solid CanvasText;
+  }
+
+  .fill {
+    background-color: Highlight;
+  }
+}

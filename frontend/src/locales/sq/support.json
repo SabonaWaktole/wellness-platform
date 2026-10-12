@@ -1,0 +1,36 @@
+{
+  "popover": {
+    "label": "Turi i faqes",
+    "stepOf": "Hapi {{current}} nga {{total}}",
+    "progress": "Ecuria e turit",
+    "back": "Kthehu",
+    "next": "Para",
+    "finish": "Përfundo",
+    "skip": "Kapërce turin",
+    "exit": "Dil",
+    "when": "Kur ta përdorni",
+    "warningLabel": "Kini kujdes",
+    "disabledFallback": "Ky kontroll nuk është i disponueshëm tani.",
+    "waiting": {
+      "title": "Po ngarkohet kjo pjesë e faqes…",
+      "body": "Turi vazhdon sapo ajo të shfaqet."
+    },
+    "lost": {
+      "title": "Ky element ka ndryshuar ose nuk është më në faqe",
+      "body": "Mund të shkoni te hapi tjetër, të ktheheni mbrapa ose të dilni nga turi."
+    },
+    "completed": {
+      "title": "Përfunduat",
+      "body": "Këtë tur mund ta bëni përsëri kurdo nga Mbështetja.",
+      "replay": "Përsërit",
+      "close": "Mbyll"
+    }
+  },
+  "announce": {
+    "step": "Hapi {{current}} nga {{total}}: {{title}}",
+    "skipped": "U kapërcye: {{title}} nuk është i disponueshëm tani",
+    "closed": "Turi u mbyll",
+    "movedPage": "Turi u mbyll sepse kaluat në një faqe tjetër",
+    "done": "Turi përfundoi. Përfunduat."
+  }
+}

@@ -1,0 +1,48 @@
+/* ============================================================================
+ * Spotlight mask — the dimmed page with a hole around the tour's target.
+ * Four panels and a ring, never a clip-path, and never interactive.
+ * ========================================================================= */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tour);
+  pointer-events: none;
+}
+
+.panel {
+  position: fixed;
+  background-color: var(--scrim);
+  pointer-events: none;
+}
+
+.ring {
+  position: fixed;
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  pointer-events: none;
+}
+
+/* The hole glides only for people who have not asked for less motion. */
+.root[data-animated='true'] .panel,
+.root[data-animated='true'] .ring {
+  transition:
+    top var(--duration-normal) var(--ease-out),
+    left var(--duration-normal) var(--ease-out),
+    width var(--duration-normal) var(--ease-out),
+    height var(--duration-normal) var(--ease-out);
+}
+
+/* The dim is a colour the user cannot control; drop it and keep the target identifiable with system colors. */
+@media (forced-colors: active) {
+  .panel {
+    background-color: transparent;
+  }
+
+  .ring {
+    outline: 3px solid Highlight;
+    box-shadow: 0 0 0 2px CanvasText;
+  }
+}
