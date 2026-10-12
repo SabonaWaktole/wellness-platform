@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppLayout } from './AppLayout';
 import { useThemeStore } from '../../../store/useThemeStore';
+import { useSupportStore } from '../../../store/useSupportStore';
 
 const renderShell = () =>
   render(
@@ -59,5 +60,20 @@ describe('AppLayout branding', () => {
     renderShell();
 
     expect(document.title).toBe('Wellness Albania');
+  });
+});
+
+describe('AppLayout Support', () => {
+  it('SUP-01 the Help button in the header opens the Support panel (it used to do nothing)', async () => {
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Help' }));
+    expect(useSupportStore.getState().panelOpen).toBe(true);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    act(() => useSupportStore.getState().closePanel());
+  });
+
+  it('SUP-14 the Help button keeps the header icon layout classes', () => {
+    renderShell();
+    expect(screen.getByRole('button', { name: 'Help' }).className).toMatch(/iconBtn/);
   });
 });

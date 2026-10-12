@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { useSupportStore } from '../../../store/useSupportStore';
 
 const signInTo = (tenantName: string | null) =>
   useAuthStore.setState({
@@ -38,5 +39,35 @@ describe('Sidebar workspace heading', () => {
 
     expect(screen.getByRole('heading', { name: 'Platform' })).toBeTruthy();
     expect(screen.getByText('Administration')).toBeTruthy();
+  });
+});
+
+describe('Sidebar Support item', () => {
+  beforeEach(() => {
+    signInTo('Wellness Albania');
+    act(() => useSupportStore.getState().closePanel());
+  });
+
+  it('SUP-01 opens the Support panel (the item used to do nothing)', () => {
+    render(<Sidebar navItems={[]} />);
+    fireEvent.click(screen.getByText('Support'));
+    expect(useSupportStore.getState().panelOpen).toBe(true);
+    act(() => useSupportStore.getState().closePanel());
+  });
+
+  it('SUP-01 closes the mobile sidebar so the panel is not hidden behind it', () => {
+    const onClose = vi.fn();
+    render(<Sidebar navItems={[]} isOpen onClose={onClose} />);
+    fireEvent.click(screen.getByText('Support'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    act(() => useSupportStore.getState().closePanel());
+  });
+
+  it('SUP-01 does not navigate: the hash stays as it was', () => {
+    render(<Sidebar navItems={[]} />);
+    const before = window.location.hash;
+    fireEvent.click(screen.getByText('Support'));
+    expect(window.location.hash).toBe(before);
+    act(() => useSupportStore.getState().closePanel());
   });
 });
