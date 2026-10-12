@@ -29,10 +29,10 @@
 .root[data-animated='true'] .panel,
 .root[data-animated='true'] .ring {
   transition:
-    top var(--duration-base) var(--ease-out),
-    left var(--duration-base) var(--ease-out),
-    width var(--duration-base) var(--ease-out),
-    height var(--duration-base) var(--ease-out);
+    top var(--duration-normal) var(--ease-out),
+    left var(--duration-normal) var(--ease-out),
+    width var(--duration-normal) var(--ease-out),
+    height var(--duration-normal) var(--ease-out);
 }
 
 /* The dim is a colour the user cannot control; drop it and keep the target identifiable with system colors. */
