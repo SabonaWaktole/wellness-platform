@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { SalesScriptPanelHost } from '../components/panels/SalesScriptPanel/SalesScriptPanel';
+import { SupportHostLazy } from '../components/support/SupportHostLazy';
 
 export const TenantGuard = () => {
   const { tenantSlug } = useParams();
@@ -24,6 +25,8 @@ export const TenantGuard = () => {
     <>
       <Outlet />
       <SalesScriptPanelHost />
+      {/* The Support tour: also above the pages, so it survives page-internal re-renders. */}
+      <SupportHostLazy />
     </>
   );
 };

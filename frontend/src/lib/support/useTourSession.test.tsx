@@ -82,8 +82,23 @@ beforeAll(() => {
   );
 });
 
+/** An in-memory Storage: under Node 26, Node's own `localStorage` global shadows jsdom's and is unusable without a file. */
+const memoryStorage = (): Storage => {
+  const items = new Map<string, string>();
+  return {
+    get length() {
+      return items.size;
+    },
+    clear: () => items.clear(),
+    getItem: (key) => items.get(key) ?? null,
+    key: (index) => [...items.keys()][index] ?? null,
+    removeItem: (key) => void items.delete(key),
+    setItem: (key, value) => void items.set(key, String(value)),
+  };
+};
+
 beforeEach(() => {
-  localStorage.clear?.();
+  vi.stubGlobal('localStorage', memoryStorage());
   main = document.createElement('main');
   document.body.append(main);
   created.push(main);
@@ -100,6 +115,7 @@ afterEach(() => {
   delete loaders[PAGE];
   useAuthStore.setState({ user: null, isAuthenticated: false });
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 afterAll(() => {
@@ -190,9 +206,11 @@ describe('SUP-06 SUP-08 the page changes under a running tour', () => {
     await start();
     click('Next');
     await settle();
-    click('Finish');
+    expect(heading()).toBe('Beta');
+    click('Next');
     await settle();
     expect(heading()).toBe("You're done");
+    expect(status()).toContain('Skipped: Gamma is not available right now');
   });
 
   it('SUP-06 shows the lost card when the current control disappears, and restores the step when it returns', async () => {

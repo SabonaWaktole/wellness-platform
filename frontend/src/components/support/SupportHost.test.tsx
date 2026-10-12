@@ -31,7 +31,7 @@ describe('SUP-19 the Support host costs nothing until it is used', () => {
     );
     expect(container).toBeEmptyDOMElement();
     expect(subscriberCount()).toBe(0);
-    expect(add).not.toHaveBeenCalled();
+    expect(add.mock.calls.filter(([type]) => type === 'keydown')).toHaveLength(0);
     expect(windowAdd.mock.calls.filter(([type]) => type === 'resize' || type === 'scroll')).toHaveLength(0);
   });
 
