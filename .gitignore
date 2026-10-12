@@ -11,5 +11,3 @@ frontend/design/
 # source of truth themselves.
 deploy/*.zip
 
-# Client documents (kept locally, not versioned)
-/docs/
