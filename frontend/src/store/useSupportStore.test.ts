@@ -66,6 +66,12 @@ describe('useSupportStore', () => {
     expect(useSupportStore.getState().panelView).toBe('main');
   });
 
+  it('SUP-04 pointing at a control starts pick mode on the page and closes the panel', () => {
+    useSupportStore.getState().openPanel();
+    useSupportStore.getState().startPick('clients.list');
+    expect(useSupportStore.getState()).toMatchObject({ panelOpen: false, mode: 'pick', context: { pageId: 'clients.list' } });
+  });
+
   it('ending the session returns to mode none', () => {
     useSupportStore.getState().startTour('clients.list');
     useSupportStore.getState().endSession();

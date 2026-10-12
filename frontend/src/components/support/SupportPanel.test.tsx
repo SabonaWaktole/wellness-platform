@@ -274,6 +274,30 @@ describe('SUP-13 SUP-14 SupportPanel: closing', () => {
   });
 });
 
+describe('SUP-04 SupportPanel: pointing at a control', () => {
+  it('SUP-04 offers it on a page with a guide, and starts pick mode for the page', async () => {
+    mount();
+    await open();
+    fireEvent.click(await screen.findByRole('button', { name: 'Point at a control' }));
+    expect(useSupportStore.getState()).toMatchObject({ mode: 'pick', panelOpen: false, context: { pageId: 'clients.list' } });
+  });
+
+  it('SUP-05 offers it on a page with no guide too, because the header and menu can still be explained', async () => {
+    delete loaders['clients.list'];
+    mount();
+    await open();
+    expect(await screen.findByRole('button', { name: 'Point at a control' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Explain a control' })).toBeNull();
+  });
+
+  it('SUP-01 does not offer it on a screen with no page', async () => {
+    mount('/acme');
+    await open();
+    await screen.findByText('No help for this screen yet');
+    expect(screen.queryByRole('button', { name: 'Point at a control' })).toBeNull();
+  });
+});
+
 describe('SUP-04 SupportPanel: Explain a control', () => {
   const created: HTMLElement[] = [];
   const onPage = (...ids: string[]) => {
