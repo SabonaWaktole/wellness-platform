@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppLayout } from '../../../components/layout/AppLayout/AppLayout';
@@ -104,7 +104,7 @@ describe('SUP-05 the shell controls are annotated', () => {
     expect(all('shell.notifications')[0].tagName).toBe('BUTTON');
     expect(all('shell.script')[0].tagName).toBe('BUTTON');
     expect(all('shell.support')[0]).toBe(screen.getByRole('button', { name: 'Help' }));
-    expect(all('shell.profile')[0]).toBe(screen.getByRole('button', { name: 'User profile' }));
+    expect(all('shell.profile')[0]).toBe(screen.getByRole('button', { name: 'User Profile' }));
     expect(all('shell.theme')[0].tagName).toBe('BUTTON');
     expect(all('shell.nav')[0].tagName).toBe('NAV');
     expect(all('shell.logout')[0].tagName).toBe('A');
@@ -126,9 +126,10 @@ describe('SUP-05 the shell controls are annotated', () => {
   it('SUP-05 does not annotate the two inert controls: the header search and the sidebar "New entry" button', () => {
     shell();
     for (const input of document.querySelectorAll('input')) expect(input.closest('[data-tour]')).toBeNull();
+    // The sidebar as a whole is the nav region; the button itself, and the block that holds it, carry no id.
     const newEntry = screen.getByRole('button', { name: /new entry/i });
     expect(newEntry).not.toHaveAttribute('data-tour');
-    expect(newEntry.closest('[data-tour]')).toBeNull();
+    expect(newEntry.parentElement).not.toHaveAttribute('data-tour');
   });
 
   it('SUP-05 does not annotate the mobile search toggle either (it drives the inert search)', () => {
@@ -206,7 +207,7 @@ describe('SUP-15 a step about the navigation on a phone', () => {
     act(() => void fireEvent.click(screen.getByRole('button', { name: /^(Next|Finish)$/ })));
     await settle();
   };
-  const heading = () => screen.getByRole('heading', { level: 2 }).textContent;
+  const heading = () => within(screen.getByRole('dialog')).getByRole('heading', { level: 2 }).textContent;
 
   it('SUP-15 opens the sidebar for the navigation step, and closes it again when the tour moves on', async () => {
     await run(false);

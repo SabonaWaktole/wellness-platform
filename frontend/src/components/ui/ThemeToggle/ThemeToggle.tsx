@@ -5,6 +5,7 @@ import { useThemeStore } from '../../../store/useThemeStore';
 import type { ThemePreference } from '../../../store/useThemeStore';
 import { DropdownMenu } from '../DropdownMenu/DropdownMenu';
 import type { DropdownMenuItemType } from '../DropdownMenu/DropdownMenu';
+import { tourProps } from '../../../lib/support/tourProps';
 import styles from './ThemeToggle.module.css';
 
 // Keys rather than labels: the menu sits on the sign-in page, which is the
@@ -45,6 +46,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
           type="button"
           className={`${styles.trigger} ${className}`}
           aria-label={t('theme.triggerLabel', { current: t(activeOption.labelKey) })}
+          {...tourProps('shell.theme')}
         >
           {/* Show what is actually rendered, not the preference, so "system" reads correctly. */}
           {resolved === 'dark' ? <Moon size={20} /> : <Sun size={20} />}

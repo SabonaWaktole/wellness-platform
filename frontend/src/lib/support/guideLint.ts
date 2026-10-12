@@ -58,7 +58,7 @@ export function lintGuide(guide: PageGuide, lookup: CopyLookup = defaultLookup):
     if (REPEATED_SUFFIX.test(step.target) && !step.repeat) {
       add('repeat-required', id, `Step "${id}" targets "${step.target}", which repeats; declare repeat: true.`);
     }
-    if (step.target.startsWith('shell.') && guide.pageId !== 'shell') {
+    if (step.target.startsWith('shell.') && guide.pageId !== 'shell' && !step.use?.startsWith('shell.')) {
       add('shell-id-reused', id, `Step "${id}" targets "${step.target}", a shell id; include the shell guide instead.`);
     }
 
@@ -71,10 +71,16 @@ export function lintGuide(guide: PageGuide, lookup: CopyLookup = defaultLookup):
 
     const sharedId = step.use?.startsWith('shared.') ? step.use.slice('shared.'.length) : null;
     const sharedOk = sharedId !== null && isSharedKind(sharedId);
-    if (step.use && !sharedOk) add('unknown-shared-kind', id, `Step "${id}" uses "${step.use}", which is not a shared guidance kind.`);
+    // `shell.<name>` borrows the shell guide's explanation of the same control.
+    const shellName = step.use?.startsWith('shell.') ? step.use.slice('shell.'.length) : null;
+    if (step.use && !sharedOk && shellName === null) add('unknown-shared-kind', id, `Step "${id}" uses "${step.use}", which is not a shared guidance kind.`);
 
     const own = copyKeys(guide.pageId, id);
-    const shared = sharedOk ? sharedCopyKeys(sharedId) : null;
+    const shared = sharedOk
+      ? sharedCopyKeys(sharedId)
+      : shellName !== null
+        ? { title: `shell.${shellName}.title`, body: `shell.${shellName}.body` }
+        : null;
     const required: Array<['title' | 'body' | 'warning']> = [['title'], ['body'], ...(step.warning ? ([['warning']] as Array<['warning']>) : [])];
     for (const lng of ['en', 'sq'] as const) {
       for (const [part] of required) {

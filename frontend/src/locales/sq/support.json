@@ -136,5 +136,43 @@
       "when": "Herën e parë që e përdorni këtë faqe.",
       "disabled": "Shtimi nuk është i disponueshëm për rolin tuaj."
     }
+  },
+  "shell": {
+    "menu": {
+      "title": "Butoni i menusë",
+      "body": "Hap menunë kryesore në telefon. Në një ekran më të madh menuja është gjithmonë e dukshme në të majtë."
+    },
+    "nav": {
+      "title": "Menuja kryesore",
+      "body": "Vendet ku mund të shkoni. Lista shfaq vetëm ato që e lejon roli juaj, ndaj mund të ndryshojë nga ajo e një kolegu."
+    },
+    "navItem": {
+      "title": "Një zë i menusë",
+      "body": "Zgjidhni një zë për të hapur atë pjesë të aplikacionit. I theksuari është ku ndodheni tani. Një numër pranë një zëri numëron gjërat që po ju presin, si ndjekjet e vonuara."
+    },
+    "theme": {
+      "title": "Pamja",
+      "body": "Ndërron mes pamjes së çelët, të errët dhe cilësimit të pajisjes tuaj. Ndryshon vetëm si duket aplikacioni për ju."
+    },
+    "notifications": {
+      "title": "Njoftimet",
+      "body": "Tregon çfarë ka ndodhur që ju përket, si caktimet dhe miratimet. Një numër mbi zile numëron ato të palexuara; zgjedhja e një njoftimi hap zërin për të cilin flet."
+    },
+    "script": {
+      "title": "Skripti i shitjes",
+      "body": "Hap skriptin e shitjes pranë faqes, që ta lexoni gjatë një telefonate. Mbetet i hapur ndërsa kaloni nga faqja në faqe derisa ta mbyllni."
+    },
+    "support": {
+      "title": "Mbështetja",
+      "body": "Hap ndihmën për faqen ku ndodheni: një tur i udhëhequr i kësaj faqeje ose shpjegim i një kontrolli."
+    },
+    "profile": {
+      "title": "Profili juaj",
+      "body": "Hap një menu me cilësimet tuaja dhe mënyrën për të dalë."
+    },
+    "logout": {
+      "title": "Dil",
+      "body": "Mbyll sesionin tuaj në këtë pajisje. Çfarë nuk keni ruajtur nuk mbahet."
+    }
   }
 }

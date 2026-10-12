@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef } from 'react';
 import { HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { tourProps } from '../../lib/support/tourProps';
 import { useSupportStore } from '../../store/useSupportStore';
 
 // The panel and its copy are fetched when it is first opened, not with every page.
@@ -33,6 +34,7 @@ export const SupportLauncher = ({ className }: SupportLauncherProps) => {
         aria-haspopup="dialog"
         aria-expanded={panelOpen}
         onClick={toggle}
+        {...tourProps('shell.support')}
       >
         <HelpCircle size={20} />
       </button>

@@ -6,6 +6,7 @@ import { useNotifications, type NotificationItem } from '../../hooks/useNotifica
 import { useNotificationText } from '../../hooks/useNotificationText';
 import { useTeam } from '../../hooks/useTeam';
 import { useDateFormat } from '../../hooks/useDateFormat';
+import { tourProps } from '../../lib/support/tourProps';
 import styles from './NotificationBell.module.css';
 
 /** Where a notification takes you when clicked. */
@@ -90,6 +91,7 @@ export const NotificationBell: React.FC = () => {
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
         aria-haspopup="menu"
+        {...tourProps('shell.notifications')}
         aria-label={
           unreadCount > 0 ? t('bellAriaUnread', { count: unreadCount }) : t('bellAria')
         }

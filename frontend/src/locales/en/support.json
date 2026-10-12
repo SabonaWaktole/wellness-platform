@@ -136,5 +136,43 @@
       "when": "The first time you use this page.",
       "disabled": "Adding is not available to your role."
     }
+  },
+  "shell": {
+    "menu": {
+      "title": "Menu button",
+      "body": "Opens the main menu on a phone. On a larger screen the menu is always visible on the left."
+    },
+    "nav": {
+      "title": "Main menu",
+      "body": "The places you can go. The list shows only what your role allows, so it may differ from a colleague's."
+    },
+    "navItem": {
+      "title": "A menu entry",
+      "body": "Select an entry to open that part of the application. The highlighted one is where you are now. A number beside an entry counts things waiting for you, such as overdue follow-ups."
+    },
+    "theme": {
+      "title": "Appearance",
+      "body": "Switches between light, dark and the setting of your device. It changes only how the application looks for you."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "body": "Shows what has happened that concerns you, such as assignments and approvals. A number on the bell counts the unread ones; selecting a notification opens the item it is about."
+    },
+    "script": {
+      "title": "Sales script",
+      "body": "Opens the sales script beside the page, so you can read it during a call. It stays open as you move between pages until you close it."
+    },
+    "support": {
+      "title": "Support",
+      "body": "Opens help for the page you are on: a guided tour of this page, or an explanation of one control."
+    },
+    "profile": {
+      "title": "Your profile",
+      "body": "Opens a menu with your settings and the way to sign out."
+    },
+    "logout": {
+      "title": "Log out",
+      "body": "Ends your session on this device. Anything you have not saved is not kept."
+    }
   }
 }
