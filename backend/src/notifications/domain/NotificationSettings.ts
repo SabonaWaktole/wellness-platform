@@ -100,7 +100,12 @@ export class NotificationSettings {
   /**
    * What a workspace gets before anyone visits the settings page.
    *
-   * Email defaults to the events an owner would want to hear about away from
+   * The email master switch is OFF: a workspace sends no business-event email
+   * until its owner turns it on in Settings -> Notifications. In-app
+   * notifications are unaffected. The event types and recipient roles below are
+   * what the switch enables once it is on.
+   *
+   * Once on, email defaults to the events an owner would want to hear about away from
    * the app — a customer answering a quotation, and work waiting on their own
    * approval — rather than to everything. Defaulting to all eleven types would
    * teach every new owner to filter our mail.
@@ -112,7 +117,7 @@ export class NotificationSettings {
   static defaults(tenantId: string): NotificationSettings {
     return new NotificationSettings({
       tenantId,
-      emailEnabled: true,
+      emailEnabled: false,
       emailEventTypes: [
         'QUOTATION_SUBMITTED_FOR_APPROVAL',
         'QUOTATION_ACCEPTED',
