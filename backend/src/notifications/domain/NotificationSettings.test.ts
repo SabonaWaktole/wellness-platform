@@ -12,9 +12,17 @@ describe('NotificationSettings', () => {
     it('gives an unconfigured workspace a working policy', () => {
       const settings = NotificationSettings.defaults(tenantId);
 
-      expect(settings.emailEnabled).toBe(true);
+      expect(settings.emailEnabled).toBe(false);
       expect(settings.appointmentRemindersEnabled).toBe(true);
       expect(settings.quotationFollowUpEnabled).toBe(true);
+    });
+
+    it('sends no business-event email until an owner turns the master switch on', () => {
+      const settings = NotificationSettings.defaults(tenantId);
+
+      expect(settings.emailEnabled).toBe(false);
+      expect(settings.emailsFor('QUOTATION_ACCEPTED')).toBe(false);
+      expect(settings.withPatch({ emailEnabled: true }).emailsFor('QUOTATION_ACCEPTED')).toBe(true);
     });
 
     it('leaves automatic expiry off, because it changes records rather than sending mail', () => {
@@ -138,6 +146,7 @@ describe('NotificationSettings', () => {
 
     it('sends only the types that are switched on', () => {
       const settings = NotificationSettings.defaults(tenantId).withPatch({
+        emailEnabled: true,
         emailEventTypes: ['QUOTATION_ACCEPTED'],
       });
 
@@ -147,6 +156,7 @@ describe('NotificationSettings', () => {
 
     it('filters by recipient role as well as by type', () => {
       const settings = NotificationSettings.defaults(tenantId).withPatch({
+        emailEnabled: true,
         emailEventTypes: ['QUOTATION_ACCEPTED'],
         emailRecipientRoles: [UserRole.BUSINESS_OWNER],
       });
@@ -173,7 +183,7 @@ describe('NotificationSettings', () => {
     const off = NotificationSettings.defaults(tenantId);
     expect(off.emailsFor('FOLLOW_UP_DAILY_SUMMARY')).toBe(false);
 
-    const on = off.withPatch({ followUpDailySummaryEnabled: true });
+    const on = off.withPatch({ emailEnabled: true, followUpDailySummaryEnabled: true });
     expect(on.emailsFor('FOLLOW_UP_DAILY_SUMMARY')).toBe(true);
     expect(on.withPatch({ emailEnabled: false }).emailsFor('FOLLOW_UP_DAILY_SUMMARY')).toBe(false);
     expect(on.toJSON().availableEventTypes).not.toContain('FOLLOW_UP_DAILY_SUMMARY');
