@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -49,7 +49,20 @@ describe('ImpersonationBanner', () => {
     });
 
     renderBanner();
-    expect(screen.getByRole('button')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /exit to admin console/i })).toBeEnabled();
+  });
+
+  it('collapses to just the arrow and expands again', () => {
+    useAuthStore.setState({
+      impersonating: { adminEmail: 'admin@platform.test', tenantSlug: 'acme', tenantName: 'Acme' },
+    });
+
+    renderBanner();
+    fireEvent.click(screen.getByRole('button', { name: /hide workspace notice/i }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /show workspace notice/i }));
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 });
 

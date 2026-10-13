@@ -19,6 +19,8 @@ import { CompanyWellnessTab } from '../membership/CompanyWellnessTab';
 import { CompanyTimeline } from '../../components/clients/CompanyTimeline';
 import { AppointmentDetailPanel } from '../../components/panels/AppointmentDetailPanel/AppointmentDetailPanel';
 import { PlanActivityDialog } from '../../components/calendar/PlanActivityDialog';
+import { dealService } from '../../services/dealService';
+import { OPEN_DEAL_STAGES } from '../../types/deal';
 import { appointmentToCalendarItem } from '../../utils/appointmentUtils';
 import { ActivityDialog } from '../../components/activities/ActivityDialog';
 import { FollowUpsPanel } from '../../components/followUps/FollowUpsPanel';
@@ -181,6 +183,25 @@ export const ClientDetailContent: React.FC = () => {
     (field) => field.role !== 'ASSIGNEE' && field.role !== 'PRIMARY_EMAIL' && field.role !== 'PRIMARY_PHONE'
   );
 
+  const handleCalculatePrice = async () => {
+    if (!tenantSlug || !clientId) return;
+    try {
+      const deals = await dealService.list(tenantSlug, { clientId, stage: [...OPEN_DEAL_STAGES], pageSize: 1 });
+      if (deals.items.length > 0) {
+        navigate(`/${tenantSlug}/deals/${deals.items[0].id}/pricing`);
+      } else {
+        const newDeal = await dealService.create(tenantSlug, {
+          clientId,
+          type: 'NEW_CONTRACT',
+          title: 'Occupational Health & Wellness',
+        });
+        navigate(`/${tenantSlug}/deals/${newDeal.id}/pricing`);
+      }
+    } catch {
+      navigate(`/${tenantSlug}/clients/${clientId}/pricing`);
+    }
+  };
+
   return (
     <div className={styles.container}>
       {showDuplicateNameWarning && (
@@ -223,7 +244,7 @@ export const ClientDetailContent: React.FC = () => {
                 className={styles.iconButton}
                 aria-label={t('detail.calculatePrice')}
                 title={t('detail.calculatePrice')}
-                onClick={() => navigate(`/${tenantSlug}/clients/${clientId}/pricing`)}
+                onClick={handleCalculatePrice}
               >
                 <Calculator size={18} />
               </Button>

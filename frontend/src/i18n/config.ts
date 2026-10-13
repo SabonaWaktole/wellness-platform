@@ -8,15 +8,15 @@
  * see the regression test in useMoneyFormat.test.ts, which fails if anyone
  * wires the i18n language into an Intl formatter.
  */
-export const SUPPORTED_LANGUAGES = ['sq', 'en', 'el', 'it'] as const;
+export const SUPPORTED_LANGUAGES = ['en', 'sq', 'el', 'it'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
 /**
  * What the interface is in before anyone signs in, and for anyone who has not
- * chosen a language in a workspace that has not set one (FR-LNG-01). Wellness
- * Albania works in Albanian; English is the second language.
+ * chosen a language in a workspace that has not set one (FR-LNG-01). English is
+ * the default; Albanian is one click away.
  */
-export const DEFAULT_LANGUAGE: Language = 'sq';
+export const DEFAULT_LANGUAGE: Language = 'en';
 
 /**
  * The catalogue every other one is written from and checked against

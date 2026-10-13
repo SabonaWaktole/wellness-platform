@@ -14,7 +14,7 @@ const readStored = (): Language | null => {
 };
 
 interface VisitorLanguageState {
-  /** The language chosen on a signed-out screen, or `null` for the default (Albanian). */
+  /** The language chosen on a signed-out screen, or `null` for the default (English). */
   language: Language | null;
   setLanguage: (language: Language) => void;
 }

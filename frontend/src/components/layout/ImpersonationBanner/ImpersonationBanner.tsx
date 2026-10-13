@@ -1,9 +1,9 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { ShieldAlert, LogOut } from 'lucide-react';
-import { useAuthStore } from '../../../store/useAuthStore';
-import { useWorkspaceSession } from '../../../hooks/useWorkspaceSession';
-import styles from './ImpersonationBanner.module.css';
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ShieldAlert, LogOut, ChevronDown, ChevronUp } from "lucide-react";
+import { useAuthStore } from "../../../store/useAuthStore";
+import { useWorkspaceSession } from "../../../hooks/useWorkspaceSession";
+import styles from "./ImpersonationBanner.module.css";
 
 /**
  * Shown while a platform administrator is operating inside a client's
@@ -18,32 +18,57 @@ import styles from './ImpersonationBanner.module.css';
  * free.
  */
 export const ImpersonationBanner: React.FC = () => {
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation("dashboard");
   const impersonating = useAuthStore((state) => state.impersonating);
   const { exitWorkspace, isSwitching } = useWorkspaceSession();
 
+  // Collapsing only hides the strip; the arrow tab stays so the warning is one click away.
+  const [collapsed, setCollapsed] = useState(false);
+
   if (!impersonating) return null;
 
+  const toggleLabel = collapsed
+    ? t("superAdmin.showNotice", { defaultValue: "Show workspace notice" })
+    : t("superAdmin.hideNotice", { defaultValue: "Hide workspace notice" });
+
   return (
-    <div className={styles.banner} role="status">
-      <span className={styles.message}>
-        <ShieldAlert size={16} aria-hidden="true" />
-        <span>
-          {t('superAdmin.impersonationNotice')}{' '}
-          <span className={styles.workspace}>
-            {impersonating.tenantName ?? impersonating.tenantSlug}
-          </span>
-        </span>
-      </span>
+    <div className={styles.root}>
       <button
         type="button"
-        className={styles.exitButton}
-        onClick={() => exitWorkspace()}
-        disabled={isSwitching}
+        className={styles.toggle}
+        onClick={() => setCollapsed((c) => !c)}
+        aria-expanded={!collapsed}
+        aria-label={toggleLabel}
+        title={toggleLabel}
       >
-        <LogOut size={14} aria-hidden="true" />
-        {t('superAdmin.exitWorkspace')}
+        {collapsed ? (
+          <ChevronUp size={16} aria-hidden="true" />
+        ) : (
+          <ChevronDown size={16} aria-hidden="true" />
+        )}
       </button>
+      {!collapsed && (
+        <div className={styles.banner} role="status">
+          <span className={styles.message}>
+            <ShieldAlert size={16} aria-hidden="true" />
+            <span>
+              {t("superAdmin.impersonationNotice")}{" "}
+              <span className={styles.workspace}>
+                {impersonating.tenantName ?? impersonating.tenantSlug}
+              </span>
+            </span>
+          </span>
+          <button
+            type="button"
+            className={styles.exitButton}
+            onClick={() => exitWorkspace()}
+            disabled={isSwitching}
+          >
+            <LogOut size={14} aria-hidden="true" />
+            {t("superAdmin.exitWorkspace")}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

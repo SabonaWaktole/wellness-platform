@@ -142,4 +142,38 @@ describe('OfferPdfRenderer (M2 Slice 9)', () => {
     await new OfferPdfRenderer().render(document());
     expect(Date.now() - started).toBeLessThan(3000);
   });
+
+  it('renders a 2-page commercial proposal document matching the MedWork reference layout', async () => {
+    const pdfBuffer = await new OfferPdfRenderer().render(document({ language: 'en' }));
+    const parsed = await pdfParse(pdfBuffer);
+    expect(parsed.numpages).toBe(2);
+
+    // Page 1 sections and content
+    expect(parsed.text).toContain('Commercial Proposal');
+    expect(parsed.text).toContain('Occupational Health & Employee Wellness');
+    expect(parsed.text).toContain('PROPOSAL INFORMATION');
+    expect(parsed.text).toContain('OUR PROPOSED SOLUTION');
+    expect(parsed.text).toContain('Occupational Doctor');
+    expect(parsed.text).toContain('EMPLOYEE BENEFITS - WELLNESS+ SILVER');
+    expect(parsed.text).toContain('Internist Consultation');
+    expect(parsed.text).toContain('100% FREE');
+    expect(parsed.text).toContain('COMMERCIAL OFFER');
+    expect(parsed.text).toContain('Occupational Health Services');
+    expect(parsed.text).toContain('COMMERCIAL CONDITIONS');
+    expect(parsed.text).toContain('Agreement duration:');
+    expect(parsed.text).toContain('medwork.al');
+
+    // Page 2 sections and content
+    expect(parsed.text).toContain('Occupational Health Service');
+    expect(parsed.text).toContain('ONE PARTNER FOR YOUR OCCUPATIONAL HEALTH NEEDS');
+    expect(parsed.text).toContain('MEDICAL CARE & EMPLOYEE SUPPORT');
+    expect(parsed.text).toContain('EMPLOYEE HEALTH MONITORING');
+    expect(parsed.text).toContain('MATERNITY & MEDICAL LEAVE SUPPORT');
+    expect(parsed.text).toContain('WORKPLACE RISK PREVENTION');
+    expect(parsed.text).toContain('ACCIDENTS & OCCUPATIONAL DISEASES');
+    expect(parsed.text).toContain('LEGAL COMPLIANCE & REPORTING');
+    expect(parsed.text).toContain('Simplified legal compliance');
+    expect(parsed.text).toContain('Reduced HR administration');
+  });
 });
+

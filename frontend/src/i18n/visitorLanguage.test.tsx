@@ -64,27 +64,27 @@ describe('language before sign-in (FR-LNG-01)', () => {
     useAuthStore.setState({ user: null, isAuthenticated: false });
   });
 
-  it('FR-LNG-01 a visitor who has not chosen sees the sign-in screen in Albanian, with the switch on Shqip', () => {
+  it('FR-LNG-01 a visitor who has not chosen sees the sign-in screen in English, with the switch on English', () => {
     renderSignIn();
 
-    expect(i18n.language).toBe('sq');
-    const switcher = screen.getByRole('group', { name: 'Gjuha' });
-    expect(screen.getByRole('button', { name: 'Shqip' }).getAttribute('aria-pressed')).toBe('true');
-    expect(switcher.textContent).toBe('ShqipEnglish');
+    expect(i18n.language).toBe('en');
+    const switcher = screen.getByRole('group', { name: 'Language' });
+    expect(screen.getByRole('button', { name: 'English' }).getAttribute('aria-pressed')).toBe('true');
+    expect(switcher.textContent).toBe('EnglishShqip');
   });
 
-  it('FR-LNG-01 switching to English changes the sign-in screen at once and is remembered in this browser', async () => {
+  it('FR-LNG-01 switching to Albanian changes the sign-in screen at once and is remembered in this browser', async () => {
     renderSignIn();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'English' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Shqip' }));
     });
 
-    expect(i18n.language).toBe('en');
-    expect(document.documentElement.lang).toBe('en');
-    expect(screen.getByRole('group', { name: 'Language' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'English' }).getAttribute('aria-pressed')).toBe('true');
-    expect(localStorage.getItem(VISITOR_LANGUAGE_STORAGE_KEY)).toBe('en');
+    expect(i18n.language).toBe('sq');
+    expect(document.documentElement.lang).toBe('sq');
+    expect(screen.getByRole('group', { name: 'Gjuha' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Shqip' }).getAttribute('aria-pressed')).toBe('true');
+    expect(localStorage.getItem(VISITOR_LANGUAGE_STORAGE_KEY)).toBe('sq');
   });
 
   it('FR-LNG-01 once signed in, the user preference and then the workspace default win over the visitor choice', async () => {
