@@ -235,7 +235,7 @@ export function generateMysqlPermissionUpgradeStatements(upgradeKey: string): st
 -- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
 INSERT INTO \`AuditEntry\` (\`id\`, \`tenantId\`, \`at\`, \`userId\`, \`userRole\`, \`action\`, \`entityType\`, \`entityId\`, \`entityLabel\`, \`changes\`)
 SELECT UUID(), r.tenantId, NOW(3), NULL, 'SYSTEM', 'UPDATE', 'Role', r.id,
-  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), CAST(v.changes AS JSON)
+  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), v.changes
 FROM \`Role\` r
 JOIN (
 ${upgradeAuditRows(upgradeKey)}
