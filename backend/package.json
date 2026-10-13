@@ -18,6 +18,7 @@
     "seed:superadmin": "ts-node -r dotenv/config -r tsconfig-paths/register scratch/seed-super-admin.ts",
     "seed:demo": "ts-node -r dotenv/config -r tsconfig-paths/register scratch/seed-demo.ts",
     "seed:wellness": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/seed-wellness-workspace.ts",
+    "seed:mock": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/seed-mock-data.ts",
     "seed:uat": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/seed-uat.ts",
     "migrate:legacy-clients": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/migrate-legacy-clients.ts",
     "jobs:run": "ts-node -r dotenv/config -r tsconfig-paths/register scripts/run-jobs.ts",
