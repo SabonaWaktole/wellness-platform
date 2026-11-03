@@ -1,3 +1,5 @@
+// Must stay first: see the module for why.
+import './config/threadLimits';
 import { assertRequiredEnv } from './config/env';
 import { createApp } from './app';
 import { createScheduler } from '../scheduler/createScheduler';
