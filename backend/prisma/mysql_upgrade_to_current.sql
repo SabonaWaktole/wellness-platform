@@ -1412,7 +1412,7 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
 INSERT INTO `AuditEntry` (`id`, `tenantId`, `at`, `userId`, `userRole`, `action`, `entityType`, `entityId`, `entityLabel`, `changes`)
 SELECT UUID(), r.tenantId, NOW(3), NULL, 'SYSTEM', 'UPDATE', 'Role', r.id,
-  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), CAST(v.changes AS JSON)
+  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), v.changes
 FROM `Role` r
 JOIN (
   SELECT 'SALES_USER' AS rolekey, '[{"field":"permissionsAdded","old":null,"new":["deals.edit","deals.view","discounts.apply","followups.manage","offers.edit","script.view"]},{"field":"permissionUpgrade","old":null,"new":"m2-sales"}]' AS changes
@@ -2774,7 +2774,7 @@ SELECT 'm3 contracts permissions' AS step, DATABASE() AS db, NOW() AS at;
 -- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
 INSERT INTO `AuditEntry` (`id`, `tenantId`, `at`, `userId`, `userRole`, `action`, `entityType`, `entityId`, `entityLabel`, `changes`)
 SELECT UUID(), r.tenantId, NOW(3), NULL, 'SYSTEM', 'UPDATE', 'Role', r.id,
-  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), CAST(v.changes AS JSON)
+  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), v.changes
 FROM `Role` r
 JOIN (
   SELECT 'SALES_MANAGER' AS rolekey, '[{"field":"permissionsAdded","old":null,"new":["contracts.terminate"]},{"field":"permissionUpgrade","old":null,"new":"m3-contracts-payments"}]' AS changes
@@ -3201,7 +3201,7 @@ SELECT 'm4 wellness permissions' AS step, DATABASE() AS db, NOW() AS at;
 -- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
 INSERT INTO `AuditEntry` (`id`, `tenantId`, `at`, `userId`, `userRole`, `action`, `entityType`, `entityId`, `entityLabel`, `changes`)
 SELECT UUID(), r.tenantId, NOW(3), NULL, 'SYSTEM', 'UPDATE', 'Role', r.id,
-  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), CAST(v.changes AS JSON)
+  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), v.changes
 FROM `Role` r
 JOIN (
   SELECT 'RECEPTION' AS rolekey, '[{"field":"permissionsAdded","old":null,"new":["members.verify"]},{"field":"permissionUpgrade","old":null,"new":"m4-wellness-plus"}]' AS changes

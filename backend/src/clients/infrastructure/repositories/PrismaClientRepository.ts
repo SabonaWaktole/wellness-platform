@@ -99,7 +99,9 @@ export class PrismaClientRepository implements IClientRepository {
       // case-insensitive already), no double-quoted identifiers (backticks
       // instead), and no `@>` jsonb-containment operator (JSON_CONTAINS
       // instead — same "every key/value on the right appears on the left"
-      // semantics for object arguments).
+      // semantics for object arguments). The candidate is passed as a plain
+      // string, not CAST(... AS JSON): MariaDB, which Hostinger runs, has no
+      // JSON cast, and both engines parse a string candidate as JSON.
       const whereClause = IS_MYSQL
         ? Prisma.sql`
             WHERE \`tenantId\` = ${tenantId}
@@ -120,7 +122,7 @@ export class PrismaClientRepository implements IClientRepository {
             ${filters.riskLevelId ? Prisma.sql`AND \`businessTypeId\` IN (SELECT id FROM \`BusinessType\` WHERE \`riskLevelId\` = ${filters.riskLevelId})` : Prisma.empty}
             ${filters.needsCompletion ? NEEDS_COMPLETION_MYSQL : Prisma.empty}
             ${ownerSql(scope, Prisma.raw('`assignedUserId`'))}
-            AND JSON_CONTAINS(\`customFieldValues\`, CAST(${customFieldsJson} AS JSON))
+            AND JSON_CONTAINS(\`customFieldValues\`, ${customFieldsJson})
           `
         // A NULL email/phone yields NULL from ILIKE rather than false, so a
         // client with no email simply does not match on that column — while
