@@ -45,7 +45,7 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- the system actor (FR-RBAC-10). Runs before the grants, which it describes.
 INSERT INTO `AuditEntry` (`id`, `tenantId`, `at`, `userId`, `userRole`, `action`, `entityType`, `entityId`, `entityLabel`, `changes`)
 SELECT UUID(), r.tenantId, NOW(3), NULL, 'SYSTEM', 'UPDATE', 'Role', r.id,
-  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), CAST(v.changes AS JSON)
+  COALESCE(NULLIF(r.nameSq, ''), r.nameEn), v.changes
 FROM `Role` r
 JOIN (
   SELECT 'SALES_USER' AS rolekey, '[{"field":"permissionsAdded","old":null,"new":["deals.edit","deals.view","discounts.apply","followups.manage","offers.edit","script.view"]},{"field":"permissionUpgrade","old":null,"new":"m2-sales"}]' AS changes
