@@ -63,7 +63,7 @@ Anything else is the exact list of what is still missing.
 cd backend
 npm ci                     # full install — the build needs devDependencies
 npm run build              # generates the Prisma client, then compiles
-npm prune --omit=dev       # now safe to drop dev-only packages
+npm prune --omit=dev --include=prod   # now safe to drop dev-only packages
 npm start                  # node dist/main/server.js
 ```
 
@@ -72,8 +72,15 @@ npm start                  # node dist/main/server.js
 compile are devDependencies — installing without them makes `npm run build`
 fail with a wall of `TS7016: Could not find a declaration file` errors.
 `npm run build` needs them; the running server (`node dist/main/server.js`)
-does not, which is what `npm prune --omit=dev` is for, run only after the
-build has already produced `dist/`.
+does not, which is what the prune is for, run only after the build has
+already produced `dist/`.
+
+`backend/.npmrc` sets `include=dev`, so a plain `npm install` or `npm ci`
+installs devDependencies even when `NODE_ENV=production` is already set. That
+is the case on Hostinger, which loads the app's environment before it installs
+and otherwise fails the build with the `TS7016` errors above. The same setting
+overrides a bare `--omit=dev`, which is why the prune also passes
+`--include=prod`.
 
 `npm run build` picks the Prisma schema from the **protocol of `DATABASE_URL`**
 (`scripts/generate-prisma-client.js`): a `mysql://` URL generates from
@@ -225,7 +232,7 @@ Against MySQL 8.0 in a throwaway container, using the real archive contents:
 **Re-verified end to end** (2026-09-13, PR #83's changes), unpacking the actual
 built archives rather than the source tree:
 
-- `npm ci` (full, not `--omit=dev`) → `npm run build` → `npm prune --omit=dev`
+- `npm ci` (full, not `--omit=dev`) → `npm run build` → `npm prune --omit=dev --include=prod`
   → `node dist/main/server.js` against the upgraded MySQL container: boots,
   and `GET /api/:tenantSlug/forms/default` with a minted JWT returns a real
   form read live through Prisma;
