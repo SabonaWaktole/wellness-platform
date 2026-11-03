@@ -3,6 +3,14 @@ import path from 'path';
 import crypto from 'crypto';
 import sharp, { type Metadata } from 'sharp';
 
+// libvips otherwise starts a worker thread per CPU core, and shared hosts
+// report dozens of cores while capping the account at 120 threads in total.
+// Uploads are a few small images at a time, so one thread costs nothing
+// noticeable. The operation cache only holds memory for repeated work on the
+// same input, which this pipeline never does.
+sharp.concurrency(1);
+sharp.cache(false);
+
 /**
  * Media pipeline for profile photos and workspace branding.
  *
