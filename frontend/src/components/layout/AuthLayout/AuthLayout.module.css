@@ -190,55 +190,17 @@
   }
 }
 
-/* The logo's figure, drawn large: a leaf either side of a head. Two
-   opposite corners fully rounded is what turns a box into a leaf. */
+/* The logo's three rings, drawn large above the tagline. */
 .art {
   position: absolute;
   z-index: -1;
   top: 14%;
   left: 50%;
   width: min(72%, 440px);
-  aspect-ratio: 1;
+  height: auto;
   transform: translateX(-50%);
+  opacity: 0.9;
   pointer-events: none;
-}
-
-.leafLeft,
-.leafRight,
-.head {
-  position: absolute;
-  display: block;
-}
-
-.leafLeft {
-  left: 0;
-  top: 24%;
-  width: 46%;
-  height: 70%;
-  border-radius: 0 100% 0 100%;
-  background-image: linear-gradient(
-    200deg,
-    var(--brand-blue-teal),
-    color-mix(in srgb, var(--brand-blue-teal) 55%, var(--brand-navy))
-  );
-}
-
-.leafRight {
-  right: 0;
-  top: 14%;
-  width: 46%;
-  height: 80%;
-  border-radius: 100% 0 100% 0;
-  background-image: linear-gradient(160deg, var(--brand-green), var(--brand-teal));
-}
-
-.head {
-  top: 0;
-  left: 38%;
-  width: 22%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background-color: var(--brand-teal);
 }
 
 .tagline {

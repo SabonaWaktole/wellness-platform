@@ -14,7 +14,7 @@ export const PRODUCT_NAME = 'Wellness Albania';
 export const EMAIL_LOGO_PATH = '/email/wellness-plus-logo.png';
 
 /** The logo's displayed size in email. The file is twice this, for sharp screens. */
-export const EMAIL_LOGO_SIZE = { width: 180, height: 38 };
+export const EMAIL_LOGO_SIZE = { width: 180, height: 74 };
 
 /** The logo's absolute URL for a given frontend URL, with or without a trailing slash. */
 export const emailLogoUrl = (appUrl: string): string =>

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '../../ui/Card/Card';
 import { ThemeToggle } from '../../ui/ThemeToggle';
 import { BrandLogo } from '../BrandLogo';
+import symbol from '../../../assets/brand/wellness-plus-symbol-on-dark.png';
 import { VisitorLanguageSwitch } from './VisitorLanguageSwitch';
 import { usePageTitle } from '../../../hooks/usePageTitle';
 import styles from './AuthLayout.module.css';
@@ -22,7 +23,7 @@ export interface AuthLayoutProps {
  *
  * On a wide screen a brand panel fills the left-hand column. It is the slot a
  * login photograph goes into if Wellness Albania supplies one; until then it
- * carries the logo's colours and shapes. On a phone the panel is dropped and
+ * carries the logo's symbol. On a phone the panel is dropped and
  * the form has the screen to itself.
  */
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle, icon }) => {
@@ -32,12 +33,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
   return (
     <div className={styles.page}>
       <aside className={styles.brandPanel}>
-        {/* The logo's figure, enlarged: two leaves and a head. Decorative. */}
-        <div className={styles.art} aria-hidden="true">
-          <span className={styles.leafLeft} />
-          <span className={styles.leafRight} />
-          <span className={styles.head} />
-        </div>
+        {/* The logo's symbol, enlarged. Decorative. */}
+        <img className={styles.art} src={symbol} alt="" aria-hidden="true" />
         <p className={styles.tagline}>{t('layout.tagline')}</p>
       </aside>
 
